@@ -23,33 +23,44 @@ function tokenizeProperties(lines: string[]) {
 
 export function parseProperties(lines: string[]) {
   let propName = undefined;
+  let previousAccumulator = [];
   let accumulator = [];
   let map = new Map();
   for(const line of lines) {
-    lexer.reset(line);
+    lexer.reset(line + "\n");
+    
     let lexeme = undefined;
-    do {
-      lexeme = lexer.next()
-      if (lexeme) {
+    while(lexeme = lexer.next()) {
         switch(lexeme.type) {
           case "TEXT":
             accumulator.push(lexeme.value);
             break;
           case "COLON":
             if (accumulator.length == 1) {
+              if (propName) {
+                map.set(propName, previousAccumulator.join(" "));
+                previousAccumulator.length = 0;
+              }
               propName = accumulator[0];
               accumulator.length = 0;
+            } else {
+              accumulator.push(lexeme.value);
             }
+            break;
+          case "NL":
+            previousAccumulator.push(...accumulator);
+            accumulator = [];
             break;
           default:
             break;
         }
-      }
-    } while (lexeme != undefined);
-    if (propName) {
-      map.set(propName, accumulator.join(" "));
     }
   }
+  if (propName) {
+    previousAccumulator.push(...accumulator);
+    map.set(propName, previousAccumulator.join(" "));
+  }
+  
 
   return map;
 }
