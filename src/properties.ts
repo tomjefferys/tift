@@ -21,11 +21,17 @@ function tokenizeProperties(lines: string[]) {
   // as appropriate:
 }
 
+function peek<Type>(list: Type[]) : Type {
+  return list[list.length - 1];
+}
+
 export function parseProperties(lines: string[]) {
   let propName = undefined;
-  let previousAccumulator = [];
-  let accumulator = [];
-  let map = new Map();
+  let acc = [];
+  let lineAcc = [];
+  let indents = [""];
+  let indent = "";
+  let maps = [new Map()];
   for(const line of lines) {
     lexer.reset(line + "\n");
     
@@ -33,23 +39,45 @@ export function parseProperties(lines: string[]) {
     while(lexeme = lexer.next()) {
         switch(lexeme.type) {
           case "TEXT":
-            accumulator.push(lexeme.value);
+            lineAcc.push(lexeme.value);
             break;
           case "COLON":
-            if (accumulator.length == 1) {
-              if (propName) {
-                map.set(propName, previousAccumulator.join(" "));
-                previousAccumulator.length = 0;
+            if (lineAcc.length == 1) {
+              // Check the indent, if it's greater than previous 
+              // then this is a child property
+              if (indent.length > peek(indents).length) {
+                indents.push(indent);
+                let newMap = new Map();
+                peek(maps).set(propName, newMap);
+                maps.push(newMap);
+
+              } else if (indent === peek(indents)) {
+                // If same then sibling
+                // don't need to do anything
+                if (propName) {
+                  peek(maps).set(propName, acc.join(" "));
+                  acc.length = 0;
+                }
+              } else {
+                // pop the indent need to find match
+
               }
-              propName = accumulator[0];
-              accumulator.length = 0;
+              
+              propName = lineAcc[0];
+              lineAcc.length = 0;
             } else {
-              accumulator.push(lexeme.value);
+              lineAcc.push(lexeme.value);
             }
             break;
           case "NL":
-            previousAccumulator.push(...accumulator);
-            accumulator = [];
+            acc.push(...lineAcc);
+            indent = "";
+            lineAcc = [];
+            break;
+          case "WS":
+            if (!indent && lineAcc.length == 0) {
+              indent = lexeme.value;
+            }
             break;
           default:
             break;
@@ -57,10 +85,10 @@ export function parseProperties(lines: string[]) {
     }
   }
   if (propName) {
-    previousAccumulator.push(...accumulator);
-    map.set(propName, previousAccumulator.join(" "));
+    acc.push(...lineAcc);
+    peek(maps).set(propName, acc.join(" "));
   }
   
 
-  return map;
+  return maps[0];
 }
