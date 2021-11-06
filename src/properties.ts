@@ -45,6 +45,8 @@ export function parseProperties(lines: string[]) {
             if (lineAcc.length == 1) {
               // Check the indent, if it's greater than previous 
               // then this is a child property
+              // TODO check that all other indents are 
+              //      prefixes of this indent
               if (indent.length > peek(indents).length) {
                 indents.push(indent);
                 let newMap = new Map();
@@ -60,7 +62,9 @@ export function parseProperties(lines: string[]) {
                 }
               } else {
                 // pop the indent need to find match
-
+                peek(maps).set(propName, acc.join(" "));
+                acc.length = 0;
+                maps.pop();
               }
               
               propName = lineAcc[0];
