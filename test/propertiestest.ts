@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {parseProperties} from "../src/properties";
 
 test("Test empty string", () => { 
@@ -141,7 +140,7 @@ test("Test dedent", () => {
 });
 
 
-function objToMap(obj) {
+function objToMap(obj : object) {
   let map = new Map();
   if(obj) {
     for(const [key,value] of Object.entries(obj)) {
