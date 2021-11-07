@@ -61,10 +61,18 @@ export function parseProperties(lines: string[]) {
                   acc.length = 0;
                 }
               } else {
-                // pop the indent need to find match
+                // set the prop
                 peek(maps).set(propName, acc.join(" "));
                 acc.length = 0;
-                maps.pop();
+
+                // pop the indent need to find match
+                while(indents.pop()) {
+                  maps.pop();
+                  if(indent === peek(indents)) {
+                    break;
+                  }
+                }
+                //maps.pop();
               }
               
               propName = lineAcc[0];

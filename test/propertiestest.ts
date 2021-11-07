@@ -139,6 +139,29 @@ test("Test dedent", () => {
                  }));
 });
 
+test("Double dedent", () => {
+    expect(parseProperties(["myobj1:",
+                            "  prop0: value0",
+                            "  myobj2:",
+                            "    prop1: value1",
+                            "    myobj3:",
+                            "      prop3: value3",
+                            "  prop2: value2"]))
+        .toStrictEqual(objToMap(
+                 {
+                   "myobj1" : {
+                     "prop0" : "value0",
+                     "myobj2" : { 
+                       "prop1" : "value1",
+                       "myobj3" : {
+                         "prop3" : "value3"
+                       }
+                     },
+                     "prop2": "value2" 
+                   }
+                 }));
+
+});
 
 function objToMap(obj : object) {
   let map = new Map();
