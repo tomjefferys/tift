@@ -44,7 +44,7 @@ export class IndentError extends ParseError {
   }
 }
 
-class Parser {
+export class Parser {
   readonly lexer = moo.compile(LEXEMES);
   readonly handlers : HandlerDict = {
        "TEXT":  (token: moo.Token) => this.text(token),

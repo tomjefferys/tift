@@ -160,8 +160,8 @@ test("Double dedent", () => {
                      "prop2": "value2" 
                    }
                  }));
-
 });
+
 
 function objToMap(obj : object) {
   let map = new Map();
