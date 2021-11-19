@@ -1,5 +1,10 @@
 import * as readline from "readline"
-import {Parser} from "./properties";
+import {
+  Parser,
+  ResultType,
+  ParseError,
+  PropertyMap,
+  propMapToObj } from "./properties";
 
 let rl = readline.createInterface({
   input: process.stdin,
@@ -13,7 +18,14 @@ rl.on('line', (input) => {
     parser.nextLine(input);
   } else {
     parser.finish();
-    console.log("result: " + JSON.stringify(parser.getResult(), replacer));
+    let result = parser.getResult();
+
+    if (result instanceof ParseError) { 
+      console.log("Error: " + result.message + " on line " + result.linenum);
+    } else if (result instanceof Map) {
+      console.log("result: " +
+                    JSON.stringify(propMapToObj(result), replacer, 2));
+    }
     parser = new Parser();
   }
 });

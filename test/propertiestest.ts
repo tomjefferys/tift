@@ -1,38 +1,38 @@
 import {parseProperties} from "../src/properties";
 
 test("Test empty string", () => { 
-  expect(parseProperties([]).result).toStrictEqual(objToMap({}));
+  expect(parseProperties([])).toStrictEqual(objToMap({}));
 }) 
 
 test("Test simple string property parsing", () => {
 
-  expect(parseProperties(["key:value"]).result)
+  expect(parseProperties(["key:value"]))
     .toStrictEqual(objToMap({"key":"value"}));
 
-  expect(parseProperties(["key: value"]).result)
+  expect(parseProperties(["key: value"]))
     .toStrictEqual(objToMap({"key":"value"}));
 
-  expect(parseProperties(["key:  value"]).result)
+  expect(parseProperties(["key:  value"]))
       .toStrictEqual(objToMap({"key":"value"}));
 
-  expect(parseProperties(["key :value"]).result)
+  expect(parseProperties(["key :value"]))
       .toStrictEqual(objToMap({"key":"value"}));
 
-  expect(parseProperties(["key  :value"]).result)
+  expect(parseProperties(["key  :value"]))
       .toStrictEqual(objToMap({"key":"value"}));
     
-  expect(parseProperties(["key  :value"]).result)
+  expect(parseProperties(["key  :value"]))
       .toStrictEqual(objToMap({"key":"value"}));
 
-  expect(parseProperties(["key : value"]).result)
+  expect(parseProperties(["key : value"]))
       .toStrictEqual(objToMap({"key":"value"}));
 
-  expect(parseProperties(["key  :  value"]).result)
+  expect(parseProperties(["key  :  value"]))
       .toStrictEqual(objToMap({"key":"value"}));
 });
 
 test("Test multiword string property", () => {
-  expect(parseProperties(["key : one two three"]).result)
+  expect(parseProperties(["key : one two three"]))
     .toStrictEqual(objToMap({"key": "one two three"}));
 });
 
@@ -43,7 +43,7 @@ test("Test multiple properties", () => {
                           "prop4 :value4",
                           "prop5  :value5",
                           "prop6 : value6",
-                          "prop7  :  value7"]).result)
+                          "prop7  :  value7"]))
     .toStrictEqual(objToMap(
                     {
                       "prop1":"value1",
@@ -63,7 +63,7 @@ test("Test multi line string property", () => {
                           "      value3",
                           "      value4",
                           "prop3: value5",
-                          "      value6"]).result)
+                          "      value6"]))
     .toStrictEqual(objToMap(
                     {
                       "prop1":"value1",
@@ -76,7 +76,7 @@ test("Test multi line string property", () => {
 test("Test simple object property", () => {
   expect(parseProperties(["myobj:",
                           "  prop1: value1", 
-                          "  prop2: value2"]).result)
+                          "  prop2: value2"]))
     .toStrictEqual(objToMap(
                     {
                       "myobj": {
@@ -90,7 +90,7 @@ test("Simple doubly nested objects", () => {
   expect(parseProperties(["myobj1:",
                           "  myobj2:",
                           "    prop1: value1",
-                          "    prop2: value2"]).result)
+                          "    prop2: value2"]))
     .toStrictEqual(objToMap(
                     {
                       "myobj1": {
@@ -108,7 +108,7 @@ test("Simple doubly nested objects with prop", () => {
                             "  prop0: value0",
                             "  myobj2:",
                             "    prop1: value1",
-                            "    prop2: value2"]).result)
+                            "    prop2: value2"]))
       .toStrictEqual(objToMap(
                {
                  "myobj1" : {
@@ -126,7 +126,7 @@ test("Test dedent", () => {
                             "  prop0: value0",
                             "  myobj2:",
                             "    prop1: value1",
-                            "  prop2: value2"]).result)
+                            "  prop2: value2"]))
         .toStrictEqual(objToMap(
                  {
                    "myobj1" : {
@@ -146,7 +146,7 @@ test("Double dedent", () => {
                             "    prop1: value1",
                             "    myobj3:",
                             "      prop3: value3",
-                            "  prop2: value2"]).result)
+                            "  prop2: value2"]))
         .toStrictEqual(objToMap(
                  {
                    "myobj1" : {

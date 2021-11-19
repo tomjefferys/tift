@@ -11,22 +11,12 @@ type HandlerDict = { [key: string]: Function}
 export type PropertyValue = string | number | PropertyMap;
 export type PropertyMap = Map<string,PropertyValue>;
 export type ResultType = PropertyMap | ParseError | undefined;
+type PropertyObject = {[key:string]: PropertyObject|string|number}
 
 export enum ParserStatus {
   RUNNING,
   SUCCESS,
   FAILURE,
-}
-
-export class ParseResult {
-   readonly parserStatus: ParserStatus;
-   readonly result: ResultType;
-
-   constructor(parserStatus: ParserStatus, result: ResultType) {
-     this.parserStatus = parserStatus;
-     this.result = result;
-   }
-
 }
 
 export class ParseError extends Error {
@@ -82,14 +72,14 @@ export class Parser {
     this.parserStatus = ParserStatus.SUCCESS;
   }
 
-  getResult() : ParseResult {
+  getResult() : ResultType {
     switch(this.parserStatus) {
       case ParserStatus.RUNNING:
-        return new ParseResult(ParserStatus.RUNNING, undefined);
+        return undefined;
       case ParserStatus.FAILURE:
-        return new ParseResult(ParserStatus.FAILURE, this.parseError);
+        return this.parseError;
       case ParserStatus.SUCCESS:
-        return new ParseResult(ParserStatus.SUCCESS, this.maps[0]);
+        return this.maps[0];
     }
   }
   
@@ -204,7 +194,16 @@ function peek<Type>(list: Type[]) : Type {
   return list[list.length - 1];
 }
 
-export function parseProperties(lines: string[]) : ParseResult {
+// Convert a property map into an object
+export function propMapToObj(map: PropertyMap) : PropertyObject {
+  let obj : PropertyObject = {};
+  map.forEach((value,key) => {
+    obj[key] = (value instanceof Map) ? propMapToObj(value) : value;
+  });
+  return obj;
+}
+
+export function parseProperties(lines: string[]) : ResultType {
   const parser = new Parser();
   for(const line of lines) {
     parser.nextLine(line);
