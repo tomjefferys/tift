@@ -54,17 +54,35 @@ export class Parser {
   parseError?: ParseError = undefined;
 
   nextLine(line: string) {
+    if (this.parserStatus !== ParserStatus.RUNNING) {
+      return;
+    }
+  
     this.linenum++;
     this.lexer.reset(line + "\n");
     let token = undefined;
-    while(token = this.lexer.next()) {
-      if (token.type) {
-        this.handlers[token.type](token);
+    try {
+      while(token = this.lexer.next()) {
+        if (token.type) {
+          this.handlers[token.type](token);
+        }
+      }
+    } catch (error) {
+        this.parserStatus = ParserStatus.FAILURE;
+      if (error instanceof ParseError) {
+        this.parseError = error;
+      } else if (error instanceof Error) {
+        this.parseError = new ParseError(error.message, this.linenum);
+      } else {
+        this.parseError = new ParseError(String(error), this.linenum);
       }
     }
   }
 
   finish() : void {
+    if (this.parserStatus !== ParserStatus.RUNNING) {
+      return;
+    } 
     if (this.propName) {
       this.acc.push(...this.lineAcc);
       peek(this.maps).set(this.propName, this.acc.join(" "));
