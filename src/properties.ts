@@ -4,6 +4,7 @@ const LEXEMES = {
   WS:    /[ \t]+/,
   COLON: /:/,
   NL:    { match: /\n/, lineBreaks: true },
+  NUMBER: /-?\d*[\.]?\d+/,
   TEXT:  /[^: \t\n\r]+/,
 };
 
@@ -12,6 +13,7 @@ export type PropertyValue = string | number | PropertyMap;
 export type PropertyMap = Map<string,PropertyValue>;
 export type ResultType = PropertyMap | ParseError | undefined;
 type PropertyObject = {[key:string]: PropertyObject|string|number}
+type Accumulator = (string | number)[];
 
 export enum ParserStatus {
   RUNNING,
@@ -37,6 +39,7 @@ export class IndentError extends ParseError {
 export class Parser {
   readonly lexer = moo.compile(LEXEMES);
   readonly handlers : HandlerDict = {
+       "NUMBER":(token: moo.Token) => this.num(token),
        "TEXT":  (token: moo.Token) => this.text(token),
        "COLON": (token: moo.Token) => this.colon(token),
        "NL":    (token: moo.Token) => this.newLine(token),
@@ -45,8 +48,9 @@ export class Parser {
 
   linenum: number = 0;
   propName?: string = undefined;
-  acc: string[] = [];
-  lineAcc: string[] = [];
+  acc: Accumulator = [];
+  lineAcc: Accumulator = [];
+  wordAcc: Accumulator = [];
   indents: string[] = [""];
   indent: string = "";
   maps: PropertyMap[] = [new Map<string,PropertyValue>()];
@@ -84,8 +88,9 @@ export class Parser {
       return;
     } 
     if (this.propName) {
+      this.pushWordAcc();
       this.acc.push(...this.lineAcc);
-      peek(this.maps).set(this.propName, this.acc.join(" "));
+      this.setProperty();
     }
     this.parserStatus = ParserStatus.SUCCESS;
   }
@@ -102,12 +107,17 @@ export class Parser {
   }
   
   private text(token: moo.Token) {
-    this.lineAcc.push(token.value);
+    this.wordAcc.push(token.value);
+  }
+
+  private num(token: moo.Token) {
+    this.wordAcc.push(Number(token.value));
   }
 
   // handle a colon, this may mean a new 
   // property definition
   private colon(token: moo.Token) {
+    this.pushWordAcc();
     if (this.lineAcc.length == 1) {
       // Check the indent, if it's greater than previous 
       // then this is a child property
@@ -115,7 +125,7 @@ export class Parser {
       if (indent === 1) {
         let newMap = new Map();
         if (!this.propName) {
-          throw new ParseError("No object defined", this.linenum);
+          this.throwParseError("No object defined");
         }
         peek(this.maps).set(this.propName, newMap);
         this.maps.push(newMap);
@@ -131,8 +141,14 @@ export class Parser {
       } else {
         throw new Error("Unknown indent type found: " + indent);
       } 
+
+      const propName = this.lineAcc[0];
       
-      this.propName = this.lineAcc[0];
+      if (typeof propName === "string") {
+        this.propName = propName;
+      } else {
+        this.throwParseError(this.lineAcc + " is not a valid property name");
+      }      
       this.lineAcc.length = 0;
     } else {
       this.lineAcc.push(token.value);
@@ -142,6 +158,7 @@ export class Parser {
   // handle a newLine
   // Resets the line accumultor and indent
   private newLine(token: moo.Token) {
+    this.pushWordAcc();
     this.acc.push(...this.lineAcc);
     this.indent = "";
     this.lineAcc = [];
@@ -150,9 +167,22 @@ export class Parser {
   // handle whitespace
   // If it's the first on a line record it as an indent
   private whitespace(token: moo.Token) {
+    this.pushWordAcc();
     if (!this.indent && this.lineAcc.length == 0) {
       this.indent = token.value;
     }
+  }
+
+  // Push the contents of the word add into the line acc, combining
+  // if necessary
+  private pushWordAcc() {
+    let len = this.wordAcc.length;
+    if (len == 1) {
+      this.lineAcc.push(this.wordAcc[0]);
+    } else if (len > 1) {
+      this.lineAcc.push(this.wordAcc.join(""));
+    }
+    this.wordAcc.length = 0;
   }
 
   // Returns the type of indent, and verifies that the indent is 
@@ -163,9 +193,8 @@ export class Parser {
     let indentType : number;
     if (this.indent.length > lastIndent.length) {
       if (!this.indent.startsWith(lastIndent)) {
-        throw new IndentError("Inconsistent indenting (mixing tabs/spaces?)",
-                              this.linenum);
-      }       
+        this.throwIndentError("Inconsistent indenting (mixing tabs/spaces?)");
+      }      
       this.indents.push(this.indent);
       indentType = 1;
 
@@ -178,7 +207,7 @@ export class Parser {
       while(this.indents.pop()) {
         const prevIndent = peek(this.indents);
         if (this.indent.length > prevIndent.length) {
-          throw new IndentError("Inconsistent indenting", this.linenum);
+          this.throwIndentError("Inconsistent indenting");
         }
         dedentCount++;
         if(this.indent === prevIndent) {
@@ -194,8 +223,23 @@ export class Parser {
   // Set the currently parsing property with the value of the
   // accumulator
   private setProperty() : void {
-      peek(this.maps).set(this.propName!, this.acc.join(" "));
+      let value : number | string
+      if (this.acc.length == 1 && typeof this.acc[0] === "number") {
+        value = this.acc[0];
+      } else {
+        value = this.acc.join(" ");
+      }
+      peek(this.maps).set(this.propName!, value);
       this.acc.length = 0;
+  }
+
+  // Throw a new parse error
+  private throwParseError(message: string) : never {
+    throw new ParseError(message, this.linenum);
+  }
+
+  private throwIndentError(message: string) : never {
+    throw new IndentError(message, this.linenum);
   }
 
 }

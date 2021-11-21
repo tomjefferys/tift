@@ -162,6 +162,30 @@ test("Double dedent", () => {
                  }));
 });
 
+test("Simple number props", () => {
+    expect(parseProperties([
+      "prop1: 1234",
+      "prop2: hello",
+      "prop3: 5.67",
+      "prop4: 34ab",
+      "prop5: -43",
+      "prop6: -.43",
+      "prop7: .314",
+      "prop8: 123 456"]))
+     .toStrictEqual(objToMap({
+          "prop1": 1234,
+          "prop2": "hello",
+          "prop3": 5.67,
+          "prop4": "34ab",
+          "prop5": -43,
+          "prop6": -.43,
+          "prop7": .314,
+          "prop8": "123 456"}));
+
+
+
+});
+
 
 function objToMap(obj : object) {
   let map = new Map();
