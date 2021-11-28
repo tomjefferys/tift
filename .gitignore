@@ -1,4 +1,6 @@
 *.js
 *.swp
+*.swo
+*.swn
 !jest.config.js
 

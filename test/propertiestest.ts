@@ -181,9 +181,41 @@ test("Simple number props", () => {
           "prop6": -.43,
           "prop7": .314,
           "prop8": "123 456"}));
+});
 
+test("Top level description", () => {
+    expect(parseProperties([
+      "This is a top level description",
+      "it goes over several",
+      "lines",
+      "prop: There's also a property"]))
+     .toStrictEqual(objToMap({
+          "desc": "This is a top level description it goes over several lines",
+          "prop": "There's also a property"}));
+});
 
+test("Test desciption after property", () => {
+    expect(parseProperties([
+      "short: This is a short description",
+      "A longer multiline description",
+      "follows..."]))
+     .toStrictEqual(objToMap({
+        "short": "This is a short description",
+        "desc": "A longer multiline description follows..."}));
+});
 
+test("Test multiline property with description", () => {
+    expect(parseProperties([
+      "This is the start of the description",
+      "prop: This is a ",
+      "      multiline",
+      "      property",
+      "  ...this is the continuation of",
+      " the description"]))
+     .toStrictEqual(objToMap({
+       "prop": "This is a multiline property",
+       "desc": "This is the start of the description " + 
+                 "...this is the continuation of the description"}));
 });
 
 

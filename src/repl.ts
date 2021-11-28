@@ -21,7 +21,7 @@ rl.on('line', (input) => {
     let result = parser.getResult();
 
     if (result instanceof ParseError) { 
-      console.log("Error: " + result.message + " on line " + result.linenum);
+      console.log("Error: " + result.message + " on line " + result.lineNum);
     } else if (result instanceof Map) {
       console.log("result: " +
                     JSON.stringify(propMapToObj(result), replacer, 2));

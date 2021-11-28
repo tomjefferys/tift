@@ -22,17 +22,30 @@ export enum ParserStatus {
 }
 
 export class ParseError extends Error {
-  readonly linenum: number;
+  readonly lineNum: number;
 
-  constructor(message: string, linenum: number) {
+  constructor(message: string, lineNum: number) {
     super(message);
-    this.linenum = linenum;
+    this.lineNum = lineNum;
   }
 }
 
 export class IndentError extends ParseError {
-  constructor(message: string, linenum: number) {
-    super(message, linenum);
+  constructor(message: string, lineNum: number) {
+    super(message, lineNum);
+  }
+}
+
+// Class holding proprty details when parsing
+class Property {
+  name: string;
+  line: number;
+  col: number;
+ 
+  constructor(name: string, line: number, col: number) {
+    this.name = name;
+    this.line = line;
+    this.col = col;
   }
 }
 
@@ -46,8 +59,9 @@ export class Parser {
        "WS":    (token: moo.Token) => this.whitespace(token),
   };
 
-  linenum: number = 0;
-  propName?: string = undefined;
+  lineNum: number = 0;
+  property?: Property = undefined;
+  //propName?: string = undefined;
   acc: Accumulator = [];
   lineAcc: Accumulator = [];
   wordAcc: Accumulator = [];
@@ -62,7 +76,7 @@ export class Parser {
       return;
     }
   
-    this.linenum++;
+    this.lineNum++;
     this.lexer.reset(line + "\n");
     let token = undefined;
     try {
@@ -76,9 +90,9 @@ export class Parser {
       if (error instanceof ParseError) {
         this.parseError = error;
       } else if (error instanceof Error) {
-        this.parseError = new ParseError(error.message, this.linenum);
+        this.parseError = new ParseError(error.message, this.lineNum);
       } else {
-        this.parseError = new ParseError(String(error), this.linenum);
+        this.parseError = new ParseError(String(error), this.lineNum);
       }
     }
   }
@@ -87,7 +101,7 @@ export class Parser {
     if (this.parserStatus !== ParserStatus.RUNNING) {
       return;
     } 
-    if (this.propName) {
+    if (this.property) {
       this.pushWordAcc();
       this.acc.push(...this.lineAcc);
       this.setProperty();
@@ -124,13 +138,13 @@ export class Parser {
       const indent = this.verifyIndent();
       if (indent === 1) {
         let newMap = new Map();
-        if (!this.propName) {
+        if (!this.property) {
           this.throwParseError("No object defined");
         }
-        peek(this.maps).set(this.propName, newMap);
+        peek(this.maps).set(this.property.name, newMap);
         this.maps.push(newMap);
       } else if (indent === 0) {
-        if (this.propName) {
+        if (this.property) {
           this.setProperty();
         }
       } else if (indent < 0) {
@@ -142,16 +156,17 @@ export class Parser {
         throw new Error("Unknown indent type found: " + indent);
       } 
 
+      // Create the new property
       const propName = this.lineAcc[0];
       
       if (typeof propName === "string") {
-        this.propName = propName;
+        this.property = new Property(propName, this.lineNum, token.col);
       } else {
         this.throwParseError(this.lineAcc + " is not a valid property name");
       }      
       this.lineAcc.length = 0;
     } else {
-      this.lineAcc.push(token.value);
+      this.wordAcc.push(token.value);
     }
   }
 
@@ -159,9 +174,16 @@ export class Parser {
   // Resets the line accumultor and indent
   private newLine(token: moo.Token) {
     this.pushWordAcc();
-    this.acc.push(...this.lineAcc);
+    if (!this.property || 
+           ( this.property.line < this.lineNum &&
+             this.property.col > this.indent.length)) {
+      // It's a free text line, add it to the description
+      this.appendLineToDescription();
+    } else {
+      this.acc.push(...this.lineAcc);
+      this.lineAcc.length = 0;
+    }
     this.indent = "";
-    this.lineAcc = [];
   }
 
   // handle whitespace
@@ -229,17 +251,28 @@ export class Parser {
       } else {
         value = this.acc.join(" ");
       }
-      peek(this.maps).set(this.propName!, value);
+      if (this.property) {
+        peek(this.maps).set(this.property.name, value);
+      } else {
+        this.throwParseError("No property found");
+      }
       this.acc.length = 0;
+  }
+
+  private appendLineToDescription() : void {
+    const desc = peek(this.maps).get("desc");
+    const value = (desc? desc + " " : "") + this.lineAcc.join(" ");
+    peek(this.maps).set("desc", value);
+    this.lineAcc.length = 0;
   }
 
   // Throw a new parse error
   private throwParseError(message: string) : never {
-    throw new ParseError(message, this.linenum);
+    throw new ParseError(message, this.lineNum);
   }
 
   private throwIndentError(message: string) : never {
-    throw new IndentError(message, this.linenum);
+    throw new IndentError(message, this.lineNum);
   }
 
 }
