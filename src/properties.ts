@@ -137,10 +137,15 @@ export class Parser {
       // then this is a child property
       const indent = this.verifyIndent();
       if (indent === 1) {
-        let newMap = new Map();
         if (!this.property) {
           this.throwParseError("No object defined");
         }
+        if (this.property && this.acc.length) {
+          this.throwParseError("Property " 
+                                + this.property.name
+                                + " already has a value");
+        }
+        let newMap = new Map();
         peek(this.maps).set(this.property.name, newMap);
         this.maps.push(newMap);
       } else if (indent === 0) {

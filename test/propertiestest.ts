@@ -1,4 +1,4 @@
-import {parseProperties} from "../src/properties";
+import {parseProperties, ParseError, IndentError} from "../src/properties";
 
 test("Test empty string", () => { 
   expect(parseProperties([])).toStrictEqual(objToMap({}));
@@ -217,6 +217,48 @@ test("Test multiline property with description", () => {
        "desc": "This is the start of the description " + 
                  "...this is the continuation of the description"}));
 });
+
+test("Test bad indentation", () => {
+  const result = parseProperties([
+    "prop1:",
+    "    prop2: prop2Value",
+    "  prop3: prop3Value"]);
+  assertIndentError(result);
+  expect(result.lineNum).toBe(3);
+});
+
+test("Test mixng tabs and spaces", () => {
+  const result = parseProperties([
+    "prop1:",
+    "  prop2: value2",
+    "\t prop3: value3"]);
+  assertIndentError(result);
+  expect(result.lineNum).toBe(3);
+});
+
+test("No object yet defined", () => {
+  const result = parseProperties([
+    "  prop1: value1"]);
+  assertParseError(result);
+  expect(result.lineNum).toBe(1);
+});
+
+test("Mixing string prop with object properties", () => {
+  const result = parseProperties([
+    "prop1: string value",
+    "  prop2: and obj prop"]);
+  assertParseError(result);
+  expect(result.lineNum).toBe(2);
+
+});
+
+function assertIndentError(value: any) : asserts value is IndentError {
+  expect(value).toBeInstanceOf(IndentError);
+}
+
+function assertParseError(value: any) : asserts value is ParseError {
+  expect(value).toBeInstanceOf(ParseError);
+}
 
 
 function objToMap(obj : object) {
