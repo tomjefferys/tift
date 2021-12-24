@@ -194,7 +194,7 @@ test("Top level description", () => {
           "prop": "There's also a property"}));
 });
 
-test("Test desciption after property", () => {
+test("Test description after property", () => {
     expect(parseProperties([
       "short: This is a short description",
       "A longer multiline description",
@@ -250,6 +250,37 @@ test("Mixing string prop with object properties", () => {
   assertParseError(result);
   expect(result.lineNum).toBe(2);
 
+});
+
+test("Add description to sub property", () => {
+  expect(parseProperties([
+    "prop1:",
+    "    prop2: value2",
+    "  this is prop1s description",
+    "    prop3: value3"]))
+   .toStrictEqual(objToMap({
+     "prop1": {
+        "prop2": "value2",
+        "prop3": "value3",
+        "desc":  "this is prop1s description"}}));
+});
+
+test("Top level and sub level descriptions", () => {
+  expect(parseProperties([
+    "Top desc1",
+    "prop1:",
+    "  prop1 desc1",
+    "    prop2: value2",
+    "  prop1 desc2",
+    "    prop3: value3",
+    "Top desc2"]))
+    .toStrictEqual(objToMap({
+      "desc": "Top desc1 Top desc2",
+      "prop1": {
+         "desc": "prop2 desc1 prop1 desc2",
+         "prop2": "value2",
+         "prop3": "value3",        
+      }}));
 });
 
 function assertIndentError(value: any) : asserts value is IndentError {

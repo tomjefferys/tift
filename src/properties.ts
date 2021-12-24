@@ -1,4 +1,7 @@
 import * as moo from 'moo';
+import log from 'loglevel';
+
+log.setLevel("DEBUG");
 
 const LEXEMES = {
   WS:    /[ \t]+/,
@@ -49,6 +52,122 @@ class Property {
   }
 }
 
+// Intermediate data type used when parsing the data
+class PropNode {
+  readonly name: string;
+  readonly line: number;
+  readonly col: number;
+  readonly valueCol: number;
+  readonly parent? : PropNode;
+
+  value?: number | string;
+  desc?: string;
+  children: PropNode[];
+  
+  constructor(name: string,
+              line: number,
+              col: number,
+              valueCol: number,  // The location of the colon
+              parent?: PropNode) {
+    this.name = name;
+    this.line = line;
+    this.col = col;
+    this.valueCol = valueCol;
+    this.parent = parent;
+    this.children = [];
+  }
+
+  static makeRoot() : PropNode {
+    return new PropNode("", 0, -1, -1, undefined);
+  }
+  
+  isRoot() : boolean {
+    return !this.parent;
+  }
+ 
+  createChild(name: string, line: number, col: number, valueCol: number) : PropNode {
+    log.debug("NodeProp: ", this.name, " adding child ", name);
+    if (line <= this.line) {
+      throw new ParseError(
+           "Child properties must be on a later line to their parent",
+           line);
+    }
+    if (col <= this.col) {
+      throw new ParseError(
+           "Child properties must have greater indentation than their parent",
+           line); 
+    }
+    if (valueCol <= col) {
+      throw new ParseError(
+           "The value (colon) column must be after the indent column",
+           line);
+    }
+    const child = new PropNode(name, line, col, valueCol, this);
+    this.children.push(child);
+    return child;
+  }
+
+  createSibling(name: string, line: number, col: number, valueCol: number) : PropNode {
+    if (!this.parent) {
+      throw new ParseError(
+           "The root node cannot have siblings", line);
+    }
+    return this.parent.createChild(name, line, col, valueCol);
+  }
+
+  getAncestor(count : number) : PropNode {
+    log.debug("PropNode: ", this.name, " getAncestor ", count);
+    if (count == 0) {
+      return this;
+    } else if (this.parent) {
+      return this.parent.getAncestor(count - 1);
+    } else {
+      throw new Error("Can't get ancestor of the root node");
+    }
+  }
+ 
+  getRoot() : PropNode {
+    return this.parent? this.parent.getRoot() : this;
+  }
+
+  toPropertyMap() : PropertyMap {
+    const value = this.toPropertyValue();
+    if (!(value instanceof Map)) {
+      throw new Error("Property value is not of type Map");
+    }
+    return value;
+  }
+
+  private toPropertyValue() : PropertyValue {
+    //if (this.isValueType()) {
+    //  throw new Error("Can't create map out of single value property node");
+    //}
+    if (!this.children.length && !this.desc && this.value) {
+      return this.value;
+    } 
+
+    // Don't allow non empty non root definitions
+    if (!(this.children.length || this.desc || this.value) && this.parent) {
+      throw new Error("Property: [" +  this.name + "] is not defined");
+    }
+
+    const map = new Map<string,PropertyValue>();
+    for(let prop of this.children) {
+      //map.set(prop.name, (prop.isValueType())? prop.value : prop.toPropertyMap());
+      map.set(prop.name, prop.toPropertyValue());
+    }
+    // FIXME use symbols?
+    if (this.desc) {
+      map.set("desc", this.desc);
+    }
+    if (this.value) {
+      map.set("value", this.value);  
+    }
+    return map;
+  }
+
+}
+
 export class Parser {
   readonly lexer = moo.compile(LEXEMES);
   readonly handlers : HandlerDict = {
@@ -58,6 +177,8 @@ export class Parser {
        "NL":    (token: moo.Token) => this.newLine(token),
        "WS":    (token: moo.Token) => this.whitespace(token),
   };
+
+  node: PropNode = PropNode.makeRoot();
 
   lineNum: number = 0;
   property?: Property = undefined;
@@ -116,7 +237,8 @@ export class Parser {
       case ParserStatus.FAILURE:
         return this.parseError;
       case ParserStatus.SUCCESS:
-        return this.maps[0];
+        return this.node.getRoot().toPropertyMap();
+        //return this.maps[0];
     }
   }
   
@@ -133,6 +255,18 @@ export class Parser {
   private colon(token: moo.Token) {
     this.pushWordAcc();
     if (this.lineAcc.length == 1) {
+      // TODO treat all properties as object type
+      //      each can have a value field containing the value
+      //      in the case of string or number properties
+      //      this could be an intermediate datastructure
+
+      let propName : string;
+      if (typeof this.lineAcc[0] === "string") {
+        propName = this.lineAcc[0];
+      } else {
+        this.throwParseError(this.lineAcc + " is not a valid property name");
+      }
+
       // Check the indent, if it's greater than previous 
       // then this is a child property
       const indent = this.verifyIndent();
@@ -141,19 +275,44 @@ export class Parser {
           this.throwParseError("No object defined");
         }
         if (this.property && this.acc.length) {
+          console.log(this.acc);
           this.throwParseError("Property " 
                                 + this.property.name
                                 + " already has a value");
         }
+        const child = this.node.createChild(
+                        propName, this.lineNum, this.indent.length, token.col);
+        this.node = child;
+
         let newMap = new Map();
         peek(this.maps).set(this.property.name, newMap);
         this.maps.push(newMap);
       } else if (indent === 0) {
+        
         if (this.property) {
           this.setProperty();
         }
+        // FIXME the first property at root will have indent type of 0
+        const newNode = (this.node.parent)
+                           ? this.node.createSibling(
+                                propName, this.lineNum, this.indent.length, token.col)
+                           : this.node.createChild(
+                                propName, this.lineNum, this.indent.length, token.col);
+   
+        this.node = newNode;
+        
+
+        
+        //if (this.property) {
+        //  this.setProperty();
+        //}
       } else if (indent < 0) {
         this.setProperty();
+        const ancestor = this.node.getAncestor(-indent + 1);
+        const child = ancestor.createChild(
+                          propName, this.lineNum, this.indent.length, token.col);
+        this.node = child;
+       
         for(var i=0; i> indent; i--) {
           this.maps.pop();
         }
@@ -162,13 +321,8 @@ export class Parser {
       } 
 
       // Create the new property
-      const propName = this.lineAcc[0];
       
-      if (typeof propName === "string") {
-        this.property = new Property(propName, this.lineNum, token.col);
-      } else {
-        this.throwParseError(this.lineAcc + " is not a valid property name");
-      }      
+      this.property = new Property(propName, this.lineNum, token.col);
       this.lineAcc.length = 0;
     } else {
       this.wordAcc.push(token.value);
@@ -179,15 +333,33 @@ export class Parser {
   // Resets the line accumultor and indent
   private newLine(token: moo.Token) {
     this.pushWordAcc();
-    if (!this.property || 
-           ( this.property.line < this.lineNum &&
-             this.property.col > this.indent.length)) {
-      // It's a free text line, add it to the description
-      this.appendLineToDescription();
+    let parent = this.node.parent;
+    if (!parent) {
+      log.debug("newLine: no parent node");
+      this.appendLineToNodeDescription(this.node);
+    } else if (this.node.line < this.lineNum &&
+                     this.node.valueCol > this.indent.length) {
+      // We're at the top level so this is a description
+      log.debug("newLine: appending decription to parent");
+      this.appendLineToNodeDescription(parent);
     } else {
       this.acc.push(...this.lineAcc);
       this.lineAcc.length = 0;
     }
+    //else if (parent.line < this.lineNum &&
+    //            parent.col < this.indent.length) {
+    //  this.appendLineToNodeDescription(parent);
+    //}
+
+ 
+    //if (!this.property || 
+    //       ( this.property.line < this.lineNum &&
+    //         this.property.col > this.indent.length)) {
+    //  this.appendLineToDescription();
+    //} else {
+    //  this.acc.push(...this.lineAcc);
+    //  this.lineAcc.length = 0;
+    //}
     this.indent = "";
   }
 
@@ -256,12 +428,25 @@ export class Parser {
       } else {
         value = this.acc.join(" ");
       }
+
+      log.debug("Setting node value: ", this.node.name, "= ", value);
+      // FIXME what if acc.length == 0
+      this.node.value = value;
+
       if (this.property) {
         peek(this.maps).set(this.property.name, value);
       } else {
         this.throwParseError("No property found");
       }
       this.acc.length = 0;
+  }
+
+  private appendLineToNodeDescription(node: PropNode) : void {
+    const desc = node.desc;
+    const value = (desc? desc + " " : "") + this.lineAcc.join(" ");
+    log.debug("Setting node: ", node.name, " description: ", value); 
+    /*this.*/node.desc = value;
+    this.lineAcc.length = 0; //TODO uncomment 
   }
 
   private appendLineToDescription() : void {
