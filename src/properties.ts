@@ -39,25 +39,10 @@ export class IndentError extends ParseError {
   }
 }
 
-// Class holding proprty details when parsing
-class Property {
-  name: string;
-  line: number;
-  col: number;
- 
-  constructor(name: string, line: number, col: number) {
-    this.name = name;
-    this.line = line;
-    this.col = col;
-  }
-}
-
 // Intermediate data type used when parsing the data
 class PropNode {
   readonly name: string;
   readonly line: number;
-  readonly col: number;
-  readonly valueCol: number;
   readonly parent? : PropNode;
 
   value?: number | string;
@@ -66,53 +51,39 @@ class PropNode {
   
   constructor(name: string,
               line: number,
-              col: number,
-              valueCol: number,  // The location of the colon
               parent?: PropNode) {
     this.name = name;
     this.line = line;
-    this.col = col;
-    this.valueCol = valueCol;
     this.parent = parent;
     this.children = [];
   }
 
   static makeRoot() : PropNode {
-    return new PropNode("", 0, -1, -1, undefined);
+    return new PropNode("", 0, undefined);
   }
   
   isRoot() : boolean {
     return !this.parent;
   }
  
-  createChild(name: string, line: number, col: number, valueCol: number) : PropNode {
+  createChild(name: string, line: number) : PropNode {
     log.debug("NodeProp: ", this.name, " adding child ", name);
     if (line <= this.line) {
       throw new ParseError(
            "Child properties must be on a later line to their parent",
            line);
     }
-    if (col <= this.col) {
-      throw new ParseError(
-           "Child properties must have greater indentation than their parent",
-           line); 
-    }
-    if (valueCol <= col) {
-      throw new ParseError(
-           "The value (colon) column must be after the indent column",
-           line);
-    }
-    const child = new PropNode(name, line, col, valueCol, this);
+    const child = new PropNode(name, line, this);
     this.children.push(child);
     return child;
   }
 
-  createSibling(name: string, line: number, col: number, valueCol: number) : PropNode {
+  createSibling(name: string, line: number) : PropNode {
     if (!this.parent) {
       throw new ParseError(
            "The root node cannot have siblings", line);
     }
-    return this.parent.createChild(name, line, col, valueCol);
+    return this.parent.createChild(name, line);
   }
 
   getAncestor(count : number) : PropNode {
@@ -258,25 +229,21 @@ export class Parser {
       const indent = this.verifyIndent();
       if (indent === 1) {
         this.setProperty();
-        const child = this.node.createChild(
-                        propName, this.lineNum, this.indent.length, token.col);
+        const child = this.node.createChild(propName, this.lineNum);
         this.node = child;
 
       } else if (indent === 0) {
         
         this.setProperty();
         const newNode = (this.node.parent)
-                           ? this.node.createSibling(
-                                propName, this.lineNum, this.indent.length, token.col)
-                           : this.node.createChild(
-                                propName, this.lineNum, this.indent.length, token.col);
+                           ? this.node.createSibling(propName, this.lineNum)
+                           : this.node.createChild(propName, this.lineNum);
    
         this.node = newNode;
       } else if (indent < 0) {
         this.setProperty();
         const ancestor = this.node.getAncestor(-indent + 1);
-        const child = ancestor.createChild(
-                          propName, this.lineNum, this.indent.length, token.col);
+        const child = ancestor.createChild(propName, this.lineNum);
         this.node = child;
       } else {
         throw new Error("Unknown indent type found: " + indent);
