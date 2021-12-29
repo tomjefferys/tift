@@ -236,22 +236,6 @@ test("Test mixng tabs and spaces", () => {
   expect(result.lineNum).toBe(3);
 });
 
-test("No object yet defined", () => {
-  const result = parseProperties([
-    "  prop1: value1"]);
-  assertParseError(result);
-  expect(result.lineNum).toBe(1);
-});
-
-//test("Mixing string prop with object properties", () => {
-//  const result = parseProperties([
-//    "prop1: string value",
-//    "  prop2: and obj prop"]);
-//  assertParseError(result);
-//  expect(result.lineNum).toBe(2);
-//
-//});
-
 test("Add description to sub property", () => {
   expect(parseProperties([
     "prop1:",

@@ -139,9 +139,6 @@ class PropNode {
   }
 
   private toPropertyValue() : PropertyValue {
-    //if (this.isValueType()) {
-    //  throw new Error("Can't create map out of single value property node");
-    //}
     if (!this.children.length && !this.desc && this.value) {
       return this.value;
     } 
@@ -181,14 +178,11 @@ export class Parser {
   node: PropNode = PropNode.makeRoot();
 
   lineNum: number = 0;
-  property?: Property = undefined;
-  //propName?: string = undefined;
   acc: Accumulator = [];
   lineAcc: Accumulator = [];
   wordAcc: Accumulator = [];
   indents: string[] = [""];
   indent: string = "";
-  maps: PropertyMap[] = [new Map<string,PropertyValue>()];
   parserStatus = ParserStatus.RUNNING;
   parseError?: ParseError = undefined;
 
@@ -222,11 +216,9 @@ export class Parser {
     if (this.parserStatus !== ParserStatus.RUNNING) {
       return;
     } 
-    if (this.property) {
-      this.pushWordAcc();
-      this.acc.push(...this.lineAcc);
-      this.setProperty();
-    }
+    this.pushWordAcc();
+    this.acc.push(...this.lineAcc);
+    this.setProperty();
     this.parserStatus = ParserStatus.SUCCESS;
   }
 
@@ -238,7 +230,6 @@ export class Parser {
         return this.parseError;
       case ParserStatus.SUCCESS:
         return this.node.getRoot().toPropertyMap();
-        //return this.maps[0];
     }
   }
   
@@ -255,11 +246,6 @@ export class Parser {
   private colon(token: moo.Token) {
     this.pushWordAcc();
     if (this.lineAcc.length == 1) {
-      // TODO treat all properties as object type
-      //      each can have a value field containing the value
-      //      in the case of string or number properties
-      //      this could be an intermediate datastructure
-
       let propName : string;
       if (typeof this.lineAcc[0] === "string") {
         propName = this.lineAcc[0];
@@ -271,23 +257,14 @@ export class Parser {
       // then this is a child property
       const indent = this.verifyIndent();
       if (indent === 1) {
-        if (!this.property) {
-          this.throwParseError("No object defined");
-        }
         this.setProperty();
         const child = this.node.createChild(
                         propName, this.lineNum, this.indent.length, token.col);
         this.node = child;
 
-        let newMap = new Map();
-        peek(this.maps).set(this.property.name, newMap);
-        this.maps.push(newMap);
       } else if (indent === 0) {
         
-        if (this.property) {
-          this.setProperty();
-        }
-        // FIXME the first property at root will have indent type of 0
+        this.setProperty();
         const newNode = (this.node.parent)
                            ? this.node.createSibling(
                                 propName, this.lineNum, this.indent.length, token.col)
@@ -295,29 +272,16 @@ export class Parser {
                                 propName, this.lineNum, this.indent.length, token.col);
    
         this.node = newNode;
-        
-
-        
-        //if (this.property) {
-        //  this.setProperty();
-        //}
       } else if (indent < 0) {
         this.setProperty();
         const ancestor = this.node.getAncestor(-indent + 1);
         const child = ancestor.createChild(
                           propName, this.lineNum, this.indent.length, token.col);
         this.node = child;
-       
-        for(var i=0; i> indent; i--) {
-          this.maps.pop();
-        }
       } else {
         throw new Error("Unknown indent type found: " + indent);
       } 
 
-      // Create the new property
-      
-      this.property = new Property(propName, this.lineNum, token.col);
       this.lineAcc.length = 0;
     } else {
       this.wordAcc.push(token.value);
@@ -332,29 +296,10 @@ export class Parser {
     if (!parent) {
       log.debug("newLine: no parent node");
       this.appendLineToNodeDescription(this.node);
-    } /*else if (this.node.line < this.lineNum &&
-                     this.node.valueCol > this.indent.length) {
-      // We're at the top level so this is a description
-      log.debug("newLine: appending decription to parent");
-      this.appendLineToNodeDescription(parent);
-    } */ else {
+    } else {
       this.acc.push(...this.lineAcc);
       this.lineAcc.length = 0;
     }
-    //else if (parent.line < this.lineNum &&
-    //            parent.col < this.indent.length) {
-    //  this.appendLineToNodeDescription(parent);
-    //}
-
- 
-    //if (!this.property || 
-    //       ( this.property.line < this.lineNum &&
-    //         this.property.col > this.indent.length)) {
-    //  this.appendLineToDescription();
-    //} else {
-    //  this.acc.push(...this.lineAcc);
-    //  this.lineAcc.length = 0;
-    //}
     this.indent = "";
   }
 
@@ -427,12 +372,6 @@ export class Parser {
       log.debug("Setting node value: ", this.node.name, "= ", value);
       // FIXME what if acc.length == 0
       this.node.value = value;
-
-      if (this.property) {
-        peek(this.maps).set(this.property.name, value);
-      } else {
-        this.throwParseError("No property found");
-      }
       this.acc.length = 0;
   }
 
@@ -440,14 +379,7 @@ export class Parser {
     const desc = node.desc;
     const value = (desc? desc + " " : "") + this.lineAcc.join(" ");
     log.debug("Setting node: ", node.name, " description: ", value); 
-    /*this.*/node.desc = value;
-    this.lineAcc.length = 0; //TODO uncomment 
-  }
-
-  private appendLineToDescription() : void {
-    const desc = peek(this.maps).get("desc");
-    const value = (desc? desc + " " : "") + this.lineAcc.join(" ");
-    peek(this.maps).set("desc", value);
+    node.desc = value;
     this.lineAcc.length = 0;
   }
 
