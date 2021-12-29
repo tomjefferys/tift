@@ -274,12 +274,7 @@ export class Parser {
         if (!this.property) {
           this.throwParseError("No object defined");
         }
-        if (this.property && this.acc.length) {
-          console.log(this.acc);
-          this.throwParseError("Property " 
-                                + this.property.name
-                                + " already has a value");
-        }
+        this.setProperty();
         const child = this.node.createChild(
                         propName, this.lineNum, this.indent.length, token.col);
         this.node = child;
@@ -337,12 +332,12 @@ export class Parser {
     if (!parent) {
       log.debug("newLine: no parent node");
       this.appendLineToNodeDescription(this.node);
-    } else if (this.node.line < this.lineNum &&
+    } /*else if (this.node.line < this.lineNum &&
                      this.node.valueCol > this.indent.length) {
       // We're at the top level so this is a description
       log.debug("newLine: appending decription to parent");
       this.appendLineToNodeDescription(parent);
-    } else {
+    } */ else {
       this.acc.push(...this.lineAcc);
       this.lineAcc.length = 0;
     }
