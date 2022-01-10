@@ -4,18 +4,27 @@ import log from 'loglevel';
 log.setLevel("DEBUG");
 
 const LEXEMES = {
-  WS:    /[ \t]+/,
-  COLON: /:/,
-  NL:    { match: /\n/, lineBreaks: true },
-  NUMBER: /-?\d*[\.]?\d+/,
-  TEXT:  /[^: \t\n\r]+/,
+  WS:            /[ \t]+/,
+  BRACKET_OPEN:  /\[/,
+  BRACKET_CLOSE: /\]/,
+  COLON:         /:/,
+  NL:            { match: /\n/, lineBreaks: true },
+  NUMBER:        /-?\d*[\.]?\d+/,
+  TEXT:          /[^: \t\n\r]+/,
 };
 
 type HandlerDict = { [key: string]: Function}
-export type PropertyValue = string | number | PropertyMap;
+export type PropertyValue = string | number | PropertyMap | PropertyArray;
+export type PropertyArray = PropertyValue[]
 export type PropertyMap = Map<string,PropertyValue>;
 export type ResultType = PropertyMap | ParseError | undefined;
-type PropertyObject = {[key:string]: PropertyObject|string|number}
+
+// FIXME consider just using objects the whole time, so we can have a 
+// single set of types
+type PropertyObjectValue = PropertyObjectArray|PropertyObject|string|number;
+type PropertyObjectArray = PropertyObjectValue[];
+type PropertyObject = {[key:string]: PropertyObjectValue};
+
 type Accumulator = (string | number)[];
 
 export enum ParserStatus {
@@ -136,6 +145,11 @@ class PropNode {
 
 }
 
+enum ParserState {
+  PROPS,
+  ARRAY
+}
+
 export class Parser {
   readonly lexer = moo.compile(LEXEMES);
   readonly handlers : HandlerDict = {
@@ -144,6 +158,7 @@ export class Parser {
        "COLON": (token: moo.Token) => this.colon(token),
        "NL":    (token: moo.Token) => this.newLine(token),
        "WS":    (token: moo.Token) => this.whitespace(token),
+       "BRACKET_OPEN": (token: moo.Token) => this.startArray(token),
   };
 
   node: PropNode = PropNode.makeRoot();
@@ -156,6 +171,7 @@ export class Parser {
   indent: string = "";
   parserStatus = ParserStatus.RUNNING;
   parseError?: ParseError = undefined;
+  state: ParserState = ParserState.PROPS;
 
   nextLine(line: string) {
     if (this.parserStatus !== ParserStatus.RUNNING) {
@@ -168,7 +184,11 @@ export class Parser {
     try {
       while(token = this.lexer.next()) {
         if (token.type) {
-          this.handlers[token.type](token);
+          if (this.handlers[token.type]) {
+            this.handlers[token.type](token);
+          } else {
+            this.text(token);
+          }
         }
       }
     } catch (error) {
@@ -279,6 +299,22 @@ export class Parser {
     }
   }
 
+  // Handle the begining of a new array
+  //   these could be nested
+  private startArray(token: moo.Token) {
+    if (this.nothingAccumulated()) {
+       // TODO
+     } else {
+       this.wordAcc.push(token.value); 
+     }
+  }
+
+  private nothingAccumulated() : boolean {
+    return this.wordAcc.length == 0 &&
+           this.lineAcc.length == 0 &&
+           this.acc.length == 0;
+  }
+
   // Push the contents of the word add into the line acc, combining
   // if necessary
   private pushWordAcc() {
@@ -377,9 +413,30 @@ function peek<Type>(list: Type[]) : Type {
 export function propMapToObj(map: PropertyMap) : PropertyObject {
   let obj : PropertyObject = {};
   map.forEach((value,key) => {
-    obj[key] = (value instanceof Map) ? propMapToObj(value) : value;
+    obj[key] = propValueToPropObjectValue(value);
   });
   return obj;
+}
+
+function propArrayToPropObjArray(array: PropertyArray) : PropertyObjectArray {
+  let result : PropertyObjectValue[] = [];
+  for(let value of array) {
+    result.push(propValueToPropObjectValue(value));
+  }
+  return result;
+}
+
+function propValueToPropObjectValue(value: PropertyValue): PropertyObjectValue {
+  let propValue : PropertyObjectValue;
+  if (value instanceof Map) {
+     propValue = propMapToObj(value);
+  } else if (Array.isArray(value)) {
+    propValue = propArrayToPropObjArray(value);
+     // handle array
+  } else {
+    propValue = value;
+  }
+  return propValue;
 }
 
 export function parseProperties(lines: string[]) : ResultType {

@@ -194,6 +194,7 @@ test("Top level description", () => {
           "prop": "There's also a property"}));
 });
 
+// FIXME test no longer relevant, descriptions can only be at begining
 test("Test description after property", () => {
     expect(parseProperties([
       "short: This is a short description",
@@ -204,6 +205,7 @@ test("Test description after property", () => {
         /*"desc": "A longer multiline description follows..."*/}));
 });
 
+// FIXME test no longer relevant, descriptoins can only be at beginning
 test("Test multiline property with description", () => {
     expect(parseProperties([
       "This is the start of the description",
@@ -236,6 +238,7 @@ test("Test mixng tabs and spaces", () => {
   expect(result.lineNum).toBe(3);
 });
 
+// FIXME test no longer relevant, can't add descriptoin to sub property
 test("Add description to sub property", () => {
   expect(parseProperties([
     "prop1:",
@@ -249,6 +252,7 @@ test("Add description to sub property", () => {
         /*"desc":  "this is prop1s description"*/}}));
 });
 
+// FIXME test no longer relevant, can't add descriptoin to sub property
 test("Top level and sub level descriptions", () => {
   expect(parseProperties([
     "Top desc1",
@@ -265,6 +269,23 @@ test("Top level and sub level descriptions", () => {
          "prop2": "value2 prop1 desc2",
          "prop3": "value3 Top desc2",        
       }}));
+});
+
+test("Test colon in text", () => {
+  expect(parseProperties([
+    "prop1: prop with [brackets]"]))
+    .toStrictEqual(objToMap({
+      "prop1": "prop with [brackets]"
+     }));
+});
+
+test("Test colon in text after new line", () => {
+  expect(parseProperties([
+    "prop1: prop with",
+    "[brackets]"]))
+    .toStrictEqual(objToMap({
+      "prop1": "prop with [brackets]"
+     }));
 });
 
 function assertIndentError(value: any) : asserts value is IndentError {
