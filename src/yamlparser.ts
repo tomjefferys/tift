@@ -1,5 +1,6 @@
 import { loadAll } from "js-yaml"
 import * as fs from "fs"
+import { Obj, ObjArray, ObjValue } from "./types"
 
 const data = fs.readFileSync("test.yaml", "utf8");
 
@@ -8,10 +9,6 @@ let prototypes = {
   "object":{"type":"object"},
   "rule":{"type":"rule"}, 
 }
-
-export type ObjValue = Obj | ObjArray | string | number;
-export type ObjArray = ObjValue[];
-export type Obj = {[key:string] : ObjValue};
 
 function loadObjs(fileName: string) {
   const data = fs.readFileSync(fileName, "utf8");
