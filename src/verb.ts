@@ -20,6 +20,18 @@ export class Verb {
     this.attributes = attributes;
     this.traits = traits;
   }
+
+  isTransitive() : boolean {
+    return this.traits.includes(VerbTrait.Transitive);
+  }
+
+  isIntransitive() : boolean {
+    return this.traits.includes(VerbTrait.Intransitive);
+  }
+  
+  isQualifiable() : boolean {
+    return this.traits.includes(VerbTrait.Qualifiable);
+  }
 }
 
 export class VerbBuilder {

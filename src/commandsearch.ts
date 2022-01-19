@@ -42,14 +42,28 @@ function getVerbSearch(objs : Obj[], verbs : VerbMap) : () => WordOption[] {
   
     let result : WordOption[] = [];
     Object.entries(matches).forEach(
-      ([key,value]) => result.push(
+      ([verbName, objMatches]) => result.push(
         {usable:true,
          terminal: true,
-         word:key,
-         getNextWordOptions: () => [] }))
+         word:verbName,
+         getNextWordOptions: getObjSearch(verbs[verbName], objMatches) }))
     
     return result;
   };
+}
+
+function getObjSearch(verb : Verb, directObjs : Obj[]) {
+  return () => {
+     let result : WordOption[] = [];
+     for(const obj of directObjs) {
+        result.push({
+          usable:true,
+          terminal: true,
+          word: obj.id,
+          getNextWordOptions: () => [] });
+     }    
+     return result;
+  }
 }
 
 
