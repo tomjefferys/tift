@@ -32,6 +32,10 @@ export class Verb {
   isQualifiable() : boolean {
     return this.traits.includes(VerbTrait.Qualifiable);
   }
+
+  getName() : string {
+    return this.name ? this.name : this.id;
+  }
 }
 
 export class VerbBuilder {

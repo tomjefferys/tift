@@ -16,17 +16,18 @@ export class Obj {
    }
 }
 
-export class VerbMatcher {
+export interface VerbMatcher {
   readonly verb : string;
   readonly attribute? : string;
   readonly qualifier : boolean;
+}
 
-  constructor(verb : string, attribute : string | undefined, qualifier : boolean) {
-    this.verb = verb;
-    this.attribute = attribute;
-    this.qualifier = qualifier;
-  }
-
+function buildVerbMatcher(verb : string, attribute? : string) : VerbMatcher {
+  return {
+    verb: verb,
+    attribute: attribute,
+    qualifier: false,
+  };
 }
 
 export class ObjBuilder {
@@ -40,7 +41,12 @@ export class ObjBuilder {
   }
   
   withVerb(verb: string) : ObjBuilder {
-    this.verbs.push(new VerbMatcher(verb, undefined, false));
+    this.verbs.push(buildVerbMatcher(verb));
+    return this;
+  }
+
+  withAttributedVerb(verb : string, attribute : string) {
+    this.verbs.push(buildVerbMatcher(verb, attribute));
     return this;
   }
 

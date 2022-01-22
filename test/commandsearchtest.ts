@@ -3,11 +3,11 @@ import {Obj, ObjBuilder} from "../src/obj";
 import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
 
 const STIR = new VerbBuilder("stir")
-                     .withTrait(VerbTrait.Intransitive)
+                     .withTrait(VerbTrait.Transitive)
                      .build();
 
 const EAT = new VerbBuilder("eat")
-                     .withTrait(VerbTrait.Intransitive)
+                     .withTrait(VerbTrait.Transitive)
                      .build();
 
 const SOUP = new ObjBuilder("soup")
