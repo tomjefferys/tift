@@ -11,6 +11,8 @@ import { Obj, VerbMatcher } from "./obj"
 type VerbMap = {[key:string]:Verb}
 type ObjMap  = {[key:string]:Obj}
 
+const EMPTY_SEARCH = () => [];
+
 
 export function getWordOptions(obj: Obj[], verbs: Verb[]) : WordOption[] {
   const context = buildSearchContext(obj, verbs);
@@ -21,7 +23,6 @@ export interface WordOption {
   word : string;
   getNextWordOptions : () => WordOption[];
   usable : boolean;
-  terminal : boolean;
 }
 
 interface SearchContext {
@@ -42,21 +43,6 @@ function buildSearchContext(objs : Obj[], verbs : Verb[]) : SearchContext {
   };
 }
 
-
-/**
- * Takes a set of objects and verbs, and creates a list of 
- * possible verbs
- */
-function getVerbSearch(context: SearchContext) : () => WordOption[] {
-  return () => {
-    const matches : Verb[] = Object.values(context.objs)
-                                    .flatMap((obj) => obj.verbs)
-                                    .map((matcher) => context.verbs[matcher.verb])
-                                    .filter(result => result);
-  
-    return matches.map((verb) => getWordOptionsForVerb(context, verb));
-  };
-}
 
 
 /**
@@ -106,28 +92,65 @@ function getVerbAttributes(context : SearchContext, verb : Verb) : string[] {
              .map(verbMatcher => verbMatcher.attribute as string);
 }
 
+/**
+ * Takes a set of objects and verbs, and creates a list of 
+ * possible verbs
+ */
+function getVerbSearch(context: SearchContext) : () => WordOption[] {
+  return () => {
+    const matches : Verb[] = Object.values(context.objs)
+                                    .flatMap((obj) => obj.verbs)
+                                    .map((matcher) => context.verbs[matcher.verb])
+                                    .filter(result => result);
+  
+    return matches.map((verb) => getWordOptionsForVerb(context, verb));
+  };
+}
+
+
 function getWordOptionsForVerb(context : SearchContext, verb : Verb) {
   const nextWordFn = verb.isTransitive()
-                        ? getObjSearch(context, verb)
-                        : () => [];
+                        ? getDirectObjectSearch(context, verb)
+                        : EMPTY_SEARCH;
   return {
     usable: verb.isIntransitive(),
-    terminal: !verb.isTransitive(),
     word: verb.getName(),
     getNextWordOptions : nextWordFn
   };
 }
 
-function getObjSearch(context : SearchContext, verb : Verb) : () => WordOption[] {
+function getDirectObjectSearch(
+          context : SearchContext,
+          verb : Verb) : () => WordOption[] {
+  const nextWordFn = verb.attributes.length
+                        ? getAttributeSearch(context, verb)
+                        : EMPTY_SEARCH;
   return () => 
      getDirectObjects(context, verb)
        .map((obj) => ({
          usable : true,
-         terminal: true,
          word : obj.id,
-         getNextWordOptions: () => [] }));
+         getNextWordOptions: nextWordFn }));
 }
 
+function getAttributeSearch(context : SearchContext, verb : Verb) : () => WordOption[] {
+  return () =>
+     getVerbAttributes(context,verb)
+        .map(word => ({
+           usable : false,
+           word : word,
+           getNextWordOptions: getIndirectObjectSearch(context, verb, word)}));
+}
 
-
+function getIndirectObjectSearch(
+            context : SearchContext,
+            verb : Verb,
+            attribute : string) : () => WordOption[] {
+  return () =>
+    getIndirectObjects(context, verb, attribute)
+        .map(obj => ({
+           usable : true,
+           word : obj.id,
+           getNextWordOptions: EMPTY_SEARCH}));
+}
 
