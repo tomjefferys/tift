@@ -1,9 +1,10 @@
-import {getWordOptions, WordOption} from "../src/commandsearch";
+import {getWordOptions, getAllCommands, WordOption} from "../src/commandsearch";
 import {Obj, ObjBuilder} from "../src/obj";
 import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
 
 const STIR = new VerbBuilder("stir")
                      .withTrait(VerbTrait.Transitive)
+                     .withAttribute("with")
                      .build();
 
 const EAT = new VerbBuilder("eat")
@@ -16,6 +17,10 @@ const SOUP = new ObjBuilder("soup")
   
 const APPLE = new ObjBuilder("apple")
                      .withVerb("eat")
+                     .build();
+
+const SPOON = new ObjBuilder("spoon")
+                     .withAttributedVerb("stir","with")
                      .build();
 
 test("Test empty input", () => {
@@ -39,35 +44,25 @@ test("No matching verbs and objects", () => {
 })
 
 test("Test simple transitive verb", () => { 
-  const options = getWordOptions([SOUP, APPLE], [STIR]);
-  
-  expect(options).toHaveLength(1);
-  expect(options[0].word).toBe("stir");
-
-  const objOptions = options[0].getNextWordOptions();
-  expect(objOptions).toHaveLength(1);
-  expect(objOptions[0].word).toBe("soup");
-
+  const commands = getAllCommands([SOUP, APPLE], [STIR]);
+  expect(commands).toHaveLength(1);
+  expect(commands).toEqual(expect.arrayContaining([["stir","soup"]]));
 }) 
 
 test("Test multiple transitive verbs", () => {
+  const commands = getAllCommands([SOUP, APPLE], [STIR, EAT]);
+  expect(commands).toHaveLength(2);
+  expect(commands).toEqual(expect.arrayContaining([
+       ["stir","soup"],
+       ["eat","apple"]]));
+});
 
-  const options = getWordOptions([SOUP, APPLE], [STIR, EAT]);
-  
-  expect(options).toHaveLength(2);
-  
-  const stirMatch = options.find(option => option.word === "stir");
-  
-  expect(stirMatch).toBeDefined();
-  expect(stirMatch!.getNextWordOptions()
-                  .map(match => match.word)).toStrictEqual(["soup"]);
-
-
-  const eatMatch = options.find(option => option.word === "eat");
-
-  expect(eatMatch).toBeDefined();
-  expect(eatMatch!.getNextWordOptions()
-                 .map(match => match.word)).toStrictEqual(["apple"]);
+test("Test transitive verb with indirect object", () => {
+  const commands = getAllCommands([SOUP, SPOON], [STIR]);
+  expect(commands).toHaveLength(2);
+  expect(commands).toEqual(expect.arrayContaining([
+       ["stir","soup"],
+       ["stir","soup","with","spoon"]]));
 
 });
 

@@ -13,17 +13,33 @@ type ObjMap  = {[key:string]:Obj}
 
 const EMPTY_SEARCH = () => [];
 
-
-export function getWordOptions(obj: Obj[], verbs: Verb[]) : WordOption[] {
-  const context = buildSearchContext(obj, verbs);
-  return getVerbSearch(context)();
-}
- 
 export interface WordOption {
   word : string;
   getNextWordOptions : () => WordOption[];
   usable : boolean;
 }
+
+export function getWordOptions(obj: Obj[], verbs: Verb[]) : WordOption[] {
+  const context = buildSearchContext(obj, verbs);
+  return getVerbSearch(context)();
+}
+
+export function getAllCommands(objs: Obj[], verbs: Verb[]) : string[][] {
+  return getWordOptions(objs, verbs)
+            .flatMap(option => expandWordOption([], option));
+}
+
+function expandWordOption(prefix : string[], wordOption : WordOption) : string[][] {
+  const result : string[][] = [];
+  if (wordOption.usable) {
+    result.push([...prefix, wordOption.word]);
+  }
+  wordOption.getNextWordOptions()
+            .flatMap(nextWord => expandWordOption([...prefix, wordOption.word], nextWord))
+            .forEach(sentance => result.push(sentance));
+  return result;
+}
+ 
 
 interface SearchContext {
   objs:  ObjMap,
@@ -52,7 +68,7 @@ function getDirectObjects(context : SearchContext, verb : Verb) : Obj[] {
   return Object.values(context.objs)
                .filter(obj => 
                   obj.verbs.some((verbMatcher) => 
-                    verbMatcher.verb === verb.id));
+                    verbMatcher.verb === verb.id && !verbMatcher.attribute));
 }
 
 /**
@@ -99,8 +115,9 @@ function getVerbAttributes(context : SearchContext, verb : Verb) : string[] {
 function getVerbSearch(context: SearchContext) : () => WordOption[] {
   return () => {
     const matches : Verb[] = Object.values(context.objs)
-                                    .flatMap((obj) => obj.verbs)
-                                    .map((matcher) => context.verbs[matcher.verb])
+                                    .flatMap(obj => obj.verbs)
+                                    .filter(matcher => !matcher.attribute)
+                                    .map(matcher => context.verbs[matcher.verb])
                                     .filter(result => result);
   
     return matches.map((verb) => getWordOptionsForVerb(context, verb));
