@@ -1,0 +1,35 @@
+{
+  "name": "tift",
+  "version": "1.0.0",
+  "description": "pseudo parser based interactive fiction engine",
+  "main": "jest.config.js",
+  "directories": {
+    "example": "example",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomjefferys/tift.git"
+  },
+  "author": "Tom Jefferys",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tomjefferys/tift/issues"
+  },
+  "homepage": "https://github.com/tomjefferys/tift#readme",
+  "dependencies": {
+    "jest": "^27.4.7",
+    "js-yaml": "^4.1.0",
+    "loglevel": "^1.8.0",
+    "moo": "^0.5.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.4.0",
+    "@types/js-yaml": "^4.0.5",
+    "@types/loglevel": "^1.6.3",
+    "@types/moo": "^0.5.5"
+  }
+}

@@ -6,4 +6,5 @@
 out
 .vscode
 notes.txt
+node_modules
 

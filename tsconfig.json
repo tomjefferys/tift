@@ -7,9 +7,13 @@
           "skipLibCheck": true,
           "forceConsistentCasingInFileNames": true,
           "sourceMap": true,
-          "outDir": "./out"
+          "outDir": "./out",
+          "lib": [
+            "ES2019"
+        ]
     },
     "types": ["moo"],
+    "typeRoots": ["node_modules/@types" ],
     "$schema": "https://json.schemastore.org/tsconfig",
     "display": "Recommended",
     "include": ["src/**/*", "test/**/*"],
