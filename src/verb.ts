@@ -1,7 +1,7 @@
 export enum VerbTrait {
   Transitive,
   Intransitive,
-  Qualifiable
+  Modifiable
 }
 
 
@@ -10,15 +10,18 @@ export class Verb {
   readonly name? : string;
   readonly attributes : string[];
   readonly traits : VerbTrait[];
+  readonly modifiers : string[];
 
   constructor(id : string,
               name : string | undefined,
               attributes : string[],
-              traits : VerbTrait[]) {
+              traits : VerbTrait[],
+              modifiers : string[]) {
     this.id = id;
     this.name = name;
     this.attributes = attributes;
     this.traits = traits;
+    this.modifiers = modifiers;
   }
 
   isTransitive() : boolean {
@@ -29,8 +32,8 @@ export class Verb {
     return this.traits.includes(VerbTrait.Intransitive);
   }
   
-  isQualifiable() : boolean {
-    return this.traits.includes(VerbTrait.Qualifiable);
+  isModifiable() : boolean {
+    return this.modifiers.length != 0;
   }
 
   getName() : string {
@@ -43,6 +46,7 @@ export class VerbBuilder {
   name? : string;
   attributes : string[] = [];
   traits : VerbTrait[] = [];
+  modifiers : string[] = [];
 
   constructor(id : string) {
     this.id = id;
@@ -62,9 +66,14 @@ export class VerbBuilder {
     this.traits.push(trait);
     return this;
   }
+  
+  withModifier(modifier : string) : VerbBuilder {
+    this.modifiers.push(modifier);
+    return this;
+  }
 
   build() : Verb {
-    return new Verb(this.id, this.name, this.attributes, this.traits);
+    return new Verb(this.id, this.name, this.attributes, this.traits, this.modifiers);
   }
   
 

@@ -23,6 +23,17 @@ const SPOON = new ObjBuilder("spoon")
                      .withAttributedVerb("stir","with")
                      .build();
 
+const GO = new VerbBuilder("go")
+                  .withTrait(VerbTrait.Intransitive)
+                  .withModifier("direction")
+                  .build();
+
+const CAVE = new ObjBuilder("cave")
+                  .withVerb("go")
+                  .withVerbModifier("direction","north")
+                  .withVerbModifier("direction","east")
+                  .build();
+
 test("Test empty input", () => {
   const options = getWordOptions([], []);
   expect(options).toHaveLength(0);
@@ -63,6 +74,13 @@ test("Test transitive verb with indirect object", () => {
   expect(commands).toEqual(expect.arrayContaining([
        ["stir","soup"],
        ["stir","soup","with","spoon"]]));
+});
 
+test("Test instransitive verb with modifier", () => {
+  const commands = getAllCommands([CAVE], [GO]);
+  expect(commands).toHaveLength(2);
+  expect(commands).toEqual(expect.arrayContaining([
+    ["go","north"],
+    ["go","east"] ]));
 });
 

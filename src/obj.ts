@@ -1,18 +1,23 @@
 
+type VerbModMap = {[key:string]: string[]};
+
 export class Obj {
   readonly id : string;
   readonly name? : string;
   readonly verbs : VerbMatcher[];
   readonly cverbs : VerbMatcher[];
+  readonly verbModifiers : VerbModMap;
 
   constructor(id : string, 
               name : string | undefined,
               verbs : VerbMatcher[],
-              cverbs : VerbMatcher[]) {
+              cverbs : VerbMatcher[],
+              verbModifiers: VerbModMap) {
      this.id = id;
      this.name = name;
      this.verbs = verbs;
      this.cverbs = cverbs;
+     this.verbModifiers = verbModifiers;
    }
 }
 
@@ -35,6 +40,7 @@ export class ObjBuilder {
   name? : string;
   verbs : VerbMatcher[] = [];
   cverbs : VerbMatcher[] = [];
+  verbModifiers : VerbModMap = {};
   
   constructor(id : string) {
     this.id = id;
@@ -50,7 +56,15 @@ export class ObjBuilder {
     return this;
   }
 
+  withVerbModifier(modType : string, value : string) {
+    if (!this.verbModifiers[modType]) {
+      this.verbModifiers[modType] = [];
+    }
+    this.verbModifiers[modType].push(value);
+    return this;
+  }
+
   build() : Obj {
-    return new Obj(this.id, this.name, this.verbs, this.cverbs);   
+    return new Obj(this.id, this.name, this.verbs, this.cverbs, this.verbModifiers);   
   }
 }
