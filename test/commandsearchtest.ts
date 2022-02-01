@@ -34,6 +34,15 @@ const CAVE = new ObjBuilder("cave")
                   .withVerbModifier("direction","east")
                   .build();
 
+const PUSH = new VerbBuilder("push")
+                    .withTrait(VerbTrait.Transitive)
+                    .withModifier("direction")
+                    .build();
+
+const BOX = new ObjBuilder("box")
+                    .withVerb("push")
+                    .build();
+
 test("Test empty input", () => {
   const options = getWordOptions([], []);
   expect(options).toHaveLength(0);
@@ -83,4 +92,13 @@ test("Test instransitive verb with modifier", () => {
     ["go","north"],
     ["go","east"] ]));
 });
+
+test("Test transitive verb with modifier", () => {
+  const commands = getAllCommands([BOX, CAVE], [PUSH])
+  expect(commands).toHaveLength(2);
+  expect(commands).toEqual(expect.arrayContaining([
+    ["push", "box", "north"],
+    ["push", "box", "east"]
+  ]));
+})
 

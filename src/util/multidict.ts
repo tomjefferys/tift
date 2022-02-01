@@ -22,7 +22,12 @@ export function addAll<T>(dict : MultiDict<T>, key : KeyType, values : T[]) {
 }
 
 export function addUnique<T>(dict : MultiDict<T>, key : KeyType, values : T[]) {
-    const arr = getOrInitialize(dict, key);
-    arr.push(...values.filter(v => !arr.includes(v)));
-    return dict;
+  const arr = getOrInitialize(dict, key);
+  arr.push(...values.filter(v => !arr.includes(v)));
+  return dict;
+}
+
+export function get<T>(dict : MultiDict<T>, key : KeyType) : T[] {
+  const arr = dict[key];
+  return arr ? arr : [];
 }

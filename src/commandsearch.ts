@@ -124,11 +124,12 @@ function getVerbAttributes(context : SearchContext, verb : Verb) : string[] {
 const getVerbModifiers = (context : SearchContext, verb : Verb) =>
    verb.modifiers.reduce(
       (modMap : MultiDict<string>, modifier) => 
-        multidict.addUnique(modMap, modifier, getModifierValues(context, modifier))
+          multidict.addUnique(modMap, modifier, getModifierValues(context, modifier))
       , {});
 
-const getModifierValues = (context : SearchContext, modifier : string) => 
-      Object.values(context.objs).flatMap(obj => obj.verbModifiers[modifier])
+const getModifierValues = (context : SearchContext, modifier : string) : string[] => 
+      Object.values(context.objs).flatMap(obj => 
+        multidict.get(obj.verbModifiers, modifier))
 
 /**
  * Takes a set of objects and verbs, and creates a list of 
@@ -153,7 +154,7 @@ function getWordOptionsForVerb(context : SearchContext, verb : Verb) {
                         : EMPTY_SEARCH;
   let nextWordFn : () => WordOption[];
   if (verb.isIntransitive()) {
-    const modifierSearch = getIntransitiveModifierSearch(context, verb);
+    const modifierSearch = getModifierSearch(context, verb);
     nextWordFn = () => objectSearch().concat(modifierSearch())
   } else {
     nextWordFn = objectSearch;
@@ -168,18 +169,22 @@ function getWordOptionsForVerb(context : SearchContext, verb : Verb) {
 function getDirectObjectSearch(
           context : SearchContext,
           verb : Verb) : NextWordFn {
-  const nextWordFn = verb.attributes.length
+  const attributeSearch = verb.attributes.length
                         ? getAttributeSearch(context, verb)
                         : EMPTY_SEARCH;
+
+  const modifierSearch = getModifierSearch(context, verb);
+  const nextWordFn = () => attributeSearch().concat(modifierSearch());
+  
   return () => 
      getDirectObjects(context, verb)
        .map((obj) => ({
-         usable : true,
+         usable : !verb.isModifiable(),
          word : obj.id,
          getNextWordOptions: nextWordFn }));
 }
 
-function getIntransitiveModifierSearch(
+function getModifierSearch(
           context : SearchContext,
           verb : Verb) : () => WordOption[] {
   return () => 
