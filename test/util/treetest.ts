@@ -2,7 +2,7 @@ import * as Tree from "../../src/util/tree";
 import { Node } from "../../src/util/tree";
 
 const ROOT = Tree.Special.ROOT;
-const TERMINAL = Tree.Special.TERMINAL;
+const TERMINAL = [Tree.Special.TERMINAL, []];
 
 test("test empty tree", () => {
     const tree = Tree.fromArrays([]);
@@ -11,24 +11,13 @@ test("test empty tree", () => {
 
 test("test single value", () => {
     const tree = Tree.fromArrays([["a"]]);
-    expect(tree).toStrictEqual(
-        [ROOT,
-            [["a",
-                [[TERMINAL, []]]
-            ]]
-        ]);
+    expect(tree).toStrictEqual( [ROOT, [["a",[TERMINAL]]]]);
 })
 
 test("test short branch", () => {
     const tree = Tree.fromArrays([["a","b"]]);
     expect(tree).toStrictEqual(
-        [ROOT,
-            [["a",
-                [["b",
-                    [[TERMINAL, []]]
-                ]]
-            ]]
-        ]);
+        [ROOT, [["a", [["b", [TERMINAL] ]] ]] ]);
 })
 
 test("test two branches", () => {
@@ -36,12 +25,8 @@ test("test two branches", () => {
     expect(tree).toStrictEqual(
         [ROOT,
             [["a",
-                [["b",
-                    [[TERMINAL, []]]
-                 ],
-                 ["c",
-                    [[TERMINAL, []]]
-                 ]]
+                [["b", [TERMINAL] ],
+                 ["c", [TERMINAL] ]]
             ]]
         ]);
 })
@@ -50,16 +35,17 @@ test("test two branches", () => {
     const tree = Tree.fromArrays([["a","b"],["c","d"]]);
     expect(tree).toStrictEqual(
         [ROOT,
-            [["a",
-                [["b",
-                    [[TERMINAL, []]]
-                ]],
-             ],
-             ["c",
-                [["d",
-                    [[TERMINAL, []]]
-                 ]]
-             ]]
-        ]);
+            [["a", [["b", [TERMINAL]] ]],
+             ["c", [["d", [TERMINAL]] ]]]]);
 })
+
+test("test multiple terminals in branch", () => {
+    const tree = Tree.fromArrays([["a"],["a","b"]]);
+    expect(tree).toStrictEqual(
+        [ROOT,
+            [["a", [
+                TERMINAL,
+                ["b",[ TERMINAL ]]
+            ]]]]);
+});
 
