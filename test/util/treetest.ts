@@ -1,8 +1,7 @@
 import * as Tree from "../../src/util/tree";
-import { Node } from "../../src/util/tree";
 
-const ROOT = Tree.Special.ROOT;
-const TERMINAL = [Tree.Special.TERMINAL, []];
+const ROOT = Tree.ROOT;
+const TERMINAL = [Tree.TERMINAL, []];
 
 test("test empty tree", () => {
     const tree = Tree.fromArrays([]);

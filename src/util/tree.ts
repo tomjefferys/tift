@@ -1,14 +1,12 @@
 
-export enum Special {
-    ROOT,
-    TERMINAL
-}
+export const ROOT = Symbol("ROOT");
+export const TERMINAL = Symbol("TERMINAL");
 
-type NodeValue<T> = T | Special;
+type NodeValue<T> = T | typeof ROOT | typeof TERMINAL;
 export type Node<T> = [NodeValue<T>, Node<T>[]];
 
 export function newRoot<T>() : Node<T> {
-    return newNode(Special.ROOT);
+    return newNode(ROOT);
 }
 
 export function fromArrays<T>(arrays : T[][]) : Node<T> {
@@ -19,15 +17,20 @@ export function fromArrays<T>(arrays : T[][]) : Node<T> {
     return root;
 }
 
+export function isRoot<T>(node : Node<T>) {
+    const [value, children] = node;
+    return value === ROOT;
+}
+
 function newNode<T>(value : NodeValue<T>) : Node<T> {
     return [value, [] ];
 }
 
 export function addPath<T>(node : Node<T>, path : T[] ) {
-   const next = path.length? path.pop() as T : Special.TERMINAL;
+   const next = path.length? path.pop() as T : TERMINAL;
    const [value, children] = node;
    const child = getOrCreateChild(node, next);
-   if (next != Special.TERMINAL) {
+   if (next !== TERMINAL) {
       addPath(child, path);
    }
 }
