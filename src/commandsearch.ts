@@ -2,6 +2,7 @@ import { Verb } from "./verb"
 import { Obj, VerbMatcher } from "./obj"
 import { MultiDict } from "./util/multidict"
 import * as multidict from "./util/multidict"
+import * as Tree from "./util/tree"
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -13,37 +14,26 @@ import * as multidict from "./util/multidict"
 type VerbMap = {[key:string]:Verb}
 type ObjMap  = {[key:string]:Obj}
 
-type NextWordFn = () => WordOption[];
-
-const EMPTY_SEARCH = () => [];
-
-export interface WordOption {
-  word : string;
-  getNextWordOptions : NextWordFn;
-  usable : boolean;
+interface SearchState {
+  readonly verb? : Verb;
+  readonly directObject? : Obj;
+  readonly attribute? : string;
+  readonly indirectObject? : Obj;
+  readonly modifiers : {[key:string]:string};
+  readonly words : string[];
 }
 
-export function getWordOptions(obj: Obj[], verbs: Verb[]) : WordOption[] {
-  const context = buildSearchContext(obj, verbs);
-  return getVerbSearch(context)();
-}
+type SearchFn = (context: SearchContext, state: SearchState) => SearchState[]; 
+type SearchNode = Tree.ValueNode<SearchFn>;
+type SearchResult = [SearchState, SearchNode];
+
+const INITIAL_STATE : SearchState = {modifiers : {}, words : []};
 
 export function getAllCommands(objs: Obj[], verbs: Verb[]) : string[][] {
-  return getWordOptions(objs, verbs)
-            .flatMap(option => expandWordOption([], option));
+  const context = buildSearchContext(objs, verbs);
+  return searchAll(context)
+          .map(state => state.words);
 }
-
-function expandWordOption(prefix : string[], wordOption : WordOption) : string[][] {
-  const result : string[][] = [];
-  if (wordOption.usable) {
-    result.push([...prefix, wordOption.word]);
-  }
-  wordOption.getNextWordOptions()
-            .flatMap(nextWord => expandWordOption([...prefix, wordOption.word], nextWord))
-            .forEach(sentance => result.push(sentance));
-  return result;
-}
- 
 
 interface SearchContext {
   objs:  ObjMap,
@@ -131,90 +121,97 @@ const getModifierValues = (context : SearchContext, modifier : string) : string[
       Object.values(context.objs).flatMap(obj => 
         multidict.get(obj.verbModifiers, modifier))
 
-/**
- * Takes a set of objects and verbs, and creates a list of 
- * possible verbs
- */
-function getVerbSearch(context: SearchContext) : NextWordFn {
-  return () => {
-    const matches  = Object.values(context.objs)
-                           .flatMap(obj => obj.verbs)
-                           .filter(matcher => !matcher.attribute)
-                           .map(matcher => context.verbs[matcher.verb])
-                           .filter(result => result);
-  
-    return matches.map((verb) => getWordOptionsForVerb(context, verb));
-  };
+const getVarbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
+  return (context, state) =>
+        Object.values(context.objs)
+              .flatMap(obj => obj.verbs)
+              .filter(matcher => !matcher.attribute)
+              .map(matcher => context.verbs[matcher.verb])
+              .filter(Boolean)
+              .filter(filter)
+              .map(verb => ({...state,
+                verb: verb,
+                words: [...state.words, verb.getName()]}));
 }
 
+const directObjectSearch : SearchFn = (context, state) => {
+  const objs = state.verb && state.verb.isTransitive()
+                  ? getDirectObjects(context, state.verb)
+                  : [];
+  return objs.map(obj => ({...state,
+                directObject : obj,
+                words: [...state.words, obj.getName()]}));
+}
 
-function getWordOptionsForVerb(context : SearchContext, verb : Verb) {
-  const objectSearch = verb.isTransitive()
-                        ? getDirectObjectSearch(context, verb)
-                        : EMPTY_SEARCH;
-  let nextWordFn : () => WordOption[];
-  if (verb.isIntransitive()) {
-    const modifierSearch = getModifierSearch(context, verb);
-    nextWordFn = () => objectSearch().concat(modifierSearch())
-  } else {
-    nextWordFn = objectSearch;
+const attributeSearch : SearchFn = (context, state) => {
+  const attributes = state.verb
+                      ? getVerbAttributes(context, state.verb)
+                      : [];
+  return attributes.map(attr => ({...state,
+                                  attribute: attr,
+                                  words: [...state.words, attr]}));
+}
+
+const indirectObjectSearch : SearchFn = (context, state) => {
+  const objs = state.verb && state.attribute
+                ? getIndirectObjects(context, state.verb, state.attribute)
+                : [];
+  return objs.map(obj => ({...state,
+                          indirectObject: obj,
+                          words: [...state.words, obj.getName()]}));
+}
+
+const modifierSearch : SearchFn = (context, state) => {
+    const newModifiers = state.verb? getVerbModifiers(context, state.verb) : {};
+    return multidict.entries(newModifiers)
+             .map(([modType, modValue]) => {
+                return {...state,
+                        modifiers: {...state.modifiers, [modType]: modValue},
+                        words: [...state.words, modValue]}
+             });
+}
+
+const TRANS_VERB = getVarbSearch(verb => verb.isTransitive());
+const INTRANS_VERB = getVarbSearch(verb => verb.isIntransitive());
+const DIRECT_OBJECT = directObjectSearch;
+const ATTRIBUTE = attributeSearch;
+const INDIRECT_OBJECT = indirectObjectSearch;
+const MODIFIER = modifierSearch;
+
+const WORD_PATTERNS = Tree.fromArrays([
+  [INTRANS_VERB],
+  [INTRANS_VERB, MODIFIER],
+  [TRANS_VERB, DIRECT_OBJECT],
+  [TRANS_VERB, DIRECT_OBJECT, MODIFIER],
+  [TRANS_VERB, DIRECT_OBJECT, ATTRIBUTE, INDIRECT_OBJECT]
+]);
+
+const doSearch = (context : SearchContext,
+                  searchNode = WORD_PATTERNS,
+                  state = INITIAL_STATE) => {
+  const [searchFn, children] = searchNode;
+  const results : SearchResult[] = [];
+  Tree.forEachChild(searchNode, node => {
+    const searchFn = Tree.getValue(node);
+    searchFn(context, state).forEach(result => results.push([result, node]));
+  });
+  return results;
+}
+
+const searchAll = (context : SearchContext,
+                   searchNode = WORD_PATTERNS,
+                   state = INITIAL_STATE) : SearchState[] => {
+  const results = doSearch(context, searchNode, state);
+  const states : SearchState[] = [];
+  if (Tree.isTerminal(searchNode)) {
+    states.push(state);
   }
-  return {
-    usable: verb.isIntransitive() && !verb.isModifiable,
-    word: verb.getName(),
-    getNextWordOptions : nextWordFn
-  };
+  if (results.length) {
+    const newStates = results.flatMap(result => {
+      const [state, node] = result;
+      return searchAll(context, node, state);
+    });
+    states.push(...newStates);
+  } 
+  return states;
 }
-
-function getDirectObjectSearch(
-          context : SearchContext,
-          verb : Verb) : NextWordFn {
-  const attributeSearch = verb.attributes.length
-                        ? getAttributeSearch(context, verb)
-                        : EMPTY_SEARCH;
-
-  const modifierSearch = getModifierSearch(context, verb);
-  const nextWordFn = () => attributeSearch().concat(modifierSearch());
-  
-  return () => 
-     getDirectObjects(context, verb)
-       .map((obj) => ({
-         usable : !verb.isModifiable(),
-         word : obj.id,
-         getNextWordOptions: nextWordFn }));
-}
-
-function getModifierSearch(
-          context : SearchContext,
-          verb : Verb) : () => WordOption[] {
-  return () => 
-    Object.values(getVerbModifiers(context,verb))
-      .flatMap(value => value)
-      .map(modifier => ({
-        usable : true,
-        word : modifier,
-        getNextWordOptions : EMPTY_SEARCH
-      }))
-}
-
-function getAttributeSearch(context : SearchContext, verb : Verb) : NextWordFn {
-  return () =>
-     getVerbAttributes(context,verb)
-        .map(word => ({
-           usable : false,
-           word : word,
-           getNextWordOptions: getIndirectObjectSearch(context, verb, word)}));
-}
-
-function getIndirectObjectSearch(
-            context : SearchContext,
-            verb : Verb,
-            attribute : string) : NextWordFn {
-  return () =>
-    getIndirectObjects(context, verb, attribute)
-        .map(obj => ({
-           usable : true,
-           word : obj.id,
-           getNextWordOptions: EMPTY_SEARCH}));
-}
-

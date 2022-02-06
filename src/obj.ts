@@ -1,23 +1,30 @@
+import { MultiDict } from "./util/multidict"
+import * as multidict from "./util/multidict"
+import { IndentError } from "./properties";
 
-type VerbModMap = {[key:string]: string[]};
+//type VerbModMap = {[key:string]: string[]};
 
 export class Obj {
   readonly id : string;
   readonly name? : string;
   readonly verbs : VerbMatcher[];
   readonly cverbs : VerbMatcher[];
-  readonly verbModifiers : VerbModMap;
+  readonly verbModifiers : MultiDict<string>;
 
   constructor(id : string, 
               name : string | undefined,
               verbs : VerbMatcher[],
               cverbs : VerbMatcher[],
-              verbModifiers: VerbModMap) {
+              verbModifiers: MultiDict<string>) {
      this.id = id;
      this.name = name;
      this.verbs = verbs;
      this.cverbs = cverbs;
      this.verbModifiers = verbModifiers;
+   }
+
+   getName() : string {
+     return this.name ?? this.id;
    }
 }
 
@@ -40,7 +47,7 @@ export class ObjBuilder {
   name? : string;
   verbs : VerbMatcher[] = [];
   cverbs : VerbMatcher[] = [];
-  verbModifiers : VerbModMap = {};
+  verbModifiers : MultiDict<string> = {};
   
   constructor(id : string) {
     this.id = id;

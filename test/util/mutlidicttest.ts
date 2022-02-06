@@ -10,7 +10,7 @@ test("Test add", () => {
 });
 
 test("Test add all", () => {
-  const dict : MultiDict<String> = {};
+  const dict : MultiDict<string> = {};
   multidict.addAll(dict, "key1", ["value1", "value2"]);
   multidict.addAll(dict, "key2", ["foo", "bar"]);
   multidict.addAll(dict, "key1", ["value1", "value3"]);
@@ -22,7 +22,7 @@ test("Test add all", () => {
 });
 
 test("Test add unique", () => {
-  const dict : MultiDict<String> = {};
+  const dict : MultiDict<string> = {};
   multidict.addUnique(dict, "key1", ["value1", "value2"]);
   multidict.addUnique(dict, "key2", ["foo", "bar"]);
   multidict.addUnique(dict, "key1", ["value1", "value3"]);
@@ -31,4 +31,17 @@ test("Test add unique", () => {
     ["value1", "value2", "value3"],
     ["foo","bar"]
   ]))
+})
+
+test("Test get entries", () => {
+    const dict : MultiDict<string> = {};
+    multidict.addAll(dict, "key1", ["value1", "value2"]);
+    multidict.addAll(dict, "key2", ["foo", "bar"]);
+    const entries = multidict.entries(dict)
+    expect(entries).toHaveLength(4);
+    expect(entries).toEqual(expect.arrayContaining([
+            ["key1", "value1"],
+            ["key1", "value2"],
+            ["key2", "foo"],
+            ["key2", "bar"]]));
 })

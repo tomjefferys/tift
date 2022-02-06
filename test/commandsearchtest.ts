@@ -1,4 +1,4 @@
-import {getWordOptions, getAllCommands, WordOption} from "../src/commandsearch";
+import {getAllCommands} from "../src/commandsearch";
 import {Obj, ObjBuilder} from "../src/obj";
 import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
 
@@ -44,22 +44,22 @@ const BOX = new ObjBuilder("box")
                     .build();
 
 test("Test empty input", () => {
-  const options = getWordOptions([], []);
+  const options = getAllCommands([], []);
   expect(options).toHaveLength(0);
 })
 
 test("Test no objects", () => {
-  const options = getWordOptions([], [STIR]);
+  const options = getAllCommands([], [STIR]);
   expect(options).toHaveLength(0);
 })
 
 test("Test no verbs", () => {
-  const options = getWordOptions([SOUP, APPLE], []);
+  const options = getAllCommands([SOUP, APPLE], []);
   expect(options).toHaveLength(0);
 })
 
 test("No matching verbs and objects", () => {
-  const options = getWordOptions([APPLE], [STIR]);
+  const options = getAllCommands([APPLE], [STIR]);
   expect(options).toHaveLength(0);
 })
 
@@ -87,16 +87,18 @@ test("Test transitive verb with indirect object", () => {
 
 test("Test instransitive verb with modifier", () => {
   const commands = getAllCommands([CAVE], [GO]);
-  expect(commands).toHaveLength(2);
+  expect(commands).toHaveLength(3);
   expect(commands).toEqual(expect.arrayContaining([
+    ["go"],
     ["go","north"],
     ["go","east"] ]));
 });
 
 test("Test transitive verb with modifier", () => {
   const commands = getAllCommands([BOX, CAVE], [PUSH])
-  expect(commands).toHaveLength(2);
+  expect(commands).toHaveLength(3);
   expect(commands).toEqual(expect.arrayContaining([
+    ["push", "box"],
     ["push", "box", "north"],
     ["push", "box", "east"]
   ]));
