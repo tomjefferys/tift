@@ -1,0 +1,29 @@
+---
+object: cave
+verbs:
+  - go
+modifiers:
+  - direction:
+      - north
+      - east
+---
+object: soup
+verbs:
+  - stir
+---
+object: spoon
+verbs:
+  - stir.with
+---
+verb: go
+modifiers:
+  - direction
+tags:
+  - intransitive
+---
+verb: stir
+attributes:
+  - with
+tags:
+  - transitive
+  - intransitive

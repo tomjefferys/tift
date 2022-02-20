@@ -1,5 +1,6 @@
 import { Verb } from "./verb"
-import { Obj, VerbMatcher } from "./obj"
+import { VerbMap, EntityMap } from "./types"
+import { Entity, VerbMatcher } from "./entity"
 import { MultiDict } from "./util/multidict"
 import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
@@ -11,14 +12,11 @@ import * as Tree from "./util/tree"
 // verb object (to) direction          -- tranistive verb with qualifier
 // verb object direction (with) object -- transitive verb with qual and attr
 
-type VerbMap = {[key:string]:Verb}
-type ObjMap  = {[key:string]:Obj}
-
 interface SearchState {
   readonly verb? : Verb;
-  readonly directObject? : Obj;
+  readonly directObject? : Entity;
   readonly attribute? : string;
-  readonly indirectObject? : Obj;
+  readonly indirectObject? : Entity;
   readonly modifiers : {[key:string]:string};
   readonly words : string[];
 }
@@ -29,23 +27,23 @@ type SearchResult = [SearchState, SearchNode];
 
 const INITIAL_STATE : SearchState = {modifiers : {}, words : []};
 
-export function getAllCommands(objs: Obj[], verbs: Verb[]) : string[][] {
+export function getAllCommands(objs: Entity[], verbs: Verb[]) : string[][] {
   const context = buildSearchContext(objs, verbs);
   return searchAll(context)
           .map(state => state.words);
 }
 
 interface SearchContext {
-  objs:  ObjMap,
+  objs:  EntityMap,
   verbs: VerbMap,
 }
 
-function buildSearchContext(objs : Obj[], verbs : Verb[]) : SearchContext {
+function buildSearchContext(objs : Entity[], verbs : Verb[]) : SearchContext {
   return {
     objs: objs.reduce((map,obj) => {
             map[obj.id] = obj;
             return map;
-          }, {} as ObjMap),
+          }, {} as EntityMap),
     verbs: verbs.reduce((map,verb) => {
              map[verb.id] = verb;
              return map;
@@ -58,7 +56,7 @@ function buildSearchContext(objs : Obj[], verbs : Verb[]) : SearchContext {
 /**
  * Return all direct object in the context matching a single verb
  */
-function getDirectObjects(context : SearchContext, verb : Verb) : Obj[] {
+function getDirectObjects(context : SearchContext, verb : Verb) : Entity[] {
   return Object.values(context.objs)
                .filter(obj => 
                   obj.verbs.some((verbMatcher) => 
@@ -70,7 +68,7 @@ function getDirectObjects(context : SearchContext, verb : Verb) : Obj[] {
  */
 function getIndirectObjects(context : SearchContext,
                             verb : Verb,
-                            attribute? : string) : Obj[] {
+                            attribute? : string) : Entity[] {
   return Object.values(context.objs)
                .filter(obj =>
                   obj.verbs.some(matcher =>

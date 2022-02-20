@@ -1,5 +1,5 @@
 import {getAllCommands} from "../src/commandsearch";
-import {Obj, ObjBuilder} from "../src/obj";
+import {Entity, EntityBuilder} from "../src/entity";
 import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
 
 const STIR = new VerbBuilder("stir")
@@ -11,15 +11,15 @@ const EAT = new VerbBuilder("eat")
                      .withTrait(VerbTrait.Transitive)
                      .build();
 
-const SOUP = new ObjBuilder("soup")
+const SOUP = new EntityBuilder("soup")
                     .withVerb("stir")
                     .build();
   
-const APPLE = new ObjBuilder("apple")
+const APPLE = new EntityBuilder("apple")
                      .withVerb("eat")
                      .build();
 
-const SPOON = new ObjBuilder("spoon")
+const SPOON = new EntityBuilder("spoon")
                      .withAttributedVerb("stir","with")
                      .build();
 
@@ -28,7 +28,7 @@ const GO = new VerbBuilder("go")
                   .withModifier("direction")
                   .build();
 
-const CAVE = new ObjBuilder("cave")
+const CAVE = new EntityBuilder("cave")
                   .withVerb("go")
                   .withVerbModifier("direction","north")
                   .withVerbModifier("direction","east")
@@ -39,7 +39,7 @@ const PUSH = new VerbBuilder("push")
                     .withModifier("direction")
                     .build();
 
-const BOX = new ObjBuilder("box")
+const BOX = new EntityBuilder("box")
                     .withVerb("push")
                     .build();
 

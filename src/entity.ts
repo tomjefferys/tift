@@ -1,10 +1,8 @@
 import { MultiDict } from "./util/multidict"
-import * as multidict from "./util/multidict"
-import { IndentError } from "./properties";
 
 //type VerbModMap = {[key:string]: string[]};
 
-export class Obj {
+export class Entity {
   readonly id : string;
   readonly name? : string;
   readonly verbs : VerbMatcher[];
@@ -42,7 +40,7 @@ function buildVerbMatcher(verb : string, attribute? : string) : VerbMatcher {
   };
 }
 
-export class ObjBuilder {
+export class EntityBuilder {
   id : string;
   name? : string;
   verbs : VerbMatcher[] = [];
@@ -53,7 +51,7 @@ export class ObjBuilder {
     this.id = id;
   }
   
-  withVerb(verb: string) : ObjBuilder {
+  withVerb(verb: string) : EntityBuilder {
     this.verbs.push(buildVerbMatcher(verb));
     return this;
   }
@@ -71,7 +69,7 @@ export class ObjBuilder {
     return this;
   }
 
-  build() : Obj {
-    return new Obj(this.id, this.name, this.verbs, this.cverbs, this.verbModifiers);   
+  build() : Entity {
+    return new Entity(this.id, this.name, this.verbs, this.cverbs, this.verbModifiers);   
   }
 }
