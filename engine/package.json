@@ -1,8 +1,12 @@
 {
-  "name": "tift",
+  "name": "tift-engine",
   "version": "1.0.0",
   "description": "pseudo parser based interactive fiction engine",
-  "main": "jest.config.js",
+  "_main": "out/src/main.js",
+  "_types": "out/src/main.d.ts",
+  "main": "out/src/main",
+  "typings": "out/src/main",
+  "module": "out/src/main.js",
   "directories": {
     "example": "example",
     "test": "test"
