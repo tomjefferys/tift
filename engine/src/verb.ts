@@ -49,6 +49,9 @@ export class VerbBuilder {
   modifiers : string[] = [];
 
   constructor(id : string) {
+    if (!id) {
+      throw new Error("A verb must have an id");
+    }
     this.id = id;
   } 
   

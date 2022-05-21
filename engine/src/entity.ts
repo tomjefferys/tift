@@ -29,14 +29,14 @@ export class Entity {
 export interface VerbMatcher {
   readonly verb : string;
   readonly attribute? : string;
-  readonly qualifier : boolean;
+  //readonly qualifier : boolean;
 }
 
 function buildVerbMatcher(verb : string, attribute? : string) : VerbMatcher {
   return {
     verb: verb,
     attribute: attribute,
-    qualifier: false,
+    //qualifier: false,
   };
 }
 
@@ -48,7 +48,15 @@ export class EntityBuilder {
   verbModifiers : MultiDict<string> = {};
   
   constructor(id : string) {
+    if (!id) {
+      throw new Error("An Entity must have an id");
+    }
     this.id = id;
+  }
+
+  withName(name : string) : EntityBuilder {
+    this.name = name;
+    return this;
   }
   
   withVerb(verb: string) : EntityBuilder {

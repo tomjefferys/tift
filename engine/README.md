@@ -12,3 +12,8 @@ $ tsc
 ```
 $ jest
 ```
+
+### Running all tests in a particular file
+```sh
+$ jest out/test/enginebuildertest.js
+```

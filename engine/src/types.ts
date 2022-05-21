@@ -14,3 +14,10 @@ export function stringValue(value : ObjValue) : string {
   }
   return value;
 }
+
+export function arrayValue(value : ObjValue) : ObjArray {
+  if (!Array.isArray(value)) {
+    throw new Error(JSON.stringify(value) + " is not an array")
+  }
+  return value;
+}

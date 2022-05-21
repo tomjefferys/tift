@@ -1,16 +1,29 @@
-import { Obj, ObjValue, ObjArray, stringValue } from "./types"
+import { Obj, ObjValue, ObjArray} from "./types"
+import { getString, getArray, getObj } from "./obj"
+import { VerbTrait, Verb, VerbBuilder } from "./verb"
 
+
+export interface Engine {
+  getWords(partialCommand : string[]) : string[];
+  execute(command : string[]) : void;
+}
 
 // Think about how to sructure this
 // Could we take inspiration from entity component systems
-class Engine {
+class EngineOld {
   private objs : {[key:string]: Obj} = {};
   
   constructor(objs : Obj[]) {
     for(const obj of objs) {
-      this.objs[stringValue(obj["name"])] = obj;
+      this.objs[getString(obj["name"])] = obj;
+      if (obj["type"] === "verb") {
+        // Create a verb
+      } else {
+        // Create an enity
+      }
     }
   }
-
-
 }
+
+
+

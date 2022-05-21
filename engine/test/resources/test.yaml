@@ -3,9 +3,9 @@ object: cave
 verbs:
   - go
 modifiers:
-  - direction:
-      - north
-      - east
+  direction:
+    - north
+    - east
 ---
 object: soup
 verbs:
