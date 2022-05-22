@@ -1,11 +1,17 @@
 import { Obj, ObjValue, ObjArray} from "./types"
 import { getString, getArray, getObj } from "./obj"
 import { VerbTrait, Verb, VerbBuilder } from "./verb"
+import { Entity } from "./entity"
 
 
 export interface Engine {
   getWords(partialCommand : string[]) : string[];
   execute(command : string[]) : void;
+}
+
+export interface EngineState {
+  entities : Entity[];
+  verbs : Verb[];
 }
 
 // Think about how to sructure this

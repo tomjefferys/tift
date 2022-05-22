@@ -2,7 +2,8 @@ import { Verb, VerbBuilder, VerbTrait } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
 import { Obj } from "./types";
 import { getString, getArray, getObj, forEach, forEachEntry, ifExists } from "./obj";
-import { Engine } from "./engine";
+import { Engine, EngineState } from "./engine";
+import { getObjs } from "./yamlparser";
 
 class EngineBuilder {
     private verbs : Verb[] = [];
@@ -22,13 +23,22 @@ class EngineBuilder {
         return this;
     }
 
-    build() : Engine {
+    build() : Engine & EngineState {
         return {
+            verbs : this.verbs,
+            entities : this.entities,
             getWords : (partial) => [],
             execute : (command) => {}
         };
     }
     
+}
+
+export function loadFromYaml(data: string) : Engine & EngineState {
+    const objs = getObjs(data);
+    const builder = new EngineBuilder();
+    objs.forEach(obj => builder.withObj(obj));
+    return builder.build();
 }
 
 export function makeVerb(obj : Obj) : Verb {

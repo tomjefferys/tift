@@ -1,6 +1,8 @@
-import { makeVerb, makeEntity } from "../src/enginebuilder";
+import { makeVerb, makeEntity, loadFromYaml } from "../src/enginebuilder";
 import { Obj } from "../src/types";
 import { Verb, VerbTrait } from "../src/verb";
+import { Engine, EngineState } from "../src/engine";
+import * as fs from "fs";
 
 
 test("Test make verb from empty object", () => {
@@ -112,4 +114,11 @@ test("Test entity with verb modifiers", () => {
     expect(entity.verbs).toHaveLength(1);
     expect(entity.verbs).toContainEqual({"verb":"go"});
     expect(entity.verbModifiers).toStrictEqual({"direction":["north", "east"]});
+})
+
+test("Test YAML loading", () => {
+  const data = fs.readFileSync("test/resources/test.yaml", "utf8");
+  const engine = loadFromYaml(data);
+  expect(engine.verbs).toHaveLength(2);
+  expect(engine.entities).toHaveLength(3);
 })
