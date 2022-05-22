@@ -62,8 +62,23 @@ export function makeVerb(obj : Obj) : Verb {
 }
 
 export function makeEntity(obj : Obj) : Entity {
-    const builder = new EntityBuilder(getString(obj["id"]));
-    ifExists(obj["name"], value => builder.withName(getString(value)));
+    const builder = new EntityBuilder(obj);
+    makeEntityVerbs(builder, obj)
+    return builder.build();
+}
+
+export function makeRoom(obj : Obj) : Entity {
+    const builder = new EntityBuilder(obj);
+    makeEntityVerbs(builder, obj);
+    builder.withVerb("go");
+    for(const [dir, dest] of Object.entries(obj["exits"])) {
+        builder.withVerbModifier("direction", dir);
+        // TODO add actions to handle the verb and set the dest
+    }
+    return builder.build();
+}
+
+function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
     forEach(obj["verbs"], verb => {
         const components = getString(verb).split(".", 2);
         if (components.length == 2) {
@@ -75,6 +90,4 @@ export function makeEntity(obj : Obj) : Entity {
     forEachEntry(obj["modifiers"], (type, mods) => {
         forEach(mods, mod => builder.withVerbModifier(type, getString(mod)))
     });
-
-    return builder.build();
 }

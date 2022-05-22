@@ -11,15 +11,15 @@ const EAT = new VerbBuilder("eat")
                      .withTrait(VerbTrait.Transitive)
                      .build();
 
-const SOUP = new EntityBuilder("soup")
+const SOUP = new EntityBuilder({"id" : "soup"})
                     .withVerb("stir")
                     .build();
   
-const APPLE = new EntityBuilder("apple")
+const APPLE = new EntityBuilder({"id" : "apple"})
                      .withVerb("eat")
                      .build();
 
-const SPOON = new EntityBuilder("spoon")
+const SPOON = new EntityBuilder({"id" : "spoon"})
                      .withAttributedVerb("stir","with")
                      .build();
 
@@ -28,7 +28,7 @@ const GO = new VerbBuilder("go")
                   .withModifier("direction")
                   .build();
 
-const CAVE = new EntityBuilder("cave")
+const CAVE = new EntityBuilder({"id" : "cave"})
                   .withVerb("go")
                   .withVerbModifier("direction","north")
                   .withVerbModifier("direction","east")
@@ -39,7 +39,7 @@ const PUSH = new VerbBuilder("push")
                     .withModifier("direction")
                     .build();
 
-const BOX = new EntityBuilder("box")
+const BOX = new EntityBuilder({"id" : "box"})
                     .withVerb("push")
                     .build();
 

@@ -1,4 +1,4 @@
-import { makeVerb, makeEntity, loadFromYaml } from "../src/enginebuilder";
+import { makeVerb, makeEntity, makeRoom, loadFromYaml } from "../src/enginebuilder";
 import { Obj } from "../src/types";
 import { Verb, VerbTrait } from "../src/verb";
 import { Engine, EngineState } from "../src/engine";
@@ -121,4 +121,23 @@ test("Test YAML loading", () => {
   const engine = loadFromYaml(data);
   expect(engine.verbs).toHaveLength(2);
   expect(engine.entities).toHaveLength(3);
+})
+
+test("Build room", () => {
+    const obj = {
+        "id": "cave",
+        "type": "room",
+        "desc": "A dark dank cave",
+        "exits": {
+            "north": "entrance",
+            "east": "pool"
+        }
+    };
+    const room = makeRoom(obj);
+
+    expect(room.id).toEqual("cave");
+    expect(room.props).toBeDefined();
+    expect(room.verbs).toHaveLength(1);
+    expect(room.verbs).toContainEqual({"verb":"go"});
+    expect(room.verbModifiers).toStrictEqual({"direction":["north", "east"]});
 })

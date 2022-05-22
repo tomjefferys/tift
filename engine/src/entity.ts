@@ -1,28 +1,30 @@
-import { MultiDict } from "./util/multidict"
+import { MultiDict } from "./util/multidict";
+import { Obj } from "./types";
+import { getString } from "./obj";
 
 //type VerbModMap = {[key:string]: string[]};
 
 export class Entity {
   readonly id : string;
-  readonly name? : string;
+  readonly props : Obj;
   readonly verbs : VerbMatcher[];
   readonly cverbs : VerbMatcher[];
   readonly verbModifiers : MultiDict<string>;
 
   constructor(id : string, 
-              name : string | undefined,
+              props : Obj,
               verbs : VerbMatcher[],
               cverbs : VerbMatcher[],
               verbModifiers: MultiDict<string>) {
      this.id = id;
-     this.name = name;
+     this.props = props;
      this.verbs = verbs;
      this.cverbs = cverbs;
      this.verbModifiers = verbModifiers;
    }
 
    getName() : string {
-     return this.name ?? this.id;
+     return this.props["name"] as string ?? this.id;
    }
 }
 
@@ -42,21 +44,20 @@ function buildVerbMatcher(verb : string, attribute? : string) : VerbMatcher {
 
 export class EntityBuilder {
   id : string;
-  name? : string;
+  props : Obj;
   verbs : VerbMatcher[] = [];
   cverbs : VerbMatcher[] = [];
   verbModifiers : MultiDict<string> = {};
   
-  constructor(id : string) {
-    if (!id) {
-      throw new Error("An Entity must have an id");
+  constructor(props : Obj) {
+    if (!props) {
+      throw new Error("An Entity must have properties");
     }
-    this.id = id;
-  }
-
-  withName(name : string) : EntityBuilder {
-    this.name = name;
-    return this;
+    if (!props["id"]) {
+      throw new Error("An Entity must have an id property")
+    }
+    this.props = props;
+    this.id = getString(props["id"]);
   }
   
   withVerb(verb: string) : EntityBuilder {
@@ -78,6 +79,6 @@ export class EntityBuilder {
   }
 
   build() : Entity {
-    return new Entity(this.id, this.name, this.verbs, this.cverbs, this.verbModifiers);   
+    return new Entity(this.id, this.props, this.verbs, this.cverbs, this.verbModifiers);   
   }
 }
