@@ -24,7 +24,7 @@ export const loadUniverse = (data: string) : Universe => {
 const entityBuilder : BuildFn<Entity> = (universe, obj) => {
     const id = obj["id"];
     if (typeof id === "string") {
-        const builder = new EntityBuilder(id);
+        const builder = new EntityBuilder(obj);
         return builder.build();
     }
     else {
