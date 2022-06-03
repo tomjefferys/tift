@@ -1,10 +1,12 @@
 import { Verb } from "./verb"
 import { Entity } from "./entity"
 
+export type BindingMap = {[key:string]:string};
+
 export type VerbMap = {[key:string]:Verb}
 export type EntityMap  = {[key:string]:Entity}
 
-export type ObjValue = Obj | ObjArray | string | number;
+export type ObjValue = Obj | ObjArray | string | number | Function;
 export type ObjArray = ObjValue[];
 export type Obj = {[key:string] : ObjValue};
 

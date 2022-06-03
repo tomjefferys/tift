@@ -4,6 +4,9 @@ import { Obj } from "./types";
 import { getString, getArray, getObj, forEach, forEachEntry, ifExists } from "./obj";
 import { Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
+import { Action } from "./action"
+import { ActionMatcher, getMatcher, match } from "./actionmatcher"
+import { Env } from "./env"
 
 class EngineBuilder {
     private verbs : Verb[] = [];
@@ -73,9 +76,19 @@ export function makeRoom(obj : Obj) : Entity {
     builder.withVerb("go");
     for(const [dir, dest] of Object.entries(obj["exits"])) {
         builder.withVerbModifier("direction", dir);
-        // TODO add actions to handle the verb and set the dest
+        builder.withAction(createMoveToAction(dir, dest));
     }
     return builder.build();
+}
+
+function createMoveToAction(dir : string, dest : string) : Action {
+    const matcher = getMatcher([match("go"), match(dir)]);
+    const action = (env : Env) => env.execute("moveTo", { dest : dest });
+
+    return {
+      matcher : matcher,
+      action : action
+    }
 }
 
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {

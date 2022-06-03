@@ -1,5 +1,6 @@
-import { Obj, ObjValue } from "./types"
+import { BindingMap, Obj, ObjValue } from "./types"
 
+type EnvFn = (env:Env) => {}
 
 export function createRootEnv() : Env {
     return new Env();
@@ -42,7 +43,23 @@ export class Env {
         }
     }
 
+    execute(name : string, bindings : Obj ) {
+        const fn = this.get(name);
+        if (!fn || typeof fn !== 'function') {
+            throw new Error(name + " is not a function");
+        }
+        const fnEnv = this.newChild();
+        fnEnv.addBindings(bindings);
+        fn(fnEnv);
+    }
+
     newChild() : Env {
         return new Env(this);
+    }
+
+    addBindings(bindings : Obj) {
+        for(const [key, value] of Object.entries(bindings)) {
+            this.def(key, value);
+        }
     }
 }

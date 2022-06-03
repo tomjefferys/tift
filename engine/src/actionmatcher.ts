@@ -1,6 +1,6 @@
 import { Verb } from "./verb";
+import { BindingMap } from "./types";
 
-type BindingMap = {[key:string]:string};
 
 // A match result is true/false + bindings
 export interface MatchResultSuccess {
