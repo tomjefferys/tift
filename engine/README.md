@@ -17,3 +17,8 @@ $ jest
 ```sh
 $ jest out/test/enginebuildertest.js
 ```
+
+## Linting
+```sh
+$ npm run lint
+```

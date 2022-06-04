@@ -1,0 +1,48 @@
+{
+  "id": "cave",
+  "type": "object",
+  "verbs": [
+    "go"
+  ],
+  "modifiers": {
+    "direction": [
+      "north",
+      "east"
+    ]
+  }
+}
+{
+  "id": "soup",
+  "type": "object",
+  "verbs": [
+    "stir"
+  ]
+}
+{
+  "id": "spoon",
+  "type": "object",
+  "verbs": [
+    "stir.with"
+  ]
+}
+{
+  "id": "go",
+  "type": "verb",
+  "modifiers": [
+    "direction"
+  ],
+  "tags": [
+    "intransitive"
+  ]
+}
+{
+  "id": "stir",
+  "type": "verb",
+  "attributes": [
+    "with"
+  ],
+  "tags": [
+    "transitive",
+    "intransitive"
+  ]
+}

@@ -12,6 +12,7 @@
     "test": "test"
   },
   "scripts": {
+    "lint": "eslint . --ext .ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -35,6 +36,9 @@
     "@types/jest": "^27.4.0",
     "@types/js-yaml": "^4.0.5",
     "@types/loglevel": "^1.6.3",
-    "@types/moo": "^0.5.5"
+    "@types/moo": "^0.5.5",
+    "@typescript-eslint/eslint-plugin": "^5.27.0",
+    "@typescript-eslint/parser": "^5.27.0",
+    "eslint": "^8.17.0"
   }
 }
