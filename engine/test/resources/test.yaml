@@ -1,11 +1,7 @@
 ---
-object: cave
-verbs:
-  - go
-modifiers:
-  direction:
-    - north
-    - east
+room: cave
+tags:
+  - start
 ---
 object: soup
 verbs:
@@ -14,12 +10,6 @@ verbs:
 object: spoon
 verbs:
   - stir.with
----
-verb: go
-modifiers:
-  - direction
-tags:
-  - intransitive
 ---
 verb: stir
 attributes:

@@ -1,7 +1,7 @@
 import * as moo from 'moo';
 import log from 'loglevel';
 
-log.setLevel("DEBUG");
+log.setLevel("INFO");
 
 const LEXEMES = {
   WS:    /[ \t]+/,

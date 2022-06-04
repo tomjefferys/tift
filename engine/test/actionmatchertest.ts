@@ -14,7 +14,7 @@ test("test empty match", () => {
 
     result = matcher([]);
     expect(result.match).toBe(true);
-    expect((result as MatchResultSuccess).bindings).toStrictEqual({}):
+    expect((result as MatchResultSuccess).bindings).toStrictEqual({});
 })
 
 test("test simple match", () => {

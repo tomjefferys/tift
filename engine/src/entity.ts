@@ -46,7 +46,7 @@ export class Entity {
    }
 
   hasTag(tag : string) : boolean {
-    const tags = getArray(this.props[PROPS.TAGS]) || [];
+    const tags = getArray(this.props[PROPS.TAGS] ?? []);
     return tags.indexOf(tag) != -1;
   }
 
@@ -112,6 +112,17 @@ export class EntityBuilder {
 
   withAction(action : Action) {
     this.actions.push(action);
+  }
+
+  withProp(name : string, value : string) {
+    this.props[name] = value; 
+  }
+
+  withTag(tag : string) {
+    if (!this.props[PROPS.TAGS]) {
+      this.props[PROPS.TAGS] = [];
+    }
+    getArray(this.props[PROPS.TAGS]).push(tag);
   }
 
   build() : Entity {

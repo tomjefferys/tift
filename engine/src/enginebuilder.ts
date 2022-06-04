@@ -2,18 +2,32 @@ import { Verb, VerbBuilder, VerbTrait } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
 import { Obj } from "./types";
 import { getString, getArray, getObj, forEach, forEachEntry, ifExists } from "./obj";
-import { Engine, EngineState } from "./engine";
+import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
 import { ActionMatcher, getMatcher, match } from "./actionmatcher"
 import { Env } from "./env"
 
-class EngineBuilder {
+const DEFAULT_VERBS = [
+      new VerbBuilder("go")
+                  .withTrait(VerbTrait.Intransitive)
+                  .withModifier("direction")
+                  .build()
+];
+
+export class EngineBuilder {
     private verbs : Verb[] = [];
     private entities : Entity[] = [];
+
+    constructor() {
+        DEFAULT_VERBS.forEach(verb => this.verbs.push(verb));
+    }
      
     withObj(obj : Obj) : EngineBuilder {
         switch(obj["type"]) {
+            case "room":
+                this.entities.push(makeRoom(obj));
+                break;
             case "object":
                 this.entities.push(makeEntity(obj));
                 break;
@@ -27,12 +41,13 @@ class EngineBuilder {
     }
 
     build() : Engine & EngineState {
-        return {
-            verbs : this.verbs,
-            entities : this.entities,
-            getWords : (partial) => [],
-            execute : (command) => {}
-        };
+        return new BasicEngine(this.entities, this.verbs);
+        //return {
+        //    verbs : this.verbs,
+        //    entities : this.entities,
+        //    getWords : (partial) => [],
+        //    execute : (command) => {}
+        //};
     }
     
 }
@@ -74,7 +89,7 @@ export function makeRoom(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj);
     builder.withVerb("go");
-    for(const [dir, dest] of Object.entries(obj["exits"])) {
+    for(const [dir, dest] of Object.entries(obj["exits"] ?? {})) {
         builder.withVerbModifier("direction", dir);
         builder.withAction(createMoveToAction(dir, dest));
     }

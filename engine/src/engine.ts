@@ -3,6 +3,7 @@ import { getString, getArray, getObj } from "./obj"
 import { VerbTrait, Verb, VerbBuilder } from "./verb"
 import { Entity } from "./entity"
 import { Env, createRootEnv } from "./env"
+import { getAllCommands } from "./commandsearch"
 
 enum TAG {
   START = "start"
@@ -22,10 +23,17 @@ export interface EngineState {
   verbs : Verb[];
 }
 
-export class BasicEngine {
-  private env = createRootEnv();
-  private entities : Entity[];
-  private verbs : Verb[];
+interface CommandContext {
+  entities : Entity[];
+  verbs : Verb[];
+}
+
+export class BasicEngine implements Engine {
+  private readonly env = createRootEnv();
+  readonly entities : Entity[];
+  readonly verbs : Verb[];
+  private context : CommandContext;
+  private commands : string[][];
 
   constructor(entities : Entity[], verbs : Verb[]) {
     this.entities = entities;
@@ -33,32 +41,68 @@ export class BasicEngine {
     const startingLocs = this.entities.filter(
         entity => entity.getType() === TYPE.ROOM && entity.hasTag(TAG.START));
     if (startingLocs.length == 0) {
-      throw new Error("No starting location deffined");
+      throw new Error("No starting location defined");
     }
     if (startingLocs.length > 1) {
       throw new Error("Multiple starting locations found");
     }
     this.env.set("location", startingLocs[0].id);
     this.env.set("moveTo", (env : Env) => this.env.set("location", env.get("dest"))); 
+    this.context = this.getContext();
+    this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
-}
 
-// Think about how to sructure this
-// Could we take inspiration from entity component systems
-class EngineOld {
-  private objs : {[key:string]: Obj} = {};
-  
-  constructor(objs : Obj[]) {
-    for(const obj of objs) {
-      this.objs[getString(obj["name"])] = obj;
-      if (obj["type"] === "verb") {
-        // Create a verb
-      } else {
-        // Create an enity
+  // TODO pass verbs through to the engine constructor
+  addDefaultVerbs() {
+    this.verbs.push(
+      new VerbBuilder("go")
+                  .withTrait(VerbTrait.Intransitive)
+                  .withModifier("direction")
+                  .build());
+  }
+
+  getContext() : CommandContext {
+    // for now just get the entity for the current location
+    const location = this.env.get("location");
+    const contextEntities = [];
+    for(const entity of this.entities) {
+      if (entity.id == location) {
+        contextEntities.push(entity);
       }
     }
+    return {
+      entities: contextEntities,
+      verbs: this.verbs
+    }
   }
-}
 
+  getWords(partial : String[]): string[] {
+    const nextWords = new Set<string>();
+    for(const command of this.commands) {
+      if (partial.length < command.length) {
+        let match = true;
+        let i=0;
+        for(const word of partial) {
+          if (word !== command[i]) {
+            match = false;
+            break;
+          }
+          i++;
+        }
+        if (match) {
+          nextWords.add(command[i]);
+        }
+      }
+    }
+    return Array.from(nextWords);
+  }
+
+  
+  execute(command: string[]): void {
+    // TODO
+  }
+
+
+}
 
 

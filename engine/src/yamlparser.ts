@@ -31,10 +31,10 @@ export function getObjs(data: string) {
   return docs;
 }
 
-const docs = loadObjs("test/resources/test.yaml");
-
-for(const doc of docs) {
-  console.log(JSON.stringify(doc, null, 2));
-
-}
+//const docs = loadObjs("test/resources/test.yaml");
+//
+//for(const doc of docs) {
+//  console.log(JSON.stringify(doc, null, 2));
+//
+//}
 
