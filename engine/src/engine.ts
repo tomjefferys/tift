@@ -99,10 +99,20 @@ export class BasicEngine implements Engine {
 
   
   execute(command: string[]): void {
-    // TODO
+    for(const entity of this.context.entities) {
+      for(const action of entity.actions) {
+        const result = action.matcher(command);
+        if (result.match) {
+          const actionEnv = this.env.newChild();
+          actionEnv.addBindings(result.bindings);
+          action.action(actionEnv);
+          this.context = this.getContext();
+          // TODO Break out?  Or run all matching actions?
+        }
+      }
+    }
+    this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
-
-
 }
 
 

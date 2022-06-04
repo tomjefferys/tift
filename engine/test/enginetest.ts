@@ -53,7 +53,7 @@ test("Test single room, with two exits", () => {
     expect(engine.getWords(["eat"])).toStrictEqual([]);
 })
 
-test("Test simple engine", () => {
+test("Test two rooms", () => {
     const builder = new EngineBuilder();
     builder.withObj({
         id : "northRoom",
@@ -71,6 +71,8 @@ test("Test simple engine", () => {
         }
     })
     const engine = builder.build();
-    expect(engine.getWords([])).toStrictEqual(["go"]);
+
     expect(engine.getWords(["go"])).toStrictEqual(["south"]);
+    engine.execute(["go", "south"]);
+    expect(engine.getWords(["go"])).toStrictEqual(["north"]);
 })
