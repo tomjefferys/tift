@@ -1,4 +1,3 @@
-import { this_str } from "jsep";
 import { match, capture, getMatcher, MatchResultSuccess } from "../src/actionmatcher"
 
 test("test empty input", () => {

@@ -1,4 +1,4 @@
-import { Env, createRootEnv } from ".././src/env";
+import { createRootEnv } from ".././src/env";
 
 test("test empty env", () => {
     const env = createRootEnv();

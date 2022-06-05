@@ -1,7 +1,5 @@
 import { makeVerb, makeEntity, makeRoom, loadFromYaml } from "../src/enginebuilder";
-import { Obj } from "../src/types";
-import { Verb, VerbTrait } from "../src/verb";
-import { Engine, EngineState } from "../src/engine";
+import { VerbTrait } from "../src/verb";
 import * as fs from "fs";
 
 

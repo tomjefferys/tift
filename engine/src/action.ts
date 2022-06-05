@@ -1,4 +1,5 @@
 import { ActionMatcher } from "./actionmatcher"
+import { Env } from "./env"
 
 // Encapsulates an action
 // eg
@@ -9,5 +10,5 @@ import { ActionMatcher } from "./actionmatcher"
 
 export interface Action {
     readonly matcher : ActionMatcher,
-    readonly action : Function
+    readonly action : (env : Env) => void
 }

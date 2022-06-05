@@ -6,7 +6,7 @@ export type BindingMap = {[key:string]:string};
 export type VerbMap = {[key:string]:Verb}
 export type EntityMap  = {[key:string]:Entity}
 
-export type ObjValue = Obj | ObjArray | string | number | Function;
+export type ObjValue = Obj | ObjArray | string | number | Function //(env: Env) => void;
 export type ObjArray = ObjValue[];
 export type Obj = {[key:string] : ObjValue};
 

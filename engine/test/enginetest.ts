@@ -1,6 +1,4 @@
 import { EngineBuilder } from "../src/enginebuilder";
-import { Engine } from "../src/engine";
-import { EntityBuilder } from "../src/entity";
 
 test("Test single room, no exits", () => {
     const builder = new EngineBuilder();

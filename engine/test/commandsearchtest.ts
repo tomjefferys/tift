@@ -1,6 +1,6 @@
 import {getAllCommands} from "../src/commandsearch";
-import {Entity, EntityBuilder} from "../src/entity";
-import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
+import {EntityBuilder} from "../src/entity";
+import {VerbBuilder, VerbTrait} from "../src/verb";
 
 const STIR = new VerbBuilder("stir")
                      .withTrait(VerbTrait.Transitive)

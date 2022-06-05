@@ -1,5 +1,3 @@
-import { Obj, ObjValue, ObjArray} from "./types"
-import { getString, getArray, getObj } from "./obj"
 import { VerbTrait, Verb, VerbBuilder } from "./verb"
 import { Entity } from "./entity"
 import { Env, createRootEnv } from "./env"
@@ -76,7 +74,7 @@ export class BasicEngine implements Engine {
     }
   }
 
-  getWords(partial : String[]): string[] {
+  getWords(partial : string[]): string[] {
     const nextWords = new Set<string>();
     for(const command of this.commands) {
       if (partial.length < command.length) {

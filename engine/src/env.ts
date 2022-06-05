@@ -1,11 +1,13 @@
-import { BindingMap, Obj, ObjValue } from "./types"
-
-type EnvFn = (env:Env) => {}
+import { Obj, ObjValue } from "./types"
 
 export function createRootEnv() : Env {
     return new Env();
 }
 
+//type EnvValue = 
+//type EnvArray = EnvValue[];
+//type EnvProps = {[key:string]: EnvValue}
+//
 // An execution envionment for a function.  Contains all local variables, and access to 
 // variables in parent environments
 export class Env {

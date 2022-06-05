@@ -1,4 +1,3 @@
-import { Verb } from "./verb";
 import { BindingMap } from "./types";
 
 

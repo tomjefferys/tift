@@ -1,11 +1,11 @@
 import { Verb, VerbBuilder, VerbTrait } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
 import { Obj } from "./types";
-import { getString, getArray, getObj, forEach, forEachEntry, ifExists } from "./obj";
+import { getString, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
-import { ActionMatcher, getMatcher, match } from "./actionmatcher"
+import { getMatcher, match } from "./actionmatcher"
 import { Env } from "./env"
 
 const DEFAULT_VERBS = [

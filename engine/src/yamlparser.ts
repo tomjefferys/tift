@@ -1,10 +1,10 @@
 import { loadAll } from "js-yaml"
 import * as fs from "fs"
-import { Obj, ObjArray, ObjValue } from "./types"
+import { Obj } from "./types"
 
 //const data = fs.readFileSync("test/resources/test.yaml", "utf8");
 
-let prototypes = {
+const prototypes = {
   "room":{"type":"room"},
   "object":{"type":"object"},
   "rule":{"type":"rule"},
@@ -17,12 +17,12 @@ export function loadObjs(fileName: string) {
 }
 
 export function getObjs(data: string) {
-  let docs : Obj[] = [];
+  const docs : Obj[] = [];
   loadAll(data, rawDoc => { 
     const doc = rawDoc as Obj
     for(const [name, pt] of Object.entries(prototypes)) {
       if (doc[name]) {
-        let newDoc : Obj = Object.assign({"id": doc[name]}, pt, doc);
+        const newDoc : Obj = Object.assign({"id": doc[name]}, pt, doc);
         delete newDoc[name];
         docs.push(newDoc);
       }

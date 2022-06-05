@@ -1,5 +1,3 @@
-import { Optional } from "./optional"
-import * as Opt from "./optional"
 
 export const ROOT = Symbol("ROOT");
 export const TERMINAL = Symbol("TERMINAL");
@@ -45,10 +43,6 @@ function isValueNode<T>(node : Node<T>) : node is ValueNode<T> {
     return value !== ROOT && value !== TERMINAL;
 }
 
-//function isValueNode<T>(value : NodeValue<T>) : value is T {
-//    return value !== ROOT && value !== TERMINAL;
-//}
-
 export function forEachChild<T>(node : Node<T>, fn : (t:ValueNode<T>) => void) {
     const [_, children] = node;
     children.forEach(child => {
@@ -64,7 +58,6 @@ function newNode<T>(value : NodeValue<T>) : Node<T> {
 
 export function addPath<T>(node : Node<T>, path : T[] ) {
    const next = path.length? path.pop() as T : TERMINAL;
-   const [value, children] = node;
    const child = getOrCreateChild(node, next);
    if (next !== TERMINAL) {
       addPath(child, path);
@@ -72,7 +65,7 @@ export function addPath<T>(node : Node<T>, path : T[] ) {
 }
 
 function getOrCreateChild<T>(node : Node<T>, value : NodeValue<T>) {
-   const [nodeValue, children] = node;
+   const [_, children] = node;
    let child = children.find(node => node[0] == value);
    if (!child) {
        child = newNode(value);

@@ -1,5 +1,4 @@
 import {Obj, ObjValue, ObjArray} from "./types"
-import { ValueNode } from "./util/tree";
 
 export function getString(value : ObjValue) : string {
     if (typeof value != 'string') {
@@ -16,7 +15,6 @@ export function getArray(value : ObjValue) : ObjArray {
 }
 
 export function getObj(value : ObjValue) : Obj {
-  const type = typeof value;
   if (!isObject(value)) {
       throw new Error(JSON.stringify(value) + " is not an object");
   }

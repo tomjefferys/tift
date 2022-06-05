@@ -187,7 +187,6 @@ const WORD_PATTERNS = Tree.fromArrays([
 const doSearch = (context : SearchContext,
                   searchNode = WORD_PATTERNS,
                   state = INITIAL_STATE) => {
-  const [searchFn, children] = searchNode;
   const results : SearchResult[] = [];
   Tree.forEachChild(searchNode, node => {
     const searchFn = Tree.getValue(node);
