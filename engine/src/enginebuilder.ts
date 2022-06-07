@@ -6,7 +6,7 @@ import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
 import { getMatcher, match } from "./actionmatcher"
-import { Env } from "./env"
+import { Env, ObjBuilder } from "./env"
 
 const DEFAULT_VERBS = [
       new VerbBuilder("go")
@@ -98,8 +98,8 @@ export function makeRoom(obj : Obj) : Entity {
 
 function createMoveToAction(dir : string, dest : string) : Action {
     const matcher = getMatcher([match("go"), match(dir)]);
-    const action = (env : Env) => env.execute("moveTo", { dest : dest });
-
+    const bindings = new ObjBuilder().with("dest", dest).build()
+    const action = (env : Env) => env.execute("moveTo", bindings);
     return {
       matcher : matcher,
       action : action

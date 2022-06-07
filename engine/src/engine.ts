@@ -1,6 +1,6 @@
 import { VerbTrait, Verb, VerbBuilder } from "./verb"
 import { Entity } from "./entity"
-import { Env, createRootEnv } from "./env"
+import { Env, createRootEnv, VarType, ObjBuilder } from "./env"
 import { getAllCommands } from "./commandsearch"
 
 enum TAG {
@@ -45,7 +45,7 @@ export class BasicEngine implements Engine {
       throw new Error("Multiple starting locations found");
     }
     this.env.set("location", startingLocs[0].id);
-    this.env.set("moveTo", (env : Env) => this.env.set("location", env.get("dest"))); 
+    this.env.set("moveTo", (env : Env) => this.env.set("location", env.get(VarType.STRING, "dest"))); 
     this.context = this.getContext();
     this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
@@ -61,7 +61,7 @@ export class BasicEngine implements Engine {
 
   getContext() : CommandContext {
     // for now just get the entity for the current location
-    const location = this.env.get("location");
+    const location = this.env.get(VarType.STRING, "location");
     const contextEntities = [];
     for(const entity of this.entities) {
       if (entity.id == location) {
@@ -102,7 +102,11 @@ export class BasicEngine implements Engine {
         const result = action.matcher(command);
         if (result.match) {
           const actionEnv = this.env.newChild();
-          actionEnv.addBindings(result.bindings);
+          const bindings = new ObjBuilder();
+          for(const [key,value] of Object.entries(result.bindings)) {
+            bindings.with(key, value);
+          }
+          actionEnv.addBindings(bindings.build());
           action.action(actionEnv);
           this.context = this.getContext();
           // TODO Break out?  Or run all matching actions?

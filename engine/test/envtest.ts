@@ -1,8 +1,8 @@
-import { createRootEnv } from ".././src/env";
+import { VarType, createRootEnv } from "../src/env";
 
 test("test empty env", () => {
     const env = createRootEnv();
-    const test = () => env.get("test");
+    const test = () => env.get(VarType.STRING, "test");
 
     expect(test).toThrowError();
 });
@@ -10,7 +10,7 @@ test("test empty env", () => {
 test("test simple set and get", () => {
     const env = createRootEnv();
     env.set("foo", "bar");
-    const foo = env.get("foo");
+    const foo = env.get(VarType.STRING, "foo");
     expect(foo).toStrictEqual("bar");
 })
 
@@ -21,20 +21,20 @@ test("test child env", () => {
     const child = root.newChild();
     child.set("var3", "baz");
 
-    expect(root.get("var1")).toEqual("foo");
-    expect(root.get("var2")).toEqual("bar");
-    expect(() => root.get("var3")).toThrowError();
+    expect(root.get(VarType.STRING, "var1")).toEqual("foo");
+    expect(root.get(VarType.STRING, "var2")).toEqual("bar");
+    expect(() => root.get(VarType.STRING, "var3")).toThrowError();
 
-    expect(child.get("var1")).toEqual("foo");
-    expect(child.get("var2")).toEqual("bar");
-    expect(child.get("var3")).toEqual("baz");
+    expect(child.get(VarType.STRING, "var1")).toEqual("foo");
+    expect(child.get(VarType.STRING, "var2")).toEqual("bar");
+    expect(child.get(VarType.STRING, "var3")).toEqual("baz");
 
     child.set("var1", "qux");
 
-    expect(root.get("var1")).toEqual("qux");
-    expect(child.get("var1")).toEqual("qux");
+    expect(root.get(VarType.STRING, "var1")).toEqual("qux");
+    expect(child.get(VarType.STRING, "var1")).toEqual("qux");
 
     root.set("var3", "quux");
-    expect(root.get("var3")).toEqual("quux");
-    expect(child.get("var3")).toEqual("baz");
+    expect(root.get(VarType.STRING, "var3")).toEqual("quux");
+    expect(child.get(VarType.STRING, "var3")).toEqual("baz");
 })
