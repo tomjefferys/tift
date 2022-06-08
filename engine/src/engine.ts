@@ -50,15 +50,6 @@ export class BasicEngine implements Engine {
     this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
 
-  // TODO pass verbs through to the engine constructor
-  addDefaultVerbs() {
-    this.verbs.push(
-      new VerbBuilder("go")
-                  .withTrait(VerbTrait.Intransitive)
-                  .withModifier("direction")
-                  .build());
-  }
-
   getContext() : CommandContext {
     // for now just get the entity for the current location
     const location = this.env.get(VarType.STRING, "location");
