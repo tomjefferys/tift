@@ -30,6 +30,7 @@ const GO = new VerbBuilder("go")
 
 const CAVE = new EntityBuilder({"id" : "cave"})
                   .withVerb("go")
+                  .withVerb("look")
                   .withVerbModifier("direction","north")
                   .withVerbModifier("direction","east")
                   .build();
@@ -42,6 +43,11 @@ const PUSH = new VerbBuilder("push")
 const BOX = new EntityBuilder({"id" : "box"})
                     .withVerb("push")
                     .build();
+
+const LOOK = new VerbBuilder("look")
+                  .withTrait(VerbTrait.Intransitive)
+                  .build();
+
 
 test("Test empty input", () => {
   const options = getAllCommands([], []);
@@ -103,4 +109,15 @@ test("Test transitive verb with modifier", () => {
     ["push", "box", "east"]
   ]));
 })
+
+test("Test look", () => {
+  const commands = getAllCommands([CAVE], [GO, LOOK]);
+  expect(commands).toHaveLength(4);
+  expect(commands).toEqual(expect.arrayContaining([
+    ["go"],
+    ["go","north"],
+    ["go","east"],
+    ["look"] ]));
+
+});
 

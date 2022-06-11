@@ -8,7 +8,7 @@ test("Test single room, no exits", () => {
         tags : [ "start" ]
     })
     const engine = builder.build();
-    expect(engine.getWords([])).toStrictEqual(["go"]);
+    expect(engine.getWords([])).toStrictEqual(["go", "look"]);
     expect(engine.getWords(["go"])).toStrictEqual([]);
     expect(engine.getWords(["eat"])).toStrictEqual([]);
 });
@@ -24,7 +24,7 @@ test("Test single room, with one exit", () => {
         tags : [ "start" ]
     })
     const engine = builder.build();
-    expect(engine.getWords([])).toStrictEqual(["go"]);
+    expect(engine.getWords([])).toStrictEqual(["go", "look"]);
     expect(engine.getWords(["go"])).toStrictEqual(["south"]);
     expect(engine.getWords(["go", "south"])).toStrictEqual([]);
     expect(engine.getWords(["eat"])).toStrictEqual([]);
@@ -42,7 +42,7 @@ test("Test single room, with two exits", () => {
         tags : [ "start" ]
     })
     const engine = builder.build();
-    expect(engine.getWords([])).toStrictEqual(["go"]);
+    expect(engine.getWords([])).toStrictEqual(["go", "look"]);
     expect(engine.getWords(["go"])).toHaveLength(2);
     expect(engine.getWords(["go"])).toContain("south");
     expect(engine.getWords(["go"])).toContain("east");
@@ -55,6 +55,8 @@ test("Test two rooms", () => {
     const builder = new EngineBuilder();
     builder.withObj({
         id : "northRoom",
+        name : "The North Room",
+        desc : "The room is dark and square",
         type : "room",
         exits : {
             south : "southRoom"
@@ -63,6 +65,7 @@ test("Test two rooms", () => {
     })
     builder.withObj({
         id : "southRoom",
+        name : "The South Room",
         type : "room",
         exits : {
             north : "northRoom"
@@ -71,6 +74,13 @@ test("Test two rooms", () => {
     const engine = builder.build();
 
     expect(engine.getWords(["go"])).toStrictEqual(["south"]);
+    engine.execute(["look"]);
+    let look = engine.getBuffer().flush().join(" ");
+    expect(look).toEqual("The room is dark and square");
+    
     engine.execute(["go", "south"]);
     expect(engine.getWords(["go"])).toStrictEqual(["north"]);
+    engine.execute(["look"]);
+    look = engine.getBuffer().flush().join(" ");
+    expect(look).toEqual("The South Room");
 })

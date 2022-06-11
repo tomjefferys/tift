@@ -6,12 +6,27 @@ import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
 import { getMatcher, match } from "./actionmatcher"
-import { Env, ObjBuilder } from "./env"
+import { Env, ObjBuilder, mkObj } from "./env"
+
+
+const LOOK = {
+    matcher : getMatcher([match("look")]),
+    action : (env:Env) => {
+        const location = env.execute("getLocation", {});
+        const entity = env.execute("getEntity", mkObj({"id":location})) as Entity;
+        const desc = entity.props["desc"] ?? entity.props["name"] ?? entity.id;
+        env.execute("write", mkObj({"value":desc}))
+    } 
+}
 
 const DEFAULT_VERBS = [
       new VerbBuilder("go")
                   .withTrait(VerbTrait.Intransitive)
                   .withModifier("direction")
+                  .build(),
+      new VerbBuilder("look")
+                  .withTrait(VerbTrait.Intransitive)
+                  .withAction(LOOK)
                   .build()
 ];
 
@@ -42,12 +57,6 @@ export class EngineBuilder {
 
     build() : Engine & EngineState {
         return new BasicEngine(this.entities, this.verbs);
-        //return {
-        //    verbs : this.verbs,
-        //    entities : this.entities,
-        //    getWords : (partial) => [],
-        //    execute : (command) => {}
-        //};
     }
     
 }
@@ -93,6 +102,7 @@ export function makeRoom(obj : Obj) : Entity {
         builder.withVerbModifier("direction", dir);
         builder.withAction(createMoveToAction(dir, dest));
     }
+    builder.withVerb("look");
     return builder.build();
 }
 
@@ -119,3 +129,4 @@ function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
         forEach(mods, mod => builder.withVerbModifier(type, getString(mod)))
     });
 }
+

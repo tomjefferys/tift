@@ -8,7 +8,15 @@ export enum VarType {
 }
 
 type Obj = {[key:string]:AnyType};
-type EnvFn = (env:Env) => void;
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type AnyObj = {[key:string]:any};
+type AnyArray = any[];
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export type EnvFn = (env:Env) => ReturnType;
+
+export type ReturnType = boolean | number | string | EnvFn | AnyObj | AnyArray | void;
 
 type TypeName = VarType.BOOLEAN | VarType.NUMBER | VarType.STRING | VarType.FUNCTION | VarType.ARRAY | VarType.OBJECT;
 type AnyType = VarBool | VarNum | VarString | VarFunction | VarArray | VarObject;
@@ -17,7 +25,7 @@ type ObjectType<T> =
     T extends VarType.BOOLEAN ? boolean :
     T extends VarType.NUMBER ? number :
     T extends VarType.STRING ? string :
-    T extends VarType.FUNCTION ? (env:Env) => void :
+    T extends VarType.FUNCTION ? EnvFn :
     T extends VarType.ARRAY ? AnyType[] :
     T extends VarType.OBJECT ? Obj :
     never;
@@ -66,7 +74,6 @@ export class Env {
         this.properties[name] = wrapValue(value);
     }
 
-    //set(name : string, value : AnyType) {
     set<T extends TypeName>(name : string, value : ObjectType<T>) {
         const env = this.find(name) ?? this;
         env.properties[name] = wrapValue(value);
@@ -96,11 +103,11 @@ export class Env {
         }
     }
 
-    execute(name : string, bindings : Obj ) {
+    execute(name : string, bindings : Obj ) : ReturnType {
         const fn = this.get(VarType.FUNCTION, name);
         const fnEnv = this.newChild();
         fnEnv.addBindings(bindings);
-        fn(fnEnv);
+        return fn(fnEnv);
     }
 
     newChild() : Env {
@@ -112,6 +119,18 @@ export class Env {
             this.properties[key] = value;
         }
     }
+}
+
+export function mkObj(obj : AnyObj) : Obj {
+    const builder = new ObjBuilder();
+    for(const [key, value] of Object.entries(obj)) {
+        builder.with(key, value);
+    }
+    return builder.build();
+}
+
+export function mkArr(arr: AnyArray) : AnyType[] {
+    return arr.map(value => wrapValue(value));
 }
 
 export class ObjBuilder {
@@ -146,9 +165,9 @@ function wrapValue<T extends TypeName>(value : ObjectType<T>) : AnyType {
             break;
         case "object":
             if (Array.isArray(value)) {
-                result = makeVar(VarType.ARRAY, value as AnyType[]);
+                result = makeVar(VarType.ARRAY, mkArr(value));
             } else if (value != null) {
-                result = makeVar(VarType.OBJECT, value as Obj)
+                result = makeVar(VarType.OBJECT, mkObj(value as {[key:string]:any}))
             } else {
                 throw new Error("Null values are forbidden");
             }

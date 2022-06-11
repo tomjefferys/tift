@@ -1,7 +1,12 @@
-import { VerbTrait, Verb, VerbBuilder } from "./verb"
+import { Verb } from "./verb"
 import { Entity } from "./entity"
 import { Env, createRootEnv, VarType, ObjBuilder } from "./env"
 import { getAllCommands } from "./commandsearch"
+import { TextBuffer, createTextBuffer } from "./textbuffer";
+import { Action } from "./action";
+
+type EntityMap = {[key:string]:Entity}
+type VerbMap = {[key:string]:Verb}
 
 enum TAG {
   START = "start"
@@ -14,11 +19,12 @@ enum TYPE {
 export interface Engine {
   getWords(partialCommand : string[]) : string[];
   execute(command : string[]) : void;
+  getBuffer() : TextBuffer;
 }
 
 export interface EngineState {
-  entities : Entity[];
-  verbs : Verb[];
+  entities : {[key:string]:Entity};
+  verbs : {[key:string]:Verb};
 }
 
 interface CommandContext {
@@ -28,15 +34,17 @@ interface CommandContext {
 
 export class BasicEngine implements Engine {
   private readonly env = createRootEnv();
-  readonly entities : Entity[];
-  readonly verbs : Verb[];
+  readonly entities : EntityMap;
+  readonly verbs : VerbMap;
+  readonly buffer : TextBuffer;
   private context : CommandContext;
   private commands : string[][];
+  private location : string;
 
   constructor(entities : Entity[], verbs : Verb[]) {
-    this.entities = entities;
-    this.verbs = verbs;
-    const startingLocs = this.entities.filter(
+    this.entities = entities.reduce((map : EntityMap, entity) => {map[entity.id] = entity; return map}, {} );
+    this.verbs = verbs.reduce((map : VerbMap, verb) => {map[verb.id] = verb; return map}, {} );
+    const startingLocs = Object.values(this.entities).filter(
         entity => entity.getType() === TYPE.ROOM && entity.hasTag(TAG.START));
     if (startingLocs.length == 0) {
       throw new Error("No starting location defined");
@@ -44,24 +52,35 @@ export class BasicEngine implements Engine {
     if (startingLocs.length > 1) {
       throw new Error("Multiple starting locations found");
     }
-    this.env.set("location", startingLocs[0].id);
-    this.env.set("moveTo", (env : Env) => this.env.set("location", env.get(VarType.STRING, "dest"))); 
+    this.location = startingLocs[0].id;
+    this.makeDefaultFunctions();
+    this.env.set("moveTo", (env : Env) => 
+      this.env.execute("setLocation", new ObjBuilder().with("dest",env.get(VarType.STRING, "dest")).build()));
+    this.buffer = createTextBuffer();
     this.context = this.getContext();
     this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
 
+  makeDefaultFunctions() {
+    this.env.set("setLocation", env => this.location = env.get(VarType.STRING, "dest"));
+    this.env.set("getLocation", _ => this.location);
+    this.env.set("getEntity", env => {
+      const entityId = env.get(VarType.STRING, "id")
+      return this.entities[entityId];
+    });
+    this.env.set("write", env => this.buffer.write(env.get(VarType.STRING, "value")));
+  }
+
   getContext() : CommandContext {
     // for now just get the entity for the current location
-    const location = this.env.get(VarType.STRING, "location");
     const contextEntities = [];
-    for(const entity of this.entities) {
-      if (entity.id == location) {
-        contextEntities.push(entity);
-      }
+    const locationEntity = this.entities[this.location];
+    if (locationEntity) {
+      contextEntities.push(locationEntity);
     }
     return {
       entities: contextEntities,
-      verbs: this.verbs
+      verbs: Object.values(this.verbs)
     }
   }
 
@@ -88,8 +107,8 @@ export class BasicEngine implements Engine {
 
   
   execute(command: string[]): void {
-    for(const entity of this.context.entities) {
-      for(const action of entity.actions) {
+    const actions : Action[] = [...this.context.entities, ...this.context.verbs].flatMap(obj => obj.actions);
+    for (const action of actions) {
         const result = action.matcher(command);
         if (result.match) {
           const actionEnv = this.env.newChild();
@@ -102,9 +121,12 @@ export class BasicEngine implements Engine {
           this.context = this.getContext();
           // TODO Break out?  Or run all matching actions?
         }
-      }
     }
     this.commands = getAllCommands(this.context.entities, this.context.verbs);
+  }
+
+  getBuffer(): TextBuffer {
+      return this.buffer;
   }
 }
 

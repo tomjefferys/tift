@@ -1,3 +1,5 @@
+import { Action } from "./action";
+
 export enum VerbTrait {
   Transitive,
   Intransitive,
@@ -11,17 +13,20 @@ export class Verb {
   readonly attributes : string[];
   readonly traits : VerbTrait[];
   readonly modifiers : string[];
+  readonly actions : Action[];
 
   constructor(id : string,
               name : string | undefined,
               attributes : string[],
               traits : VerbTrait[],
-              modifiers : string[]) {
+              modifiers : string[],
+              actions : Action[]) {
     this.id = id;
     this.name = name;
     this.attributes = attributes;
     this.traits = traits;
     this.modifiers = modifiers;
+    this.actions = actions;
   }
 
   isTransitive() : boolean {
@@ -47,6 +52,7 @@ export class VerbBuilder {
   attributes : string[] = [];
   traits : VerbTrait[] = [];
   modifiers : string[] = [];
+  actions : Action[] = [];
 
   constructor(id : string) {
     if (!id) {
@@ -74,9 +80,14 @@ export class VerbBuilder {
     this.modifiers.push(modifier);
     return this;
   }
+  
+  withAction(action : Action) : VerbBuilder {
+    this.actions.push(action);
+    return this;
+  }
 
   build() : Verb {
-    return new Verb(this.id, this.name, this.attributes, this.traits, this.modifiers);
+    return new Verb(this.id, this.name, this.attributes, this.traits, this.modifiers, this.actions);
   }
   
 

@@ -119,7 +119,7 @@ const getModifierValues = (context : SearchContext, modifier : string) : string[
       Object.values(context.objs).flatMap(obj => 
         multidict.get(obj.verbModifiers, modifier))
 
-const getVarbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
+const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
   return (context, state) =>
         Object.values(context.objs)
               .flatMap(obj => obj.verbs)
@@ -169,8 +169,8 @@ const modifierSearch : SearchFn = (context, state) => {
              });
 }
 
-const TRANS_VERB = getVarbSearch(verb => verb.isTransitive());
-const INTRANS_VERB = getVarbSearch(verb => verb.isIntransitive());
+const TRANS_VERB = getVerbSearch(verb => verb.isTransitive());
+const INTRANS_VERB = getVerbSearch(verb => verb.isIntransitive());
 const DIRECT_OBJECT = directObjectSearch;
 const ATTRIBUTE = attributeSearch;
 const INDIRECT_OBJECT = indirectObjectSearch;
