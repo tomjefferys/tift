@@ -4,6 +4,7 @@ import { Env, createRootEnv, VarType, ObjBuilder } from "./env"
 import { getAllCommands } from "./commandsearch"
 import { TextBuffer, createTextBuffer } from "./textbuffer";
 import { Action } from "./action";
+import { StringLiteral } from "@babel/types";
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -20,6 +21,7 @@ export interface Engine {
   getWords(partialCommand : string[]) : string[];
   execute(command : string[]) : void;
   getBuffer() : TextBuffer;
+  getStatus() : String;
 }
 
 export interface EngineState {
@@ -127,6 +129,11 @@ export class BasicEngine implements Engine {
 
   getBuffer(): TextBuffer {
       return this.buffer;
+  }
+
+  getStatus() : string {
+    const location = this.entities[this.location];
+    return location.getName() ?? location.id;
   }
 }
 

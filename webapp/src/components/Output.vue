@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import StatusBar from "./StatusBar.vue";
+
+const props = defineProps<{
+    status : string,
+    text: string[],
+}>();
 </script>
 
 <template>
-    <StatusBar/>
+    <StatusBar :status="status"/>
     <div class="textout">
-        This is where the story output goes
+        <p v-for="output in text">
+           {{output}}
+        </p>
     </div>
 </template>
 

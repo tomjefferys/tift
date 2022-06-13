@@ -1,12 +1,13 @@
 <script setup lang="ts">
   import { reactive } from 'vue'
-
-  const state = reactive({ status : "This is the status bar"});
+  const props = defineProps<{
+      status: string
+  }>();
 </script>
 
 <template>
     <div id="statusBar">
-        {{ state.status }}
+        {{ status }}
     </div>
 </template>
 

@@ -9,7 +9,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'wordSelected', word: string) : void
+  (e: 'wordSelected', word: string) : void,
+  (e: 'execute') : void
 }>();
 
 
@@ -26,6 +27,9 @@ function wordSelected(word: string) {
 <template>
     <div id="commandOut">
         <Command :command="combinedCommand"/>
+        <div id="execute">
+            <button @click="$emit('execute')">execute</button>
+        </div>
     </div>
     <div class="textout">
         <div v-for="word in words">

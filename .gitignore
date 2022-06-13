@@ -7,4 +7,5 @@ out
 .vscode
 notes.txt
 node_modules
+webapp/dist
 
