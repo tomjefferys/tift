@@ -26,8 +26,8 @@ type ObjectType<T> =
     T extends VarType.NUMBER ? number :
     T extends VarType.STRING ? string :
     T extends VarType.FUNCTION ? EnvFn :
-    T extends VarType.ARRAY ? AnyType[] :
-    T extends VarType.OBJECT ? Obj :
+    T extends VarType.ARRAY ? AnyArray :
+    T extends VarType.OBJECT ? AnyObj :
     never;
 
 interface VarBool {
@@ -75,16 +75,25 @@ export class Env {
     }
 
     set<T extends TypeName>(name : string, value : ObjectType<T>) {
-        const env = this.find(name) ?? this;
+        const env = this.findEnv(name) ?? this;
         env.properties[name] = wrapValue(value);
     }
 
     get<T extends TypeName>(type : T, name : string) : ObjectType<T> {
-        const env = this.find(name);
+        const dotIndex = name.indexOf(".");
+        const rootName = (dotIndex > -1)? name.substring(0, dotIndex) : name;
+        const env = this.findEnv(rootName);
         if (env) {
-            const value = env.properties[name];
+            const value = env.properties[rootName];
+            if (dotIndex > -1) {
+                if (value.type == VarType.OBJECT) {
+                    return this.getFromObj(type, value.value, name.substring(dotIndex + 1));
+                } else {
+                    throw new Error(rootName + " is not an object");
+                }
+            }
             if (value.type == type) {
-                return value.value as ObjectType<T>;
+                return unwrap(type, value);
             } else {
                 throw new Error("Variable " + name + " is not a " + type);
             }
@@ -93,11 +102,39 @@ export class Env {
         }
     }
 
-    find(name : string) : Env | undefined {
+    getFromObj<T extends TypeName>(type : T, obj : Obj, name : string) : ObjectType<T> {
+        const dotIndex = name.indexOf(".");
+        if (dotIndex == -1) {
+            const value = obj[name];
+            if (value) {
+                if (value.type == type) {
+                    return unwrap(type, value);
+                } else if (!value) {
+                    throw new Error("Variable " + name + " is not a " + type);
+                }
+            } else {
+                throw new Error("Variable " + name + " does not exist");
+            }
+        } else {
+            const value = obj[name.substring(0,dotIndex)];
+            if (value) {
+                if (value.type == VarType.OBJECT) {
+                    return this.getFromObj(type, value.value, name.substring(dotIndex + 1));
+                } else {
+                    throw new Error(name.substring(0,dotIndex) + " is not an object");
+                }
+            } else {
+                throw new Error(name.substring(0,dotIndex) + " does not exist");
+            }
+        }
+        throw new Error("Should not get here");
+    }
+
+    findEnv(name : string) : Env | undefined {
         if (this.properties[name]) {
             return this;
         } else if (this.parent) {
-            return this.parent.find(name);
+            return this.parent.findEnv(name);
         } else {
             return undefined;
         }
@@ -176,6 +213,43 @@ function wrapValue<T extends TypeName>(value : ObjectType<T>) : AnyType {
             throw new Error("Unknown type");
     }
     return result;
+}
+
+function unwrap<T extends TypeName>(type : T, wrappedValue : AnyType) : ObjectType<T> {
+    if (type === wrappedValue.type) {
+        if (isSimpleType(type)) {
+            return wrappedValue.value as ObjectType<T>;
+        } else if (type === VarType.ARRAY) {
+            const arr = [] as AnyArray;
+            for(const item of (wrappedValue.value as AnyType[])) {
+                arr.push(unwrap(item.type, item))
+            }
+            return arr as ObjectType<T>
+        } else if (type == VarType.OBJECT) {
+            const obj = {} as AnyObj;
+            for(const [key,value] of Object.entries(wrappedValue.value)) {
+                obj[key] = unwrap(value.type, value);
+            }
+            return obj as ObjectType<T>;
+        } else {
+            throw new Error(type + " is an unknow type");
+        }
+        
+    } else {
+        throw new Error("value is wrong type");
+    }
+}
+
+function isSimpleType(type : TypeName ) {
+    switch(type) {
+        case VarType.BOOLEAN:
+        case VarType.NUMBER:
+        case VarType.STRING:
+        case VarType.FUNCTION:
+            return true;
+        default:
+            return false;
+    }
 }
 
 function makeVar<T extends TypeName>(typeName : T, value : ObjectType<T> ) : AnyType {

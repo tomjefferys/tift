@@ -1,4 +1,4 @@
-import { VarType, createRootEnv } from "../src/env";
+import { VarType, createRootEnv, mkObj } from "../src/env";
 
 test("test empty env", () => {
     const env = createRootEnv();
@@ -38,3 +38,23 @@ test("test child env", () => {
     expect(root.get(VarType.STRING, "var3")).toEqual("quux");
     expect(child.get(VarType.STRING, "var3")).toEqual("baz");
 })
+
+test("test set/get an object", () => {
+    const root = createRootEnv();
+    root.set("obj1", {"foo":{"bar":"baz"}});
+    const obj1 = root.get(VarType.OBJECT, "obj1");
+    expect(obj1).toStrictEqual({"foo":{"bar":"baz"}});
+})
+
+
+test("test get with dot syntax", () => {
+    const root = createRootEnv();
+    root.set("obj1", {"foo":{"bar":"baz"}});
+    const bar = root.get(VarType.STRING, "obj1.foo.bar");
+    expect(bar).toEqual("baz");
+})
+
+test("test mkobj", () => {
+    const obj = mkObj({"foo":{"bar":"baz"}});
+    console.log(JSON.stringify(obj));
+});
