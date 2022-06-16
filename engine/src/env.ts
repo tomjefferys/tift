@@ -103,28 +103,22 @@ export class Env {
     }
 
     getFromObj<T extends TypeName>(type : T, obj : Obj, name : string) : ObjectType<T> {
-        const dotIndex = name.indexOf(".");
-        if (dotIndex == -1) {
-            const value = obj[name];
-            if (value) {
-                if (value.type == type) {
-                    return unwrap(type, value);
-                } else if (!value) {
-                    throw new Error("Variable " + name + " is not a " + type);
-                }
-            } else {
-                throw new Error("Variable " + name + " does not exist");
+        const [head, tail] = name.split(".", 2);
+        const value = obj[head];
+        if (!value) {
+            throw new Error("Variable " + head + " does not exist");
+        }
+        if (!tail) {
+            if (value.type == type) {
+                return unwrap(type, value);
+            } else if (!value) {
+                throw new Error("Variable " + head + " is not a " + type);
             }
         } else {
-            const value = obj[name.substring(0,dotIndex)];
-            if (value) {
-                if (value.type == VarType.OBJECT) {
-                    return this.getFromObj(type, value.value, name.substring(dotIndex + 1));
-                } else {
-                    throw new Error(name.substring(0,dotIndex) + " is not an object");
-                }
+            if (value.type == VarType.OBJECT) {
+                return this.getFromObj(type, value.value, tail);
             } else {
-                throw new Error(name.substring(0,dotIndex) + " does not exist");
+                throw new Error(head + " is not an object");
             }
         }
         throw new Error("Should not get here");
