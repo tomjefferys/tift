@@ -56,5 +56,5 @@ test("test get with dot syntax", () => {
 
 test("test mkobj", () => {
     const obj = mkObj({"foo":{"bar":"baz"}});
-    console.log(JSON.stringify(obj));
+    expect(obj).toStrictEqual({"foo":{"type":"OBJECT","value":{"bar":{"type":"STRING","value":"baz"}}}});
 });

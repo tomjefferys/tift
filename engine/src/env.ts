@@ -80,16 +80,15 @@ export class Env {
     }
 
     get<T extends TypeName>(type : T, name : string) : ObjectType<T> {
-        const dotIndex = name.indexOf(".");
-        const rootName = (dotIndex > -1)? name.substring(0, dotIndex) : name;
-        const env = this.findEnv(rootName);
+        const [head,tail] = dotSplit(name);
+        const env = this.findEnv(head);
         if (env) {
-            const value = env.properties[rootName];
-            if (dotIndex > -1) {
+            const value = env.properties[head];
+            if (tail) {
                 if (value.type == VarType.OBJECT) {
-                    return this.getFromObj(type, value.value, name.substring(dotIndex + 1));
+                    return getFromObj(type, value.value, tail);
                 } else {
-                    throw new Error(rootName + " is not an object");
+                    throw new Error(head + " is not an object");
                 }
             }
             if (value.type == type) {
@@ -100,28 +99,6 @@ export class Env {
         } else {
             throw new Error("No such varible " + name);
         }
-    }
-
-    getFromObj<T extends TypeName>(type : T, obj : Obj, name : string) : ObjectType<T> {
-        const [head, tail] = name.split(".", 2);
-        const value = obj[head];
-        if (!value) {
-            throw new Error("Variable " + head + " does not exist");
-        }
-        if (!tail) {
-            if (value.type == type) {
-                return unwrap(type, value);
-            } else if (!value) {
-                throw new Error("Variable " + head + " is not a " + type);
-            }
-        } else {
-            if (value.type == VarType.OBJECT) {
-                return this.getFromObj(type, value.value, tail);
-            } else {
-                throw new Error(head + " is not an object");
-            }
-        }
-        throw new Error("Should not get here");
     }
 
     findEnv(name : string) : Env | undefined {
@@ -176,6 +153,35 @@ export class ObjBuilder {
         return this.obj;
     }
 
+}
+
+function getFromObj<T extends TypeName>(type : T, obj : Obj, name : string) : ObjectType<T> {
+    const [head, tail] = dotSplit(name);
+    const value = obj[head];
+    if (!value) {
+        throw new Error("Variable " + head + " does not exist");
+    }
+    if (!tail) {
+        if (value.type == type) {
+            return unwrap(type, value);
+        } else {
+            throw new Error("Variable " + head + " is not a " + type);
+        }
+    } else {
+        if (value.type == VarType.OBJECT) {
+            return getFromObj(type, value.value, tail);
+        } else {
+            throw new Error(head + " is not an object");
+        }
+    }
+}
+
+function dotSplit(name : string) : [string, string | undefined] {
+    const dotIndex = name.indexOf(".");
+    const dotFound = dotIndex != -1;
+    const head = dotFound ? name.substring(0, dotIndex) : name;
+    const tail = dotFound ? name.substring(dotIndex + 1) : undefined;
+    return [head, tail];
 }
 
 function wrapValue<T extends TypeName>(value : ObjectType<T>) : AnyType {
