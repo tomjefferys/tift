@@ -75,8 +75,20 @@ export class Env {
     }
 
     set<T extends TypeName>(name : string, value : ObjectType<T>) {
-        const env = this.findEnv(name) ?? this;
-        env.properties[name] = wrapValue(value);
+        const [head,tail] = dotSplit(name);
+        const env = this.findEnv(name) ?? this; // TODO this should handle readonly envs
+        if (!tail) {
+            env.properties[head] = wrapValue(value);
+            return;
+        }
+        const obj = env.properties[head] ?? wrapValue({});
+        if (!env.properties[head]) {
+            env.properties[head] = obj;
+        }
+        if (obj.type != VarType.OBJECT) {
+            throw new Error(head + " is not an object");
+        }
+        setToObj(obj.value, tail, value);
     }
 
     get<T extends TypeName>(type : T, name : string) : ObjectType<T> {
@@ -174,6 +186,22 @@ function getFromObj<T extends TypeName>(type : T, obj : Obj, name : string) : Ob
             throw new Error(head + " is not an object");
         }
     }
+}
+
+function setToObj<T extends TypeName>(obj : Obj, name : string, value : ObjectType<T>) {
+    const [head,tail] = dotSplit(name);
+    if (!tail) {
+        obj[name] = wrapValue(value);
+        return;
+    }
+    const child = obj[head] ?? wrapValue({});
+    if (!obj[head]) {
+        obj[head] = child;
+    }
+    if (child.type !== VarType.OBJECT) {
+        throw new Error(name + " is not an object");
+    } 
+    setToObj(child.value, tail, value);
 }
 
 function dotSplit(name : string) : [string, string | undefined] {

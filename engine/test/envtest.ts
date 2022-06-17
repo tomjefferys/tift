@@ -58,3 +58,22 @@ test("test mkobj", () => {
     const obj = mkObj({"foo":{"bar":"baz"}});
     expect(obj).toStrictEqual({"foo":{"type":"OBJECT","value":{"bar":{"type":"STRING","value":"baz"}}}});
 });
+
+test("Set existing object with dot notation", () => {
+    const root = createRootEnv();
+    root.set("obj1", {"foo":{"bar":"baz"}});
+    expect(root.get(VarType.STRING, "obj1.foo.bar")).toEqual("baz");
+    root.set("obj1.foo.bar", "qux");
+    expect(root.get(VarType.STRING, "obj1.foo.bar")).toEqual("qux");
+});
+
+test("Set missing object with dot notation", () => {
+    const root = createRootEnv();
+    root.set("obj1", {"foo": {}});
+    root.set("obj1.foo.bar", "baz");
+    expect(root.get(VarType.STRING, "obj1.foo.bar")).toEqual("baz");
+
+    root.set("obj2", {});
+    root.set("obj2.foo.bar", "baz");
+    expect(root.get(VarType.STRING, "obj2.foo.bar")).toEqual("baz");
+})
