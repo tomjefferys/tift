@@ -1,21 +1,21 @@
 import { VarType, createRootEnv, mkObj } from "../src/env";
 
 test("test empty env", () => {
-    const env = createRootEnv();
+    const env = createRootEnv({}, true);
     const test = () => env.get(VarType.STRING, "test");
 
     expect(test).toThrowError();
 });
 
 test("test simple set and get", () => {
-    const env = createRootEnv();
+    const env = createRootEnv({}, true);
     env.set("foo", "bar");
     const foo = env.get(VarType.STRING, "foo");
     expect(foo).toStrictEqual("bar");
 })
 
 test("test child env", () => {
-    const root = createRootEnv();
+    const root = createRootEnv({}, true);
     root.set("var1", "foo");
     root.set("var2", "bar");
     const child = root.newChild();
@@ -40,7 +40,7 @@ test("test child env", () => {
 })
 
 test("test set/get an object", () => {
-    const root = createRootEnv();
+    const root = createRootEnv({}, true);
     root.set("obj1", {"foo":{"bar":"baz"}});
     const obj1 = root.get(VarType.OBJECT, "obj1");
     expect(obj1).toStrictEqual({"foo":{"bar":"baz"}});
@@ -48,7 +48,7 @@ test("test set/get an object", () => {
 
 
 test("test get with dot syntax", () => {
-    const root = createRootEnv();
+    const root = createRootEnv({}, true);
     root.set("obj1", {"foo":{"bar":"baz"}});
     const bar = root.get(VarType.STRING, "obj1.foo.bar");
     expect(bar).toEqual("baz");
@@ -60,7 +60,7 @@ test("test mkobj", () => {
 });
 
 test("Set existing object with dot notation", () => {
-    const root = createRootEnv();
+    const root = createRootEnv({}, true);
     root.set("obj1", {"foo":{"bar":"baz"}});
     expect(root.get(VarType.STRING, "obj1.foo.bar")).toEqual("baz");
     root.set("obj1.foo.bar", "qux");
@@ -68,7 +68,7 @@ test("Set existing object with dot notation", () => {
 });
 
 test("Set missing object with dot notation", () => {
-    const root = createRootEnv();
+    const root = createRootEnv({}, true);
     root.set("obj1", {"foo": {}});
     root.set("obj1.foo.bar", "baz");
     expect(root.get(VarType.STRING, "obj1.foo.bar")).toEqual("baz");
@@ -76,4 +76,57 @@ test("Set missing object with dot notation", () => {
     root.set("obj2", {});
     root.set("obj2.foo.bar", "baz");
     expect(root.get(VarType.STRING, "obj2.foo.bar")).toEqual("baz");
+})
+
+test("Attempt to set a readonly env", () => {
+    const root = createRootEnv({"foo":"bar"}, false);
+    expect(() => root.set("baz","qux")).toThrowError();
+    expect(() => root.set("foo", "qux")).toThrowError();
+});
+
+test("Test readonly root, and writable child", () => {
+    const root = createRootEnv({"foo":"bar"}, false);
+    const child = root.newChild();
+    expect(root.get(VarType.STRING, "foo")).toEqual("bar");
+    expect(child.get(VarType.STRING, "foo")).toEqual("bar");
+
+    child.set("foo", "qux");
+    expect(root.get(VarType.STRING, "foo")).toEqual("bar");
+    expect(child.get(VarType.STRING, "foo")).toEqual("qux");
+});
+
+test("Test readonly root, correct descendent gets written to", () => {
+    const root = createRootEnv({"foo":"bar"}, false);
+    const child = root.newChild();
+    const grandchild = child.newChild();
+
+    expect(root.get(VarType.STRING, "foo")).toEqual("bar");
+    expect(child.get(VarType.STRING, "foo")).toEqual("bar");
+    expect(grandchild.get(VarType.STRING, "foo")).toEqual("bar");
+
+    child.set("foo", "baz");
+    expect(root.get(VarType.STRING, "foo")).toEqual("bar");
+    expect(child.get(VarType.STRING, "foo")).toEqual("baz");
+    expect(grandchild.get(VarType.STRING, "foo")).toEqual("baz");
+
+    grandchild.set("foo", "qux");
+    expect(root.get(VarType.STRING, "foo")).toEqual("bar");
+    expect(child.get(VarType.STRING, "foo")).toEqual("qux");
+    expect(grandchild.get(VarType.STRING, "foo")).toEqual("qux");
+
+    grandchild.def("foo", "quux");
+    expect(root.get(VarType.STRING, "foo")).toEqual("bar");
+    expect(child.get(VarType.STRING, "foo")).toEqual("qux");
+    expect(grandchild.get(VarType.STRING, "foo")).toEqual("quux");
+});
+
+test("Test readonly root, with complex object", () => {
+    const root = createRootEnv({"foo":{"bar":{"baz":"qux"}}}, false);
+    const child = root.newChild();
+
+    expect(() => root.set("foo.bar.baz", "corge")).toThrowError();
+
+    child.set("foo.bar.baz", "corge");
+    expect(root.get(VarType.STRING, "foo.bar.baz")).toEqual("qux");
+    expect(child.get(VarType.STRING, "foo.bar.baz")).toEqual("corge");
 })

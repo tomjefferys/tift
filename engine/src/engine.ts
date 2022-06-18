@@ -34,7 +34,7 @@ interface CommandContext {
 }
 
 export class BasicEngine implements Engine {
-  private readonly env = createRootEnv();
+  private readonly env = createRootEnv({}, true);
   readonly entities : EntityMap;
   readonly verbs : VerbMap;
   readonly buffer : TextBuffer;

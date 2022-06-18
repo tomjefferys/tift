@@ -64,10 +64,13 @@ interface VarObject {
 // variables in parent environments
 export class Env {
     readonly parent? : Env;
-    readonly properties : Obj = {};
+    readonly properties : Obj;
+    readonly writable : boolean;
 
-    constructor(parent? : Env) {
+    constructor(writable : boolean, properties : Obj, parent? : Env) {
         this.parent = parent;
+        this.writable = writable;
+        this.properties = properties;
     }
 
     def<T extends TypeName>(name : string, value : ObjectType<T> ) {
@@ -75,8 +78,11 @@ export class Env {
     }
 
     set<T extends TypeName>(name : string, value : ObjectType<T>) {
+        if (!this.writable) {
+            throw new Error("Can't set variable on readonly env");
+        }
         const [head,tail] = dotSplit(name);
-        const env = this.findEnv(name) ?? this; // TODO this should handle readonly envs
+        const env = this.findWritableEnv(name) ?? this;
         if (!tail) {
             env.properties[head] = wrapValue(value);
             return;
@@ -123,6 +129,21 @@ export class Env {
         }
     }
 
+    findWritableEnv(name : string) : Env | undefined {
+        if (this.properties[name]) {
+            return this.writable ? this : undefined;
+        } else if (this.parent) {
+            if (this.parent.writable) {
+                return this.parent.findWritableEnv(name);
+            } else {
+                // If the parent contains the field but isn't writable, return the (writable) child
+                return this.parent.findEnv(name) ? this : undefined;
+            }
+        } else {
+            return undefined;
+        }
+    }
+
     execute(name : string, bindings : Obj ) : ReturnType {
         const fn = this.get(VarType.FUNCTION, name);
         const fnEnv = this.newChild();
@@ -131,7 +152,7 @@ export class Env {
     }
 
     newChild() : Env {
-        return new Env(this);
+        return new Env(true, {}, this);
     }
 
     addBindings(bindings : Obj) {
@@ -284,6 +305,14 @@ function makeVar<T extends TypeName>(typeName : T, value : ObjectType<T> ) : Any
     return { type : typeName, value : value} as AnyType;
 }
 
-export function createRootEnv() : Env {
-    return new Env();
+export function createRootEnv(obj : AnyObj, writable : boolean) : Env {
+    return new Env(writable, wrapObjectValues(obj));
+}
+
+function wrapObjectValues(anyobj : AnyObj) : Obj {
+    const obj = {} as Obj;
+    for(const [key,value] of Object.entries(anyobj)) {
+        obj[key] = wrapValue(value);
+    }
+    return obj
 }
