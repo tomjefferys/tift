@@ -1,4 +1,6 @@
 import { Action } from "./action";
+import { Obj } from "./types";
+import { getString } from "./obj";
 
 export enum VerbTrait {
   Transitive,
@@ -9,20 +11,20 @@ export enum VerbTrait {
 
 export class Verb {
   readonly id : string;
-  readonly name? : string;
+  readonly props : Obj;
   readonly attributes : string[];
   readonly traits : VerbTrait[];
   readonly modifiers : string[];
   readonly actions : Action[];
 
   constructor(id : string,
-              name : string | undefined,
+              props : Obj,
               attributes : string[],
               traits : VerbTrait[],
               modifiers : string[],
               actions : Action[]) {
     this.id = id;
-    this.name = name;
+    this.props = props;
     this.attributes = attributes;
     this.traits = traits;
     this.modifiers = modifiers;
@@ -42,23 +44,28 @@ export class Verb {
   }
 
   getName() : string {
-    return this.name ? this.name : this.id;
+    return this.props["name"] as string ?? this.id;
   }
 }
 
 export class VerbBuilder {
   id : string;
+  props : Obj;
   name? : string;
   attributes : string[] = [];
   traits : VerbTrait[] = [];
   modifiers : string[] = [];
   actions : Action[] = [];
 
-  constructor(id : string) {
-    if (!id) {
-      throw new Error("A verb must have an id");
+  constructor(props : Obj) {
+    if (!props) {
+      throw new Error("An Entity must have properties");
     }
-    this.id = id;
+    if (!props["id"]) {
+      throw new Error("An Entity must have an id property")
+    }
+    this.props = props;
+    this.id = getString(props["id"]);
   } 
   
   withName(name : string) : VerbBuilder {
@@ -87,7 +94,7 @@ export class VerbBuilder {
   }
 
   build() : Verb {
-    return new Verb(this.id, this.name, this.attributes, this.traits, this.modifiers, this.actions);
+    return new Verb(this.id, this.props, this.attributes, this.traits, this.modifiers, this.actions);
   }
   
 

@@ -13,18 +13,19 @@ const LOOK = {
     matcher : getMatcher([match("look")]),
     action : (env:Env) => {
         const location = env.execute("getLocation", {});
-        const entity = env.execute("getEntity", mkObj({"id":location})) as Entity;
-        const desc = entity.props["desc"] ?? entity.props["name"] ?? entity.id;
+        const entity = env.execute("getEntity", mkObj({"id":location})) as Obj;
+        const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
         env.execute("write", mkObj({"value":desc}))
     } 
 }
 
+// TODO we should load this from a data file
 const DEFAULT_VERBS = [
-      new VerbBuilder("go")
+      new VerbBuilder({"id":"go"})
                   .withTrait(VerbTrait.Intransitive)
                   .withModifier("direction")
                   .build(),
-      new VerbBuilder("look")
+      new VerbBuilder({"id":"look"})
                   .withTrait(VerbTrait.Intransitive)
                   .withAction(LOOK)
                   .build()
@@ -69,7 +70,7 @@ export function loadFromYaml(data: string) : Engine & EngineState {
 }
 
 export function makeVerb(obj : Obj) : Verb {
-   const builder = new VerbBuilder(getString(obj["id"]));
+   const builder = new VerbBuilder(obj);
    ifExists(obj["name"], value => builder.withName(getString(value)));
    forEach(obj["modifiers"], modifier => builder.withModifier(getString(modifier)));
    forEach(obj["attributes"], attribute => builder.withAttribute(getString(attribute)));

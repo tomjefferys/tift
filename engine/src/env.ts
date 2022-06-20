@@ -7,11 +7,11 @@ export enum VarType {
     OBJECT = "OBJECT"
 }
 
-type Obj = {[key:string]:AnyType};
+export type Obj = {[key:string]:AnyType};
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type AnyObj = {[key:string]:any};
-type AnyArray = any[];
+export type AnyObj = {[key:string]:any};
+export type AnyArray = any[];
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type EnvFn = (env:Env) => ReturnType;
@@ -82,7 +82,7 @@ export class Env {
             throw new Error("Can't set variable on readonly env");
         }
         const [head,tail] = dotSplit(name);
-        const env = this.findWritableEnv(name) ?? this;
+        const env = this.findWritableEnv(head) ?? this;
         if (!tail) {
             env.properties[head] = wrapValue(value);
             return;
@@ -97,6 +97,8 @@ export class Env {
         setToObj(obj.value, tail, value);
     }
 
+    // FIXME this won't get the entire object if an alteration has been made, 
+    // and it's been saved to a child env
     get<T extends TypeName>(type : T, name : string) : ObjectType<T> {
         const [head,tail] = dotSplit(name);
         const env = this.findEnv(head);
@@ -120,28 +122,33 @@ export class Env {
     }
 
     findEnv(name : string) : Env | undefined {
+        let result : Env | undefined;
         if (this.properties[name]) {
-            return this;
+            // eslint-disable-next-line @typescript-eslint/no-this-alias 
+            result = this;
         } else if (this.parent) {
-            return this.parent.findEnv(name);
+            result = this.parent.findEnv(name);
         } else {
-            return undefined;
+            result = undefined;
         }
+        return result;
     }
 
     findWritableEnv(name : string) : Env | undefined {
+        let result : Env | undefined;
         if (this.properties[name]) {
-            return this.writable ? this : undefined;
+            result = this.writable ? this : undefined;
         } else if (this.parent) {
             if (this.parent.writable) {
-                return this.parent.findWritableEnv(name);
+                result = this.parent.findWritableEnv(name);
             } else {
                 // If the parent contains the field but isn't writable, return the (writable) child
-                return this.parent.findEnv(name) ? this : undefined;
+                result = this.parent.findEnv(name) ? this : undefined;
             }
         } else {
-            return undefined;
+            result = undefined;
         }
+        return result;
     }
 
     execute(name : string, bindings : Obj ) : ReturnType {
@@ -159,6 +166,14 @@ export class Env {
         for(const [key, value] of Object.entries(bindings)) {
             this.properties[key] = value;
         }
+    }
+
+    getRoot() : Env {
+        return (this.parent)? this.parent.getRoot() : this;
+    }
+
+    getDepth() : number {
+        return 1 + (this.parent?.getDepth() ?? 0);
     }
 }
 
@@ -259,7 +274,7 @@ function wrapValue<T extends TypeName>(value : ObjectType<T>) : AnyType {
             }
             break;
         default:
-            throw new Error("Unknown type");
+            throw new Error("Unknown type: " + type);
     }
     return result;
 }
@@ -312,7 +327,11 @@ export function createRootEnv(obj : AnyObj, writable : boolean) : Env {
 function wrapObjectValues(anyobj : AnyObj) : Obj {
     const obj = {} as Obj;
     for(const [key,value] of Object.entries(anyobj)) {
-        obj[key] = wrapValue(value);
+        try {
+            obj[key] = wrapValue(value);
+        } catch (e) {
+            throw new Error("Could not wrap [" + key + "," + value + "]: " + e)
+        }
     }
     return obj
 }

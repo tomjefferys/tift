@@ -130,3 +130,18 @@ test("Test readonly root, with complex object", () => {
     expect(root.get(VarType.STRING, "foo.bar.baz")).toEqual("qux");
     expect(child.get(VarType.STRING, "foo.bar.baz")).toEqual("corge");
 })
+
+test("Test readonly deeply nested root, with complex object", () => {
+    const root = createRootEnv({"foo":{"bar":"baz"}}, false);
+    const child = root.newChild();
+    const gchild = child.newChild();
+    const ggchild = child.newChild();
+
+    ggchild.set("foo.bar", "qux");
+
+    expect(root.get(VarType.STRING, "foo.bar")).toEqual("baz");
+    expect(child.get(VarType.STRING, "foo.bar")).toEqual("qux");
+    expect(gchild.get(VarType.STRING, "foo.bar")).toEqual("qux");
+    expect(ggchild.get(VarType.STRING, "foo.bar")).toEqual("qux");
+    
+});

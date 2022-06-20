@@ -2,12 +2,12 @@ import {getAllCommands} from "../src/commandsearch";
 import {EntityBuilder} from "../src/entity";
 import {VerbBuilder, VerbTrait} from "../src/verb";
 
-const STIR = new VerbBuilder("stir")
+const STIR = new VerbBuilder({"id":"stir"})
                      .withTrait(VerbTrait.Transitive)
                      .withAttribute("with")
                      .build();
 
-const EAT = new VerbBuilder("eat")
+const EAT = new VerbBuilder({"id":"eat"})
                      .withTrait(VerbTrait.Transitive)
                      .build();
 
@@ -23,7 +23,7 @@ const SPOON = new EntityBuilder({"id" : "spoon"})
                      .withAttributedVerb("stir","with")
                      .build();
 
-const GO = new VerbBuilder("go")
+const GO = new VerbBuilder({"id":"go"})
                   .withTrait(VerbTrait.Intransitive)
                   .withModifier("direction")
                   .build();
@@ -35,7 +35,7 @@ const CAVE = new EntityBuilder({"id" : "cave"})
                   .withVerbModifier("direction","east")
                   .build();
 
-const PUSH = new VerbBuilder("push")
+const PUSH = new VerbBuilder({"id":"push"})
                     .withTrait(VerbTrait.Transitive)
                     .withModifier("direction")
                     .build();
@@ -44,7 +44,7 @@ const BOX = new EntityBuilder({"id" : "box"})
                     .withVerb("push")
                     .build();
 
-const LOOK = new VerbBuilder("look")
+const LOOK = new VerbBuilder({"id":"look"})
                   .withTrait(VerbTrait.Intransitive)
                   .build();
 

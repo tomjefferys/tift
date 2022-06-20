@@ -18,6 +18,11 @@ $ jest
 $ jest out/test/enginebuildertest.js
 ```
 
+### Running a single test case
+```sh
+$ jest -t 'name of test case to run'
+```
+
 ## Linting
 ```sh
 $ npm run lint

@@ -1,9 +1,11 @@
 import { Verb } from "./verb"
 import { Entity } from "./entity"
-import { Env, createRootEnv, VarType, ObjBuilder } from "./env"
+import { createRootEnv, ObjBuilder } from "./env"
 import { getAllCommands } from "./commandsearch"
-import { TextBuffer, createTextBuffer } from "./textbuffer";
+import { TextBuffer } from "./textbuffer";
 import { Action } from "./action";
+import { Obj } from "./types";
+import { makePlayer, makeDefaultFunctions, makeBuffer, getPlayer, getBuffer } from "./enginedefault";
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -34,48 +36,36 @@ interface CommandContext {
 }
 
 export class BasicEngine implements Engine {
-  private readonly env = createRootEnv({}, true);
+  private readonly env;
   readonly entities : EntityMap;
   readonly verbs : VerbMap;
-  readonly buffer : TextBuffer;
   private context : CommandContext;
   private commands : string[][];
-  private location : string;
 
   constructor(entities : Entity[], verbs : Verb[]) {
+    const environment = {} as Obj; 
+    entities.forEach(entity => environment[entity.id] = entity.props);
+    verbs.forEach(verb => environment[verb.id] = verb.props);
+
     this.entities = entities.reduce((map : EntityMap, entity) => {map[entity.id] = entity; return map}, {} );
     this.verbs = verbs.reduce((map : VerbMap, verb) => {map[verb.id] = verb; return map}, {} );
-    const startingLocs = Object.values(this.entities).filter(
-        entity => entity.getType() === TYPE.ROOM && entity.hasTag(TAG.START));
-    if (startingLocs.length == 0) {
-      throw new Error("No starting location defined");
-    }
-    if (startingLocs.length > 1) {
-      throw new Error("Multiple starting locations found");
-    }
-    this.location = startingLocs[0].id;
-    this.makeDefaultFunctions();
-    this.env.set("moveTo", (env : Env) => 
-      this.env.execute("setLocation", new ObjBuilder().with("dest",env.get(VarType.STRING, "dest")).build()));
-    this.buffer = createTextBuffer();
+
+    const start = findStartingLocation(entities);
+    makePlayer(environment, start);
+    makeDefaultFunctions(environment);
+    makeBuffer(environment);
+
+    const rootEnv = createRootEnv(environment, false);
+    this.env = rootEnv.newChild();
+
     this.context = this.getContext();
     this.commands = getAllCommands(this.context.entities, this.context.verbs);
-  }
-
-  makeDefaultFunctions() {
-    this.env.set("setLocation", env => this.location = env.get(VarType.STRING, "dest"));
-    this.env.set("getLocation", _ => this.location);
-    this.env.set("getEntity", env => {
-      const entityId = env.get(VarType.STRING, "id")
-      return this.entities[entityId];
-    });
-    this.env.set("write", env => this.buffer.write(env.get(VarType.STRING, "value")));
   }
 
   getContext() : CommandContext {
     // for now just get the entity for the current location
     const contextEntities = [];
-    const locationEntity = this.entities[this.location];
+    const locationEntity = this.entities[getPlayer(this.env).location];
     if (locationEntity) {
       contextEntities.push(locationEntity);
     }
@@ -105,7 +95,6 @@ export class BasicEngine implements Engine {
     }
     return Array.from(nextWords);
   }
-
   
   execute(command: string[]): void {
     const actions : Action[] = [...this.context.entities, ...this.context.verbs].flatMap(obj => obj.actions);
@@ -127,13 +116,23 @@ export class BasicEngine implements Engine {
   }
 
   getBuffer(): TextBuffer {
-      return this.buffer;
+      return getBuffer(this.env);
   }
 
   getStatus() : string {
-    const location = this.entities[this.location];
+    const location = this.entities[getPlayer(this.env).location];
     return location.getName() ?? location.id;
   }
 }
 
-
+function findStartingLocation(entities : Entity[]) : string {
+  const startingLocs = entities.filter(
+      entity => entity.getType() === TYPE.ROOM && entity.hasTag(TAG.START));
+  if (startingLocs.length == 0) {
+    throw new Error("No starting location defined");
+  }
+  if (startingLocs.length > 1) {
+    throw new Error("Multiple starting locations found");
+  }
+  return startingLocs[0].id;
+}
