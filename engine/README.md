@@ -23,6 +23,26 @@ $ jest out/test/enginebuildertest.js
 $ jest -t 'name of test case to run'
 ```
 
+### Debugging jest tests
+```sh
+node --inspect-brk node_modules/.bin/jest [any other arguments here]
+```
+
+Create the following `.vscode/launch.json`
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "attach",
+            "name": "Attach",
+            "port": 9229
+        }
+    ]
+}
+```
+
 ## Linting
 ```sh
 $ npm run lint

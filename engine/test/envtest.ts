@@ -56,7 +56,10 @@ test("test get with dot syntax", () => {
 
 test("test mkobj", () => {
     const obj = mkObj({"foo":{"bar":"baz"}});
-    expect(obj).toStrictEqual({"foo":{"type":"OBJECT","value":{"bar":{"type":"STRING","value":"baz"}}}});
+    expect(obj).toStrictEqual({"foo":{"type":"OBJECT",
+                                      "override":false,
+                                      "value":{"bar":{"type":"STRING",
+                                                      "value":"baz"}}}});
 });
 
 test("Set existing object with dot notation", () => {
@@ -144,4 +147,20 @@ test("Test readonly deeply nested root, with complex object", () => {
     expect(gchild.get(VarType.STRING, "foo.bar")).toEqual("qux");
     expect(ggchild.get(VarType.STRING, "foo.bar")).toEqual("qux");
     
+});
+
+test("Test get parent object props after child overridden", () => {
+    const root = createRootEnv({"foo":{"bar":"baz", "qux" : "corge"}}, false);
+    const child = root.newChild();
+    const gchild = child.newChild();
+
+    gchild.set("foo.bar", "grault");
+    expect(root.get(VarType.STRING, "foo.bar")).toEqual("baz");
+    expect(root.get(VarType.STRING, "foo.qux")).toEqual("corge");
+   
+    expect(child.get(VarType.STRING, "foo.bar")).toEqual("grault");
+    expect(child.get(VarType.STRING, "foo.qux")).toEqual("corge");
+
+    expect(gchild.get(VarType.STRING, "foo.bar")).toEqual("grault");
+    expect(gchild.get(VarType.STRING, "foo.qux")).toEqual("corge");
 });

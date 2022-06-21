@@ -37,27 +37,29 @@ interface VarBool {
 
 interface VarNum {
     type : VarType.NUMBER,
-    value : number;
+    value : number,
 }
 
 interface VarString {
     type : VarType.STRING,
-    value : string
+    value : string,
 }
 
 interface VarFunction {
     type : VarType.FUNCTION,
-    value : (env:Env) => void
+    value : (env:Env) => void,
 }
 
 interface VarArray { 
     type : VarType.ARRAY,
-    value : AnyType[]
+    value : AnyType[],
+    override : boolean
 }
 
 interface VarObject {
     type : VarType.OBJECT
-    value : Obj
+    value : Obj,
+    override : boolean
 }
 
 // An execution envionment for a function.  Contains all local variables, and access to 
@@ -77,22 +79,26 @@ export class Env {
         this.properties[name] = wrapValue(value);
     }
 
+    // TODO need syntax for accessing arrays
     set<T extends TypeName>(name : string, value : ObjectType<T>) {
         if (!this.writable) {
             throw new Error("Can't set variable on readonly env");
         }
         const [head,tail] = dotSplit(name);
-        const env = this.findWritableEnv(head) ?? this;
+        const [env, isOverride] = this.findWritableEnv(head) ?? [this, false];
         if (!tail) {
             env.properties[head] = wrapValue(value);
             return;
         }
         const obj = env.properties[head] ?? wrapValue({});
-        if (!env.properties[head]) {
-            env.properties[head] = obj;
-        }
         if (obj.type != VarType.OBJECT) {
             throw new Error(head + " is not an object");
+        }
+        if (isOverride) {
+            obj.override = true;
+        }
+        if (!env.properties[head]) {
+            env.properties[head] = obj;
         }
         setToObj(obj.value, tail, value);
     }
@@ -106,7 +112,15 @@ export class Env {
             const value = env.properties[head];
             if (tail) {
                 if (value.type == VarType.OBJECT) {
-                    return getFromObj(type, value.value, tail);
+                    let obj;
+                    if (value.override && env.parent) {
+                        const parentResult = env.parent.get(VarType.OBJECT, head);
+                        const unwrapped = unwrap(VarType.OBJECT, value);
+                        obj = wrapObjectValues({...parentResult, ...unwrapped});//...value.value};
+                    } else {
+                        obj = value.value;
+                    }
+                    return getFromObj(type, obj, tail); 
                 } else {
                     throw new Error(head + " is not an object");
                 }
@@ -134,16 +148,18 @@ export class Env {
         return result;
     }
 
-    findWritableEnv(name : string) : Env | undefined {
-        let result : Env | undefined;
+    // Find a writable env, return the env alongside a boolean indicating if 
+    // we're overriding a readonly value
+    findWritableEnv(name : string) : [Env,boolean] | undefined {
+        let result : [Env,boolean] | undefined;
         if (this.properties[name]) {
-            result = this.writable ? this : undefined;
+            result = this.writable ? [this,false] : undefined;
         } else if (this.parent) {
             if (this.parent.writable) {
                 result = this.parent.findWritableEnv(name);
             } else {
                 // If the parent contains the field but isn't writable, return the (writable) child
-                result = this.parent.findEnv(name) ? this : undefined;
+                result = this.parent.findEnv(name) ? [this,true] : undefined;
             }
         } else {
             result = undefined;
@@ -268,7 +284,7 @@ function wrapValue<T extends TypeName>(value : ObjectType<T>) : AnyType {
             if (Array.isArray(value)) {
                 result = makeVar(VarType.ARRAY, mkArr(value));
             } else if (value != null) {
-                result = makeVar(VarType.OBJECT, mkObj(value as {[key:string]:any}))
+                result = makeObj(mkObj(value as {[key:string]:any}), false);
             } else {
                 throw new Error("Null values are forbidden");
             }
@@ -318,6 +334,10 @@ function isSimpleType(type : TypeName ) {
 
 function makeVar<T extends TypeName>(typeName : T, value : ObjectType<T> ) : AnyType {
     return { type : typeName, value : value} as AnyType;
+}
+
+function makeObj(value : AnyObj, override : boolean) : VarObject {
+    return { type : VarType.OBJECT, value : value, override : override};
 }
 
 export function createRootEnv(obj : AnyObj, writable : boolean) : Env {

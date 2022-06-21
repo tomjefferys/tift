@@ -21,18 +21,7 @@ exits:
   north: cave
 `
 
-//export interface Engine {
-//    getWords : () => string[];
-//    submit: (command : string[]) => string;
-//}
-
 export function getEngine() : Engine {
-  console.log("hello");
   const engine = loadFromYaml(data);
-  console.log("loaded");
   return engine;
-    //return {
-    //    getWords : () => ["one", "two", "three", "four"],
-    //    submit : (command : string[] ) => "Submitted: " + command.join(" ")
-    //}
 }
