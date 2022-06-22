@@ -1,3 +1,5 @@
+import { hrtime } from "process";
+
 export enum VarType {
     BOOLEAN = "BOOLEAN",
     NUMBER = "NUMBER",
@@ -103,66 +105,84 @@ export class Env {
         setToObj(obj.value, tail, value);
     }
 
-    // FIXME this won't get the entire object if an alteration has been made, 
-    // and it's been saved to a child env
     get<T extends TypeName>(type : T, name : string) : ObjectType<T> {
         const [head,tail] = dotSplit(name);
         const env = this.findEnv(head);
-        if (env) {
-            const value = env.properties[head];
-            if (tail) {
-                if (value.type == VarType.OBJECT) {
-                    let obj;
-                    if (value.override && env.parent) {
-                        const parentResult = env.parent.get(VarType.OBJECT, head);
-                        const unwrapped = unwrap(VarType.OBJECT, value);
-                        obj = wrapObjectValues({...parentResult, ...unwrapped});//...value.value};
-                    } else {
-                        obj = value.value;
-                    }
-                    return getFromObj(type, obj, tail); 
-                } else {
-                    throw new Error(head + " is not an object");
-                }
-            }
-            if (value.type == type) {
-                return unwrap(type, value);
-            } else {
-                throw new Error("Variable " + name + " is not a " + type);
-            }
-        } else {
+
+        if (!env) {
             throw new Error("No such varible " + name);
         }
-    }
 
-    findEnv(name : string) : Env | undefined {
-        let result : Env | undefined;
-        if (this.properties[name]) {
-            // eslint-disable-next-line @typescript-eslint/no-this-alias 
-            result = this;
-        } else if (this.parent) {
-            result = this.parent.findEnv(name);
-        } else {
-            result = undefined;
+        if (tail) {
+            return env.getObjProperty(type, head, tail);
         }
-        return result;
+
+        const value = env.properties[head];
+        if (value.type == type) {
+            return unwrap(type, value);
+        } else {
+            throw new Error("Variable " + name + " is not a " + type);
+        }
     }
 
-    // Find a writable env, return the env alongside a boolean indicating if 
-    // we're overriding a readonly value
+    private getObjProperty<T extends TypeName>(
+                    type : T, head : string, tail : string) : ObjectType<T> {
+        const value = this.properties[head];
+
+        if (value.type != VarType.OBJECT) {
+            throw new Error(head + " is not an object");
+        }
+
+        const obj = (value.override && this.parent)
+                        ? wrapObjectValues({
+                            ...this.parent.get(VarType.OBJECT, head),
+                            ...unwrap(VarType.OBJECT, value)})
+                        : value.value;
+
+        return getFromObj(type, obj, tail); 
+    }
+
+    /**
+     * Find an environment containing a property
+     * @param name the name of the property
+     * @returns the matching environment
+     */
+    findEnv(name : string) : Env | undefined {
+        return this.properties[name]
+                ? this
+                : this.parent?.findEnv(name);
+    }
+
+    /**
+     * Check if an environment, or one of it's ancestors has a property
+     * @param name the name of the property
+     * @returns true if the property exists
+     */
+    hasProperty(name : string) : boolean {
+        return this.properties[name]
+                    ? true
+                    : this.parent?.hasProperty(name) ?? false;
+    }
+
+    /**
+     * Find a writable env that could contain a property
+     * Returns either the one containing the property, or if that one is 
+     *   readonly the closest writable descendent, in which case we are 
+     *   considering it an override
+     * @param name 
+     * @returns A tuple of the writable env, and an boolean indicating if 
+     *          this is an override
+     */
     findWritableEnv(name : string) : [Env,boolean] | undefined {
-        let result : [Env,boolean] | undefined;
-        if (this.properties[name]) {
-            result = this.writable ? [this,false] : undefined;
+        let result : [Env,boolean] | undefined = undefined;
+        if (this.properties[name] && this.writable) {
+            result = [this,false];
         } else if (this.parent) {
             if (this.parent.writable) {
                 result = this.parent.findWritableEnv(name);
-            } else {
-                // If the parent contains the field but isn't writable, return the (writable) child
-                result = this.parent.findEnv(name) ? [this,true] : undefined;
+            } else if (this.parent.hasProperty(name)) {
+                result = [this, true];
             }
-        } else {
-            result = undefined;
         }
         return result;
     }
