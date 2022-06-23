@@ -1,68 +1,14 @@
-import { hrtime } from "process";
+const OVERRIDE = "__override__"; // TODO use symbol
 
-export enum VarType {
-    BOOLEAN = "BOOLEAN",
-    NUMBER = "NUMBER",
-    STRING = "STRING",
-    FUNCTION = "FUNCTION",
-    ARRAY = "ARRAY",
-    OBJECT = "OBJECT"
-}
-
-export type Obj = {[key:string]:AnyType};
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export type AnyObj = {[key:string]:any};
+export type Obj = {[key:string]:any};
 export type AnyArray = any[];
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type EnvFn = (env:Env) => ReturnType;
 
-export type ReturnType = boolean | number | string | EnvFn | AnyObj | AnyArray | void;
-
-type TypeName = VarType.BOOLEAN | VarType.NUMBER | VarType.STRING | VarType.FUNCTION | VarType.ARRAY | VarType.OBJECT;
-type AnyType = VarBool | VarNum | VarString | VarFunction | VarArray | VarObject;
-
-type ObjectType<T> = 
-    T extends VarType.BOOLEAN ? boolean :
-    T extends VarType.NUMBER ? number :
-    T extends VarType.STRING ? string :
-    T extends VarType.FUNCTION ? EnvFn :
-    T extends VarType.ARRAY ? AnyArray :
-    T extends VarType.OBJECT ? AnyObj :
-    never;
-
-interface VarBool {
-    type : VarType.BOOLEAN,
-    value : boolean
-}
-
-interface VarNum {
-    type : VarType.NUMBER,
-    value : number,
-}
-
-interface VarString {
-    type : VarType.STRING,
-    value : string,
-}
-
-interface VarFunction {
-    type : VarType.FUNCTION,
-    value : (env:Env) => void,
-}
-
-interface VarArray { 
-    type : VarType.ARRAY,
-    value : AnyType[],
-    override : boolean
-}
-
-interface VarObject {
-    type : VarType.OBJECT
-    value : Obj,
-    override : boolean
-}
+export type ReturnType = boolean | number | string | EnvFn | Obj | AnyArray | void;
 
 // An execution envionment for a function.  Contains all local variables, and access to 
 // variables in parent environments
@@ -77,35 +23,35 @@ export class Env {
         this.properties = properties;
     }
 
-    def<T extends TypeName>(name : string, value : ObjectType<T> ) {
-        this.properties[name] = wrapValue(value);
+    def(name : string, value : any) {
+        this.properties[name] = value;
     }
 
     // TODO need syntax for accessing arrays
-    set<T extends TypeName>(name : string, value : ObjectType<T>) {
+    set(name : string, value : any) {
         if (!this.writable) {
             throw new Error("Can't set variable on readonly env");
         }
         const [head,tail] = dotSplit(name);
         const [env, isOverride] = this.findWritableEnv(head) ?? [this, false];
         if (!tail) {
-            env.properties[head] = wrapValue(value);
+            env.properties[head] = value;
             return;
         }
-        const obj = env.properties[head] ?? wrapValue({});
-        if (obj.type != VarType.OBJECT) {
+        const obj = env.properties[head] ?? {};
+        if (typeof obj !== "object") {
             throw new Error(head + " is not an object");
         }
         if (isOverride) {
-            obj.override = true;
+            obj[OVERRIDE] = true;
         }
         if (!env.properties[head]) {
             env.properties[head] = obj;
         }
-        setToObj(obj.value, tail, value);
+        setToObj(obj, tail, value);
     }
 
-    get<T extends TypeName>(type : T, name : string) : ObjectType<T> {
+    get(name : string) : any {
         const [head,tail] = dotSplit(name);
         const env = this.findEnv(head);
 
@@ -114,32 +60,28 @@ export class Env {
         }
 
         if (tail) {
-            return env.getObjProperty(type, head, tail);
+            return env.getObjProperty(head, tail);
         }
 
-        const value = env.properties[head];
-        if (value.type == type) {
-            return unwrap(type, value);
-        } else {
-            throw new Error("Variable " + name + " is not a " + type);
-        }
+        return env.properties[head];
     }
 
-    private getObjProperty<T extends TypeName>(
-                    type : T, head : string, tail : string) : ObjectType<T> {
+    getStr(name : string) : string {
+        return this.get(name) as string;
+    }
+
+    private getObjProperty(head : string, tail : string) : any {
         const value = this.properties[head];
 
-        if (value.type != VarType.OBJECT) {
+        if (typeof value !== "object") {
             throw new Error(head + " is not an object");
         }
 
-        const obj = (value.override && this.parent)
-                        ? wrapObjectValues({
-                            ...this.parent.get(VarType.OBJECT, head),
-                            ...unwrap(VarType.OBJECT, value)})
-                        : value.value;
+        const obj = (value[OVERRIDE] && this.parent)
+                        ? { ...this.parent.get(head), ...value}
+                        : value;
 
-        return getFromObj(type, obj, tail); 
+        return getFromObj(obj, tail); 
     }
 
     /**
@@ -188,7 +130,7 @@ export class Env {
     }
 
     execute(name : string, bindings : Obj ) : ReturnType {
-        const fn = this.get(VarType.FUNCTION, name);
+        const fn = this.get(name);
         const fnEnv = this.newChild();
         fnEnv.addBindings(bindings);
         return fn(fnEnv);
@@ -213,7 +155,7 @@ export class Env {
     }
 }
 
-export function mkObj(obj : AnyObj) : Obj {
+export function mkObj(obj : Obj) : Obj {
     const builder = new ObjBuilder();
     for(const [key, value] of Object.entries(obj)) {
         builder.with(key, value);
@@ -221,15 +163,16 @@ export function mkObj(obj : AnyObj) : Obj {
     return builder.build();
 }
 
-export function mkArr(arr: AnyArray) : AnyType[] {
-    return arr.map(value => wrapValue(value));
+export function mkArr(arr: AnyArray) : any[] {
+    return arr.map(value => value);
 }
 
+// TODO don't really need this anymore
 export class ObjBuilder {
     readonly obj : Obj = {};
 
-    with<T extends TypeName>(name : string, value : ObjectType<T> ) : ObjBuilder {
-        this.obj[name] = wrapValue(value);
+    with(name : string, value : any ) : ObjBuilder {
+        this.obj[name] = value;
         return this;
     }
 
@@ -239,41 +182,37 @@ export class ObjBuilder {
 
 }
 
-function getFromObj<T extends TypeName>(type : T, obj : Obj, name : string) : ObjectType<T> {
+function getFromObj(obj : Obj, name : string) : any {
     const [head, tail] = dotSplit(name);
     const value = obj[head];
     if (!value) {
         throw new Error("Variable " + head + " does not exist");
     }
     if (!tail) {
-        if (value.type == type) {
-            return unwrap(type, value);
-        } else {
-            throw new Error("Variable " + head + " is not a " + type);
-        }
+        return value;
     } else {
-        if (value.type == VarType.OBJECT) {
-            return getFromObj(type, value.value, tail);
+        if (typeof value === "object") {
+            return getFromObj(value, tail);
         } else {
             throw new Error(head + " is not an object");
         }
     }
 }
 
-function setToObj<T extends TypeName>(obj : Obj, name : string, value : ObjectType<T>) {
+function setToObj(obj : Obj, name : string, value : any) {
     const [head,tail] = dotSplit(name);
     if (!tail) {
-        obj[name] = wrapValue(value);
+        obj[name] = value;
         return;
     }
-    const child = obj[head] ?? wrapValue({});
+    const child = obj[head] ?? {};
     if (!obj[head]) {
         obj[head] = child;
     }
-    if (child.type !== VarType.OBJECT) {
+    if (typeof child !== "object") {
         throw new Error(name + " is not an object");
     } 
-    setToObj(child.value, tail, value);
+    setToObj(child, tail, value);
 }
 
 function dotSplit(name : string) : [string, string | undefined] {
@@ -284,94 +223,6 @@ function dotSplit(name : string) : [string, string | undefined] {
     return [head, tail];
 }
 
-function wrapValue<T extends TypeName>(value : ObjectType<T>) : AnyType {
-    const type = typeof value;
-    let result : AnyType;
-    switch(type) {
-        case "boolean":
-            result = makeVar(VarType.BOOLEAN, value as boolean);
-            break;
-        case "number":
-            result = makeVar(VarType.NUMBER, value as number);
-            break;
-        case "string":
-            result = makeVar(VarType.STRING, value as string);
-            break;
-        case "function":
-            result = makeVar(VarType.FUNCTION, value as EnvFn);
-            break;
-        case "object":
-            if (Array.isArray(value)) {
-                result = makeVar(VarType.ARRAY, mkArr(value));
-            } else if (value != null) {
-                result = makeObj(mkObj(value as {[key:string]:any}), false);
-            } else {
-                throw new Error("Null values are forbidden");
-            }
-            break;
-        default:
-            throw new Error("Unknown type: " + type);
-    }
-    return result;
-}
-
-function unwrap<T extends TypeName>(type : T, wrappedValue : AnyType) : ObjectType<T> {
-    if (type === wrappedValue.type) {
-        if (isSimpleType(type)) {
-            return wrappedValue.value as ObjectType<T>;
-        } else if (type === VarType.ARRAY) {
-            const arr = [] as AnyArray;
-            for(const item of (wrappedValue.value as AnyType[])) {
-                arr.push(unwrap(item.type, item))
-            }
-            return arr as ObjectType<T>
-        } else if (type == VarType.OBJECT) {
-            const obj = {} as AnyObj;
-            for(const [key,value] of Object.entries(wrappedValue.value)) {
-                obj[key] = unwrap(value.type, value);
-            }
-            return obj as ObjectType<T>;
-        } else {
-            throw new Error(type + " is an unknow type");
-        }
-        
-    } else {
-        throw new Error("value is wrong type");
-    }
-}
-
-function isSimpleType(type : TypeName ) {
-    switch(type) {
-        case VarType.BOOLEAN:
-        case VarType.NUMBER:
-        case VarType.STRING:
-        case VarType.FUNCTION:
-            return true;
-        default:
-            return false;
-    }
-}
-
-function makeVar<T extends TypeName>(typeName : T, value : ObjectType<T> ) : AnyType {
-    return { type : typeName, value : value} as AnyType;
-}
-
-function makeObj(value : AnyObj, override : boolean) : VarObject {
-    return { type : VarType.OBJECT, value : value, override : override};
-}
-
-export function createRootEnv(obj : AnyObj, writable : boolean) : Env {
-    return new Env(writable, wrapObjectValues(obj));
-}
-
-function wrapObjectValues(anyobj : AnyObj) : Obj {
-    const obj = {} as Obj;
-    for(const [key,value] of Object.entries(anyobj)) {
-        try {
-            obj[key] = wrapValue(value);
-        } catch (e) {
-            throw new Error("Could not wrap [" + key + "," + value + "]: " + e)
-        }
-    }
-    return obj
+export function createRootEnv(obj : Obj, writable : boolean) : Env {
+    return new Env(writable, obj);
 }

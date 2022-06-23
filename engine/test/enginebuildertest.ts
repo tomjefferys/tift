@@ -12,7 +12,6 @@ test("Test make verb with only id", () => {
     const obj = {"id": "myverb"};
     const verb = makeVerb(obj);
     expect(verb.id).toEqual("myverb");
-    expect(verb.name).toBeUndefined();
     expect(verb.attributes).toHaveLength(0);
     expect(verb.modifiers).toHaveLength(0);
 });
@@ -29,7 +28,6 @@ test("Test make modifiable verb", () => {
 
     const verb = makeVerb(obj);
     expect(verb.id).toEqual("go");
-    expect(verb.name).toBeUndefined();
     expect(verb.attributes).toHaveLength(0);
     expect(verb.modifiers).toHaveLength(2);
     expect(verb.modifiers).toContain("direction");
@@ -53,7 +51,6 @@ test("Test make attributed verb", () => {
     
       const verb = makeVerb(obj);
       expect(verb.id).toEqual("stir");
-      expect(verb.name).toBeUndefined();
       expect(verb.modifiers).toHaveLength(0);
       expect(verb.attributes).toHaveLength(1);
       expect(verb.attributes).toContain("with");
