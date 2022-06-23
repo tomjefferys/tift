@@ -1,4 +1,4 @@
-import { createRootEnv, mkObj } from "../src/env";
+import { createRootEnv } from "../src/env";
 
 test("test empty env", () => {
     const env = createRootEnv({}, true);
@@ -53,12 +53,6 @@ test("test get with dot syntax", () => {
     const bar = root.get("obj1.foo.bar");
     expect(bar).toEqual("baz");
 })
-
-test("test mkobj", () => {
-    const obj = mkObj({"foo":{"bar":"baz"}});
-    //expect(obj).toStrictEqual({"foo":{"override":false,
-    expect(obj).toStrictEqual({"foo":{"bar":"baz"}});
-});
 
 test("Set existing object with dot notation", () => {
     const root = createRootEnv({}, true);

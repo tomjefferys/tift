@@ -25,10 +25,22 @@ export class Env {
         this.properties = properties;
     }
 
+    /**
+     * Declare variable in this environment.  Don't look for previous definitions in parent envs
+     * Declaration will shadow any variables in wider scopes
+     * @param name 
+     * @param value 
+     */
     def(name : string, value : any) {
         this.properties[name] = value;
     }
 
+    /**
+     * Set a variable, either in this environment, or in a parent environment if it already
+     * exists there
+     * @param name 
+     * @param value 
+     */
     // TODO need syntax for accessing arrays
     set(name : ObjKey, value : any) {
         if (!this.writable) {
@@ -53,6 +65,11 @@ export class Env {
         setToObj(obj, tail, value);
     }
 
+    /**
+     * Get a variable. Will search parent environments, as well as this one.
+     * @param name 
+     * @returns 
+     */
     get(name : ObjKey) : any {
         const [head,tail] = dotSplit(name);
         const env = this.findEnv(head);
@@ -68,10 +85,22 @@ export class Env {
         return env.properties[head];
     }
 
+    /**
+     * Get a variable as a string
+     * @param name 
+     * @returns 
+     */
     getStr(name : string) : string {
-        return this.get(name) as string;
+        return this.get(name).toString();
     }
 
+
+    /**
+     * Look for a property inside an object.  Used where dot syntax has been used to access a varaible,
+     * eg get("foo.bar.baz")
+     * @param head 
+     * @param tail 
+     */
     private getObjProperty(head : ObjKey, tail : string) : any {
         const value = this.properties[head];
 
@@ -91,7 +120,7 @@ export class Env {
      * @param name the name of the property
      * @returns the matching environment
      */
-    findEnv(name : ObjKey) : Env | undefined {
+    private findEnv(name : ObjKey) : Env | undefined {
         return this.properties[name]
                 ? this
                 : this.parent?.findEnv(name);
@@ -102,7 +131,7 @@ export class Env {
      * @param name the name of the property
      * @returns true if the property exists
      */
-    hasProperty(name : ObjKey) : boolean {
+    private hasProperty(name : ObjKey) : boolean {
         return this.properties[name]
                     ? true
                     : this.parent?.hasProperty(name) ?? false;
@@ -117,7 +146,7 @@ export class Env {
      * @returns A tuple of the writable env, and an boolean indicating if 
      *          this is an override
      */
-    findWritableEnv(name : ObjKey) : [Env,boolean] | undefined {
+    private findWritableEnv(name : ObjKey) : [Env,boolean] | undefined {
         let result : [Env,boolean] | undefined = undefined;
         if (this.properties[name] && this.writable) {
             result = [this,false];
@@ -131,13 +160,26 @@ export class Env {
         return result;
     }
 
+    /**
+     * execute a function and return the result
+     * @param name the name of the function
+     * @param bindings parameter binding
+     * @returns the result of the function
+     */
     execute(name : string, bindings : Obj ) : ReturnType {
         const fn = this.get(name);
+        return this.executeFn(fn, bindings);
+    }
+
+    executeFn(fn : EnvFn, bindings : Obj) : ReturnType {
         const fnEnv = this.newChild();
         fnEnv.addBindings(bindings);
         return fn(fnEnv);
     }
 
+    /**
+     * @returns a new child environment of the current environment
+     */
     newChild() : Env {
         return new Env(true, {}, this);
     }
@@ -157,33 +199,11 @@ export class Env {
     }
 }
 
-export function mkObj(obj : Obj) : Obj {
-    const builder = new ObjBuilder();
-    for(const [key, value] of Object.entries(obj)) {
-        builder.with(key, value);
-    }
-    return builder.build();
-}
-
-export function mkArr(arr: AnyArray) : any[] {
-    return arr.map(value => value);
-}
-
-// TODO don't really need this anymore
-export class ObjBuilder {
-    readonly obj : Obj = {};
-
-    with(name : string, value : any ) : ObjBuilder {
-        this.obj[name] = value;
-        return this;
-    }
-
-    build() : Obj {
-        return this.obj;
-    }
-
-}
-
+/**
+ * Access a value inside an object, referenced using dot syntax
+ * @param obj 
+ * @param name 
+ */
 function getFromObj(obj : Obj, name : string) : any {
     const [head, tail] = dotSplit(name);
     const value = obj[head];
@@ -201,6 +221,11 @@ function getFromObj(obj : Obj, name : string) : any {
     }
 }
 
+/**
+ * Set a value inside an object, referenced using dot syntax
+ * @param obj 
+ * @param name 
+ */
 function setToObj(obj : Obj, name : string, value : any) {
     const [head,tail] = dotSplit(name);
     if (!tail) {
@@ -217,6 +242,11 @@ function setToObj(obj : Obj, name : string, value : any) {
     setToObj(child, tail, value);
 }
 
+/**
+ * Split a string on the first dot, eg "foo.bar.baz" -> ["foo","bar.baz"]
+ * @param name
+ * @returns 
+ */
 function dotSplit(name : ObjKey) : [ObjKey, string | undefined] {
     if (typeof name === "symbol") {
         return [name, undefined];
@@ -228,6 +258,9 @@ function dotSplit(name : ObjKey) : [ObjKey, string | undefined] {
     return [head, tail];
 }
 
+/** 
+ * Create a new root environment, based on the supplied object
+ */
 export function createRootEnv(obj : Obj, writable : boolean) : Env {
     return new Env(writable, obj);
 }

@@ -1,6 +1,6 @@
 import { Verb } from "./verb"
 import { Entity } from "./entity"
-import { createRootEnv, ObjBuilder } from "./env"
+import { createRootEnv } from "./env"
 import { getAllCommands } from "./commandsearch"
 import { TextBuffer } from "./textbuffer";
 import { Action } from "./action";
@@ -101,14 +101,7 @@ export class BasicEngine implements Engine {
     for (const action of actions) {
         const result = action.matcher(command);
         if (result.match) {
-          const actionEnv = this.env.newChild();
-          const bindings = new ObjBuilder();
-          for(const [key,value] of Object.entries(result.bindings)) {
-            bindings.with(key, value);
-          }
-          actionEnv.addBindings(bindings.build());
-          action.action(actionEnv);
-          this.context = this.getContext();
+          this.env.executeFn(action.action, result.bindings);
           // TODO Break out?  Or run all matching actions?
         }
     }

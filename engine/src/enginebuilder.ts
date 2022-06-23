@@ -6,16 +6,16 @@ import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
 import { getMatcher, match } from "./actionmatcher"
-import { Env, ObjBuilder, mkObj } from "./env"
+import { Env } from "./env"
 
 
 const LOOK = {
     matcher : getMatcher([match("look")]),
     action : (env:Env) => {
         const location = env.execute("getLocation", {});
-        const entity = env.execute("getEntity", mkObj({"id":location})) as Obj;
+        const entity = env.execute("getEntity", {"id":location}) as Obj;
         const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
-        env.execute("write", mkObj({"value":desc}))
+        env.execute("write", {"value":desc});
     } 
 }
 
@@ -109,8 +109,7 @@ export function makeRoom(obj : Obj) : Entity {
 
 function createMoveToAction(dir : string, dest : string) : Action {
     const matcher = getMatcher([match("go"), match(dir)]);
-    const bindings = new ObjBuilder().with("dest", dest).build()
-    const action = (env : Env) => env.execute("moveTo", bindings);
+    const action = (env : Env) => env.execute("moveTo", {"dest" : dest});
     return {
       matcher : matcher,
       action : action
