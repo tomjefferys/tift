@@ -1,8 +1,10 @@
-const OVERRIDE = "__override__"; // TODO use symbol
+const OVERRIDE = Symbol("__override__");
 
+
+export type ObjKey = string | symbol;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export type Obj = {[key:string]:any};
+export type Obj = {[key:ObjKey]:any};
 export type AnyArray = any[];
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -28,7 +30,7 @@ export class Env {
     }
 
     // TODO need syntax for accessing arrays
-    set(name : string, value : any) {
+    set(name : ObjKey, value : any) {
         if (!this.writable) {
             throw new Error("Can't set variable on readonly env");
         }
@@ -40,7 +42,7 @@ export class Env {
         }
         const obj = env.properties[head] ?? {};
         if (typeof obj !== "object") {
-            throw new Error(head + " is not an object");
+            throw new Error(head.toString() + " is not an object");
         }
         if (isOverride) {
             obj[OVERRIDE] = true;
@@ -51,12 +53,12 @@ export class Env {
         setToObj(obj, tail, value);
     }
 
-    get(name : string) : any {
+    get(name : ObjKey) : any {
         const [head,tail] = dotSplit(name);
         const env = this.findEnv(head);
 
         if (!env) {
-            throw new Error("No such varible " + name);
+            throw new Error("No such varible " + name.toString());
         }
 
         if (tail) {
@@ -70,11 +72,11 @@ export class Env {
         return this.get(name) as string;
     }
 
-    private getObjProperty(head : string, tail : string) : any {
+    private getObjProperty(head : ObjKey, tail : string) : any {
         const value = this.properties[head];
 
         if (typeof value !== "object") {
-            throw new Error(head + " is not an object");
+            throw new Error(head.toString() + " is not an object");
         }
 
         const obj = (value[OVERRIDE] && this.parent)
@@ -89,7 +91,7 @@ export class Env {
      * @param name the name of the property
      * @returns the matching environment
      */
-    findEnv(name : string) : Env | undefined {
+    findEnv(name : ObjKey) : Env | undefined {
         return this.properties[name]
                 ? this
                 : this.parent?.findEnv(name);
@@ -100,7 +102,7 @@ export class Env {
      * @param name the name of the property
      * @returns true if the property exists
      */
-    hasProperty(name : string) : boolean {
+    hasProperty(name : ObjKey) : boolean {
         return this.properties[name]
                     ? true
                     : this.parent?.hasProperty(name) ?? false;
@@ -115,7 +117,7 @@ export class Env {
      * @returns A tuple of the writable env, and an boolean indicating if 
      *          this is an override
      */
-    findWritableEnv(name : string) : [Env,boolean] | undefined {
+    findWritableEnv(name : ObjKey) : [Env,boolean] | undefined {
         let result : [Env,boolean] | undefined = undefined;
         if (this.properties[name] && this.writable) {
             result = [this,false];
@@ -186,7 +188,7 @@ function getFromObj(obj : Obj, name : string) : any {
     const [head, tail] = dotSplit(name);
     const value = obj[head];
     if (!value) {
-        throw new Error("Variable " + head + " does not exist");
+        throw new Error("Variable " + head.toString() + " does not exist");
     }
     if (!tail) {
         return value;
@@ -194,7 +196,7 @@ function getFromObj(obj : Obj, name : string) : any {
         if (typeof value === "object") {
             return getFromObj(value, tail);
         } else {
-            throw new Error(head + " is not an object");
+            throw new Error(head.toString() + " is not an object");
         }
     }
 }
@@ -215,7 +217,10 @@ function setToObj(obj : Obj, name : string, value : any) {
     setToObj(child, tail, value);
 }
 
-function dotSplit(name : string) : [string, string | undefined] {
+function dotSplit(name : ObjKey) : [ObjKey, string | undefined] {
+    if (typeof name === "symbol") {
+        return [name, undefined];
+    }
     const dotIndex = name.indexOf(".");
     const dotFound = dotIndex != -1;
     const head = dotFound ? name.substring(0, dotIndex) : name;

@@ -1,8 +1,8 @@
 import { Obj, AnyArray, EnvFn, Env } from "./env";
 import { TextBuffer, createTextBuffer } from "./textbuffer";
 
-const PLAYER = "__PLAYER__";
-const BUFFER = "__BUFFER__";
+const PLAYER = Symbol("__PLAYER__");
+const BUFFER = Symbol("__BUFFER__");
 
 export interface Player {
     location : string, 
