@@ -76,11 +76,11 @@ test("Test two rooms", () => {
     expect(engine.getWords(["go"])).toStrictEqual(["south"]);
     engine.execute(["look"]);
     let look = engine.getBuffer().flush().join(" ");
-    expect(look).toEqual("The room is dark and square");
+    expect(look).toEqual("The room is dark and square <br/>");
     
     engine.execute(["go", "south"]);
     expect(engine.getWords(["go"])).toStrictEqual(["north"]);
     engine.execute(["look"]);
     look = engine.getBuffer().flush().join(" ");
-    expect(look).toEqual("The South Room");
+    expect(look).toEqual("The South Room <br/>");
 })

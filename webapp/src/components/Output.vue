@@ -10,9 +10,9 @@ const props = defineProps<{
 <template>
     <StatusBar :status="status"/>
     <div class="textout">
-        <p v-for="output in text">
-           {{output}}
-        </p>
+        <p v-for="output in text" v-html="output"> </p>
+        <!--   {{output}}
+        </p>-->
     </div>
 </template>
 

@@ -37,6 +37,8 @@ interface CommandContext {
 
 export class BasicEngine implements Engine {
   private readonly env;
+  // FIXME entites are both being stored in the env, and here.
+  // I think they should only be in the env (possibly cached here)
   readonly entities : EntityMap;
   readonly verbs : VerbMap;
   private context : CommandContext;
@@ -63,12 +65,17 @@ export class BasicEngine implements Engine {
   }
 
   getContext() : CommandContext {
-    // for now just get the entity for the current location
+    // Entity for the current location
     const contextEntities = [];
     const locationEntity = this.entities[getPlayer(this.env).location];
     if (locationEntity) {
       contextEntities.push(locationEntity);
     }
+
+    // Get any other entities that are here
+
+  
+  
     return {
       entities: contextEntities,
       verbs: Object.values(this.verbs)
@@ -102,6 +109,7 @@ export class BasicEngine implements Engine {
         const result = action.matcher(command);
         if (result.match) {
           this.env.executeFn(action.action, result.bindings);
+          this.context = this.getContext();
           // TODO Break out?  Or run all matching actions?
         }
     }

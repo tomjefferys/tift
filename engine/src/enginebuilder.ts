@@ -1,7 +1,7 @@
 import { Verb, VerbBuilder, VerbTrait } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
 import { Obj } from "./types";
-import { getString, forEach, forEachEntry, ifExists } from "./obj";
+import { getString, getArray, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
@@ -16,6 +16,14 @@ const LOOK = {
         const entity = env.execute("getEntity", {"id":location}) as Obj;
         const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
         env.execute("write", {"value":desc});
+        env.execute("write", {"value":"<br/>"});
+
+        const items = getArray(entity["items"] ?? []);
+
+        for(const item of items) {
+            env.execute("write", {"value":item});
+            env.execute("write", {"value":"<br/>"});
+        }
     } 
 }
 
@@ -45,6 +53,7 @@ export class EngineBuilder {
                 this.entities.push(makeRoom(obj));
                 break;
             case "object":
+            case "item":
                 this.entities.push(makeEntity(obj));
                 break;
             case "verb":

@@ -5,6 +5,7 @@ import { Obj } from "./types"
 const prototypes = {
   "room":{"type":"room"},
   "object":{"type":"object"},
+  "item":{"type":"item"},
   "rule":{"type":"rule"},
   "verb":{"type":"verb"}
 }

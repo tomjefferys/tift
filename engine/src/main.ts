@@ -19,6 +19,12 @@ room: pool
 desc: A deep pool of cold clear water exends over the southern end of the chamber
 exits:
   north: cave
+items: [key]
+---
+item: key
+name: rusty key
+desc: An old rusty key
+tags: [carryable]
 `
 
 export function getEngine() : Engine {

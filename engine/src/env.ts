@@ -94,6 +94,13 @@ export class Env {
         return this.get(name).toString();
     }
 
+    getArr(name : string) : AnyArray {
+        const arr = this.get(name);
+        if (!Array.isArray(arr)) {
+            throw new Error(name + " is not an array");
+        }
+        return arr;
+    }
 
     /**
      * Look for a property inside an object.  Used where dot syntax has been used to access a varaible,
