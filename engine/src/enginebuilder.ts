@@ -1,12 +1,12 @@
 import { Verb, VerbBuilder, VerbTrait } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
-import { Obj } from "./types";
+//import { Obj } from "./types";
 import { getString, getArray, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
 import { getMatcher, match } from "./actionmatcher"
-import { Env } from "./env"
+import { Env, Obj } from "./env"
 
 
 const LOOK = {
@@ -109,6 +109,9 @@ export function makeRoom(obj : Obj) : Entity {
     makeEntityVerbs(builder, obj);
     builder.withVerb("go");
     for(const [dir, dest] of Object.entries(obj["exits"] ?? {})) {
+        if (typeof dest !== "string") {
+            throw new Error(obj.id + " contains invalid destination for: " + dir);
+        }
         builder.withVerbModifier("direction", dir);
         builder.withAction(createMoveToAction(dir, dest));
     }
@@ -137,5 +140,11 @@ function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
     forEachEntry(obj["modifiers"], (type, mods) => {
         forEach(mods, mod => builder.withVerbModifier(type, getString(mod)))
     });
+}
+
+function findItems(env : Env, location : string) : Obj[] {
+
+    return [];
+
 }
 

@@ -156,3 +156,12 @@ test("Test get parent object props after child overridden", () => {
     expect(gchild.get("foo.bar")).toEqual("grault");
     expect(gchild.get("foo.qux")).toEqual("corge");
 });
+
+test("Test get top level object that's been overridden", () => {
+    const root = createRootEnv({"foo":{"bar":"baz", "qux":"corge"}}, false);
+    const child = root.newChild();
+
+    child.set("foo.bar","grault");
+    expect(root.get("foo")).toStrictEqual({"bar":"baz", "qux":"corge"});
+    expect(child.get("foo")).toStrictEqual({"bar":"grault", "qux":"corge"});
+});

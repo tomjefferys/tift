@@ -1,7 +1,13 @@
+import * as _ from "lodash"
+
+
 const OVERRIDE = Symbol("__override__");
 
 
 export type ObjKey = string | symbol;
+
+// Either an ObjKey, or an array of ObjKeys with at least one element
+export type ObjPath = ObjKey | ObjKey[];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type Obj = {[key:ObjKey]:any};
@@ -42,7 +48,7 @@ export class Env {
      * @param value 
      */
     // TODO need syntax for accessing arrays
-    set(name : ObjKey, value : any) {
+    set(name : ObjPath, value : any) {
         if (!this.writable) {
             throw new Error("Can't set variable on readonly env");
         }
@@ -78,11 +84,10 @@ export class Env {
             throw new Error("No such varible " + name.toString());
         }
 
-        if (tail) {
-            return env.getObjProperty(head, tail);
-        }
-
-        return env.properties[head];
+        let value = env.properties[head];
+        return (typeof value === "object")
+            ? env.getObjProperty(head,tail)
+            : value;
     }
 
     /**
@@ -108,7 +113,7 @@ export class Env {
      * @param head 
      * @param tail 
      */
-    private getObjProperty(head : ObjKey, tail : string) : any {
+    private getObjProperty(head : ObjKey, tail : ObjPath | undefined) : any {
         const value = this.properties[head];
 
         if (typeof value !== "object") {
@@ -118,8 +123,11 @@ export class Env {
         const obj = (value[OVERRIDE] && this.parent)
                         ? { ...this.parent.get(head), ...value}
                         : value;
+        
+        delete obj[OVERRIDE];
 
-        return getFromObj(obj, tail); 
+        const result = tail? getFromObj(obj, tail) : obj;
+        return _.cloneDeep(result);
     }
 
     /**
@@ -204,6 +212,18 @@ export class Env {
     getDepth() : number {
         return 1 + (this.parent?.getDepth() ?? 0);
     }
+
+    /**
+     * Find all objects matching a predicate
+     * @param predicate 
+     * @returns 
+     */
+    findObjs(predicate: (obj: Obj) => boolean) : Obj {
+        const parentObjs = this.parent?.findObjs(predicate) ?? [];
+
+
+        return [];
+    }
 }
 
 /**
@@ -211,8 +231,8 @@ export class Env {
  * @param obj 
  * @param name 
  */
-function getFromObj(obj : Obj, name : string) : any {
-    const [head, tail] = dotSplit(name);
+function getFromObj(obj : Obj, path : ObjPath) : any {
+    const [head, tail] = dotSplit(path);
     const value = obj[head];
     if (!value) {
         throw new Error("Variable " + head.toString() + " does not exist");
@@ -233,10 +253,10 @@ function getFromObj(obj : Obj, name : string) : any {
  * @param obj 
  * @param name 
  */
-function setToObj(obj : Obj, name : string, value : any) {
+function setToObj(obj : Obj, name : ObjPath, value : any) {
     const [head,tail] = dotSplit(name);
     if (!tail) {
-        obj[name] = value;
+        obj[head] = value;
         return;
     }
     const child = obj[head] ?? {};
@@ -244,7 +264,7 @@ function setToObj(obj : Obj, name : string, value : any) {
         obj[head] = child;
     }
     if (typeof child !== "object") {
-        throw new Error(name + " is not an object");
+        throw new Error(head.toString() + " is not an object");
     } 
     setToObj(child, tail, value);
 }
@@ -254,15 +274,20 @@ function setToObj(obj : Obj, name : string, value : any) {
  * @param name
  * @returns 
  */
-function dotSplit(name : ObjKey) : [ObjKey, string | undefined] {
-    if (typeof name === "symbol") {
-        return [name, undefined];
+function dotSplit(path : ObjPath) : [ObjKey, ObjPath | undefined] {
+    if (typeof path === "symbol") {
+        return [path, undefined];
+    } else if (typeof path === "string") {
+        const dotIndex = path.indexOf(".");
+        const dotFound = dotIndex != -1;
+        const head = dotFound ? path.substring(0, dotIndex) : path;
+        const tail = dotFound ? path.substring(dotIndex + 1) : undefined;
+        return [head, tail];
+    } else {
+        const head = path[0];
+        const tail = (path.length > 1)? path.slice(1) : undefined;
+        return [head, tail];
     }
-    const dotIndex = name.indexOf(".");
-    const dotFound = dotIndex != -1;
-    const head = dotFound ? name.substring(0, dotIndex) : name;
-    const tail = dotFound ? name.substring(dotIndex + 1) : undefined;
-    return [head, tail];
 }
 
 /** 
