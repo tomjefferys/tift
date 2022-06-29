@@ -17,12 +17,7 @@ export const getBuffer : ((env:Env) => TextBuffer) = env => env.get(BUFFER) as T
 const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     setLocation : env => {
         const dest = env.getStr("dest");
-        //const player = getPlayer(env);
         env.set([PLAYER, "location"], dest);
-        // TODO set the location
-        // TODO set the player
-        //getPlayer(env).location = env.getStr("dest");
-        //env.set("__PLAYER__.location", dest); // FIXME this looks like it's setting at the wrong level
     },
     
     moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),

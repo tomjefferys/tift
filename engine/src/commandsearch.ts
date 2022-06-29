@@ -116,13 +116,13 @@ const getVerbModifiers = (context : SearchContext, verb : Verb) =>
       , {});
 
 const getModifierValues = (context : SearchContext, modifier : string) : string[] => 
-      Object.values(context.objs).flatMap(obj => 
-        multidict.get(obj.verbModifiers, modifier))
+      Object.values(context.objs)
+            .flatMap(obj => obj.verbModifiers ? multidict.get(obj.verbModifiers, modifier) : []);
 
 const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
   return (context, state) =>
         Object.values(context.objs)
-              .flatMap(obj => obj.verbs)
+              .flatMap(obj => obj?.verbs ?? [])
               .filter(matcher => !matcher.attribute)
               .map(matcher => context.verbs[matcher.verb])
               .filter(Boolean)

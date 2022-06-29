@@ -18,10 +18,10 @@ const LOOK = {
         env.execute("write", {"value":desc});
         env.execute("write", {"value":"<br/>"});
 
-        const items = getArray(entity["items"] ?? []);
+        const items = env.findObjs(obj => obj.location === location);
 
         for(const item of items) {
-            env.execute("write", {"value":item});
+            env.execute("write", {"value": item["name"] ?? item["id"]});
             env.execute("write", {"value":"<br/>"});
         }
     } 
@@ -143,8 +143,6 @@ function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
 }
 
 function findItems(env : Env, location : string) : Obj[] {
-
-    return [];
-
+    return env.findObjs(obj => obj?.location === location);
 }
 

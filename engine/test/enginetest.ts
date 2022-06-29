@@ -84,3 +84,26 @@ test("Test two rooms", () => {
     look = engine.getBuffer().flush().join(" ");
     expect(look).toEqual("The South Room <br/>");
 })
+
+test("Test room with item", () => {
+    const builder = new EngineBuilder();
+    builder.withObj({
+        id : "theRoom",
+        name : "The Room",
+        desc : "An almost empty room",
+        type : "room",
+        tags : [ "start" ]
+    });
+    builder.withObj({
+        id : "anItem",
+        name : "an ordinary item",
+        type : "item",
+        location : "theRoom"
+    });
+    const engine = builder.build();
+    engine.execute(["look"]);
+    const look = engine.getBuffer().flush().join(" ");
+    expect(look).toContain("An almost empty room");
+    expect(look).toContain("an ordinary item");
+
+});

@@ -67,14 +67,15 @@ export class BasicEngine implements Engine {
   getContext() : CommandContext {
     // Entity for the current location
     const contextEntities = [];
-    const locationEntity = this.entities[getPlayer(this.env).location];
+    const location = getPlayer(this.env).location;
+    const locationEntity = this.entities[location];
     if (locationEntity) {
       contextEntities.push(locationEntity);
     }
 
     // Get any other entities that are here
-
-  
+    this.env.findObjs(obj => obj?.location === location)
+            .forEach(obj => contextEntities.push(obj))
   
     return {
       entities: contextEntities,
@@ -104,7 +105,8 @@ export class BasicEngine implements Engine {
   }
   
   execute(command: string[]): void {
-    const actions : Action[] = [...this.context.entities, ...this.context.verbs].flatMap(obj => obj.actions);
+    const actions : Action[] = [...this.context.entities, ...this.context.verbs]
+                                  .flatMap(obj => obj?.actions ?? []);
     for (const action of actions) {
         const result = action.matcher(command);
         if (result.match) {

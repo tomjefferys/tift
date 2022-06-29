@@ -214,15 +214,27 @@ export class Env {
     }
 
     /**
+     * @returns the names of all object in this (and parent) envs
+     */
+    getAllObjectNames() : Set<ObjKey> {
+        const objNames = this.parent?.getAllObjectNames() ?? new Set<ObjKey>();
+        for(const [name,value] of Object.entries(this.properties)) {
+            if (typeof value === "object") {
+                objNames.add(name);
+            }
+        }
+        return objNames;
+    }
+
+    /**
      * Find all objects matching a predicate
      * @param predicate 
      * @returns 
      */
-    findObjs(predicate: (obj: Obj) => boolean) : Obj {
-        const parentObjs = this.parent?.findObjs(predicate) ?? [];
-
-
-        return [];
+    findObjs(predicate: (obj: Obj) => boolean) : Obj[] {
+        const allNames = [...this.getAllObjectNames()];
+        return allNames.map(name => this.get(name))
+                       .filter(predicate);
     }
 }
 
