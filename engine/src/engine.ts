@@ -2,10 +2,10 @@ import { Verb } from "./verb"
 import { Entity } from "./entity"
 import { createRootEnv } from "./env"
 import { getAllCommands } from "./commandsearch"
-import { TextBuffer } from "./textbuffer";
 import { Action } from "./action";
 import { Obj } from "./types";
-import { makePlayer, makeDefaultFunctions, makeBuffer, getPlayer, getBuffer } from "./enginedefault";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
+import { OutputConsumer } from "./messages/output";
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -21,7 +21,6 @@ enum TYPE {
 export interface Engine {
   getWords(partialCommand : string[]) : string[];
   execute(command : string[]) : void;
-  getBuffer() : TextBuffer;
   getStatus() : string;
 }
 
@@ -44,7 +43,7 @@ export class BasicEngine implements Engine {
   private context : CommandContext;
   private commands : string[][];
 
-  constructor(entities : Entity[], verbs : Verb[]) {
+  constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer) {
     const environment = {} as Obj; 
     entities.forEach(entity => environment[entity.id] = entity.props);
     verbs.forEach(verb => environment[verb.id] = verb.props);
@@ -55,7 +54,7 @@ export class BasicEngine implements Engine {
     const start = findStartingLocation(entities);
     makePlayer(environment, start);
     makeDefaultFunctions(environment);
-    makeBuffer(environment);
+    makeOutputConsumer(environment, outputConsumer);
 
     const rootEnv = createRootEnv(environment, false);
     this.env = rootEnv.newChild();
@@ -116,10 +115,6 @@ export class BasicEngine implements Engine {
         }
     }
     this.commands = getAllCommands(this.context.entities, this.context.verbs);
-  }
-
-  getBuffer(): TextBuffer {
-      return getBuffer(this.env);
   }
 
   getStatus() : string {

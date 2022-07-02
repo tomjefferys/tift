@@ -6,8 +6,12 @@ import { reactive } from 'vue';
 import { getEngine } from '@engine/main.ts';
 //@ts-ignore
 import { Engine } from '@engine/engine.ts'
+//@ts-ignore
+import { OutputConsumer, OutputMessage } from '@engine/messages/output.ts'
 
-const engine : Engine = getEngine();
+
+const output : OutputMessage[] = [];
+const engine : Engine = getEngine((message: OutputMessage) => output.push(message));
 
 const state = reactive({ 
   command : [] as string[],
@@ -26,9 +30,10 @@ function execute() {
   state.command = [];
   state.words = engine.getWords([]);
   state.status = engine.getStatus();
-  const output = engine.getBuffer().flush();
   if (output.length) {
-    state.text.push(output.join(" "));
+    const values = output.map(message => message.value);
+    state.text.push(values.join(" "));
+    output.length = 0;
   }
 }
 </script>

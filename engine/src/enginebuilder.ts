@@ -1,12 +1,12 @@
 import { Verb, VerbBuilder, VerbTrait } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
-//import { Obj } from "./types";
-import { getString, getArray, forEach, forEachEntry, ifExists } from "./obj";
+import { getString, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
 import { getMatcher, match } from "./actionmatcher"
 import { Env, Obj } from "./env"
+import { OutputConsumer } from "./messages/output";
 
 
 const LOOK = {
@@ -40,11 +40,17 @@ const DEFAULT_VERBS = [
 ];
 
 export class EngineBuilder {
+    private outputConsumer? : OutputConsumer;
     private verbs : Verb[] = [];
     private entities : Entity[] = [];
 
     constructor() {
         DEFAULT_VERBS.forEach(verb => this.verbs.push(verb));
+    }
+
+    withOutput(outputConsumer : OutputConsumer) {
+        this.outputConsumer = outputConsumer;
+        return this;
     }
      
     withObj(obj : Obj) : EngineBuilder {
@@ -66,14 +72,17 @@ export class EngineBuilder {
     }
 
     build() : Engine & EngineState {
-        return new BasicEngine(this.entities, this.verbs);
+        if (!this.outputConsumer) {
+            throw new Error("No output counsumer specified")
+        }
+        return new BasicEngine(this.entities, this.verbs, this.outputConsumer);
     }
     
 }
 
-export function loadFromYaml(data: string) : Engine & EngineState {
+export function loadFromYaml(data: string, outputConsumer : OutputConsumer) : Engine & EngineState {
     const objs = getObjs(data);
-    const builder = new EngineBuilder();
+    const builder = new EngineBuilder().withOutput(outputConsumer);
     objs.forEach(obj => builder.withObj(obj));
     return builder.build();
 }
@@ -101,6 +110,16 @@ export function makeVerb(obj : Obj) : Verb {
 export function makeEntity(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj)
+    return builder.build();
+}
+
+export function makeItem(obj : Obj) : Entity {
+    const builder = new EntityBuilder(obj);
+    const tags = obj?.tags ?? [];
+    if (tags.includes("carryable")) {
+        builder.withVerb("get");
+
+    }
     return builder.build();
 }
 
@@ -141,8 +160,3 @@ function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
         forEach(mods, mod => builder.withVerbModifier(type, getString(mod)))
     });
 }
-
-function findItems(env : Env, location : string) : Obj[] {
-    return env.findObjs(obj => obj?.location === location);
-}
-

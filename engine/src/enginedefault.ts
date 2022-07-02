@@ -1,8 +1,8 @@
 import { Obj, AnyArray, EnvFn, Env } from "./env";
-import { TextBuffer, createTextBuffer } from "./textbuffer";
+import { OutputConsumer, print } from "./messages/output";
 
 const PLAYER = Symbol("__PLAYER__");
-const BUFFER = Symbol("__BUFFER__");
+const OUTPUT = Symbol("__OUTPUT__");
 
 export interface Player {
     location : string, 
@@ -12,7 +12,7 @@ export interface Player {
 }
 
 export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Player;
-export const getBuffer : ((env:Env) => TextBuffer) = env => env.get(BUFFER) as TextBuffer;
+export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
 const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     setLocation : env => {
@@ -23,7 +23,8 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),
     getLocation : env => getPlayer(env).location,
     getEntity : env => env.get(env.getStr("id")),
-    write : env => getBuffer(env).write(env.getStr("value"))
+    write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
+    writeMessage : env => getOutput(env)(env.get("message"))
 }
 
 export function makePlayer(obj : Obj, start : string) {
@@ -42,6 +43,6 @@ export function makeDefaultFunctions(obj : Obj) {
     }
 }
 
-export function makeBuffer(obj : Obj) {
-    obj[BUFFER] = createTextBuffer();
+export function makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
+    obj[OUTPUT] = outputConsumer;
 }

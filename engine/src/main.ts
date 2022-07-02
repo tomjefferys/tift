@@ -1,5 +1,6 @@
 import { loadFromYaml } from "./enginebuilder";
 import { Engine } from "./engine";
+import { OutputConsumer } from "./messages/output";
 
 const data = `
 ---
@@ -27,7 +28,7 @@ location: pool
 tags: [carryable]
 `
 
-export function getEngine() : Engine {
-  const engine = loadFromYaml(data);
+export function getEngine(outputConsumer : OutputConsumer) : Engine {
+  const engine = loadFromYaml(data, outputConsumer);
   return engine;
 }

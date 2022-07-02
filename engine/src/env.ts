@@ -84,7 +84,7 @@ export class Env {
             throw new Error("No such varible " + name.toString());
         }
 
-        let value = env.properties[head];
+        const value = env.properties[head];
         return (typeof value === "object")
             ? env.getObjProperty(head,tail)
             : value;
@@ -195,8 +195,8 @@ export class Env {
     /**
      * @returns a new child environment of the current environment
      */
-    newChild() : Env {
-        return new Env(true, {}, this);
+    newChild(obj : Obj = {}) : Env {
+        return new Env(true, obj, this);
     }
 
     addBindings(bindings : Obj) {
