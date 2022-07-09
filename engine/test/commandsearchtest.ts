@@ -1,6 +1,7 @@
-import {getAllCommands} from "../src/commandsearch";
+import {getAllCommands, ContextEntities} from "../src/commandsearch";
 import {Entity, EntityBuilder} from "../src/entity";
 import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
+import * as _ from "lodash"
 
 const STIR = new VerbBuilder({"id":"stir"})
                      .withTrait(VerbTrait.Transitive)
@@ -17,6 +18,8 @@ const SOUP = new EntityBuilder({"id" : "soup"})
   
 const APPLE = new EntityBuilder({"id" : "apple"})
                      .withVerb("eat")
+                     .withVerb("get")
+                     .withVerb("drop")
                      .build();
 
 const SPOON = new EntityBuilder({"id" : "spoon"})
@@ -48,24 +51,34 @@ const LOOK = new VerbBuilder({"id":"look"})
                   .withTrait(VerbTrait.Intransitive)
                   .build();
 
+const GET = new VerbBuilder({"id":"get"})
+                  .withTrait(VerbTrait.Transitive)
+                  .withContext("environment")
+                  .build();
+
+const DROP = new VerbBuilder({"id":"drop"})
+                  .withTrait(VerbTrait.Transitive)
+                  .withContext("inventory")
+                  .withContext("holding")
+                  .build();
 
 test("Test empty input", () => {
-  const options = getAllCommands([], []);
+  const options = getAllCommandIds([], []);
   expect(options).toHaveLength(0);
 })
 
 test("Test no objects", () => {
-  const options = getAllCommands([], [STIR]);
+  const options = getAllCommandIds([], [STIR]);
   expect(options).toHaveLength(0);
 })
 
 test("Test no verbs", () => {
-  const options = getAllCommands([SOUP, APPLE], []);
+  const options = getAllCommandIds([SOUP, APPLE], []);
   expect(options).toHaveLength(0);
 })
 
 test("No matching verbs and objects", () => {
-  const options = getAllCommands([APPLE], [STIR]);
+  const options = getAllCommandIds([APPLE], [STIR]);
   expect(options).toHaveLength(0);
 })
 
@@ -120,7 +133,22 @@ test("Test look", () => {
     ["look"] ]));
 });
 
-function getAllCommandIds(entities : Entity[], verbs : Verb[]) {
-  const commands = getAllCommands(entities, verbs);
+test("Test inventory context", () => {
+  let commands = getAllCommandIds({"environment":[APPLE]}, [GET, DROP]);
+  expect(commands).toHaveLength(1);
+  expect(commands).toEqual(expect.arrayContaining([["get", "apple"]]));
+
+  commands = getAllCommandIds({"inventory":[APPLE]}, [GET, DROP]);
+  expect(commands).toHaveLength(1);
+  expect(commands).toEqual(expect.arrayContaining([["drop", "apple"]]));
+
+  //commands = getAllCommandIds({"holding":[APPLE]}, [GET, DROP]);
+  //expect(commands).toHaveLength(1);
+  //expect(commands).toEqual(expect.arrayContaining([["drop", "apple"]]));
+});
+
+function getAllCommandIds(entities : ContextEntities | Entity[], verbs : Verb[]) {
+  const contextEntities = _.isArray(entities)? {"default": entities} : entities;
+  const commands = getAllCommands(contextEntities, verbs);
   return commands.map(command => command.map(idWords => idWords.id))
 }

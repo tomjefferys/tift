@@ -2,6 +2,8 @@ import { Action } from "./action";
 import { Obj } from "./types";
 import { getString } from "./obj";
 
+export type VerbContext = string;
+
 export enum VerbTrait {
   Transitive,
   Intransitive,
@@ -16,19 +18,22 @@ export class Verb {
   readonly traits : VerbTrait[];
   readonly modifiers : string[];
   readonly actions : Action[];
+  readonly contexts : VerbContext[];
 
   constructor(id : string,
               props : Obj,
               attributes : string[],
               traits : VerbTrait[],
               modifiers : string[],
-              actions : Action[]) {
+              actions : Action[],
+              contexts : VerbContext[]) {
     this.id = id;
     this.props = props;
     this.attributes = attributes;
     this.traits = traits;
     this.modifiers = modifiers;
     this.actions = actions;
+    this.contexts = contexts;
   }
 
   isTransitive() : boolean {
@@ -56,6 +61,7 @@ export class VerbBuilder {
   traits : VerbTrait[] = [];
   modifiers : string[] = [];
   actions : Action[] = [];
+  contexts : VerbContext[] = [];
 
   constructor(props : Obj) {
     if (!props) {
@@ -93,8 +99,13 @@ export class VerbBuilder {
     return this;
   }
 
+  withContext(context : VerbContext) : VerbBuilder {
+    this.contexts.push(context);
+    return this;
+  }
+
   build() : Verb {
-    return new Verb(this.id, this.props, this.attributes, this.traits, this.modifiers, this.actions);
+    return new Verb(this.id, this.props, this.attributes, this.traits, this.modifiers, this.actions, this.contexts);
   }
   
 

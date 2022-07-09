@@ -166,10 +166,17 @@ test("Test get named item", () => {
         tags : ["carryable"]
     });
     const engine = builder.build();
-    const words = getWordIds(engine, ["get"]);
-    // FIXME words needs to return id and name
-    console.log(words);
+    engine.execute(["look"]);
+    expect(messages).toContain("rusty key");
+    messages.length = 0;
 
+    const words = engine.getWords(["get"]);
+    expect(words).toEqual(expect.arrayContaining([{id: "key", value: "rusty key"}]))
+
+    engine.execute(["get", "key"]);
+
+    engine.execute(["look"]);
+    expect(messages).not.toContain("rusty key");
 })
 
 function listOutputConsumer(messages : string[]) : OutputConsumer {

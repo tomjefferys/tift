@@ -63,7 +63,7 @@ export class BasicEngine implements Engine {
     this.context = this.getContext();
 
     // FIXME this should be done a bit at a time
-    this.commands = getAllCommands(this.context.entities, this.context.verbs);
+    this.commands = getAllCommands({"default":this.context.entities}, this.context.verbs);
   }
 
   getContext() : CommandContext {
@@ -118,7 +118,7 @@ export class BasicEngine implements Engine {
           // TODO Break out?  Or run all matching actions?
         }
     }
-    this.commands = getAllCommands(this.context.entities, this.context.verbs);
+    this.commands = getAllCommands({"default":this.context.entities}, this.context.verbs);
   }
 
   getStatus() : string {

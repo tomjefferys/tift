@@ -1,4 +1,4 @@
-import { Verb } from "./verb"
+import { Verb, VerbContext } from "./verb"
 import { VerbMap, EntityMap } from "./types"
 import { Entity, VerbMatcher } from "./entity"
 import { MultiDict } from "./util/multidict"
@@ -26,25 +26,24 @@ type SearchFn = (context: SearchContext, state: SearchState) => SearchState[];
 type SearchNode = Tree.ValueNode<SearchFn>;
 type SearchResult = [SearchState, SearchNode];
 
+export type ContextEntities = {[key:VerbContext]:Entity[]}
+
 const INITIAL_STATE : SearchState = {modifiers : {}, words : []};
 
-export function getAllCommands(objs: Entity[], verbs: Verb[]) : IdValue<string>[][] {
+export function getAllCommands(objs: ContextEntities, verbs: Verb[]) : IdValue<string>[][] {
   const context = buildSearchContext(objs, verbs);
   return searchAll(context)
           .map(state => state.words);
 }
 
 interface SearchContext {
-  objs:  EntityMap,
+  objs:  ContextEntities,
   verbs: VerbMap,
 }
 
-function buildSearchContext(objs : Entity[], verbs : Verb[]) : SearchContext {
+function buildSearchContext(objs : ContextEntities, verbs : Verb[]) : SearchContext {
   return {
-    objs: objs.reduce((map,obj) => {
-            map[obj.id] = obj;
-            return map;
-          }, {} as EntityMap),
+    objs: objs,
     verbs: verbs.reduce((map,verb) => {
              map[verb.id] = verb;
              return map;
@@ -57,10 +56,17 @@ function buildSearchContext(objs : Entity[], verbs : Verb[]) : SearchContext {
  * Return all direct object in the context matching a single verb
  */
 function getDirectObjects(context : SearchContext, verb : Verb) : Entity[] {
-  return Object.values(context.objs)
+  const entities = filterEntities(context.objs, verb.contexts);
+  return entities
                .filter(obj => 
                   obj.verbs.some((verbMatcher) => 
                     verbMatcher.verb === verb.id && !verbMatcher.attribute));
+}
+
+function filterEntities(entities : ContextEntities, verbContexts : VerbContext[]) {
+  return verbContexts.length
+            ? verbContexts.flatMap(context => entities[context] ?? [])
+            : Object.values(entities).flatMap(entity => entity);
 }
 
 /**
@@ -69,7 +75,8 @@ function getDirectObjects(context : SearchContext, verb : Verb) : Entity[] {
 function getIndirectObjects(context : SearchContext,
                             verb : Verb,
                             attribute? : string) : Entity[] {
-  return Object.values(context.objs)
+  const entities = filterEntities(context.objs, verb.contexts);
+  return entities
                .filter(obj =>
                   obj.verbs.some(matcher =>
                         testAttributeMatches(matcher, verb, attribute)));
@@ -112,25 +119,48 @@ function getVerbAttributes(context : SearchContext, verb : Verb) : string[] {
 const getVerbModifiers = (context : SearchContext, verb : Verb) =>
    verb.modifiers.reduce(
       (modMap : MultiDict<string>, modifier) => 
-          multidict.addUnique(modMap, modifier, getModifierValues(context, modifier))
+          multidict.addUnique(modMap, modifier, getModifierValues(context, modifier, verb.contexts))
       , {});
 
-const getModifierValues = (context : SearchContext, modifier : string) : string[] => 
-      Object.values(context.objs)
-            .flatMap(obj => obj.verbModifiers ? multidict.get(obj.verbModifiers, modifier) : []);
-
-const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
-  return (context, state) =>
-        Object.values(context.objs)
-              .flatMap(obj => obj?.verbs ?? [])
-              .filter(matcher => !matcher.attribute)
-              .map(matcher => context.verbs[matcher.verb])
-              .filter(Boolean)
-              .filter(filter)
-              .map(verb => ({...state,
-                verb: verb,
-                words: [...state.words, mkIdValue(verb.id, verb.getName())]}));
+const getModifierValues = (context : SearchContext, modifier : string, verbContexts : VerbContext[]) : string[] => {
+    const entities = filterEntities(context.objs, verbContexts);
+      return entities
+              .flatMap(obj => obj.verbModifiers ? multidict.get(obj.verbModifiers, modifier) : []);
 }
+
+/**
+ * Creates a search function to match verbs up with entities
+ * @param filter a filter for the results, eg only transitve verbs
+ * @returns the Search Function
+ */
+const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
+  return (context, state) => {
+    const states : SearchState[] = [];
+    for(const [verbContext, entities] of Object.entries(context.objs)) {
+      getVerbs(entities, context.verbs, verbContext)
+        .filter(filter)
+        .map(verb => ({...state,
+                         verb: verb,
+                         words: [...state.words, mkIdValue(verb.id, verb.getName())]}))
+        .forEach(state => states.push(state));
+    }
+    return states;
+  }
+}
+
+/**
+ * Search entities for matching verbs, discarding any verb atribute matchers, and verbs not in the context
+ * @param entities a list of entities 
+ * @param verbs a list of verbs
+ * @param context the verb-context to limit the search to
+ * @returns a list of matching verbs
+ */
+const getVerbs = (entities : Entity[], verbs : VerbMap, context : VerbContext) : Verb[] => 
+    entities.flatMap(entity => entity?.verbs ?? [])
+            .filter(matcher => !matcher.attribute)
+            .map(matcher => verbs[matcher.verb])
+            .filter(Boolean)
+            .filter(verb => verb.contexts.length == 0 || verb.contexts.includes(context));
 
 const directObjectSearch : SearchFn = (context, state) => {
   const objs = state.verb && state.verb.isTransitive()
