@@ -8,20 +8,22 @@ import { getEngine } from '@engine/main.ts';
 import { Engine } from '@engine/engine.ts'
 //@ts-ignore
 import { OutputConsumer, OutputMessage } from '@engine/messages/output.ts'
+//@ts-ignore
+import { IdValue } from '@engine/shared.ts'
 
 
 const output : OutputMessage[] = [];
 const engine : Engine = getEngine((message: OutputMessage) => output.push(message));
 
 const state = reactive({ 
-  command : [] as string[],
+  command : [] as IdValue[],
   words : engine.getWords([]),
   text : [] as string[],
   status : engine.getStatus()
   });
 
-function wordSelected(word: string) {
-  state.command.push(word);
+function wordSelected(word: IdValue) {
+  state.command.push(word.id);
   state.words = engine.getWords(state.command);
 }
 

@@ -6,6 +6,7 @@ import { Action } from "./action";
 import { Obj } from "./types";
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
 import { OutputConsumer } from "./messages/output";
+import { IdValue } from "./shared";
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -19,7 +20,7 @@ enum TYPE {
 }
 
 export interface Engine {
-  getWords(partialCommand : string[]) : string[];
+  getWords(partialCommand : string[]) : IdValue<string>[];
   execute(command : string[]) : void;
   getStatus() : string;
 }
@@ -41,7 +42,7 @@ export class BasicEngine implements Engine {
   readonly entities : EntityMap;
   readonly verbs : VerbMap;
   private context : CommandContext;
-  private commands : string[][];
+  private commands : IdValue<string>[][];
 
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer) {
     const environment = {} as Obj; 
@@ -60,6 +61,8 @@ export class BasicEngine implements Engine {
     this.env = rootEnv.newChild();
 
     this.context = this.getContext();
+
+    // FIXME this should be done a bit at a time
     this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
 
@@ -74,7 +77,8 @@ export class BasicEngine implements Engine {
 
     // Get any other entities that are here
     this.env.findObjs(obj => obj?.location === location)
-            .forEach(obj => contextEntities.push(obj))
+            .map(obj => this.entities[obj.id])
+            .forEach(entity => contextEntities.push(entity));
   
     return {
       entities: contextEntities,
@@ -82,14 +86,14 @@ export class BasicEngine implements Engine {
     }
   }
 
-  getWords(partial : string[]): string[] {
-    const nextWords = new Set<string>();
+  getWords(partial : string[]): IdValue<string>[] {
+    const nextWords = new Set<IdValue<string>>();
     for(const command of this.commands) {
       if (partial.length < command.length) {
         let match = true;
         let i=0;
         for(const word of partial) {
-          if (word !== command[i]) {
+          if (word !== command[i].id) {
             match = false;
             break;
           }

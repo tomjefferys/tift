@@ -4,7 +4,7 @@ import { getString, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
-import { getMatcher, match } from "./actionmatcher"
+import { capture, getMatcher, match } from "./actionmatcher"
 import { Env, Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
 
@@ -27,6 +27,14 @@ const LOOK = {
     } 
 }
 
+const GET = {
+    matcher : getMatcher([match("get"), capture("item")]),
+    action : (env : Env) => {
+        const itemId = env.getStr("item");
+        env.set([itemId,"location"], "INVENTORY");
+    }
+}
+
 // TODO we should load this from a data file
 const DEFAULT_VERBS = [
       new VerbBuilder({"id":"go"})
@@ -36,6 +44,10 @@ const DEFAULT_VERBS = [
       new VerbBuilder({"id":"look"})
                   .withTrait(VerbTrait.Intransitive)
                   .withAction(LOOK)
+                  .build(),
+      new VerbBuilder({"id":"get"})
+                  .withTrait(VerbTrait.Transitive)
+                  .withAction(GET)
                   .build()
 ];
 
@@ -60,7 +72,7 @@ export class EngineBuilder {
                 break;
             case "object":
             case "item":
-                this.entities.push(makeEntity(obj));
+                this.entities.push(makeItem(obj));
                 break;
             case "verb":
                 this.verbs.push(makeVerb(obj));
@@ -118,7 +130,6 @@ export function makeItem(obj : Obj) : Entity {
     const tags = obj?.tags ?? [];
     if (tags.includes("carryable")) {
         builder.withVerb("get");
-
     }
     return builder.build();
 }

@@ -1,6 +1,6 @@
 import {getAllCommands} from "../src/commandsearch";
-import {EntityBuilder} from "../src/entity";
-import {VerbBuilder, VerbTrait} from "../src/verb";
+import {Entity, EntityBuilder} from "../src/entity";
+import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
 
 const STIR = new VerbBuilder({"id":"stir"})
                      .withTrait(VerbTrait.Transitive)
@@ -70,13 +70,13 @@ test("No matching verbs and objects", () => {
 })
 
 test("Test simple transitive verb", () => { 
-  const commands = getAllCommands([SOUP, APPLE], [STIR]);
+  const commands = getAllCommandIds([SOUP, APPLE], [STIR]);
   expect(commands).toHaveLength(1);
   expect(commands).toEqual(expect.arrayContaining([["stir","soup"]]));
 }) 
 
 test("Test multiple transitive verbs", () => {
-  const commands = getAllCommands([SOUP, APPLE], [STIR, EAT]);
+  const commands = getAllCommandIds([SOUP, APPLE], [STIR, EAT]);
   expect(commands).toHaveLength(2);
   expect(commands).toEqual(expect.arrayContaining([
        ["stir","soup"],
@@ -84,7 +84,7 @@ test("Test multiple transitive verbs", () => {
 });
 
 test("Test transitive verb with indirect object", () => {
-  const commands = getAllCommands([SOUP, SPOON], [STIR]);
+  const commands = getAllCommandIds([SOUP, SPOON], [STIR]);
   expect(commands).toHaveLength(2);
   expect(commands).toEqual(expect.arrayContaining([
        ["stir","soup"],
@@ -92,7 +92,7 @@ test("Test transitive verb with indirect object", () => {
 });
 
 test("Test instransitive verb with modifier", () => {
-  const commands = getAllCommands([CAVE], [GO]);
+  const commands = getAllCommandIds([CAVE], [GO]);
   expect(commands).toHaveLength(3);
   expect(commands).toEqual(expect.arrayContaining([
     ["go"],
@@ -101,7 +101,7 @@ test("Test instransitive verb with modifier", () => {
 });
 
 test("Test transitive verb with modifier", () => {
-  const commands = getAllCommands([BOX, CAVE], [PUSH])
+  const commands = getAllCommandIds([BOX, CAVE], [PUSH]);
   expect(commands).toHaveLength(3);
   expect(commands).toEqual(expect.arrayContaining([
     ["push", "box"],
@@ -111,13 +111,16 @@ test("Test transitive verb with modifier", () => {
 })
 
 test("Test look", () => {
-  const commands = getAllCommands([CAVE], [GO, LOOK]);
+  const commands = getAllCommandIds([CAVE], [GO, LOOK])
   expect(commands).toHaveLength(4);
   expect(commands).toEqual(expect.arrayContaining([
     ["go"],
     ["go","north"],
     ["go","east"],
     ["look"] ]));
-
 });
 
+function getAllCommandIds(entities : Entity[], verbs : Verb[]) {
+  const commands = getAllCommands(entities, verbs);
+  return commands.map(command => command.map(idWords => idWords.id))
+}

@@ -2,6 +2,7 @@ import { Verb } from "./verb"
 import { VerbMap, EntityMap } from "./types"
 import { Entity, VerbMatcher } from "./entity"
 import { MultiDict } from "./util/multidict"
+import { IdValue, mkIdValue } from "./shared"
 import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
 
@@ -18,7 +19,7 @@ interface SearchState {
   readonly attribute? : string;
   readonly indirectObject? : Entity;
   readonly modifiers : {[key:string]:string};
-  readonly words : string[];
+  readonly words : IdValue<string>[];
 }
 
 type SearchFn = (context: SearchContext, state: SearchState) => SearchState[]; 
@@ -27,7 +28,7 @@ type SearchResult = [SearchState, SearchNode];
 
 const INITIAL_STATE : SearchState = {modifiers : {}, words : []};
 
-export function getAllCommands(objs: Entity[], verbs: Verb[]) : string[][] {
+export function getAllCommands(objs: Entity[], verbs: Verb[]) : IdValue<string>[][] {
   const context = buildSearchContext(objs, verbs);
   return searchAll(context)
           .map(state => state.words);
@@ -50,7 +51,6 @@ function buildSearchContext(objs : Entity[], verbs : Verb[]) : SearchContext {
           }, {} as VerbMap)
   };
 }
-
 
 
 /**
@@ -129,7 +129,7 @@ const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
               .filter(filter)
               .map(verb => ({...state,
                 verb: verb,
-                words: [...state.words, verb.getName()]}));
+                words: [...state.words, mkIdValue(verb.id, verb.getName())]}));
 }
 
 const directObjectSearch : SearchFn = (context, state) => {
@@ -138,7 +138,7 @@ const directObjectSearch : SearchFn = (context, state) => {
                   : [];
   return objs.map(obj => ({...state,
                 directObject : obj,
-                words: [...state.words, obj.getName()]}));
+                words: [...state.words, mkIdValue(obj.id, obj.getName())]}));
 }
 
 const attributeSearch : SearchFn = (context, state) => {
@@ -147,7 +147,7 @@ const attributeSearch : SearchFn = (context, state) => {
                       : [];
   return attributes.map(attr => ({...state,
                                   attribute: attr,
-                                  words: [...state.words, attr]}));
+                                  words: [...state.words, mkIdValue(attr, attr)]}));
 }
 
 const indirectObjectSearch : SearchFn = (context, state) => {
@@ -156,7 +156,7 @@ const indirectObjectSearch : SearchFn = (context, state) => {
                 : [];
   return objs.map(obj => ({...state,
                           indirectObject: obj,
-                          words: [...state.words, obj.getName()]}));
+                          words: [...state.words, mkIdValue(obj.id, obj.getName())]}));
 }
 
 const modifierSearch : SearchFn = (context, state) => {
@@ -165,7 +165,7 @@ const modifierSearch : SearchFn = (context, state) => {
              .map(([modType, modValue]) => {
                 return {...state,
                         modifiers: {...state.modifiers, [modType]: modValue},
-                        words: [...state.words, modValue]}
+                        words: [...state.words, mkIdValue(modValue, modValue)]}
              });
 }
 
