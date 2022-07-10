@@ -2,54 +2,12 @@ import { Verb, VerbBuilder, VerbTrait } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
 import { getString, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
+import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
-import { capture, getMatcher, match } from "./actionmatcher"
+import { getMatcher, match } from "./actionmatcher"
 import { Env, Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
-
-
-const LOOK = {
-    matcher : getMatcher([match("look")]),
-    action : (env:Env) => {
-        const location = env.execute("getLocation", {});
-        const entity = env.execute("getEntity", {"id":location}) as Obj;
-        const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
-        env.execute("write", {"value":desc});
-        env.execute("write", {"value":"<br/>"});
-
-        const items = env.findObjs(obj => obj.location === location);
-
-        for(const item of items) {
-            env.execute("write", {"value": item["name"] ?? item["id"]});
-            env.execute("write", {"value":"<br/>"});
-        }
-    } 
-}
-
-const GET = {
-    matcher : getMatcher([match("get"), capture("item")]),
-    action : (env : Env) => {
-        const itemId = env.getStr("item");
-        env.set([itemId,"location"], "INVENTORY");
-    }
-}
-
-// TODO we should load this from a data file
-const DEFAULT_VERBS = [
-      new VerbBuilder({"id":"go"})
-                  .withTrait(VerbTrait.Intransitive)
-                  .withModifier("direction")
-                  .build(),
-      new VerbBuilder({"id":"look"})
-                  .withTrait(VerbTrait.Intransitive)
-                  .withAction(LOOK)
-                  .build(),
-      new VerbBuilder({"id":"get"})
-                  .withTrait(VerbTrait.Transitive)
-                  .withAction(GET)
-                  .build()
-];
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
@@ -130,6 +88,7 @@ export function makeItem(obj : Obj) : Entity {
     const tags = obj?.tags ?? [];
     if (tags.includes("carryable")) {
         builder.withVerb("get");
+        builder.withVerb("drop");
     }
     return builder.build();
 }

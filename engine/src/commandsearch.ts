@@ -1,5 +1,5 @@
 import { Verb, VerbContext } from "./verb"
-import { VerbMap, EntityMap } from "./types"
+import { VerbMap } from "./types"
 import { Entity, VerbMatcher } from "./entity"
 import { MultiDict } from "./util/multidict"
 import { IdValue, mkIdValue } from "./shared"
@@ -26,7 +26,7 @@ type SearchFn = (context: SearchContext, state: SearchState) => SearchState[];
 type SearchNode = Tree.ValueNode<SearchFn>;
 type SearchResult = [SearchState, SearchNode];
 
-export type ContextEntities = {[key:VerbContext]:Entity[]}
+export type ContextEntities = MultiDict<Entity>;
 
 const INITIAL_STATE : SearchState = {modifiers : {}, words : []};
 

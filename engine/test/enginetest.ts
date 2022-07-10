@@ -179,6 +179,47 @@ test("Test get named item", () => {
     expect(messages).not.toContain("rusty key");
 })
 
+test("Test get/drop", () => {
+    const messages : string[] = [];
+    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
+    builder.withObj({
+        id : "theRoom",
+        type : "room",
+        tags : [ "start" ]
+    });
+    builder.withObj({
+        id : "key",
+        type : "item",
+        location : "theRoom",
+        tags : ["carryable"]
+    });
+    const engine = builder.build();
+    engine.execute(["look"]);
+    expect(messages).toContain("theRoom");
+    expect(messages).toContain("key");
+    messages.length = 0;
+
+    let words = getWordIds(engine, []);
+    expect(words).toContain("get");
+    expect(words).not.toContain("drop");
+
+    engine.execute(["get","key"])
+    engine.execute(["look"]);
+    expect(messages).toContain("theRoom");
+    expect(messages).not.toContain("key");
+    messages.length = 0;
+
+    words = getWordIds(engine, []);
+    expect(words).not.toContain("get");
+    expect(words).toContain("drop");
+   
+    engine.execute(["drop","key"])
+    engine.execute(["look"]);
+    expect(messages).toContain("theRoom");
+    expect(messages).toContain("key");
+
+});
+
 function listOutputConsumer(messages : string[]) : OutputConsumer {
     return message => {
         switch(message.type) {

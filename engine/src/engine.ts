@@ -1,12 +1,15 @@
 import { Verb } from "./verb"
 import { Entity } from "./entity"
 import { createRootEnv } from "./env"
-import { getAllCommands } from "./commandsearch"
+import { ContextEntities, getAllCommands } from "./commandsearch"
 import { Action } from "./action";
 import { Obj } from "./types";
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
 import { OutputConsumer } from "./messages/output";
 import { IdValue } from "./shared";
+import { MultiDict } from "./util/multidict";
+import * as multidict from "./util/multidict";
+import * as _ from "lodash"
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -31,7 +34,7 @@ export interface EngineState {
 }
 
 interface CommandContext {
-  entities : Entity[];
+  entities : ContextEntities;
   verbs : Verb[];
 }
 
@@ -63,22 +66,27 @@ export class BasicEngine implements Engine {
     this.context = this.getContext();
 
     // FIXME this should be done a bit at a time
-    this.commands = getAllCommands({"default":this.context.entities}, this.context.verbs);
+    this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
 
   getContext() : CommandContext {
     // Entity for the current location
-    const contextEntities = [];
+    const contextEntities : MultiDict<Entity> = {};
     const location = getPlayer(this.env).location;
     const locationEntity = this.entities[location];
     if (locationEntity) {
-      contextEntities.push(locationEntity);
+      multidict.add(contextEntities, "environment", locationEntity);
     }
 
     // Get any other entities that are here
     this.env.findObjs(obj => obj?.location === location)
             .map(obj => this.entities[obj.id])
-            .forEach(entity => contextEntities.push(entity));
+            .forEach(entity => multidict.add(contextEntities, "environment", entity));
+
+    // Get inventory entities
+    this.env.findObjs(obj => obj?.location === "INVENTORY")
+            .map(obj => this.entities[obj.id])
+            .forEach(entity => multidict.add(contextEntities, "inventory", entity));
   
     return {
       entities: contextEntities,
@@ -108,7 +116,8 @@ export class BasicEngine implements Engine {
   }
   
   execute(command: string[]): void {
-    const actions : Action[] = [...this.context.entities, ...this.context.verbs]
+    const allEntities = _.flatten(Object.values(this.context.entities))
+    const actions : Action[] = [...allEntities, ...this.context.verbs]
                                   .flatMap(obj => obj?.actions ?? []);
     for (const action of actions) {
         const result = action.matcher(command);
@@ -118,7 +127,7 @@ export class BasicEngine implements Engine {
           // TODO Break out?  Or run all matching actions?
         }
     }
-    this.commands = getAllCommands({"default":this.context.entities}, this.context.verbs);
+    this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
 
   getStatus() : string {
