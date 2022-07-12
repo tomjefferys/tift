@@ -1,6 +1,6 @@
 import { Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
-import { MessageType, OutputConsumer } from "../src/messages/output";
+import { listOutputConsumer } from "./testutils"
 
 test("Test single room, no exits", () => {
     const messages : string[] = [];
@@ -219,18 +219,6 @@ test("Test get/drop", () => {
     expect(messages).toContain("key");
 
 });
-
-function listOutputConsumer(messages : string[]) : OutputConsumer {
-    return message => {
-        switch(message.type) {
-            case MessageType.PRINT:
-                messages.push(message.value);
-                break;
-            default:
-                throw new Error("Can't handle type " + message.type);
-        }
-    }
-}
 
 function getWordIds(engine : Engine, partial : string[]) : string[] {
     return engine.getWords(partial).map(idWord => idWord.id);
