@@ -3,4 +3,5 @@ module.exports = {
   testEnvironment: 'node',
   moduleFileExtensions: ['js'],
   testMatch: ["**/out/test/**/*.js"],
+  modulePathIgnorePatterns: ["testutils"],
 };

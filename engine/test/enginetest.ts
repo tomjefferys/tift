@@ -1,6 +1,6 @@
 import { Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
-import { listOutputConsumer } from "./testutils"
+import { listOutputConsumer } from "./testutils/testutils"
 
 test("Test single room, no exits", () => {
     const messages : string[] = [];

@@ -1,4 +1,4 @@
-import { MessageType, OutputConsumer } from "../src/messages/output";
+import { MessageType, OutputConsumer } from "../../src/messages/output";
 
 export function listOutputConsumer(messages : string[]) : OutputConsumer {
     return message => {

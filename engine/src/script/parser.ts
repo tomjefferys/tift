@@ -1,19 +1,48 @@
-import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression} from 'jsep';
+import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression} from 'jsep';
 
-//import { Expression, CallExpression, Identifier } from './exprtypes'
 import { Env } from '../env'
 
-export type EnvFn = (env : Env) => any;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+interface Result {
+    value : any,
+    getValue : () => any;
+    [others : string] : any
+}
+
+type BinaryFunction = (l : any, r : any) => any;
+
+const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
+    "+": (l,r) => l + r,
+    "-": (l,r) => l - r,
+    "*": (l,r) => l * r,
+    "/": (l,r) => l / r,
+    "%": (l,r) => l % r,
+    "==": (l,r) => l === r,
+    "!=": (l,r) => l !== r,
+    ">": (l,r) => l > r,
+    "<": (l,r) => l < r,
+    ">=": (l,r) => l >= r,
+    "<=": (l,r) => l <= r,
+    "||": (l,r) => l || r,
+    "&&": (l,r) => l && r,
+    "|": (l,r) => l | r,
+    "&": (l,r) => l & r,
+    "^": (l,r) => l ^ r
+}
+
+export type EnvFn = (env : Env) => Result;
 
 export function parse(expression : string) : (env : Env) => any {
     const parseTree = jsep(expression);
-    return evaluate(parseTree);
+    return env => evaluate(parseTree)(env).value;
 }
 
-function evaluate(expression : Expression)  : (env : Env) => any {
+function evaluate(expression : Expression)  : EnvFn {
     switch(expression.type) {
         case "CallExpression": 
             return evaluateCallExpression(expression as CallExpression);
+        case "MemberExpression":
+            return evaluateMemberExpression(expression as MemberExpression);
         case "Identifier": 
             return evaluateIdentifier(expression as Identifier);
         case "Literal":
@@ -25,74 +54,95 @@ function evaluate(expression : Expression)  : (env : Env) => any {
     throw new Error("Unknown expression type: " + expression.type);
 }
 
-function evaluateCallExpression(callExpression : CallExpression) : (env : Env) => any {
-    const callee = evaluate(callExpression.callee);
-    const args = callExpression.arguments
-                            .map(e => evaluate(e));
-    return env => callee(env)(env.newChild({"__args__" : args.map(arg => arg(env)) }))
-    // Each arg is now a function that will return that arg value
-    // How do we map an arg to it's param name
+/**
+ * Convert a callExpression into a javascript function
+ * @param callExpression 
+ * @returns 
+ */
+function evaluateCallExpression(callExpression : CallExpression) : EnvFn {
+    const calleeThunk = evaluate(callExpression.callee);
+    const argThunks = callExpression.arguments.map(e => evaluate(e));
+    return env => {
+        const callee = calleeThunk(env).getValue();
+        const argValues = argThunks.map(arg => arg(env).getValue());
+        const result = callee(env.newChild({"__args__" : argValues})); // FIXME, maybe pass through unevaluated arguments
+        return mkResult(result);
+    }
 }
 
-// TODO it should be part of the functions implementation, to map an arg array on to named parameters
-// When a function is declared, the generated function is wrapped in an outer function that maps the parameters
-
-function evaluateIdentifier(identifier : Identifier) : (env : Env) => void {
-
-    //if (identifier.name === "print") {
-    //    return makePrint();
-    //    //return env => console.log(env.get("__args__")[0]);
-    //}
-    return env => env.get(identifier.name);
+/**
+ * Convert a member expression into a javascript function
+ * @param memberExpression 
+ * @returns 
+ */
+function evaluateMemberExpression(memberExpression : MemberExpression) : EnvFn {
+    const objThunk = evaluate(memberExpression.object);
+    const propertyThunk = evalutateMemberProperty(memberExpression.property);
+    return env => {
+        const obj = objThunk(env).value;
+        const property = propertyThunk(env).getValue();
+        return mkResult(obj[property]);
+    }
 }
+
+/**
+ * Evaluate a member property.  Identifiers need to be handled a little differently from usual 
+ *   to ensure we don't try to look them up in the environment
+ */
+function evalutateMemberProperty(expression : Expression) : EnvFn {
+    switch(expression.type) {
+        case "Identifier":
+            return _ => mkResult((expression as Identifier).name);
+        case "Literal":
+            return evaluateLiteral(expression as Literal);
+        default:
+            throw new Error("Unknown member property expression: " + expression.type);
+    }
+}
+
+
+/**
+ * Convert an Identifier into a javascript function
+ * @param identifier 
+ * @returns 
+ */
+function evaluateIdentifier(identifier : Identifier) : EnvFn {
+    return env => mkResult(env.get(identifier.name));
+}
+
 
 function evaluateBinaryExpression(expression : BinaryExpression)  : EnvFn {
-    const left = evaluate(expression.left);
-    const right = evaluate(expression.right);
-    switch(expression.operator) {
-        case "+":
-            return env => left(env) + right(env);
-        case "-":
-            return env => left(env) - right(env);
-        case "*":
-            return env => left(env) * right(env);
-        case "/":
-            return env => left(env) / right(env);
-        case "%":
-            return env => left(env) % right(env);
-        case "==":
-            return env => left(env) === right(env);
-        case "!=":
-            return env => left(env) !== right(env);
-        case ">":
-            return env => left(env) > right(env);
-        case "<":
-            return env => left(env) < right(env);
-        case ">=":
-            return env => left(env) >= right(env);
-        case "<=":
-            return env => left(env) <= right(env);
-        case "||":
-            return env => left(env) || right(env);
-        case "&&":
-            return env => left(env) && right(env);
-        case "|":
-            return env => left(env) | right(env);
-        case "&":
-            return env => left(env) & right(env);
-        case "^":
-            return env => left(env) ^ right(env);
+    const leftThunk = evaluate(expression.left);
+    const rightThunk = evaluate(expression.right);
+    const fn = BINARY_FUNCTIONS[expression.operator];
+    if (!fn) {
+        throw new Error("Unknown operatior: " + expression.operator);
     }
-    throw new Error("Unkown operator " + expression.operator);
+    return env => {
+        const left = leftThunk(env).getValue();
+        const right = rightThunk(env).getValue();
+        return mkResult(fn(left, right));
+    }
+}
+
+/**
+ * Wraps the result of an evaluation in an object
+ * Results can be wrapped in other results, use the `getValue` method to find the most deeply nested value
+ * @param result 
+ * @returns 
+ */
+function mkResult(result : any, properties = {}) : Result {
+    const resultObj = { 
+        value : result,
+        getValue : () => {
+            return resultObj.value.getValue? resultObj.value.getValue() : resultObj.value;
+        }
+    };
+    return {...resultObj, ...properties};
 }
 
 function evaluateLiteral(literal : Literal) : (env : Env) => any {
-    return env => literal.value;
-}
-
-function makePrint() : (env : Env) => any {
-    const printFn : (env : Env) => any = env => console.log(env.get("value"))
-    return env => bindParams(["value"], printFn)(env);
+    return _ => mkResult(literal.value);
 }
 
 export function bindParams(params : string[], fn : EnvFn) : EnvFn {
@@ -102,7 +152,40 @@ export function bindParams(params : string[], fn : EnvFn) : EnvFn {
         for(let i=0; i<args.length && i<params.length; i++) {
             namedArgs[params[i]] = args[i];
         }
-        fn(env.newChild(namedArgs));
+        return fn(env.newChild(namedArgs));
     }
 }
 
+/**
+ * Creates an if function.  On Execution, this creates a Result object with extra `then` and `else` methods attached,
+ * which can then be executed using member evaluation
+ * 
+ * eg if(3 > 4).then("foo").else("bar")
+ */
+export function makeIf() : EnvFn {
+    type ThenElse = {"then" : EnvFn, "else" : EnvFn}
+
+    // Create the then/else methods.  exprResult is the reusult of the boolen expression, value is 
+    // the current value to be returned.  The value is passed in via the then/else methods
+    const mkThenElse = (exprResult : any, value : any) : ThenElse => {
+        return {
+            "then" : bindParams(["thenExpr"], (env : Env) => {
+                const newValue = (exprResult)? env.get("thenExpr") : value; 
+                return mkResult(newValue, mkThenElse(exprResult, newValue));
+            }),
+            "else" : bindParams(["elseExpr"], (env : Env) => {
+                const newValue = (!exprResult)? env.get("elseExpr") : value;
+                return mkResult(newValue, mkThenElse(exprResult, newValue));
+            })
+        }
+    }
+
+    const ifFn : EnvFn = env => {
+        const exprResult = env.get("expr");
+        const thenElse = mkThenElse(exprResult, undefined);
+        return mkResult(exprResult, thenElse);
+    }
+
+    return bindParams(["expr"], ifFn);
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
