@@ -132,7 +132,7 @@ function evaluateBinaryExpression(expression : BinaryExpression)  : EnvFn {
  * @returns 
  */
 function mkResult(result : any, properties = {}) : Result {
-    const isAlreadyResult = result && result.value;
+    const isAlreadyResult = result && result.hasOwnProperty("value");
     if (isAlreadyResult) { 
         return result;
     }
@@ -192,4 +192,27 @@ export function makeIf() : EnvFn {
 
     return bindParams(["expr"], ifFn);
 }
+
+/**
+ * Switch statement
+ * switch(expr)
+ *  .case(1, "foo")
+ *  .case(2, "bar")
+ *  .case(3, "baz")
+ *  .default("qux")
+ * 
+ * or could we do:
+ * switch(expr)
+ *  .case(1).then("foo")
+ *  .case(2).then("bar")
+ *  .case(3).then("baz")
+ *  .default("qux")
+ */
+//export function makeSwitch() : EnvFn {
+//    type Case = {"case" : EnvFn };
+//    type Then = {"then" : EnvFn };
+//
+//    const mkCase = (expr)
+//}
+
 /* eslint-enable @typescript-eslint/no-explicit-any */

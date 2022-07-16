@@ -84,7 +84,7 @@ export class Env {
             throw new Error("No such varible " + name.toString());
         }
 
-        const value = env.properties[head];
+        let value = env.properties[head];
         return (typeof value === "object")
             ? env.getObjProperty(head,tail)
             : value;
@@ -136,7 +136,7 @@ export class Env {
      * @returns the matching environment
      */
     private findEnv(name : ObjKey) : Env | undefined {
-        return this.properties[name]
+        return this.properties.hasOwnProperty(name)
                 ? this
                 : this.parent?.findEnv(name);
     }
@@ -147,7 +147,7 @@ export class Env {
      * @returns true if the property exists
      */
     private hasProperty(name : ObjKey) : boolean {
-        return this.properties[name]
+        return this.properties.hasOwnProperty(name)
                     ? true
                     : this.parent?.hasProperty(name) ?? false;
     }

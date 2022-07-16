@@ -30,12 +30,19 @@ test("Test basic arithmetic exprssion", () => {
     expect(messages).toContain("12");
 });
 
-test("Test if", () => {
+test("Test if then else", () => {
     const [env, messages] = setUpEnv();
     env.set("if", makeIf());
-    const fn = parse("write(if(3 > 2).then('foo').else('bar'))")
+    const fn = parse("write(if(3 > 2).then('foo').else('bar'))");
     fn(env.newChild({}));
     expect(messages).toContain("foo");
+    expect(messages).not.toContain("bar");
+    messages.length = 0;
+
+    const fn2 = parse("write(if(3 < 2).then('foo').else('bar'))");
+    fn2(env.newChild({}));
+    expect(messages).not.toContain("foo");
+    expect(messages).toContain("bar");
 })
 
 
