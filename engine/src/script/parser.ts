@@ -79,7 +79,7 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : EnvFn {
     const objThunk = evaluate(memberExpression.object);
     const propertyThunk = evalutateMemberProperty(memberExpression.property);
     return env => {
-        const obj = objThunk(env).value;
+        const obj = objThunk(env);  // Don't need getValue, obj expressions should directly return an object
         const property = propertyThunk(env).getValue();
         return mkResult(obj[property]);
     }
@@ -132,10 +132,14 @@ function evaluateBinaryExpression(expression : BinaryExpression)  : EnvFn {
  * @returns 
  */
 function mkResult(result : any, properties = {}) : Result {
+    const isAlreadyResult = result && result.value;
+    if (isAlreadyResult) { 
+        return result;
+    }
     const resultObj = { 
         value : result,
         getValue : () => {
-            return resultObj.value.getValue? resultObj.value.getValue() : resultObj.value;
+            return resultObj.value;
         }
     };
     return {...resultObj, ...properties};
