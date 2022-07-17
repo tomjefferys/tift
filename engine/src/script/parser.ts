@@ -60,12 +60,69 @@ function evaluate(expression : Expression)  : EnvFn {
  * @returns 
  */
 function evaluateCallExpression(callExpression : CallExpression) : EnvFn {
-    const calleeThunk = evaluate(callExpression.callee);
+    const builtIns = ["if", "set", "do"];
     const argThunks = callExpression.arguments.map(e => evaluate(e));
+    const callee = callExpression.callee;
+    let result : EnvFn;
+    if (callee.type === "Identifier" && builtIns.includes((callee as Identifier).name)) {
+        result = evaluateBuiltIn(callee as Identifier, argThunks);
+    } else if (callee.type === "MemberExpression") {
+        result = evaluateMemberCallExpression(callee as MemberExpression, argThunks);
+    } else {
+        result = evaluateFunctionCall(callee, argThunks);
+    }
+    return result;
+}
+
+function evaluateBuiltIn(callee : Identifier, argThunks : EnvFn[]) : EnvFn {
+    switch(callee.name) {
+        case "if":
+            return env => makeIf()(env.newChild({"__args__" : argThunks}));
+        default:
+            throw new Error("Unknown built in function");
+    }
+}
+
+/**
+ * Evaluate a member call expression.
+ * We need to check if this is a built in expression, so we can pass through the 
+ * arguments as thunks rather than values
+ * @param callee 
+ * @param argThunks 
+ * @returns 
+ */
+function evaluateMemberCallExpression(callee : MemberExpression, argThunks : EnvFn[]) : EnvFn {
+    const keywordProperties = ["then", "else", "case"];
+    let thunk : EnvFn = env => mkResult(undefined);
+    if (callee.property.type === "Identifier" && keywordProperties.includes((callee.property as Identifier).name)) {
+        const objThunk = evaluate(callee.object);
+        const propName = (callee.property as Identifier).name;
+        thunk = env => {
+            const obj = objThunk(env);
+            const fn = obj[propName];
+            const result = fn(env.newChild({"__args__" : argThunks}));
+            return mkResult(result);
+        }
+    } else {
+        thunk = evaluateFunctionCall(callee, argThunks);
+    }
+    return thunk;
+}
+
+
+/**
+ * Evaluate a traditional function call, argunement thunks are evaluated, and their values 
+ * passed to the function
+ * @param call 
+ * @param argThunks  
+ * @returns 
+ */
+function evaluateFunctionCall(callee : Expression, argThunks : EnvFn[]) : EnvFn {
+    const calleeThunk = evaluate(callee);
     return env => {
         const callee = calleeThunk(env).getValue();
         const argValues = argThunks.map(arg => arg(env).getValue());
-        const result = callee(env.newChild({"__args__" : argValues})); // FIXME, maybe pass through unevaluated arguments
+        const result = callee(env.newChild({"__args__" : argValues}));
         return mkResult(result);
     }
 }
@@ -151,12 +208,43 @@ function evaluateLiteral(literal : Literal) : (env : Env) => any {
 
 export function bindParams(params : string[], fn : EnvFn) : EnvFn {
     return env => {
-        const namedArgs : {[key:string]:any}= {};
         const args = env.get("__args__");
         for(let i=0; i<args.length && i<params.length; i++) {
-            namedArgs[params[i]] = args[i];
+            env.def(params[i], args[i]);
         }
-        return fn(env.newChild(namedArgs));
+        return fn(env);
+    }
+}
+
+/**
+ * Creates a set function
+ * @returns 
+ */
+export function makeSet() : EnvFn {
+    const setFn = (env : Env) => {
+        if (!env.parent) {
+            throw new Error("Can't set: no parent environment");
+        }
+        const name = env.get("name");
+        const value = env.get("value");
+        env.parent.set(name, value);
+        return mkResult(value);
+    }
+
+    return bindParams(["name", "value"], setFn);
+}
+
+/**
+ * Makes a compound expression eg do(set(a, 123), write(a))
+ */
+export function makeDo() : EnvFn {
+    return env => {
+        const args = env.get("__args__");
+        let retVal = undefined;
+        for(const arg of args) {
+            retVal = arg(env).value;
+        }
+        return mkResult(retVal);
     }
 }
 
@@ -174,18 +262,18 @@ export function makeIf() : EnvFn {
     const mkThenElse = (exprResult : any, value : any) : ThenElse => {
         return {
             "then" : bindParams(["thenExpr"], (env : Env) => {
-                const newValue = (exprResult)? env.get("thenExpr") : value; 
+                const newValue = (exprResult)? env.get("thenExpr")(env).getValue() : value; 
                 return mkResult(newValue, mkThenElse(exprResult, newValue));
             }),
             "else" : bindParams(["elseExpr"], (env : Env) => {
-                const newValue = (!exprResult)? env.get("elseExpr") : value;
+                const newValue = (!exprResult)? env.get("elseExpr")(env).getValue() : value;
                 return mkResult(newValue, mkThenElse(exprResult, newValue));
             })
         }
     }
 
     const ifFn : EnvFn = env => {
-        const exprResult = env.get("expr");
+        const exprResult = env.get("expr")(env).getValue();
         const thenElse = mkThenElse(exprResult, undefined);
         return mkResult(exprResult, thenElse);
     }
