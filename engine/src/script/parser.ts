@@ -32,6 +32,14 @@ const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
 
 export type EnvFn = (env : Env) => Result;
 
+const BUILTINS : {[key:string]:EnvFn} = {
+    "if" : makeIf(),
+    "do" : makeDo(),
+    "set" : makeSet()
+}
+
+export const ARGS = "__args__"; 
+
 export function parse(expression : string) : (env : Env) => any {
     const parseTree = jsep(expression);
     return env => evaluate(parseTree)(env).value;
@@ -65,22 +73,32 @@ function evaluateCallExpression(callExpression : CallExpression) : EnvFn {
     const callee = callExpression.callee;
     let result : EnvFn;
     if (callee.type === "Identifier" && builtIns.includes((callee as Identifier).name)) {
-        result = evaluateBuiltIn(callee as Identifier, argThunks);
+        result = evaluateBuiltIn(callee as Identifier, callExpression.arguments);
     } else if (callee.type === "MemberExpression") {
         result = evaluateMemberCallExpression(callee as MemberExpression, argThunks);
     } else {
         result = evaluateFunctionCall(callee, argThunks);
-    }
+}
     return result;
 }
 
-function evaluateBuiltIn(callee : Identifier, argThunks : EnvFn[]) : EnvFn {
-    switch(callee.name) {
-        case "if":
-            return env => makeIf()(env.newChild({"__args__" : argThunks}));
-        default:
-            throw new Error("Unknown built in function");
+//function evaluateBuiltIn(callee : Identifier, argThunks : EnvFn[]) : EnvFn {
+function evaluateBuiltIn(callee : Identifier, args : Expression[]) : EnvFn {
+    const builtIn = BUILTINS[callee.name];
+    if (!builtIn) {
+        throw new Error("Unknown built in function");
     }
+
+    let argThunks : EnvFn[];
+    // FIXME, this is ugly, don't special case set like this.
+    // FIXME rename evaluateMemberProperty, it's now overloaded, and is not evaluating a member property here
+    if (callee.name === "set") {
+        argThunks = [evalutateMemberProperty(args[0]), evaluate(args[1])];
+    } else {
+        argThunks = args.map(arg => evaluate(arg));
+    }
+
+    return env => builtIn(env.newChild({[ARGS] : argThunks}));
 }
 
 /**
@@ -100,7 +118,7 @@ function evaluateMemberCallExpression(callee : MemberExpression, argThunks : Env
         thunk = env => {
             const obj = objThunk(env);
             const fn = obj[propName];
-            const result = fn(env.newChild({"__args__" : argThunks}));
+            const result = fn(env.newChild({[ARGS]: argThunks}));
             return mkResult(result);
         }
     } else {
@@ -122,7 +140,7 @@ function evaluateFunctionCall(callee : Expression, argThunks : EnvFn[]) : EnvFn 
     return env => {
         const callee = calleeThunk(env).getValue();
         const argValues = argThunks.map(arg => arg(env).getValue());
-        const result = callee(env.newChild({"__args__" : argValues}));
+        const result = callee(env.newChild({[ARGS]: argValues}));
         return mkResult(result);
     }
 }
@@ -208,7 +226,7 @@ function evaluateLiteral(literal : Literal) : (env : Env) => any {
 
 export function bindParams(params : string[], fn : EnvFn) : EnvFn {
     return env => {
-        const args = env.get("__args__");
+        const args = env.get(ARGS);
         for(let i=0; i<args.length && i<params.length; i++) {
             env.def(params[i], args[i]);
         }
@@ -225,8 +243,8 @@ export function makeSet() : EnvFn {
         if (!env.parent) {
             throw new Error("Can't set: no parent environment");
         }
-        const name = env.get("name");
-        const value = env.get("value");
+        const name = env.get("name")(env).getValue();
+        const value = env.get("value")(env).getValue();
         env.parent.set(name, value);
         return mkResult(value);
     }
@@ -239,10 +257,10 @@ export function makeSet() : EnvFn {
  */
 export function makeDo() : EnvFn {
     return env => {
-        const args = env.get("__args__");
+        const args = env.get(ARGS);
         let retVal = undefined;
         for(const arg of args) {
-            retVal = arg(env).value;
+            retVal = arg(env).getValue();
         }
         return mkResult(retVal);
     }

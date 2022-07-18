@@ -1,4 +1,4 @@
-import { parse, bindParams, makeIf } from "../../src/script/parser"
+import { parse, bindParams, ARGS } from "../../src/script/parser"
 import { Env, createRootEnv, EnvFn } from "../../src/env"
 import { print } from "../../src/messages/output"
 import { listOutputConsumer } from "../testutils/testutils"
@@ -57,6 +57,50 @@ test("Test if don't evaluate both sides", () => {
     expect(messages).not.toContain("foo");
     expect(messages).toContain("bar");
 });
+
+test("Test empty do", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse("do()");
+    fn(env.newChild({}));
+    expect(messages).toStrictEqual([]);
+});
+
+test("Test simple do", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse("do(write('one'), write('two'), write('three'))");
+    fn(env.newChild({}));
+    expect(messages).toStrictEqual(["one", "two", "three"]);
+});
+
+test("Test simple set number", () => {
+    const [env, _] = setUpEnv();
+    const fn = parse("set(myVar, 1234)");
+    fn(env);
+    expect(env.get("myVar")).toEqual(1234);
+});
+
+test("Test do with set", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(myVar, 'foo'),
+            write(myVar) )`);
+    fn(env);
+    expect(messages).toStrictEqual(["foo"]);
+});
+
+test("Test do with set with expression", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(a, 3),
+            set(b, a + 7),
+            write(a),
+            write(b)
+        )`);
+    fn(env);
+    expect(messages).toStrictEqual(["3", "10"]);
+})
 
 
 function setUpEnv() : [Env, string[]] {
