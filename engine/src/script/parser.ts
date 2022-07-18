@@ -1,4 +1,4 @@
-import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression} from 'jsep';
+import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression} from 'jsep';
 
 import { Env } from '../env'
 
@@ -35,7 +35,8 @@ export type EnvFn = (env : Env) => Result;
 const BUILTINS : {[key:string]:EnvFn} = {
     "if" : makeIf(),
     "do" : makeDo(),
-    "set" : makeSet()
+    "set" : makeSet(),
+    "def" : makeDef()
 }
 
 export const ARGS = "__args__"; 
@@ -57,6 +58,8 @@ function evaluate(expression : Expression)  : EnvFn {
             return evaluateLiteral(expression as Literal);
         case "BinaryExpression":
             return evaluateBinaryExpression(expression as BinaryExpression);
+        case "ArrayExpression":
+            return evaluateArrayExpression(expression as ArrayExpression);
 
     }
     throw new Error("Unknown expression type: " + expression.type);
@@ -68,7 +71,7 @@ function evaluate(expression : Expression)  : EnvFn {
  * @returns 
  */
 function evaluateCallExpression(callExpression : CallExpression) : EnvFn {
-    const builtIns = ["if", "set", "do"];
+    const builtIns = ["if", "set", "def", "do"];
     const argThunks = callExpression.arguments.map(e => evaluate(e));
     const callee = callExpression.callee;
     let result : EnvFn;
@@ -92,7 +95,7 @@ function evaluateBuiltIn(callee : Identifier, args : Expression[]) : EnvFn {
     let argThunks : EnvFn[];
     // FIXME, this is ugly, don't special case set like this.
     // FIXME rename evaluateMemberProperty, it's now overloaded, and is not evaluating a member property here
-    if (callee.name === "set") {
+    if (callee.name === "set" || callee.name === "def") {
         argThunks = [evalutateMemberProperty(args[0]), evaluate(args[1])];
     } else {
         argThunks = args.map(arg => evaluate(arg));
@@ -154,8 +157,11 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : EnvFn {
     const objThunk = evaluate(memberExpression.object);
     const propertyThunk = evalutateMemberProperty(memberExpression.property);
     return env => {
-        const obj = objThunk(env);  // Don't need getValue, obj expressions should directly return an object
+        let obj = objThunk(env);  // Don't need getValue, obj expressions should directly return an object
         const property = propertyThunk(env).getValue();
+        if (typeof property === "number") { // If this is a number then it's an array, get the value
+            obj = obj.getValue();
+        }
         return mkResult(obj[property]);
     }
 }
@@ -200,6 +206,11 @@ function evaluateBinaryExpression(expression : BinaryExpression)  : EnvFn {
     }
 }
 
+function evaluateArrayExpression(expression : ArrayExpression) : EnvFn {
+    const elementThunks = expression.elements.map(e => evaluate(e));
+    return env => mkResult(elementThunks.map(thunk => thunk(env).getValue()));
+}
+
 /**
  * Wraps the result of an evaluation in an object
  * Results can be wrapped in other results, use the `getValue` method to find the most deeply nested value
@@ -234,11 +245,24 @@ export function bindParams(params : string[], fn : EnvFn) : EnvFn {
     }
 }
 
+function makeDef() : EnvFn {
+    const defFn = (env : Env) => {
+        if (!env.parent) {
+            throw new Error("Can't set: no parent environment");
+        }
+        const name = env.get("name")(env).getValue();
+        const value = env.get("value")(env).getValue();
+        env.parent.def(name, value);
+        return mkResult(value);
+    }
+    return bindParams(["name", "value"], defFn);
+}
+
 /**
  * Creates a set function
  * @returns 
  */
-export function makeSet() : EnvFn {
+function makeSet() : EnvFn {
     const setFn = (env : Env) => {
         if (!env.parent) {
             throw new Error("Can't set: no parent environment");
@@ -248,14 +272,13 @@ export function makeSet() : EnvFn {
         env.parent.set(name, value);
         return mkResult(value);
     }
-
     return bindParams(["name", "value"], setFn);
 }
 
 /**
  * Makes a compound expression eg do(set(a, 123), write(a))
  */
-export function makeDo() : EnvFn {
+function makeDo() : EnvFn {
     return env => {
         const args = env.get(ARGS);
         let retVal = undefined;
@@ -272,7 +295,7 @@ export function makeDo() : EnvFn {
  * 
  * eg if(3 > 4).then("foo").else("bar")
  */
-export function makeIf() : EnvFn {
+function makeIf() : EnvFn {
     type ThenElse = {"then" : EnvFn, "else" : EnvFn}
 
     // Create the then/else methods.  exprResult is the reusult of the boolen expression, value is 

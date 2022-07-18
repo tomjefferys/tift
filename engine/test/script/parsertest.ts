@@ -100,7 +100,48 @@ test("Test do with set with expression", () => {
         )`);
     fn(env);
     expect(messages).toStrictEqual(["3", "10"]);
-})
+});
+
+test("Test do scoping", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            def(a,"foo"),
+            def(b,"bar"),
+            do(
+                def(a,"baz"),
+                write(a),
+                write(b),
+                set(b,"qux")
+            ),
+            write(a),
+            write(b)
+        )
+    `);
+    fn(env);
+    expect(messages).toStrictEqual(["baz","bar","foo","qux"]);
+});
+
+test("Test array", () => {
+    const [env, _] = setUpEnv();
+    const fn = parse(`set(arr, ["foo","bar"])`);
+    fn(env);
+    const arr = env.get("arr");
+    expect(arr).toStrictEqual(["foo","bar"]);
+});
+
+test("Test array access", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(arr, ["foo", "bar"]),
+            write(arr[1]),
+            write(arr[0])
+        )
+    `);
+    fn(env);
+    expect(messages).toStrictEqual(["bar", "foo"]);
+});
 
 
 function setUpEnv() : [Env, string[]] {
