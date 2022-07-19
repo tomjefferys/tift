@@ -32,6 +32,20 @@ const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
 
 export type EnvFn = (env : Env) => Result;
 
+interface Thunk {
+    resolve : EnvFn,
+    expression : Expression,
+    isBuiltIn : boolean
+}
+
+function mkThunk(expression : Expression, envFn : EnvFn, isBuiltIn = false) : Thunk {
+    return {
+        resolve : envFn,
+        expression : expression,
+        isBuiltIn : isBuiltIn
+    }
+}
+
 const BUILTINS : {[key:string]:EnvFn} = {
     "if" : makeIf(),
     "do" : makeDo(),
@@ -43,10 +57,10 @@ export const ARGS = "__args__";
 
 export function parse(expression : string) : (env : Env) => any {
     const parseTree = jsep(expression);
-    return env => evaluate(parseTree)(env).value;
+    return env => evaluate(parseTree).resolve(env).value;
 }
 
-function evaluate(expression : Expression)  : EnvFn {
+function evaluate(expression : Expression) : Thunk {
     switch(expression.type) {
         case "CallExpression": 
             return evaluateCallExpression(expression as CallExpression);
@@ -70,11 +84,11 @@ function evaluate(expression : Expression)  : EnvFn {
  * @param callExpression 
  * @returns 
  */
-function evaluateCallExpression(callExpression : CallExpression) : EnvFn {
+function evaluateCallExpression(callExpression : CallExpression) : Thunk {
     const builtIns = ["if", "set", "def", "do"];
     const argThunks = callExpression.arguments.map(e => evaluate(e));
     const callee = callExpression.callee;
-    let result : EnvFn;
+    let result : Thunk;
     if (callee.type === "Identifier" && builtIns.includes((callee as Identifier).name)) {
         result = evaluateBuiltIn(callee as Identifier, callExpression.arguments);
     } else if (callee.type === "MemberExpression") {
@@ -85,14 +99,14 @@ function evaluateCallExpression(callExpression : CallExpression) : EnvFn {
     return result;
 }
 
-//function evaluateBuiltIn(callee : Identifier, argThunks : EnvFn[]) : EnvFn {
-function evaluateBuiltIn(callee : Identifier, args : Expression[]) : EnvFn {
+// TODO should pass in the whole call expression
+function evaluateBuiltIn(callee : Identifier, args : Expression[]) : Thunk {
     const builtIn = BUILTINS[callee.name];
     if (!builtIn) {
         throw new Error("Unknown built in function");
     }
 
-    let argThunks : EnvFn[];
+    let argThunks : Thunk[];
     // FIXME, this is ugly, don't special case set like this.
     // FIXME rename evaluateMemberProperty, it's now overloaded, and is not evaluating a member property here
     if (callee.name === "set" || callee.name === "def") {
@@ -101,7 +115,8 @@ function evaluateBuiltIn(callee : Identifier, args : Expression[]) : EnvFn {
         argThunks = args.map(arg => evaluate(arg));
     }
 
-    return env => builtIn(env.newChild({[ARGS] : argThunks}));
+    const envFn : EnvFn = env => builtIn(env.newChild({[ARGS] : argThunks.map(thunk => thunk.resolve)}));
+    return mkThunk(callee, envFn, true);
 }
 
 /**
@@ -112,22 +127,24 @@ function evaluateBuiltIn(callee : Identifier, args : Expression[]) : EnvFn {
  * @param argThunks 
  * @returns 
  */
-function evaluateMemberCallExpression(callee : MemberExpression, argThunks : EnvFn[]) : EnvFn {
+function evaluateMemberCallExpression(callee : MemberExpression, argThunks : Thunk[]) : Thunk {
     const keywordProperties = ["then", "else", "case"];
-    let thunk : EnvFn = env => mkResult(undefined);
+    let thunk : Thunk;
     if (callee.property.type === "Identifier" && keywordProperties.includes((callee.property as Identifier).name)) {
         const objThunk = evaluate(callee.object);
         const propName = (callee.property as Identifier).name;
-        thunk = env => {
-            const obj = objThunk(env);
+        const envFn : EnvFn = env => {
+            const obj = objThunk.resolve(env);
             const fn = obj[propName];
             const result = fn(env.newChild({[ARGS]: argThunks}));
             return mkResult(result);
         }
+        thunk = mkThunk(callee, envFn, true);
     } else {
         thunk = evaluateFunctionCall(callee, argThunks);
     }
     return thunk;
+
 }
 
 
@@ -138,14 +155,15 @@ function evaluateMemberCallExpression(callee : MemberExpression, argThunks : Env
  * @param argThunks  
  * @returns 
  */
-function evaluateFunctionCall(callee : Expression, argThunks : EnvFn[]) : EnvFn {
+function evaluateFunctionCall(callee : Expression, argThunks : Thunk[]) : Thunk {
     const calleeThunk = evaluate(callee);
-    return env => {
-        const callee = calleeThunk(env).getValue();
-        const argValues = argThunks.map(arg => arg(env).getValue());
+    const envFn : EnvFn = env => {
+        const callee = calleeThunk.resolve(env).getValue();
+        const argValues = argThunks.map(arg => arg.resolve(env).getValue());
         const result = callee(env.newChild({[ARGS]: argValues}));
         return mkResult(result);
     }
+    return mkThunk(callee, envFn)
 }
 
 /**
@@ -153,27 +171,28 @@ function evaluateFunctionCall(callee : Expression, argThunks : EnvFn[]) : EnvFn 
  * @param memberExpression 
  * @returns 
  */
-function evaluateMemberExpression(memberExpression : MemberExpression) : EnvFn {
+function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
     const objThunk = evaluate(memberExpression.object);
     const propertyThunk = evalutateMemberProperty(memberExpression.property);
-    return env => {
-        let obj = objThunk(env);  // Don't need getValue, obj expressions should directly return an object
-        const property = propertyThunk(env).getValue();
+    const envFn : EnvFn = env => {
+        let obj = objThunk.resolve(env);  // Don't need getValue, obj expressions should directly return an object
+        const property = propertyThunk.resolve(env).getValue();
         if (typeof property === "number") { // If this is a number then it's an array, get the value
             obj = obj.getValue();
         }
         return mkResult(obj[property]);
     }
+    return mkThunk(memberExpression, envFn);
 }
 
 /**
  * Evaluate a member property.  Identifiers need to be handled a little differently from usual 
  *   to ensure we don't try to look them up in the environment
  */
-function evalutateMemberProperty(expression : Expression) : EnvFn {
+function evalutateMemberProperty(expression : Expression) : Thunk {
     switch(expression.type) {
         case "Identifier":
-            return _ => mkResult((expression as Identifier).name);
+            return mkThunk(expression, _ => mkResult((expression as Identifier).name));
         case "Literal":
             return evaluateLiteral(expression as Literal);
         default:
@@ -187,28 +206,31 @@ function evalutateMemberProperty(expression : Expression) : EnvFn {
  * @param identifier 
  * @returns 
  */
-function evaluateIdentifier(identifier : Identifier) : EnvFn {
-    return env => mkResult(env.get(identifier.name));
+function evaluateIdentifier(identifier : Identifier) : Thunk {
+    const envFn : EnvFn =  env => mkResult(env.get(identifier.name));
+    return mkThunk(identifier, envFn);
 }
 
 
-function evaluateBinaryExpression(expression : BinaryExpression)  : EnvFn {
+function evaluateBinaryExpression(expression : BinaryExpression)  : Thunk {
     const leftThunk = evaluate(expression.left);
     const rightThunk = evaluate(expression.right);
     const fn = BINARY_FUNCTIONS[expression.operator];
     if (!fn) {
         throw new Error("Unknown operatior: " + expression.operator);
     }
-    return env => {
-        const left = leftThunk(env).getValue();
-        const right = rightThunk(env).getValue();
+    const envFn : EnvFn = env => {
+        const left = leftThunk.resolve(env).getValue();
+        const right = rightThunk.resolve(env).getValue();
         return mkResult(fn(left, right));
     }
+    return mkThunk(expression, envFn);
 }
 
-function evaluateArrayExpression(expression : ArrayExpression) : EnvFn {
+function evaluateArrayExpression(expression : ArrayExpression) : Thunk {
     const elementThunks = expression.elements.map(e => evaluate(e));
-    return env => mkResult(elementThunks.map(thunk => thunk(env).getValue()));
+    const envFn : EnvFn = env => mkResult(elementThunks.map(thunk => thunk.resolve(env).getValue()));
+    return mkThunk(expression, envFn);
 }
 
 /**
@@ -231,8 +253,9 @@ function mkResult(result : any, properties = {}) : Result {
     return {...resultObj, ...properties};
 }
 
-function evaluateLiteral(literal : Literal) : (env : Env) => any {
-    return _ => mkResult(literal.value);
+function evaluateLiteral(literal : Literal) : Thunk {
+    const envFn : EnvFn =  _ => mkResult(literal.value);
+    return mkThunk(literal, envFn);
 }
 
 export function bindParams(params : string[], fn : EnvFn) : EnvFn {
@@ -303,11 +326,11 @@ function makeIf() : EnvFn {
     const mkThenElse = (exprResult : any, value : any) : ThenElse => {
         return {
             "then" : bindParams(["thenExpr"], (env : Env) => {
-                const newValue = (exprResult)? env.get("thenExpr")(env).getValue() : value; 
+                const newValue = (exprResult)? env.get("thenExpr").resolve(env).getValue() : value; 
                 return mkResult(newValue, mkThenElse(exprResult, newValue));
             }),
             "else" : bindParams(["elseExpr"], (env : Env) => {
-                const newValue = (!exprResult)? env.get("elseExpr")(env).getValue() : value;
+                const newValue = (!exprResult)? env.get("elseExpr").resolve(env).getValue() : value;
                 return mkResult(newValue, mkThenElse(exprResult, newValue));
             })
         }
