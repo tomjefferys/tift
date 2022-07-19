@@ -175,11 +175,8 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
     const objThunk = evaluate(memberExpression.object);
     const propertyThunk = evalutateMemberProperty(memberExpression.property);
     const envFn : EnvFn = env => {
-        let obj = objThunk.resolve(env);  // Don't need getValue, obj expressions should directly return an object
+        let obj = objThunk.resolve(env).getValue();
         const property = propertyThunk.resolve(env).getValue();
-        if (typeof property === "number") { // If this is a number then it's an array, get the value
-            obj = obj.getValue();
-        }
         return mkResult(obj[property]);
     }
     return mkThunk(memberExpression, envFn);
