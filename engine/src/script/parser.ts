@@ -1,4 +1,6 @@
 import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression} from 'jsep';
+import { indexOf } from 'lodash';
+import { keywords } from 'moo';
 
 import { Env } from '../env'
 
@@ -32,17 +34,21 @@ const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
 
 export type EnvFn = (env : Env) => Result;
 
+
+type ThunkType = "normal" | "builtin" | "property"
+
 interface Thunk {
     resolve : EnvFn,
     expression : Expression,
-    isBuiltIn : boolean
+    type : ThunkType
 }
 
-function mkThunk(expression : Expression, envFn : EnvFn, isBuiltIn = false) : Thunk {
+
+function mkThunk(expression : Expression, envFn : EnvFn, type : ThunkType = "normal") : Thunk {
     return {
         resolve : envFn,
         expression : expression,
-        isBuiltIn : isBuiltIn
+        type : type
     }
 }
 
@@ -52,6 +58,8 @@ const BUILTINS : {[key:string]:EnvFn} = {
     "set" : makeSet(),
     "def" : makeDef()
 }
+
+const KEYWORD_PROPS = ["then", "else", "case"];
 
 export const ARGS = "__args__"; 
 
@@ -80,90 +88,46 @@ function evaluate(expression : Expression) : Thunk {
 }
 
 /**
- * Convert a callExpression into a javascript function
- * @param callExpression 
- * @returns 
- */
-function evaluateCallExpression(callExpression : CallExpression) : Thunk {
-    const builtIns = ["if", "set", "def", "do"];
-    const argThunks = callExpression.arguments.map(e => evaluate(e));
-    const callee = callExpression.callee;
-    let result : Thunk;
-    if (callee.type === "Identifier" && builtIns.includes((callee as Identifier).name)) {
-        result = evaluateBuiltIn(callee as Identifier, callExpression.arguments);
-    } else if (callee.type === "MemberExpression") {
-        result = evaluateMemberCallExpression(callee as MemberExpression, argThunks);
-    } else {
-        result = evaluateFunctionCall(callee, argThunks);
-}
-    return result;
-}
-
-// TODO should pass in the whole call expression
-function evaluateBuiltIn(callee : Identifier, args : Expression[]) : Thunk {
-    const builtIn = BUILTINS[callee.name];
-    if (!builtIn) {
-        throw new Error("Unknown built in function");
-    }
-
-    let argThunks : Thunk[];
-    // FIXME, this is ugly, don't special case set like this.
-    // FIXME rename evaluateMemberProperty, it's now overloaded, and is not evaluating a member property here
-    if (callee.name === "set" || callee.name === "def") {
-        argThunks = [evalutateMemberProperty(args[0]), evaluate(args[1])];
-    } else {
-        argThunks = args.map(arg => evaluate(arg));
-    }
-
-    const envFn : EnvFn = env => builtIn(env.newChild({[ARGS] : argThunks.map(thunk => thunk.resolve)}));
-    return mkThunk(callee, envFn, true);
-}
-
-/**
- * Evaluate a member call expression.
- * We need to check if this is a built in expression, so we can pass through the 
- * arguments as thunks rather than values
- * @param callee 
- * @param argThunks 
- * @returns 
- */
-function evaluateMemberCallExpression(callee : MemberExpression, argThunks : Thunk[]) : Thunk {
-    const keywordProperties = ["then", "else", "case"];
-    let thunk : Thunk;
-    if (callee.property.type === "Identifier" && keywordProperties.includes((callee.property as Identifier).name)) {
-        const objThunk = evaluate(callee.object);
-        const propName = (callee.property as Identifier).name;
-        const envFn : EnvFn = env => {
-            const obj = objThunk.resolve(env);
-            const fn = obj[propName];
-            const result = fn(env.newChild({[ARGS]: argThunks}));
-            return mkResult(result);
-        }
-        thunk = mkThunk(callee, envFn, true);
-    } else {
-        thunk = evaluateFunctionCall(callee, argThunks);
-    }
-    return thunk;
-
-}
-
-
-/**
  * Evaluate a traditional function call, argunement thunks are evaluated, and their values 
  * passed to the function
  * @param call 
  * @param argThunks  
  * @returns 
  */
-function evaluateFunctionCall(callee : Expression, argThunks : Thunk[]) : Thunk {
-    const calleeThunk = evaluate(callee);
+function evaluateCallExpression(callExpression : CallExpression) : Thunk {
+    const calleeThunk = evaluate(callExpression.callee);
     const envFn : EnvFn = env => {
-        const callee = calleeThunk.resolve(env).getValue();
-        const argValues = argThunks.map(arg => arg.resolve(env).getValue());
-        const result = callee(env.newChild({[ARGS]: argValues}));
-        return mkResult(result);
+        const callee = calleeThunk.resolve(env);
+        const args = callExpression.arguments;
+        let result : Result;
+        if (calleeThunk.type === "builtin") {
+            const calleeName = (callExpression.callee as Identifier).name;
+            const argThunks = evaluateBuiltInArgs(calleeName, args);
+            result = callee.getValue()(env.newChild({[ARGS] : argThunks.map(thunk => thunk.resolve)}));
+        } else {
+            const argThunks = args.map(e => evaluate(e))
+            const resolvedArgs = (calleeThunk.type === "property")? argThunks : resolveThunks(argThunks, env);
+            const fn = callee.getValue();
+            const fnResult = fn(env.newChild({[ARGS] : resolvedArgs}));
+            result = mkResult(fnResult);
+        }
+        return result;
     }
-    return mkThunk(callee, envFn)
+    return mkThunk(callExpression, envFn)
+}
+
+function evaluateBuiltInArgs(calleeName : string, args : Expression[]) {
+    let argThunks : Thunk[];
+    if (calleeName === "set" || calleeName === "def") {
+        argThunks = [evalutateName(args[0]), evaluate(args[1])];
+    } else {
+        argThunks = args.map(arg => evaluate(arg));
+    }
+    return argThunks;
+}
+
+function resolveThunks(thunks : Thunk[], env : Env) : any[] {
+    return thunks.map(thunk => thunk.resolve(env).getValue());
 }
 
 /**
@@ -173,20 +137,42 @@ function evaluateFunctionCall(callee : Expression, argThunks : Thunk[]) : Thunk 
  */
 function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
     const objThunk = evaluate(memberExpression.object);
-    const propertyThunk = evalutateMemberProperty(memberExpression.property);
-    const envFn : EnvFn = env => {
-        let obj = objThunk.resolve(env).getValue();
-        const property = propertyThunk.resolve(env).getValue();
-        return mkResult(obj[property]);
+    const builtInProperty = getBuiltInProperty(memberExpression.property);
+    
+    let envFn : EnvFn;
+    if (builtInProperty) {
+        envFn = env => {
+            const obj = objThunk.resolve(env);
+            return mkResult(obj[builtInProperty]);
+        }
+    } else {
+        const propertyThunk = evalutateName(memberExpression.property);
+        envFn = env => {
+            const obj = objThunk.resolve(env).getValue();
+            const property = propertyThunk.resolve(env).getValue();
+            return mkResult(obj[property]);
+        }
     }
-    return mkThunk(memberExpression, envFn);
+    return mkThunk(memberExpression, envFn, builtInProperty? "property" : "normal");
+}
+
+function getBuiltInProperty(expression : Expression) : string | undefined {
+    let result = undefined;
+    if (expression.type === "Identifier" && KEYWORD_PROPS.includes((expression as Identifier).name)) {
+       const name = (expression as Identifier).name; 
+       if (KEYWORD_PROPS.includes(name)) {
+            result = name;
+       }
+    }
+    return result;
 }
 
 /**
- * Evaluate a member property.  Identifiers need to be handled a little differently from usual 
- *   to ensure we don't try to look them up in the environment
+ * Evaluate a "name", this could be a literal type, or an identifier
+ * If it's an identifier don't look up the identifier in the environment, 
+ * return instead the identifiers "name"  (ie the literal strig value of the identifier)
  */
-function evalutateMemberProperty(expression : Expression) : Thunk {
+function evalutateName(expression : Expression) : Thunk {
     switch(expression.type) {
         case "Identifier":
             return mkThunk(expression, _ => mkResult((expression as Identifier).name));
@@ -197,15 +183,38 @@ function evalutateMemberProperty(expression : Expression) : Thunk {
     }
 }
 
-
 /**
  * Convert an Identifier into a javascript function
  * @param identifier 
  * @returns 
  */
 function evaluateIdentifier(identifier : Identifier) : Thunk {
-    const envFn : EnvFn =  env => mkResult(env.get(identifier.name));
-    return mkThunk(identifier, envFn);
+    const type : ThunkType = getIdentifierType(identifier);
+    const isBuiltin = BUILTINS.hasOwnProperty(identifier.name);
+    const builtIn = BUILTINS[identifier.name];
+    let envFn : EnvFn;
+    switch(type) {
+        case("builtin"):
+            envFn = _ => mkResult(builtIn);
+            break;
+        case("property"):
+            envFn = _ => mkResult(identifier.name);
+            break;
+        case("normal"):
+            envFn = env => mkResult(env.get(identifier.name));
+            break;
+    }
+    return mkThunk(identifier, envFn, type);
+}
+
+function getIdentifierType(identifier : Identifier) : ThunkType {
+    if (BUILTINS.hasOwnProperty(identifier.name)) {
+        return "builtin";
+    } else if (KEYWORD_PROPS.includes(identifier.name)) {
+        return "property";
+    } else {
+        return "normal";
+    }
 }
 
 
