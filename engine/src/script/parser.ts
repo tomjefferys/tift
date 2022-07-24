@@ -245,7 +245,7 @@ function evaluateArrayExpression(expression : ArrayExpression) : Thunk {
  * @param result 
  * @returns 
  */
-function mkResult(result : any, properties = {}) : Result {
+export function mkResult(result : any, properties = {}) : Result {
     const isAlreadyResult = result && result.hasOwnProperty("value");
     if (isAlreadyResult) { 
         return result;
