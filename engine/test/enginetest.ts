@@ -220,6 +220,25 @@ test("Test get/drop", () => {
 
 });
 
+test("Test simple rules", () => {
+    const messages : string[] = [];
+    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
+    builder.withObj({
+        id : "theRoom",
+        type : "room",
+        tags : [ "start" ]
+    });
+    builder.withObj({
+        id : "rule1",
+        type : "rule",
+        run : ["print('hello world')"]
+    })
+    const engine = builder.build();
+    engine.execute(["look"]);
+    expect(messages).toContain("theRoom");
+    expect(messages).toContain("hello world");
+});
+
 function getWordIds(engine : Engine, partial : string[]) : string[] {
     return engine.getWords(partial).map(idWord => idWord.id);
 }

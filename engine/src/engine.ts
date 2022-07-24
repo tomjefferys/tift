@@ -10,6 +10,7 @@ import { IdValue } from "./shared";
 import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
 import * as _ from "lodash"
+import { addLibraryFunctions } from "./script/library";
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -47,8 +48,9 @@ export class BasicEngine implements Engine {
   private context : CommandContext;
   private commands : IdValue<string>[][];
 
-  constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer) {
+  constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
     const environment = {} as Obj; 
+    objs.forEach(obj => environment[obj.id as string] = obj); // FIXME reject anything without an id
     entities.forEach(entity => environment[entity.id] = entity.props);
     verbs.forEach(verb => environment[verb.id] = verb.props);
 
@@ -59,6 +61,7 @@ export class BasicEngine implements Engine {
     makePlayer(environment, start);
     makeDefaultFunctions(environment);
     makeOutputConsumer(environment, outputConsumer);
+    addLibraryFunctions(environment);
 
     const rootEnv = createRootEnv(environment, false);
     this.env = rootEnv.newChild();
@@ -127,6 +130,12 @@ export class BasicEngine implements Engine {
           // TODO Break out?  Or run all matching actions?
         }
     }
+
+    // Find and execute any rules
+    const rules = this.env.findObjs(obj => obj["type"] === "rule");
+    const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
+    expressions.forEach(expr => expr(this.env));
+
     this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
 

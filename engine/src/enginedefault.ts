@@ -4,7 +4,7 @@ import { getMatcher, match, capture } from "./actionmatcher"
 import { VerbBuilder, VerbTrait } from "./verb"
 
 const PLAYER = Symbol("__PLAYER__");
-const OUTPUT = Symbol("__OUTPUT__");
+export const OUTPUT = Symbol("__OUTPUT__");
 
 export interface Player {
     location : string, 

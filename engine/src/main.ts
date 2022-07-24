@@ -26,6 +26,10 @@ name: rusty key
 desc: An old rusty key
 location: pool
 tags: [carryable]
+---
+rule: rule1
+run:
+  - if(random(1,2) == 1).then(print("A cold wind runs straight through you"))
 `
 
 export function getEngine(outputConsumer : OutputConsumer) : Engine {

@@ -1,6 +1,9 @@
-import { makeVerb, makeEntity, makeRoom, loadFromYaml } from "../src/enginebuilder";
+import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule } from "../src/enginebuilder";
 import { VerbTrait } from "../src/verb";
+import { setUpEnv } from "./testutils/testutils"
+import { EnvFn } from "../src/env"
 import * as fs from "fs";
+import _ from "lodash";
 
 
 test("Test make verb from empty object", () => {
@@ -137,3 +140,38 @@ test("Build room", () => {
     expect(room.verbs).toContainEqual({"verb":"look"});
     expect(room.verbModifiers).toStrictEqual({"direction":["north", "east"]});
 })
+
+test("Build rule", () => {
+    const obj = {
+      "id": "rule1",
+      "type": "rule",
+      "run": ["write('hello')", "write('world')"]
+    }
+
+    const rule = makeRule(obj);
+    const [env, messages] = setUpEnv();
+    rule["__COMPILED__"].forEach((expr : EnvFn) => expr(env))
+    expect(messages).toStrictEqual(["hello", "world"]);
+});
+
+test("Build rule - single expr", () => {
+    const obj = {
+      "id": "rule1",
+      "type": "rule",
+      "run": "write('hello world')"
+    }
+
+    const rule = makeRule(obj);
+    const [env, messages] = setUpEnv();
+    rule["__COMPILED__"].forEach((expr : EnvFn) => expr(env))
+    expect(messages).toStrictEqual(["hello world"]);
+});
+
+test("Build rule - no expressions", () => {
+    const obj = {
+      "id": "rule1",
+      "type": "rule",
+    }
+
+    expect(() => makeRule(obj)).toThrowError();
+});

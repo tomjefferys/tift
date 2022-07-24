@@ -1,13 +1,7 @@
 import { parse, bindParams, ARGS } from "../../src/script/parser"
 import { Env, createRootEnv, EnvFn } from "../../src/env"
 import { print } from "../../src/messages/output"
-import { listOutputConsumer } from "../testutils/testutils"
-
-//test("Test parameter binding", () => {
-//    const [env, messages] = setUpEnv();
-//    env.get("write")(env.newChild({"__args__": (env: Env) => ["Hello World"]}));
-//    expect(messages).toContain("Hello World");
-//});
+import { listOutputConsumer, setUpEnv } from "../testutils/testutils"
 
 test("Test simple write expression", () => {
     const [env, messages] = setUpEnv();
@@ -142,15 +136,3 @@ test("Test array access", () => {
     fn(env);
     expect(messages).toStrictEqual(["bar", "foo"]);
 });
-
-
-function setUpEnv() : [Env, string[]] {
-    const messages : string[] = [];
-    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages)}, true);
-    const write : EnvFn = bindParams(["value"], env => {
-        const value = env.get("value"); //(env).value;
-        return env.get("OUTPUT")(print(value));
-    });
-    env.set("write", write);
-    return [env, messages];
-}

@@ -8,11 +8,14 @@ import { Action } from "./action"
 import { getMatcher, match } from "./actionmatcher"
 import { Env, Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
+import _ from "lodash";
+import { parse } from "./script/parser";
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
     private verbs : Verb[] = [];
     private entities : Entity[] = [];
+    private objs : Obj[] = [];
 
     constructor() {
         DEFAULT_VERBS.forEach(verb => this.verbs.push(verb));
@@ -35,6 +38,9 @@ export class EngineBuilder {
             case "verb":
                 this.verbs.push(makeVerb(obj));
                 break;
+            case "rule":
+                this.objs.push(makeRule(obj));
+                break;
             default:
                 throw new Error("Unknown object type");
         }
@@ -45,7 +51,7 @@ export class EngineBuilder {
         if (!this.outputConsumer) {
             throw new Error("No output counsumer specified")
         }
-        return new BasicEngine(this.entities, this.verbs, this.outputConsumer);
+        return new BasicEngine(this.entities, this.verbs, this.outputConsumer, this.objs);
     }
     
 }
@@ -106,6 +112,17 @@ export function makeRoom(obj : Obj) : Entity {
     }
     builder.withVerb("look");
     return builder.build();
+}
+
+export function makeRule(obj : Obj) : Obj {
+    const runValue = obj["run"];
+    if (!obj.hasOwnProperty("run")) {
+        throw new Error("Rule " + obj["id"] + " has no 'run' property")
+    }
+    const expressions = _.isArray(runValue) ? runValue : [runValue];
+    const compiled = expressions.map(expr => parse(expr));
+    obj["__COMPILED__"] = compiled;
+    return obj;
 }
 
 function createMoveToAction(dir : string, dest : string) : Action {
