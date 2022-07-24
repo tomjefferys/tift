@@ -1,17 +1,18 @@
 import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression} from 'jsep';
-import { indexOf } from 'lodash';
-import { keywords } from 'moo';
 
 import { Env } from '../env'
+import * as _ from 'lodash'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 interface Result {
-    value : any,
-    getValue : () => any;
-    [others : string] : any
+    value : unknown,
+    getValue : () => unknown;
+    [others : string] : unknown
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type BinaryFunction = (l : any, r : any) => any;
+
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
     "+": (l,r) => l + r,
@@ -63,7 +64,7 @@ const KEYWORD_PROPS = ["then", "else", "case"];
 
 export const ARGS = "__args__"; 
 
-export function parse(expression : string) : (env : Env) => any {
+export function parse(expression : string) : (env : Env) => unknown {
     const parseTree = jsep(expression);
     return env => evaluate(parseTree).resolve(env).value;
 }
@@ -103,11 +104,12 @@ function evaluateCallExpression(callExpression : CallExpression) : Thunk {
         if (calleeThunk.type === "builtin") {
             const calleeName = (callExpression.callee as Identifier).name;
             const argThunks = evaluateBuiltInArgs(calleeName, args);
-            result = callee.getValue()(env.newChild({[ARGS] : argThunks.map(thunk => thunk.resolve)}));
+            const fn = callee.getValue() as EnvFn;
+            result = fn(env.newChild({[ARGS] : argThunks.map(thunk => thunk.resolve)}));
         } else {
             const argThunks = args.map(e => evaluate(e))
             const resolvedArgs = (calleeThunk.type === "property")? argThunks : resolveThunks(argThunks, env);
-            const fn = callee.getValue();
+            const fn = callee.getValue() as EnvFn;
             const fnResult = fn(env.newChild({[ARGS] : resolvedArgs}));
             result = mkResult(fnResult);
         }
@@ -126,7 +128,7 @@ function evaluateBuiltInArgs(calleeName : string, args : Expression[]) {
     return argThunks;
 }
 
-function resolveThunks(thunks : Thunk[], env : Env) : any[] {
+function resolveThunks(thunks : Thunk[], env : Env) : unknown[] {
     return thunks.map(thunk => thunk.resolve(env).getValue());
 }
 
@@ -148,8 +150,8 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
     } else {
         const propertyThunk = evalutateName(memberExpression.property);
         envFn = env => {
-            const obj = objThunk.resolve(env).getValue();
-            const property = propertyThunk.resolve(env).getValue();
+            const obj = objThunk.resolve(env).getValue() as {[key:string]:unknown}
+            const property = propertyThunk.resolve(env).getValue() as string;
             return mkResult(obj[property]);
         }
     }
@@ -190,7 +192,6 @@ function evalutateName(expression : Expression) : Thunk {
  */
 function evaluateIdentifier(identifier : Identifier) : Thunk {
     const type : ThunkType = getIdentifierType(identifier);
-    const isBuiltin = BUILTINS.hasOwnProperty(identifier.name);
     const builtIn = BUILTINS[identifier.name];
     let envFn : EnvFn;
     switch(type) {
@@ -208,7 +209,7 @@ function evaluateIdentifier(identifier : Identifier) : Thunk {
 }
 
 function getIdentifierType(identifier : Identifier) : ThunkType {
-    if (BUILTINS.hasOwnProperty(identifier.name)) {
+    if (_.has(BUILTINS,identifier.name)) {
         return "builtin";
     } else if (KEYWORD_PROPS.includes(identifier.name)) {
         return "property";
@@ -245,10 +246,10 @@ function evaluateArrayExpression(expression : ArrayExpression) : Thunk {
  * @param result 
  * @returns 
  */
-export function mkResult(result : any, properties = {}) : Result {
-    const isAlreadyResult = result && result.hasOwnProperty("value");
+export function mkResult(result : unknown, properties = {}) : Result {
+    const isAlreadyResult = result && _.has(result,"value");
     if (isAlreadyResult) { 
-        return result;
+        return result as Result;
     }
     const resultObj = { 
         value : result,
@@ -329,7 +330,7 @@ function makeIf() : EnvFn {
 
     // Create the then/else methods.  exprResult is the reusult of the boolen expression, value is 
     // the current value to be returned.  The value is passed in via the then/else methods
-    const mkThenElse = (exprResult : any, value : any) : ThenElse => {
+    const mkThenElse = (exprResult : unknown, value : unknown) : ThenElse => {
         return {
             "then" : bindParams(["thenExpr"], (env : Env) => {
                 const newValue = (exprResult)? env.get("thenExpr").resolve(env).getValue() : value; 

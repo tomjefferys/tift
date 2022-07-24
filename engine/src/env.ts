@@ -11,8 +11,9 @@ export type ObjPath = ObjKey | ObjKey[];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type Obj = {[key:ObjKey]:any};
-export type AnyArray = any[];
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+export type AnyArray = unknown[];
 
 export type EnvFn = (env:Env) => ReturnType;
 
@@ -84,7 +85,7 @@ export class Env {
             throw new Error("No such varible " + name.toString());
         }
 
-        let value = env.properties[head];
+        const value = env.properties[head];
         return (typeof value === "object")
             ? env.getObjProperty(head,tail)
             : value;
@@ -136,7 +137,7 @@ export class Env {
      * @returns the matching environment
      */
     private findEnv(name : ObjKey) : Env | undefined {
-        return this.properties.hasOwnProperty(name)
+        return _.has(this.properties,name)
                 ? this
                 : this.parent?.findEnv(name);
     }
@@ -147,7 +148,7 @@ export class Env {
      * @returns true if the property exists
      */
     private hasProperty(name : ObjKey) : boolean {
-        return this.properties.hasOwnProperty(name)
+        return _.has(this.properties,name)
                     ? true
                     : this.parent?.hasProperty(name) ?? false;
     }

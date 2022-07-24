@@ -1,6 +1,6 @@
 import { bindParams, EnvFn, mkResult } from "./parser"
 import { print } from "../messages/output"
-import { Env, Obj } from "../env";
+import { Obj } from "../env";
 import { OUTPUT } from "../enginedefault";
 
 export function addLibraryFunctions(obj : Obj) {

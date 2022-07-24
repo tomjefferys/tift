@@ -1,7 +1,5 @@
-import { parse, bindParams, ARGS } from "../../src/script/parser"
-import { Env, createRootEnv, EnvFn } from "../../src/env"
-import { print } from "../../src/messages/output"
-import { listOutputConsumer, setUpEnv } from "../testutils/testutils"
+import { parse } from "../../src/script/parser"
+import { setUpEnv } from "../testutils/testutils"
 
 test("Test simple write expression", () => {
     const [env, messages] = setUpEnv();

@@ -116,7 +116,7 @@ export function makeRoom(obj : Obj) : Entity {
 
 export function makeRule(obj : Obj) : Obj {
     const runValue = obj["run"];
-    if (!obj.hasOwnProperty("run")) {
+    if (!_.has(obj,"run")) {
         throw new Error("Rule " + obj["id"] + " has no 'run' property")
     }
     const expressions = _.isArray(runValue) ? runValue : [runValue];
