@@ -6,7 +6,7 @@ import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
 import { getMatcher, match } from "./actionmatcher"
-import { Env, Obj } from "./env"
+import { Env, EnvFn, Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";
@@ -120,7 +120,8 @@ export function makeRule(obj : Obj) : Obj {
         throw new Error("Rule " + obj["id"] + " has no 'run' property")
     }
     const expressions = _.isArray(runValue) ? runValue : [runValue];
-    const compiled = expressions.map(expr => parse(expr));
+    let compiled : ((env : Env) => unknown)[];
+    compiled = expressions.map((expr, index) => parse(expr, obj["id"] + ".run[" + index + "]"));
     obj["__COMPILED__"] = compiled;
     return obj;
 }

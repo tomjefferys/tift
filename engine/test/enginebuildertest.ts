@@ -175,3 +175,22 @@ test("Build rule - no expressions", () => {
 
     expect(() => makeRule(obj)).toThrowError();
 });
+
+test("Build rule - error", () => {
+    const obj = {
+      "id": "rule1",
+      "type": "rule",
+      "run": "write('hello world)"
+    }
+
+    let exception = undefined;
+    try {
+      makeRule(obj);
+      fail();
+    } catch (e) {
+      const error = e as Error;
+      expect(error.message).toContain("rule1.run[0]");
+      expect(error.message).toContain("write('hello world)");
+    }
+
+});

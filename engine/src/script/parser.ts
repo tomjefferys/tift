@@ -64,9 +64,13 @@ const KEYWORD_PROPS = ["then", "else", "case"];
 
 export const ARGS = "__args__"; 
 
-export function parse(expression : string) : (env : Env) => unknown {
-    const parseTree = jsep(expression);
-    return env => evaluate(parseTree).resolve(env).value;
+export function parse(expression : string, objPath? : string) : (env : Env) => unknown {
+    try {
+        const parseTree = jsep(expression);
+        return env => evaluate(parseTree).resolve(env).value;
+    } catch (e) {
+        throw new Error("Error compiling: " + (objPath? objPath + "\n" : "") + expression + "\n" + e);
+    }
 }
 
 function evaluate(expression : Expression) : Thunk {
