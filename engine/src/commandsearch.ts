@@ -5,6 +5,7 @@ import { MultiDict } from "./util/multidict"
 import { IdValue, mkIdValue } from "./shared"
 import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
+import * as Arrays from "./util/arrays"
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -13,7 +14,7 @@ import * as Tree from "./util/tree"
 // verb object (to) direction          -- tranistive verb with qualifier
 // verb object direction (with) object -- transitive verb with qual and attr
 
-interface SearchState {
+export interface SearchState {
   readonly verb? : Verb;
   readonly directObject? : Entity;
   readonly attribute? : string;
@@ -36,7 +37,7 @@ export function getAllCommands(objs: ContextEntities, verbs: Verb[]) : IdValue<s
           .map(state => state.words);
 }
 
-interface SearchContext {
+export interface SearchContext {
   objs:  ContextEntities,
   verbs: VerbMap,
 }
@@ -242,3 +243,50 @@ const searchAll = (context : SearchContext,
   } 
   return states;
 }
+
+/**
+ * Takes a partial command and looks for matches
+ * 
+ * Searches for one word at a time, and checks for a match against the partially provided command
+ * Stops searching as soon as we've found an extra word
+ * @param partial 
+ * @param context 
+ * @param searchNode 
+ * @param state 
+ * @returns 
+ */
+export const searchNext = (partial : string[],
+                           context : SearchContext,
+                           searchNode = WORD_PATTERNS,
+                           state = INITIAL_STATE) : SearchState[] => 
+    doSearch(context, searchNode, state)
+                    .filter(([state, _]) => Arrays.prefixEquals(partial, state.words.map(idValue => idValue.id)))
+                    .flatMap(([state, node]) => 
+                                  (state.words.length > partial.length) 
+                                        ? [state] 
+                                        : searchNext(partial, context, node, state));
+
+/**
+ * Find an exact match for the provided command
+ * @param command 
+ * @param context 
+ * @param searchNode 
+ * @param state 
+ * @returns 
+ */
+export const searchExact = (command : string[],
+                            context : SearchContext, 
+                            searchNode = WORD_PATTERNS,
+                            state = INITIAL_STATE) : SearchState | undefined => 
+    doSearch(context, searchNode, state)
+            .filter(([state, _]) => Arrays.prefixEquals(command, state.words.map(idValue => idValue.id)))
+            .map(([state, node]) => {
+              if (state.words.length === command.length && Tree.isTerminal(node)) {
+                return state;
+              } else if (state.words.length < command.length) {
+                return searchExact(command, context, node, state);
+              } else {
+                return undefined;
+              }
+            }).find(_ => true);
+                        

@@ -1,7 +1,8 @@
-import {getAllCommands, ContextEntities} from "../src/commandsearch";
+import {getAllCommands, ContextEntities, searchNext, searchExact, SearchContext, SearchState} from "../src/commandsearch";
 import {Entity, EntityBuilder} from "../src/entity";
 import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
 import * as _ from "lodash"
+import { VerbMap } from "../src/types";
 
 const STIR = new VerbBuilder({"id":"stir"})
                      .withTrait(VerbTrait.Transitive)
@@ -146,6 +147,47 @@ test("Test inventory context", () => {
   //expect(commands).toHaveLength(1);
   //expect(commands).toEqual(expect.arrayContaining([["drop", "apple"]]));
 });
+
+test("Test partial search", () => {
+  const context : SearchContext = {
+    objs : {"default" : [BOX, CAVE]},
+    verbs : createVerbMap([PUSH])
+  }
+
+  let next = searchNext([], context);
+  expect(getWords(next)).toStrictEqual([["push"]]);
+
+  next = searchNext(["push"], context);
+  expect(getWords(next)).toStrictEqual([["push", "box"]]);
+
+  next = searchNext(["push", "box"], context);
+  expect(getWords(next)).toEqual(expect.arrayContaining([["push", "box", "north"], ["push", "box", "east"]]));
+});
+
+test("Test exact search", () => {
+  const context : SearchContext = {
+    objs : {"default" : [BOX, CAVE]},
+    verbs : createVerbMap([PUSH])
+  }
+
+  let exact = searchExact([], context);
+  expect(exact).toBeUndefined();
+
+  exact = searchExact(["push"], context);
+  expect(exact).toBeUndefined();
+
+  exact = searchExact(["push", "box"], context);
+  expect(exact).not.toBeUndefined();
+  expect(getWords([exact as SearchState])).toEqual(expect.arrayContaining([["push", "box"]]));
+
+  exact = searchExact(["push", "box", "north"], context);
+  expect(exact).not.toBeUndefined();
+  expect(getWords([exact as SearchState])).toEqual(expect.arrayContaining([["push", "box", "north"]]));
+})
+
+const createVerbMap = (verbs : Verb[]) : VerbMap => verbs.reduce((obj, verb) => ({...obj, [verb.id] : verb}), {});
+
+const getWords = (states : SearchState[]) : string[][] => states.map(state => state.words.map(wordId => wordId.id));
 
 function getAllCommandIds(entities : ContextEntities | Entity[], verbs : Verb[]) {
   const contextEntities = _.isArray(entities)? {"default": entities} : entities;
