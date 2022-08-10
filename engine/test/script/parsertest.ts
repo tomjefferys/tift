@@ -134,3 +134,8 @@ test("Test array access", () => {
     fn(env);
     expect(messages).toStrictEqual(["bar", "foo"]);
 });
+
+test("Test match operator", () => {
+    const [env, messages] = setUpEnv();
+    //const fn = parse("stir($this) => 'you stir the soup'");
+})

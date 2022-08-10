@@ -1,4 +1,5 @@
-import { bindParams, EnvFn, mkResult } from "./parser"
+import { bindParams, mkResult } from "./parser"
+import { EnvFn } from "./thunk"
 import { print } from "../messages/output"
 import { Obj } from "../env";
 import { OUTPUT } from "../enginedefault";

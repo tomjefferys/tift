@@ -21,81 +21,36 @@ import { states } from "moo";
 
 // So what is the data structure
 
-type MatchFunction = (state : SearchState) => MatchResult;
 
+export type Matcher = (state : SearchState) => MatchResult;
 
-interface MatchResult {
+export interface MatchResult {
     isMatch : boolean,
     captures? : {[key:string]:string}
 }
 
 const FAILED_MATCH : MatchResult = { isMatch : false };
 
-interface Matcher {
-    match : (state : SearchState) => MatchResult
-}
+const ALWAYS_MATCH : Matcher =  (_state) => ({ isMatch : true});
 
-const ALWAYS_MATCH : Matcher = {
-    match : (_state) => ({ isMatch : true})
-}
+export const ALWAYS_FAIL : Matcher = (_state) => FAILED_MATCH;
 
 function failIfProvided(stateField : keyof SearchState) : Matcher {
-    return {
-        match : state => ({ isMatch : state[stateField] === undefined})
-    }
-}
-
-interface VerbMatch extends Matcher {
-    verb : string,
-    obj? : ObjectMatch,
-    attribute? : AttributeMatch,
-    modifiers : ModifierMatch[]
-}
-
-interface AttributeMatch extends Matcher {
-    attribute : string;
-    obj? : ObjectMatch,
-    modifiers : ModifierMatch[]
-}
-
-type ObjectMatch = ObjectExact | ObjectCapture
-
-interface ObjectExact extends Matcher {
-    isCapture : false,
-    id : string
-}
-
-interface ObjectCapture extends Matcher {
-    isCapture : true,
-    name : string
-}
-
-type ModifierMatch = ModifierExact | ModifierCapture;
-
-interface ModifierExact extends Matcher {
-    isCapture : false,
-    type : string,
-    modifier : string
-}
-
-interface ModifierCapture extends Matcher {
-    isCapture : true,
-    type : string,
-    name : string
+    return state => ({ isMatch : state[stateField] === undefined})
 }
 
 class MatchBuilder {
-    verb? : string;
-    obj? : ObjectMatch;
+    verb? : Matcher;
+    obj? : Matcher;
     attributeBuilder? : AttributeMatchBuilder;
-    modifiers : ModifierMatch[] = [];
+    modifiers : Matcher[] = [];
 
-    withVerb(verb : string) : MatchBuilder {
+    withVerb(verb : Matcher) : MatchBuilder {
         this.verb = verb
         return this;
     }
 
-    withObject(obj : ObjectMatch) : MatchBuilder {
+    withObject(obj : Matcher) : MatchBuilder {
         this.obj = obj;
         return this;
     }
@@ -105,87 +60,89 @@ class MatchBuilder {
         return this;
     }
 
-    withModifier(modifier : ModifierMatch) : MatchBuilder {
+    withModifier(modifier : Matcher) : MatchBuilder {
         this.modifiers.push(modifier);
         return this;
     }
 
-    build() : VerbMatch {
+    build() : Matcher {
         if (!this.verb) {
             throw new Error("A verb mus be supplied to a match builder");
         }
 
         const attributeMatcher = this?.attributeBuilder?.build() ?? failIfProvided("attribute");
         const objMatcher = this?.obj ?? failIfProvided("directObject");
-        const verbMatcher : Matcher = buildMatcher(state => state.verb?.id === this.verb);
+        const verbMatcher = this?.verb ?? failIfProvided("verb");
+        //const verbMatcher : Matcher = buildMatcher(state => state.verb?.id === this.verb);
         const matchers : Matcher[] = [verbMatcher, objMatcher, attributeMatcher, ...this.modifiers];
 
-        return {
-            verb : this.verb,
-            obj : this.obj,
-            attribute : this.attributeBuilder?.build(),
-            modifiers : this.modifiers,
-            match : state => matchAll(state, ...matchers)
-        }
+        return state => matchAll(state, ...matchers);
     }
 }
 
-class AttributeMatchBuilder {
-    attribute : string;
-    obj? : ObjectMatch;
-    modifiers : ModifierMatch[] = [];
 
-    constructor(attribute : string) {
+class AttributeMatchBuilder {
+    attribute? : Matcher;
+    obj? : Matcher;
+    modifiers : Matcher[] = [];
+
+    withAttribute(attribute : Matcher) : AttributeMatchBuilder {
         this.attribute = attribute;
+        return this;
     }
 
-    withObject(obj : ObjectMatch) : AttributeMatchBuilder {
+    withObject(obj : Matcher) : AttributeMatchBuilder {
         this.obj = obj;
         return this;
     }
 
-    withModifier(modifier : ModifierMatch) : AttributeMatchBuilder {
+    withModifier(modifier : Matcher) : AttributeMatchBuilder {
         this.modifiers.push(modifier);
         return this;
     }
 
-    build() : AttributeMatch {
-        const attributeMatcher = buildMatcher(state => state.attribute === this.attribute);
-        return {
-            attribute : this.attribute,
-            obj : this.obj,
-            modifiers : this.modifiers,
-            match : state => FAILED_MATCH
+    build() : Matcher {
+        if (!this.attribute) {
+            throw new Error("Attribute matcher must have an attribute");
         }
+        if (!this.obj) { 
+            throw new Error("Attribute matcher must have an object");
+        }
+        const attrMatcher = this.attribute;
+        const objMatcher = this.obj;
+        return state => matchAll(state, attrMatcher, objMatcher);
     }
 }
 
-export function verbMatchBuilder() {
-    return new MatchBuilder();
-}
+export const verbMatchBuilder = () : MatchBuilder => new MatchBuilder();
 
-export function matchObject(objectId : string) : ObjectMatch {
-    return { 
-        isCapture : false, 
-        id : objectId,
-        match : state => ({
-            isMatch : state.directObject?.id === objectId,
-        })
-    }
-}
+export const attributeMatchBuilder = () => new AttributeMatchBuilder();
 
-export function captureObject(captureName : string) : ObjectMatch {
-    return {
-        isCapture : true,
-        name : captureName,
-        match : state => (state.directObject !== undefined)
+export const matchVerb = (verbId : string) : Matcher => 
+                        state => ({ isMatch : state.verb?.id === verbId });
+
+export const matchObject = (objectId : string) : Matcher => 
+                    state => ({ isMatch : state.directObject?.id === objectId });
+
+export const matchIndirectObject = (objectId : string) : Matcher => 
+                    state => ({ isMatch : state.indirectObject?.id === objectId });
+
+export const matchAttribute = (attribute : string) : Matcher =>
+                    state => ({ isMatch : state.attribute === attribute});
+
+
+export const captureObject = (captureName : string) : Matcher => 
+        state => (state.directObject !== undefined)
                             ? { isMatch : true, captures : { [captureName] : state.directObject?.id}}
-                            : FAILED_MATCH
-    }
-}
+                            : FAILED_MATCH;
+
+export const captureIndirectObject = (captureName : string) : Matcher => 
+        state => (state.indirectObject !== undefined)
+                            ? { isMatch : true, captures : { [captureName] : state.indirectObject?.id}}
+                            : FAILED_MATCH;
 
 const matchAll : (state : SearchState, ...matchers : Matcher[]) => MatchResult = 
-    (state, ...matchers) => combineMatches(...matchers.map(matcher => matcher.match(state)));
+    (state, ...matchers) => combineMatches(...matchers.map(matcher => matcher(state)));
 
 
 const combineMatches : (...matches : MatchResult[]) => MatchResult =
@@ -198,4 +155,4 @@ const combineMatches : (...matches : MatchResult[]) => MatchResult =
     }));
 
 const buildMatcher : (matchFunction : (state : SearchState) => boolean) => Matcher
-        = matchFunction => ({ match : state => ({ isMatch : matchFunction(state) })});
+        = matchFunction => state => ({ isMatch : matchFunction(state) });

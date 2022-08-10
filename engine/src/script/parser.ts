@@ -1,18 +1,15 @@
 import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression} from 'jsep';
+import { Result, EnvFn, Thunk, ThunkType, mkThunk } from "./thunk"
 
 import { Env } from '../env'
 import * as _ from 'lodash'
-
-interface Result {
-    value : unknown,
-    getValue : () => unknown;
-    [others : string] : unknown
-}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type BinaryFunction = (l : any, r : any) => any;
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+jsep.addBinaryOp("=>", 0);
 
 const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
     "+": (l,r) => l + r,
@@ -33,26 +30,6 @@ const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
     "^": (l,r) => l ^ r
 }
 
-export type EnvFn = (env : Env) => Result;
-
-
-type ThunkType = "normal" | "builtin" | "property"
-
-interface Thunk {
-    resolve : EnvFn,
-    expression : Expression,
-    type : ThunkType
-}
-
-
-function mkThunk(expression : Expression, envFn : EnvFn, type : ThunkType = "normal") : Thunk {
-    return {
-        resolve : envFn,
-        expression : expression,
-        type : type
-    }
-}
-
 const BUILTINS : {[key:string]:EnvFn} = {
     "if" : makeIf(),
     "do" : makeDo(),
@@ -67,13 +44,14 @@ export const ARGS = "__args__";
 export function parse(expression : string, objPath? : string) : (env : Env) => unknown {
     try {
         const parseTree = jsep(expression);
-        return env => evaluate(parseTree).resolve(env).value;
+        const compiledExpression = evaluate(parseTree);
+        return env => compiledExpression.resolve(env).value;
     } catch (e) {
         throw new Error("Error compiling: " + (objPath? objPath + "\n" : "") + expression + "\n" + e);
     }
 }
 
-function evaluate(expression : Expression) : Thunk {
+export function evaluate(expression : Expression) : Thunk {
     switch(expression.type) {
         case "CallExpression": 
             return evaluateCallExpression(expression as CallExpression);
@@ -224,6 +202,10 @@ function getIdentifierType(identifier : Identifier) : ThunkType {
 
 
 function evaluateBinaryExpression(expression : BinaryExpression)  : Thunk {
+    if (expression.operator == "=>")  {
+
+    }
+
     const leftThunk = evaluate(expression.left);
     const rightThunk = evaluate(expression.right);
     const fn = BINARY_FUNCTIONS[expression.operator];
@@ -242,6 +224,14 @@ function evaluateArrayExpression(expression : ArrayExpression) : Thunk {
     const elementThunks = expression.elements.map(e => evaluate(e));
     const envFn : EnvFn = env => mkResult(elementThunks.map(thunk => thunk.resolve(env).getValue()));
     return mkThunk(expression, envFn);
+}
+
+function evalutateMatchExpression(expression : BinaryExpression) : Thunk {
+    const match = expression.left;
+    const action = expression.right;
+    // Convert the match to an Action Matcher
+
+    return mkThunk(expression, env => mkResult(""));
 }
 
 /**

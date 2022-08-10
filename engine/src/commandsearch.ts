@@ -17,7 +17,7 @@ import * as Arrays from "./util/arrays"
 export interface SearchState {
   readonly verb? : Verb;
   readonly directObject? : Entity;
-  readonly attribute? : string;
+  readonly attribute? : string;   // TODO could have multiple attributes, should be Map<Attribute,IndirectObj>
   readonly indirectObject? : Entity;
   readonly modifiers : {[key:string]:string};
   readonly words : IdValue<string>[];
