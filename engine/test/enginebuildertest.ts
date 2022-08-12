@@ -183,7 +183,6 @@ test("Build rule - error", () => {
       "run": "write('hello world)"
     }
 
-    let exception = undefined;
     try {
       makeRule(obj);
       fail();

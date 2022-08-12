@@ -2,7 +2,8 @@ import { CallExpression, Expression, Identifier, MemberExpression } from "jsep"
 import { SearchState } from "../commandsearch";
 import { verbMatchBuilder, matchVerb, matchObject, captureObject, 
             matchAttribute, matchIndirectObject, captureIndirectObject,
-            MatchResult, Matcher, ALWAYS_FAIL, attributeMatchBuilder } from "../commandmatcher";
+            Matcher, ALWAYS_FAIL, attributeMatchBuilder,
+            matchModifier } from "../commandmatcher";
 import { mkThunk, Thunk, EnvFn } from "./thunk"
 import { mkResult } from "./parser"
 
@@ -25,8 +26,9 @@ export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
             compoundMatch = getCompoundMatcher(matchExpr as CallExpression);
             break;
         case "Identifier": 
-            let unitMatch = getMatcher(matchExpr as Identifier);
-            compoundMatch = { nameMatch : unitMatch, argMatches : []};
+            compoundMatch = { 
+                nameMatch : getMatcher(matchExpr as Identifier),
+                argMatches : []};
             break;
         default:
             throw new Error("Invalid match expression: " + matchExpr);
@@ -56,7 +58,7 @@ export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
 
 function createMatcher(compoundMatch : CompoundMatch) : Matcher {
     // We build a matcher here, using the provided state
-    // The state helps define what the match possibilities are, eg
+    // The state helps define what the match possbilities are, eg
     //    a transitive verb should always have a direct object
     // We could possibly not bother with the intermediate data structure here
     //    but this makes the code a bit clearer, and handled captures in a nicer way
@@ -66,21 +68,18 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
             throw new Error("No verb");
         }
         builder.withVerb(matchVerb(compoundMatch.nameMatch.name))
+
+        const args = compoundMatch.argMatches.slice().reverse(); // Reverse list so we can use pop 
         if (state.verb.isTransitive()) {
             // First match will be the direct object
-            if (compoundMatch.argMatches.length) {
-                builder.withObject(getObjectMatcher(compoundMatch.argMatches[0]));
-            } else {
-                // Transitive verb without object will always fail
-                builder.withObject(ALWAYS_FAIL);
-            }
-            // Could just chomp the head of the list, then process everything else as modifiers
-        } else {
-            // Match modifiers
-            if (compoundMatch.argMatches.length) {
-                throw new Error("Modifier matching not implelemented yet"); // TODO
-            }
-        }
+            const directObject = args.pop();
+            builder.withObject(directObject ? getObjectMatcher(directObject) : ALWAYS_FAIL);
+        } 
+
+        // Treat any remaining args as modifiers
+        args.forEach(arg => builder.withModifier(getModifierMatcher(arg)));
+
+
         if (compoundMatch.member) {
             const attrBuilder = attributeMatchBuilder();
             attrBuilder.withAttribute(matchAttribute(compoundMatch.member.nameMatch.name));
@@ -104,7 +103,6 @@ function getMatcher(identifier : Identifier) : UnitMatch {
 }
 
 function getCompoundMatcher(callExpression : CallExpression) : CompoundMatch {
-    // Callee here could be the member expression
     let name : UnitMatch;
     let parent : CompoundMatch | undefined;
     switch(callExpression.callee.type) {
@@ -112,22 +110,28 @@ function getCompoundMatcher(callExpression : CallExpression) : CompoundMatch {
             name = getMatcher(callExpression.callee as Identifier);
             break;
         case "MemberExpression":
-            const memberExpr = callExpression.callee as MemberExpression;
-            name = getMatcher(memberExpr.property as Identifier); // FIXME check type
-            parent = getCompoundMatcher(memberExpr.object as CallExpression); // FIXME check type
+            [name, parent] = getParentMatcher(callExpression.callee as MemberExpression);
             break;
         default:
             throw new Error("Invalid match expression: " + callExpression);
     }
-    //const verb = getMatcher(callExpression.callee as Identifier);
     const argMatchers = callExpression.arguments.map(expr => getMatcher(expr as Identifier));  // FIXME, might not be identifier
     const compoundMatcher = {nameMatch : name, argMatches : argMatchers};
     if (parent !== undefined) {
         parent.member = compoundMatcher;
     }
+    return parent ?? compoundMatcher;
+}
 
-    return parent ? parent : compoundMatcher;
-    //return {nameMatch: name, argMatches : argMatchers};
+function getParentMatcher(expression : MemberExpression) : [UnitMatch, CompoundMatch] {
+    if (expression.property.type !== "Identifier") {
+        throw new Error("Invalid attribute match: " + JSON.stringify(expression.property));
+    }
+    if (expression.object.type !== "CallExpression") {
+        throw new Error("Invalid attributed expression match: " + JSON.stringify(expression.object));
+    }
+    return [getMatcher(expression.property as Identifier), 
+            getCompoundMatcher(expression.object as CallExpression)];
 }
 
 const isCapture : (str : string) => boolean = str => str.startsWith("$");
@@ -141,3 +145,6 @@ const  getIndirectObjectMatcher : (matchData : UnitMatch) => Matcher =
             matchData => matchData.isCapture 
                                 ? captureIndirectObject(matchData.name)
                                 : matchIndirectObject(matchData.name);
+
+const getModifierMatcher : (match : UnitMatch) => Matcher = 
+            matchData => matchModifier(matchData.name);

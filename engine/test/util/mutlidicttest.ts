@@ -52,5 +52,5 @@ test("Test get values", () => {
   multidict.addAll(dict, "key2", ["foo", "bar"]);
   const values = multidict.values(dict)
   expect(values).toHaveLength(4);
-  expect(values).toEqual(expect.arrayContaining([ "value1", "value2", "foo", , "bar"]));
+  expect(values).toEqual(expect.arrayContaining([ "value1", "value2", "foo", "bar"]));
 })

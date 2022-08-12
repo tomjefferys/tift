@@ -203,7 +203,7 @@ function getIdentifierType(identifier : Identifier) : ThunkType {
 
 function evaluateBinaryExpression(expression : BinaryExpression)  : Thunk {
     if (expression.operator == "=>")  {
-
+        // TODO
     }
 
     const leftThunk = evaluate(expression.left);

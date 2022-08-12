@@ -1,11 +1,4 @@
-import { ContextEntities, SearchState } from "./commandsearch";
-import { Verb } from "./verb";
-import { Entity } from "./entity"
-import { IdValue } from "./shared"
-import * as multidict from "./util/multidict"
-import { VerbMap } from "./types"
-import * as Tree from "./util/tree"
-import { states } from "moo";
+import { SearchState } from "./commandsearch";
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -30,8 +23,6 @@ export interface MatchResult {
 }
 
 const FAILED_MATCH : MatchResult = { isMatch : false };
-
-const ALWAYS_MATCH : Matcher =  (_state) => ({ isMatch : true});
 
 export const ALWAYS_FAIL : Matcher = (_state) => FAILED_MATCH;
 
@@ -67,14 +58,14 @@ class MatchBuilder {
 
     build() : Matcher {
         if (!this.verb) {
-            throw new Error("A verb mus be supplied to a match builder");
+            throw new Error("A verb must be supplied to a match builder");
         }
 
         const attributeMatcher = this?.attributeBuilder?.build() ?? failIfProvided("attribute");
         const objMatcher = this?.obj ?? failIfProvided("directObject");
         const verbMatcher = this?.verb ?? failIfProvided("verb");
-        //const verbMatcher : Matcher = buildMatcher(state => state.verb?.id === this.verb);
-        const matchers : Matcher[] = [verbMatcher, objMatcher, attributeMatcher, ...this.modifiers];
+        const modMatchers = this.modifiers.length ? this.modifiers : [matchNoModifiers()];
+        const matchers : Matcher[] = [verbMatcher, objMatcher, attributeMatcher, ...modMatchers];
 
         return state => matchAll(state, ...matchers);
     }
@@ -130,6 +121,11 @@ export const matchIndirectObject = (objectId : string) : Matcher =>
 export const matchAttribute = (attribute : string) : Matcher =>
                     state => ({ isMatch : state.attribute === attribute});
 
+export const matchModifier = (modifier : string) : Matcher =>
+                    state => ({ isMatch : Object.values(state.modifiers).indexOf(modifier) !== -1})
+
+export const matchNoModifiers = () : Matcher => 
+                    state => ({ isMatch : Object.keys(state.modifiers).length === 0})
 
 export const captureObject = (captureName : string) : Matcher => 
         state => (state.directObject !== undefined)
@@ -153,6 +149,3 @@ const combineMatches : (...matches : MatchResult[]) => MatchResult =
             ...(result2?.captures ?? {})
         } 
     }));
-
-const buildMatcher : (matchFunction : (state : SearchState) => boolean) => Matcher
-        = matchFunction => state => ({ isMatch : matchFunction(state) });

@@ -1,11 +1,9 @@
-import { VerbBuilder, VerbTrait } from "../src/verb";
-import { ContextEntities, SearchState } from "../src/commandsearch";
+import { SearchState } from "../src/commandsearch";
 import { matchVerb, matchObject, captureObject, verbMatchBuilder, 
-            attributeMatchBuilder, matchAttribute, Matcher,
-            matchIndirectObject, captureIndirectObject } from "../src/commandmatcher";
+            attributeMatchBuilder, matchAttribute,
+            matchIndirectObject, captureIndirectObject, matchModifier } from "../src/commandmatcher";
 import { LOOK, EAT, GO, APPLE, STIR, SOUP, SPOON } from "./testutils/testentities";
 import { mkIdValue } from "../src/shared";
-import { match } from "../src/actionmatcher";
 
 test("Test simple match", () => {
     const matcher = verbMatchBuilder()
@@ -104,6 +102,20 @@ test("Test capture direct and indirect object", () => {
     expect(result.isMatch).toBeTruthy();
     expect(result.captures).toStrictEqual({"container" : "soup", "tool" : "spoon"})
 })
+
+test("Test capture with modifier", () => {
+    const matcher = verbMatchBuilder()
+        .withVerb(matchVerb("go"))
+        .withModifier(matchModifier("north"))
+        .build();
+
+    const state = mkSearchState({
+        verb : GO,
+        modifiers : { "direction" : "north"}}, "go", "north");
+
+    const result = matcher(state);
+    expect(result.isMatch).toBeTruthy();
+});
 
 function mkSearchState(partial : Partial<SearchState>, ...words : string[]) : SearchState {
     return { 
