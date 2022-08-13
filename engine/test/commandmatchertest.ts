@@ -1,12 +1,12 @@
 import { SearchState } from "../src/commandsearch";
-import { matchVerb, matchObject, captureObject, verbMatchBuilder, 
+import { matchVerb, matchObject, captureObject, matchBuilder, 
             attributeMatchBuilder, matchAttribute,
             matchIndirectObject, captureIndirectObject, matchModifier } from "../src/commandmatcher";
 import { LOOK, EAT, GO, APPLE, STIR, SOUP, SPOON } from "./testutils/testentities";
 import { mkIdValue } from "../src/shared";
 
 test("Test simple match", () => {
-    const matcher = verbMatchBuilder()
+    const matcher = matchBuilder()
                         .withVerb(matchVerb("look"))
                         .build();
     const state : SearchState = mkSearchState({ verb : LOOK }, "look");
@@ -15,7 +15,7 @@ test("Test simple match", () => {
 })
 
 test("Test match with direct object", () => {
-    const matcher = verbMatchBuilder()
+    const matcher = matchBuilder()
                             .withVerb(matchVerb("eat"))
                             .withObject(matchObject("apple"))
                             .build();
@@ -25,7 +25,7 @@ test("Test match with direct object", () => {
 })
 
 test("Test match with direct object capture", () => {
-    const matcher = verbMatchBuilder()
+    const matcher = matchBuilder()
                             .withVerb(matchVerb("eat"))
                             .withObject(captureObject("food"))
                             .build();
@@ -36,7 +36,7 @@ test("Test match with direct object capture", () => {
 })
 
 test("Test partial match", () => {
-    const matcher = verbMatchBuilder()
+    const matcher = matchBuilder()
                             .withVerb(matchVerb("eat"))
                             .build();
     const state = mkSearchState({ verb : EAT, directObject : APPLE}, "eat", "apple")
@@ -45,7 +45,7 @@ test("Test partial match", () => {
 })
 
 test("Test attribute match", () => {
-    const matcher = verbMatchBuilder()
+    const matcher = matchBuilder()
         .withVerb(matchVerb("stir"))
         .withObject(matchObject("soup"))
         .withAttribute(attributeMatchBuilder()
@@ -64,7 +64,7 @@ test("Test attribute match", () => {
 })
 
 test("Test capture indirect object", () => {
-    const matcher = verbMatchBuilder()
+    const matcher = matchBuilder()
         .withVerb(matchVerb("stir"))
         .withObject(matchObject("soup"))
         .withAttribute(attributeMatchBuilder()
@@ -84,7 +84,7 @@ test("Test capture indirect object", () => {
 })
 
 test("Test capture direct and indirect object", () => {
-    const matcher = verbMatchBuilder()
+    const matcher = matchBuilder()
         .withVerb(matchVerb("stir"))
         .withObject(captureObject("container"))
         .withAttribute(attributeMatchBuilder()
@@ -104,7 +104,7 @@ test("Test capture direct and indirect object", () => {
 })
 
 test("Test capture with modifier", () => {
-    const matcher = verbMatchBuilder()
+    const matcher = matchBuilder()
         .withVerb(matchVerb("go"))
         .withModifier(matchModifier("north"))
         .build();

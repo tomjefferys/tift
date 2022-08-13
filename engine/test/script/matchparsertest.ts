@@ -4,16 +4,9 @@ import { evaluateMatch } from "../../src/script/matchParser"
 import { evaluate } from "../../src/script/parser"
 import { EAT, LOOK, APPLE, STIR, SOUP, SPOON, GO, PUSH, BOX } from "../testutils/testentities"
 import { SearchState } from "../../src/commandsearch"
-import { IdValue, mkIdValue } from "../../src/shared"
+import { createSearchState, nameable } from '../testutils/searchstate'
 import { Env } from '../../src/env'
 import _ from 'lodash'
-
-interface Nameable {
-    id : string, 
-    getName : () => string
-}
-
-const nameable : (id : string) => Nameable = id => ({id : id, getName : () => id});
 
 const WITH = nameable("with");
 const NORTH = nameable("north");
@@ -129,12 +122,4 @@ function doMatch(state : SearchState, match : string, onMatch = DEFALT_ONMATCH) 
 
     const matchThunk = evaluateMatch(expression, onMatchThunk);
     matchThunk.resolve(env.newChild({"SEARCHSTATE" : state }));
-}
-
-function createSearchState(state : Partial<SearchState>, ...words : Nameable[]) : SearchState {
-    return {modifiers : {}, words : buildWords(...words), ...state};
-}
-
-function buildWords(...words : Nameable[]) : IdValue<string>[] {
-    return words.map(word => mkIdValue(word.id, word.getName()));
 }

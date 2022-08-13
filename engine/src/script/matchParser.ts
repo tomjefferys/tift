@@ -1,6 +1,6 @@
 import { CallExpression, Expression, Identifier, MemberExpression } from "jsep"
 import { SearchState } from "../commandsearch";
-import { verbMatchBuilder, matchVerb, matchObject, captureObject, 
+import { matchBuilder, matchVerb, matchObject, captureObject, 
             matchAttribute, matchIndirectObject, captureIndirectObject,
             Matcher, ALWAYS_FAIL, attributeMatchBuilder,
             matchModifier } from "../commandmatcher";
@@ -63,7 +63,7 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
     // We could possibly not bother with the intermediate data structure here
     //    but this makes the code a bit clearer, and handled captures in a nicer way
     return (state : SearchState) =>  {
-        const builder = verbMatchBuilder();
+        const builder = matchBuilder();
         if (!state.verb) {
             throw new Error("No verb");
         }

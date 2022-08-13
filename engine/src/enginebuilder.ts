@@ -5,11 +5,11 @@ import { BasicEngine, Engine, EngineState } from "./engine";
 import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
 import { Action } from "./action"
-import { getMatcher, match } from "./actionmatcher"
 import { Env, Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";
+import { matchBuilder, matchModifier, matchVerb } from "./commandmatcher";
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
@@ -126,7 +126,7 @@ export function makeRule(obj : Obj) : Obj {
 }
 
 function createMoveToAction(dir : string, dest : string) : Action {
-    const matcher = getMatcher([match("go"), match(dir)]);
+    const matcher = matchBuilder().withVerb(matchVerb("go")).withModifier(matchModifier(dir)).build();
     const action = (env : Env) => env.execute("moveTo", {"dest" : dest});
     return {
       matcher : matcher,

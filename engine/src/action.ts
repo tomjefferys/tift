@@ -1,5 +1,5 @@
-import { ActionMatcher } from "./actionmatcher"
 import { Env } from "./env"
+import { Matcher } from "./commandmatcher"
 
 // Encapsulates an action
 // eg
@@ -9,6 +9,6 @@ import { Env } from "./env"
 // [go,$dir]
 
 export interface Action {
-    readonly matcher : ActionMatcher,
+    readonly matcher : Matcher,
     readonly action : (env : Env) => void
 }

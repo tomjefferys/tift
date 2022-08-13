@@ -42,7 +42,7 @@ export interface SearchContext {
   verbs: VerbMap,
 }
 
-function buildSearchContext(objs : ContextEntities, verbs : Verb[]) : SearchContext {
+export function buildSearchContext(objs : ContextEntities, verbs : Verb[]) : SearchContext {
   return {
     objs: objs,
     verbs: verbs.reduce((map,verb) => {

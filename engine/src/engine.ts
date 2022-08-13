@@ -1,7 +1,7 @@
 import { Verb } from "./verb"
 import { Entity } from "./entity"
 import { createRootEnv } from "./env"
-import { ContextEntities, getAllCommands } from "./commandsearch"
+import { ContextEntities, getAllCommands, buildSearchContext, searchExact } from "./commandsearch"
 import { Action } from "./action";
 import { Obj } from "./types";
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
@@ -122,10 +122,17 @@ export class BasicEngine implements Engine {
     const allEntities = _.flatten(Object.values(this.context.entities))
     const actions : Action[] = [...allEntities, ...this.context.verbs]
                                   .flatMap(obj => obj?.actions ?? []);
+
+    const searchContext = buildSearchContext(this.context.entities, this.context.verbs);
+    const searchState = searchExact(command, searchContext);
+    if (!searchState) {
+      throw new Error("Could not match command: " + JSON.stringify(command));
+    }
+
     for (const action of actions) {
-        const result = action.matcher(command);
-        if (result.match) {
-          this.env.executeFn(action.action, result.bindings);
+        const result = action.matcher(searchState);
+        if (result.isMatch) {
+          this.env.executeFn(action.action, result.captures ?? {});
           this.context = this.getContext();
           // TODO Break out?  Or run all matching actions?
         }

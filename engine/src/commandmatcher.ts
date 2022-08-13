@@ -105,7 +105,7 @@ class AttributeMatchBuilder {
     }
 }
 
-export const verbMatchBuilder = () : MatchBuilder => new MatchBuilder();
+export const matchBuilder = () : MatchBuilder => new MatchBuilder();
 
 export const attributeMatchBuilder = () => new AttributeMatchBuilder();
 

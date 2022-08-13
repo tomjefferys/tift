@@ -1,7 +1,7 @@
 import { Obj, AnyArray, EnvFn, Env } from "./env";
 import { OutputConsumer, print } from "./messages/output";
-import { getMatcher, match, capture } from "./actionmatcher"
 import { VerbBuilder, VerbTrait } from "./verb"
+import { captureObject, matchBuilder, matchVerb } from "./commandmatcher";
 
 const PLAYER = Symbol("__PLAYER__");
 export const OUTPUT = Symbol("__OUTPUT__");
@@ -17,7 +17,7 @@ export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Playe
 export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
 const LOOK = {
-    matcher : getMatcher([match("look")]),
+    matcher : matchBuilder().withVerb(matchVerb("look")).build(),
     action : (env:Env) => {
         const location = env.execute("getLocation", {});
         const entity = env.execute("getEntity", {"id":location}) as Obj;
@@ -35,7 +35,7 @@ const LOOK = {
 }
 
 const GET = {
-    matcher : getMatcher([match("get"), capture("item")]),
+    matcher : matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
     action : (env : Env) => {
         const itemId = env.getStr("item");
         env.set([itemId,"location"], "INVENTORY");
@@ -43,7 +43,7 @@ const GET = {
 }
 
 const DROP = {
-    matcher : getMatcher([match("drop"), capture("item")]),
+    matcher : matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
     action : (env : Env) => {
         const itemId = env.getStr("item");
         const location = getPlayer(env).location;

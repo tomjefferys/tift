@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { SearchState } from "./commandsearch";
 import { Entity } from "./entity";
 import { Verb } from "./verb"
 
@@ -62,12 +63,29 @@ interface Modifiable {
     modifier : (modType : string, modValue : string) => SentenceNode & Prepositionable & Modifiable
 }
 
-export function verb(verb : Verb) : SentenceNode & Directable & Prepositionable {
+export function verb(verb : Verb) : SentenceNode & Directable & Prepositionable & Modifiable {
     const mainVerb : MainVerb = {
         type : "verb",
         verb : verb
     }
     return directable(modifiable(prepositionable(makeNode(mainVerb))));
+}
+
+// Convert a search state to a command object.  This is a bit ugly, but hopefully only temporary
+export function fromSearchState(searchState : SearchState) : Command {
+    const stage1 = searchState.verb? verb(searchState.verb) : undefined;
+    if (!stage1) {
+        throw new Error("Invalid search state, no verb specified");
+    }
+
+    const stage2 = searchState.directObject? stage1.object(searchState.directObject) : stage1;
+    const stage3 = (searchState.attribute && searchState.indirectObject)
+                        ? stage2.preposition(searchState.attribute).object(searchState.indirectObject) : stage2;
+
+    return Object.entries(searchState.modifiers)
+                 .reduce(
+                    (command, modEntry) => command.modifier(modEntry[0], modEntry[1]),
+                     stage3);
 }
 
 function directable<T extends SentenceNode>(node : T) : T & Directable {
