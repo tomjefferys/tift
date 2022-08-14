@@ -3,9 +3,10 @@ import { SearchState } from "../commandsearch";
 import { matchBuilder, matchVerb, matchObject, captureObject, 
             matchAttribute, matchIndirectObject, captureIndirectObject,
             Matcher, ALWAYS_FAIL, attributeMatchBuilder,
-            matchModifier } from "../commandmatcher";
+            matchAnyModifier} from "../commandmatcher";
 import { mkThunk, Thunk, EnvFn } from "./thunk"
 import { mkResult } from "./parser"
+import { fromSearchState, Command } from "../command";
 
 interface UnitMatch {
     isCapture : boolean,
@@ -47,7 +48,7 @@ export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
 
     const envfn : EnvFn = env => {
         const searchState = env.get("SEARCHSTATE") as SearchState;
-        const matchResult = matcher(searchState);
+        const matchResult = matcher(fromSearchState(searchState));
         return matchResult.isMatch
                     ? onMatch.resolve(env.newChild(matchResult.captures))
                     : mkResult(undefined, {});
@@ -62,15 +63,16 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
     //    a transitive verb should always have a direct object
     // We could possibly not bother with the intermediate data structure here
     //    but this makes the code a bit clearer, and handled captures in a nicer way
-    return (state : SearchState) =>  {
+    return (command : Command) =>  {
         const builder = matchBuilder();
-        if (!state.verb) {
+        const verb = command.getPoS("verb")?.verb;
+        if (!verb) {
             throw new Error("No verb");
         }
         builder.withVerb(matchVerb(compoundMatch.nameMatch.name))
 
         const args = compoundMatch.argMatches.slice().reverse(); // Reverse list so we can use pop 
-        if (state.verb.isTransitive()) {
+        if (verb.isTransitive()) {
             // First match will be the direct object
             const directObject = args.pop();
             builder.withObject(directObject ? getObjectMatcher(directObject) : ALWAYS_FAIL);
@@ -92,7 +94,7 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
         }
         const matcher = builder.build();
     
-        return matcher(state);
+        return matcher(command);
     }
 }
 
@@ -147,4 +149,4 @@ const  getIndirectObjectMatcher : (matchData : UnitMatch) => Matcher =
                                 : matchIndirectObject(matchData.name);
 
 const getModifierMatcher : (match : UnitMatch) => Matcher = 
-            matchData => matchModifier(matchData.name);
+            matchData => matchAnyModifier(matchData.name);

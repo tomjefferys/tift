@@ -11,6 +11,7 @@ import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
 import * as _ from "lodash"
 import { addLibraryFunctions } from "./script/library";
+import { fromSearchState } from "./command";
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -130,7 +131,7 @@ export class BasicEngine implements Engine {
     }
 
     for (const action of actions) {
-        const result = action.matcher(searchState);
+        const result = action.matcher(fromSearchState(searchState));
         if (result.isMatch) {
           this.env.executeFn(action.action, result.captures ?? {});
           this.context = this.getContext();

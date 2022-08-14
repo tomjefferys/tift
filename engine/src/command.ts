@@ -5,7 +5,17 @@ import { Verb } from "./verb"
 
 
 // Part of Speech
-type Part = MainVerb | DirectObject | IndirectObject | Preposition | Modifier
+type Part = MainVerb | DirectObject | IndirectObject | Preposition | Modifier | Preposition
+
+export type PoSType = "verb" | "directObject" | "preposition" | "indirectObject" | "modifier";
+
+type PoSObjectType<T> =
+        T extends "verb" ? MainVerb :
+        T extends "directObject" ? DirectObject : 
+        T extends "preposition" ? Preposition : 
+        T extends "indirectObject" ? IndirectObject :
+        T extends "modifier" ? Modifier :
+        never;
 
 export type Command = SentenceNode;
 
@@ -13,35 +23,42 @@ interface SentenceNode {
     part : Part,
     previous? : SentenceNode,
     
-    hasVerb(verbId : string) : boolean, 
-    hasDirectObject(entityId : string) : boolean,
-    hasPreposition(prepos : string) : boolean,
-    hasModifier(modtype : string, modValue : string) : boolean,
-    hasIndirectObject(entityId : string) : boolean,
-    find(predicate : (part : Part) => boolean) : boolean
+    getPoS<T extends PoSType>(posType : T) : PoSObjectType<T> | undefined,
+    getVerb(verbId : string) : MainVerb | undefined, 
+    getDirectObject(entityId : string) : DirectObject | undefined,
+    getPreposition(prepos : string) : Preposition | undefined,
+    getModifier(modtype : string, modValue : string) : Modifier | undefined,
+    getIndirectObject(entityId : string) : IndirectObject | undefined,
+
+    find(predicate : (part : Part) => boolean) : Part | undefined,
+
+    findAll(predicate : (part : Part) => boolean) : Part[],
+
+    getModifiers() : Modifier[];
+
 }
 
-interface MainVerb {
+export interface MainVerb {
     type : "verb"
     verb : Verb
 }
 
-interface DirectObject {
+export interface DirectObject {
     type : "directObject",
     entity : Entity
 }
 
-interface Preposition {
+export interface Preposition {
     type : "preposition",
     value : string,
 }
 
-interface IndirectObject {
+export interface IndirectObject {
     type : "indirectObject",
     entity : Entity
 }
 
-interface Modifier {
+export interface Modifier {
     type : "modifier"
     modType : string,
     value : string
@@ -124,19 +141,24 @@ function makeNode(part : Part, prev? : SentenceNode) : SentenceNode {
     const node : SentenceNode = {
         part : part, 
         previous : prev,
-        
-        hasVerb : verbId => node.find(part => part.type === "verb" && part.verb.id === verbId),
 
-        hasDirectObject : entityId => node.find(part => part.type === "directObject" && part.entity.id === entityId),
+        getPoS : <T extends PoSType>(posType : T) => node.find(part => part.type === posType) as PoSObjectType<T>,
 
-        hasPreposition : prepos => node.find(part => part.type === "preposition" && part.value === prepos),
+        getVerb : verbId => node.find(part => part.type === "verb" && part.verb.id === verbId) as MainVerb,
 
-        hasModifier : (modtype, modValue) => node.find(part => part.type === "modifier" && part.modType === modtype && part.value === modValue),
+        getDirectObject : entityId => node.find(part => part.type === "directObject" && part.entity.id === entityId) as DirectObject,
 
-        hasIndirectObject : (entityId : string) => node.find(part => part.type === "indirectObject" && part.entity.id === entityId),
+        getPreposition : prepos => node.find(part => part.type === "preposition" && part.value === prepos) as Preposition,
 
-        find : (predicate : (part : Part) => boolean) => predicate(part) || (prev?.find(predicate) ?? false)
+        getModifier : (modtype, modValue) => node.find(part => part.type === "modifier" && part.modType === modtype && part.value === modValue) as Modifier,
+
+        getIndirectObject : (entityId : string) => node.find(part => part.type === "indirectObject" && part.entity.id === entityId) as IndirectObject,
+
+        find : predicate => predicate(part) ? part : prev?.find(predicate),
+
+        findAll : predicate => (prev?.findAll(predicate) ?? []).concat(predicate(part)? [part] : []),
+
+        getModifiers : () => node.findAll(part => part.type === "modifier") as Modifier[]
     }
     return node;
 }
-

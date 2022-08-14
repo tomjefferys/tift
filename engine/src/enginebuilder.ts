@@ -126,7 +126,7 @@ export function makeRule(obj : Obj) : Obj {
 }
 
 function createMoveToAction(dir : string, dest : string) : Action {
-    const matcher = matchBuilder().withVerb(matchVerb("go")).withModifier(matchModifier(dir)).build();
+    const matcher = matchBuilder().withVerb(matchVerb("go")).withModifier(matchModifier("direction", dir)).build();
     const action = (env : Env) => env.execute("moveTo", {"dest" : dest});
     return {
       matcher : matcher,

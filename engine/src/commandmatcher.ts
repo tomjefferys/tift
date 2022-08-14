@@ -1,4 +1,4 @@
-import { SearchState } from "./commandsearch";
+import { Command, PoSType } from "./command";
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -15,7 +15,7 @@ import { SearchState } from "./commandsearch";
 // So what is the data structure
 
 
-export type Matcher = (state : SearchState) => MatchResult;
+export type Matcher = (command : Command) => MatchResult;
 
 export interface MatchResult {
     isMatch : boolean,
@@ -26,8 +26,8 @@ const FAILED_MATCH : MatchResult = { isMatch : false };
 
 export const ALWAYS_FAIL : Matcher = (_state) => FAILED_MATCH;
 
-function failIfProvided(stateField : keyof SearchState) : Matcher {
-    return state => ({ isMatch : state[stateField] === undefined})
+function failIfProvided(part : PoSType) : Matcher {
+    return command => ({ isMatch : !command.getPoS(part) })
 }
 
 class MatchBuilder {
@@ -61,13 +61,13 @@ class MatchBuilder {
             throw new Error("A verb must be supplied to a match builder");
         }
 
-        const attributeMatcher = this?.attributeBuilder?.build() ?? failIfProvided("attribute");
+        const attributeMatcher = this?.attributeBuilder?.build() ?? failIfProvided("preposition");
         const objMatcher = this?.obj ?? failIfProvided("directObject");
         const verbMatcher = this?.verb ?? failIfProvided("verb");
         const modMatchers = this.modifiers.length ? this.modifiers : [matchNoModifiers()];
         const matchers : Matcher[] = [verbMatcher, objMatcher, attributeMatcher, ...modMatchers];
 
-        return state => matchAll(state, ...matchers);
+        return command => matchAll(command, ...matchers);
     }
 }
 
@@ -110,34 +110,43 @@ export const matchBuilder = () : MatchBuilder => new MatchBuilder();
 export const attributeMatchBuilder = () => new AttributeMatchBuilder();
 
 export const matchVerb = (verbId : string) : Matcher => 
-                        state => ({ isMatch : state.verb?.id === verbId });
+                        command => ({ isMatch : Boolean(command.getVerb(verbId)) });
 
 export const matchObject = (objectId : string) : Matcher => 
-                    state => ({ isMatch : state.directObject?.id === objectId });
+                    command => ({ isMatch : Boolean(command.getDirectObject(objectId)) });
 
 export const matchIndirectObject = (objectId : string) : Matcher => 
-                    state => ({ isMatch : state.indirectObject?.id === objectId });
+                    command => ({ isMatch : Boolean(command.getIndirectObject(objectId)) });
 
 export const matchAttribute = (attribute : string) : Matcher =>
-                    state => ({ isMatch : state.attribute === attribute});
+                    command => ({ isMatch : Boolean(command.getPreposition(attribute)) });
 
-export const matchModifier = (modifier : string) : Matcher =>
-                    state => ({ isMatch : Object.values(state.modifiers).indexOf(modifier) !== -1})
+export const matchModifier = (modType : string, modifier : string) : Matcher =>
+                    command => ({ isMatch : Boolean(command.getModifier(modType, modifier)) });
+
+export const matchAnyModifier = (modValue : string) : Matcher => 
+                    command => ({ isMatch : Boolean(command.find(part => part.type === "modifier" && part.value === modValue))})
 
 export const matchNoModifiers = () : Matcher => 
-                    state => ({ isMatch : Object.keys(state.modifiers).length === 0})
+                    command => ({ isMatch : command.getModifiers().length === 0})
 
 export const captureObject = (captureName : string) : Matcher => 
-        state => (state.directObject !== undefined)
-                            ? { isMatch : true, captures : { [captureName] : state.directObject?.id}}
+        command => {
+            const directObject = command.getPoS("directObject");
+            return (directObject !== undefined)
+                            ? { isMatch : true, captures : { [captureName] : directObject.entity.id }}
                             : FAILED_MATCH;
+        }
 
-export const captureIndirectObject = (captureName : string) : Matcher => 
-        state => (state.indirectObject !== undefined)
-                            ? { isMatch : true, captures : { [captureName] : state.indirectObject?.id}}
+export const captureIndirectObject = (captureName : string) : Matcher =>
+        command => {
+            const indirectObject = command.getPoS("indirectObject");
+            return (indirectObject !== undefined )
+                            ? { isMatch : true, captures : { [captureName] : indirectObject.entity.id }}
                             : FAILED_MATCH;
+        }
 
-const matchAll : (state : SearchState, ...matchers : Matcher[]) => MatchResult = 
+const matchAll : (command : Command, ...matchers : Matcher[]) => MatchResult = 
     (state, ...matchers) => combineMatches(...matchers.map(matcher => matcher(state)));
 
 
