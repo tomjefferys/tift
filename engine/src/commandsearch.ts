@@ -2,10 +2,11 @@ import { Verb, VerbContext } from "./verb"
 import { VerbMap } from "./types"
 import { Entity, VerbMatcher } from "./entity"
 import { MultiDict } from "./util/multidict"
-import { IdValue, mkIdValue } from "./shared"
+import { IdValue } from "./shared"
 import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
 import * as Arrays from "./util/arrays"
+import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable } from "./command"
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -14,27 +15,18 @@ import * as Arrays from "./util/arrays"
 // verb object (to) direction          -- tranistive verb with qualifier
 // verb object direction (with) object -- transitive verb with qual and attr
 
-export interface SearchState {
-  readonly verb? : Verb;
-  readonly directObject? : Entity;
-  readonly attribute? : string;   // TODO could have multiple attributes, should be Map<Attribute,IndirectObj>
-  readonly indirectObject? : Entity;
-  readonly modifiers : {[key:string]:string};
-  readonly words : IdValue<string>[];
-}
-
-type SearchFn = (context: SearchContext, state: SearchState) => SearchState[]; 
+type SearchFn = (context: SearchContext, state: Command) => Command[]; 
 type SearchNode = Tree.ValueNode<SearchFn>;
-type SearchResult = [SearchState, SearchNode];
+type SearchResult = [Command, SearchNode];
 
 export type ContextEntities = MultiDict<Entity>;
 
-const INITIAL_STATE : SearchState = {modifiers : {}, words : []};
+const INITIAL_STATE : Command = start();
 
 export function getAllCommands(objs: ContextEntities, verbs: Verb[]) : IdValue<string>[][] {
   const context = buildSearchContext(objs, verbs);
   return searchAll(context)
-          .map(state => state.words);
+          .map(state => state.getWords());
 }
 
 export interface SearchContext {
@@ -136,13 +128,11 @@ const getModifierValues = (context : SearchContext, modifier : string, verbConte
  */
 const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
   return (context, state) => {
-    const states : SearchState[] = [];
+    const states : Command[] = [];
     for(const [verbContext, entities] of Object.entries(context.objs)) {
       getVerbs(entities, context.verbs, verbContext)
         .filter(filter)
-        .map(verb => ({...state,
-                         verb: verb,
-                         words: [...state.words, mkIdValue(verb.id, verb.getName())]}))
+        .map(v => castVerbable(state).verb(v))
         .forEach(state => states.push(state));
     }
     return states;
@@ -164,41 +154,29 @@ const getVerbs = (entities : Entity[], verbs : VerbMap, context : VerbContext) :
             .filter(verb => verb.contexts.length == 0 || verb.contexts.includes(context));
 
 const directObjectSearch : SearchFn = (context, state) => {
-  const objs = state.verb && state.verb.isTransitive()
-                  ? getDirectObjects(context, state.verb)
-                  : [];
-  return objs.map(obj => ({...state,
-                directObject : obj,
-                words: [...state.words, mkIdValue(obj.id, obj.getName())]}));
+  const verb = state.getPoS("verb")?.verb;
+  const objs = verb && verb.isTransitive() ? getDirectObjects(context, verb) : [];
+  return objs.map(obj => castDirectable(state).object(obj));
 }
 
 const attributeSearch : SearchFn = (context, state) => {
-  const attributes = state.verb
-                      ? getVerbAttributes(context, state.verb)
-                      : [];
-  return attributes.map(attr => ({...state,
-                                  attribute: attr,
-                                  words: [...state.words, mkIdValue(attr, attr)]}));
+  const verb = state.getPoS("verb")?.verb;
+  const attributes = verb ? getVerbAttributes(context, verb) : [];
+  return attributes.map(attr => castPreopositional(state).preposition(attr));
 }
 
 const indirectObjectSearch : SearchFn = (context, state) => {
-  const objs = state.verb && state.attribute
-                ? getIndirectObjects(context, state.verb, state.attribute)
-                : [];
-  return objs.map(obj => ({...state,
-                          indirectObject: obj,
-                          words: [...state.words, mkIdValue(obj.id, obj.getName())]}));
+  const verb = state.getPoS("verb")?.verb;
+  const preposition = state.getPoS("preposition")?.value;
+  
+  const objs = verb && preposition ? getIndirectObjects(context, verb, preposition) : [];
+  return objs.map(obj => castIndirectable(state).object(obj));
 }
 
 const modifierSearch : SearchFn = (context, state) => {
-    const newModifiers = state.verb? getVerbModifiers(context, state.verb) : {};
-    return multidict.entries(newModifiers)
-             .map(([modType, modValue]) => {
-                return {...state,
-                        modifiers: {...state.modifiers, [modType]: modValue},
-                        words: [...state.words, mkIdValue(modValue, modValue)]}
-             });
-}
+    const verb = state.getPoS("verb")?.verb;
+    const newModifiers = verb? getVerbModifiers(context, verb) : {};
+    return multidict.entries(newModifiers).map(([modType, modValue]) => castModifiable(state).modifier(modType, modValue))}
 
 const TRANS_VERB = getVerbSearch(verb => verb.isTransitive());
 const INTRANS_VERB = getVerbSearch(verb => verb.isIntransitive());
@@ -228,9 +206,9 @@ const doSearch = (context : SearchContext,
 
 const searchAll = (context : SearchContext,
                    searchNode = WORD_PATTERNS,
-                   state = INITIAL_STATE) : SearchState[] => {
+                   state = INITIAL_STATE) : Command[] => {
   const results = doSearch(context, searchNode, state);
-  const states : SearchState[] = [];
+  const states : Command[] = [];
   if (Tree.isTerminal(searchNode)) {
     states.push(state);
   }
@@ -258,11 +236,11 @@ const searchAll = (context : SearchContext,
 export const searchNext = (partial : string[],
                            context : SearchContext,
                            searchNode = WORD_PATTERNS,
-                           state = INITIAL_STATE) : SearchState[] => 
+                           state = INITIAL_STATE) : Command[] => 
     doSearch(context, searchNode, state)
-                    .filter(([state, _]) => Arrays.prefixEquals(partial, state.words.map(idValue => idValue.id)))
+                    .filter(([state, _]) => Arrays.prefixEquals(partial, state.getWords().map(idValue => idValue.id)))
                     .flatMap(([state, node]) => 
-                                  (state.words.length > partial.length) 
+                                  (state.size() > partial.length) 
                                         ? [state] 
                                         : searchNext(partial, context, node, state));
 
@@ -277,13 +255,14 @@ export const searchNext = (partial : string[],
 export const searchExact = (command : string[],
                             context : SearchContext, 
                             searchNode = WORD_PATTERNS,
-                            state = INITIAL_STATE) : SearchState | undefined => 
+                            state = INITIAL_STATE) : Command | undefined => 
     doSearch(context, searchNode, state)
-            .filter(([state, _]) => Arrays.prefixEquals(command, state.words.map(idValue => idValue.id)))
+            .filter(([state, _]) => Arrays.prefixEquals(command, state.getWords().map(idValue => idValue.id)))
             .map(([state, node]) => {
-              if (state.words.length === command.length && Tree.isTerminal(node)) {
+              const wordLength = state.size();
+              if (wordLength === command.length && Tree.isTerminal(node)) {
                 return state;
-              } else if (state.words.length < command.length) {
+              } else if (wordLength < command.length) {
                 return searchExact(command, context, node, state);
               } else {
                 return undefined;

@@ -1,15 +1,16 @@
 import _ from "lodash";
-import { SearchState } from "./commandsearch";
 import { Entity } from "./entity";
+import { IdValue, mkIdValue } from "./shared";
 import { Verb } from "./verb"
 
 
 // Part of Speech
-type Part = MainVerb | DirectObject | IndirectObject | Preposition | Modifier | Preposition
+type Part =  Start | MainVerb | DirectObject | IndirectObject | Preposition | Modifier | Preposition
 
-export type PoSType = "verb" | "directObject" | "preposition" | "indirectObject" | "modifier";
+export type PoSType = "start" | "verb" | "directObject" | "preposition" | "indirectObject" | "modifier";
 
 type PoSObjectType<T> =
+        T extends "start" ? Start :
         T extends "verb" ? MainVerb :
         T extends "directObject" ? DirectObject : 
         T extends "preposition" ? Preposition : 
@@ -19,7 +20,7 @@ type PoSObjectType<T> =
 
 export type Command = SentenceNode;
 
-interface SentenceNode {
+export interface SentenceNode {
     part : Part,
     previous? : SentenceNode,
     
@@ -36,6 +37,16 @@ interface SentenceNode {
 
     getModifiers() : Modifier[];
 
+    size() : number;
+
+    getWords() : IdValue<string>[];
+
+    toString() : string;
+
+}
+
+export interface Start {
+    type : "start"
 }
 
 export interface MainVerb {
@@ -64,8 +75,12 @@ export interface Modifier {
     value : string
 }
 
+interface Verbable {
+    verb : (verb : Verb) => SentenceNode & Directable & Prepositionable & Modifiable
+}
+
 interface Directable {
-    object : (entity : Entity) => SentenceNode & Prepositionable & Modifiable;
+    object : (entity : Entity) => SentenceNode & Prepositionable & Modifiable
 }
 
 interface Indirectable {
@@ -80,6 +95,34 @@ interface Modifiable {
     modifier : (modType : string, modValue : string) => SentenceNode & Prepositionable & Modifiable
 }
 
+function getWords(node : SentenceNode) : IdValue<string>[] {
+    let word = undefined;
+    const part = node.part;
+    switch(part.type) {
+        case "verb":
+            word = mkIdValue(part.verb.id, part.verb.getName());
+            break;
+        case "directObject":
+        case "indirectObject":
+            word = mkIdValue(part.entity.id, part.entity.getName());
+            break;
+        case "preposition":
+        case "modifier":
+            word = mkIdValue(part.value, part.value);
+            break;
+        default:
+            throw new Error("Invalid PoS type" + part.type);
+    }
+
+    const words = (node.previous && node.previous.part.type !== "start")? getWords(node.previous) : [];
+    words.push(word);
+    return words;
+}
+
+export function start() : SentenceNode & Verbable {
+    return verbable(makeNode({type : "start"}));
+}
+
 export function verb(verb : Verb) : SentenceNode & Directable & Prepositionable & Modifiable {
     const mainVerb : MainVerb = {
         type : "verb",
@@ -88,21 +131,47 @@ export function verb(verb : Verb) : SentenceNode & Directable & Prepositionable 
     return directable(modifiable(prepositionable(makeNode(mainVerb))));
 }
 
-// Convert a search state to a command object.  This is a bit ugly, but hopefully only temporary
-export function fromSearchState(searchState : SearchState) : Command {
-    const stage1 = searchState.verb? verb(searchState.verb) : undefined;
-    if (!stage1) {
-        throw new Error("Invalid search state, no verb specified");
+export function castVerbable<T extends SentenceNode>(node : T) : T & Verbable {
+    if (!("verb" in node && node.part.type === "start") ) {
+        throw new Error(node + " can't accept a verb, verbs must be at the start of a commmand");
     }
+    return node as T & Verbable;
+}
 
-    const stage2 = searchState.directObject? stage1.object(searchState.directObject) : stage1;
-    const stage3 = (searchState.attribute && searchState.indirectObject)
-                        ? stage2.preposition(searchState.attribute).object(searchState.indirectObject) : stage2;
+export function castDirectable<T extends SentenceNode>(node : T) : T & Directable {
+    if (!("object" in node && node.part.type === "verb") ) {
+        throw new Error(node + " can't accept a direct object, it must be a verb");
+    }
+    return node as T & Directable;
+}
 
-    return Object.entries(searchState.modifiers)
-                 .reduce(
-                    (command, modEntry) => command.modifier(modEntry[0], modEntry[1]),
-                     stage3);
+export function castIndirectable<T extends SentenceNode>(node : T) : T & Directable {
+    if (!("object" in node && node.part.type === "preposition") ) {
+        throw new Error(node + " can't accept a direct inobject, it must be a preposition");
+    }
+    return node as T & Indirectable;
+}
+
+export function castPreopositional<T extends SentenceNode>(node : T) : T & Prepositionable {
+    if (!("preposition" in node)) {
+        throw new Error(node + " can't accept a proposition");
+    }
+    return node as T & Prepositionable;
+}
+
+export function castModifiable<T extends SentenceNode>(node : T) : T & Modifiable {
+    if (!("modifier" in node)) {
+        throw new Error(node + " can't accept a modifier");
+    }
+    return node as T & Modifiable;
+}
+
+function verbable<T extends SentenceNode>(node : T) : T & Verbable {
+    const newNode = {
+        ...node,
+        verb : (verb : Verb) => directable(modifiable(prepositionable(makeNode({ type : "verb", verb : verb}, node))))
+    }
+    return newNode;
 }
 
 function directable<T extends SentenceNode>(node : T) : T & Directable {
@@ -120,6 +189,7 @@ function indirectable<T extends SentenceNode>(node : T) : T & Indirectable {
     }
     return newNode;
 }
+
 
 function prepositionable<T extends SentenceNode>(node : T) : T & Prepositionable {
     const newNode = {
@@ -158,7 +228,14 @@ function makeNode(part : Part, prev? : SentenceNode) : SentenceNode {
 
         findAll : predicate => (prev?.findAll(predicate) ?? []).concat(predicate(part)? [part] : []),
 
-        getModifiers : () => node.findAll(part => part.type === "modifier") as Modifier[]
+        getModifiers : () => node.findAll(part => part.type === "modifier") as Modifier[],
+
+        size : () => ((node.part.type !== "start") ? 1 : 0) + ((node.previous)? node.previous.size() : 0),
+
+        toString  : () => getWords(node).map(idValue => idValue.id).reduce((item, acc) => item + ", " + acc),
+
+        getWords : () => getWords(node)
+
     }
     return node;
 }

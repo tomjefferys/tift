@@ -1,12 +1,11 @@
 import { CallExpression, Expression, Identifier, MemberExpression } from "jsep"
-import { SearchState } from "../commandsearch";
 import { matchBuilder, matchVerb, matchObject, captureObject, 
             matchAttribute, matchIndirectObject, captureIndirectObject,
             Matcher, ALWAYS_FAIL, attributeMatchBuilder,
             matchAnyModifier} from "../commandmatcher";
 import { mkThunk, Thunk, EnvFn } from "./thunk"
 import { mkResult } from "./parser"
-import { fromSearchState, Command } from "../command";
+import { Command } from "../command";
 
 interface UnitMatch {
     isCapture : boolean,
@@ -47,8 +46,8 @@ export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
     // 4. execute onMatch
 
     const envfn : EnvFn = env => {
-        const searchState = env.get("SEARCHSTATE") as SearchState;
-        const matchResult = matcher(fromSearchState(searchState));
+        const searchState = env.get("SEARCHSTATE") as Command;
+        const matchResult = matcher(searchState);
         return matchResult.isMatch
                     ? onMatch.resolve(env.newChild(matchResult.captures))
                     : mkResult(undefined, {});

@@ -1,4 +1,5 @@
-import {getAllCommands, ContextEntities, searchNext, searchExact, SearchContext, SearchState} from "../src/commandsearch";
+import {getAllCommands, ContextEntities, searchNext, searchExact, SearchContext } from "../src/commandsearch";
+import {Command} from "../src/command"
 import {Entity, EntityBuilder} from "../src/entity";
 import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
 import * as _ from "lodash"
@@ -155,13 +156,13 @@ test("Test partial search", () => {
   }
 
   let next = searchNext([], context);
-  expect(getWords(next)).toStrictEqual([["push"]]);
+  expect(getCommandWords(next)).toStrictEqual([["push"]]);
 
   next = searchNext(["push"], context);
-  expect(getWords(next)).toStrictEqual([["push", "box"]]);
+  expect(getCommandWords(next)).toStrictEqual([["push", "box"]]);
 
   next = searchNext(["push", "box"], context);
-  expect(getWords(next)).toEqual(expect.arrayContaining([["push", "box", "north"], ["push", "box", "east"]]));
+  expect(getCommandWords(next)).toEqual(expect.arrayContaining([["push", "box", "north"], ["push", "box", "east"]]));
 });
 
 test("Test exact search", () => {
@@ -178,16 +179,16 @@ test("Test exact search", () => {
 
   exact = searchExact(["push", "box"], context);
   expect(exact).not.toBeUndefined();
-  expect(getWords([exact as SearchState])).toEqual(expect.arrayContaining([["push", "box"]]));
+  expect(getCommandWords([exact as Command])).toEqual(expect.arrayContaining([["push", "box"]]));
 
   exact = searchExact(["push", "box", "north"], context);
   expect(exact).not.toBeUndefined();
-  expect(getWords([exact as SearchState])).toEqual(expect.arrayContaining([["push", "box", "north"]]));
+  expect(getCommandWords([exact as Command])).toEqual(expect.arrayContaining([["push", "box", "north"]]));
 })
 
 const createVerbMap = (verbs : Verb[]) : VerbMap => verbs.reduce((obj, verb) => ({...obj, [verb.id] : verb}), {});
 
-const getWords = (states : SearchState[]) : string[][] => states.map(state => state.words.map(wordId => wordId.id));
+const getCommandWords = (states : Command[]) : string[][] => states.map(state => state.getWords().map(wordId => wordId.id));
 
 function getAllCommandIds(entities : ContextEntities | Entity[], verbs : Verb[]) {
   const contextEntities = _.isArray(entities)? {"default": entities} : entities;
