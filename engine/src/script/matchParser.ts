@@ -7,6 +7,8 @@ import { mkThunk, Thunk, EnvFn } from "./thunk"
 import { mkResult } from "./parser"
 import { Command } from "../command";
 
+export const COMMAND = Symbol("__COMMAND__");
+
 interface UnitMatch {
     isCapture : boolean,
     name : string
@@ -46,7 +48,7 @@ export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
     // 4. execute onMatch
 
     const envfn : EnvFn = env => {
-        const searchState = env.get("SEARCHSTATE") as Command;
+        const searchState = env.get(COMMAND) as Command;
         const matchResult = matcher(searchState);
         return matchResult.isMatch
                     ? onMatch.resolve(env.newChild(matchResult.captures))

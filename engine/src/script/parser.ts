@@ -3,6 +3,7 @@ import { Result, EnvFn, Thunk, ThunkType, mkThunk } from "./thunk"
 
 import { Env } from '../env'
 import * as _ from 'lodash'
+import { evaluateMatch } from './matchParser';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type BinaryFunction = (l : any, r : any) => any;
@@ -203,7 +204,7 @@ function getIdentifierType(identifier : Identifier) : ThunkType {
 
 function evaluateBinaryExpression(expression : BinaryExpression)  : Thunk {
     if (expression.operator == "=>")  {
-        // TODO
+        return evalutateMatchExpression(expression);
     }
 
     const leftThunk = evaluate(expression.left);
@@ -220,18 +221,16 @@ function evaluateBinaryExpression(expression : BinaryExpression)  : Thunk {
     return mkThunk(expression, envFn);
 }
 
+function evalutateMatchExpression(expression : BinaryExpression) : Thunk {
+    const rightThunk = evaluate(expression.right);
+    const matchExpression = evaluateMatch(expression.left, rightThunk);
+    return matchExpression;
+}
+
 function evaluateArrayExpression(expression : ArrayExpression) : Thunk {
     const elementThunks = expression.elements.map(e => evaluate(e));
     const envFn : EnvFn = env => mkResult(elementThunks.map(thunk => thunk.resolve(env).getValue()));
     return mkThunk(expression, envFn);
-}
-
-function evalutateMatchExpression(expression : BinaryExpression) : Thunk {
-    const match = expression.left;
-    const action = expression.right;
-    // Convert the match to an Action Matcher
-
-    return mkThunk(expression, env => mkResult(""));
 }
 
 /**

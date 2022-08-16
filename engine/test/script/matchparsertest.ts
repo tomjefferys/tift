@@ -1,6 +1,6 @@
 import jsep from 'jsep'
 import { setUpEnv } from "../testutils/testutils"
-import { evaluateMatch } from "../../src/script/matchParser"
+import { COMMAND, evaluateMatch } from "../../src/script/matchParser"
 import { evaluate } from "../../src/script/parser"
 import { EAT, LOOK, APPLE, STIR, SOUP, SPOON, GO, PUSH, BOX } from "../testutils/testentities"
 import { Env } from '../../src/env'
@@ -106,5 +106,5 @@ function doMatch(command : Command, match : string, onMatch = DEFALT_ONMATCH) {
     const onMatchThunk = evaluate(jsep(onMatch));
 
     const matchThunk = evaluateMatch(expression, onMatchThunk);
-    matchThunk.resolve(env.newChild({"SEARCHSTATE" : command }));
+    matchThunk.resolve(env.newChild({ [COMMAND] : command }));
 }

@@ -1,4 +1,8 @@
+import { toString } from "lodash";
+import { start } from "../../src/command";
+import { COMMAND } from "../../src/script/matchParser";
 import { parse } from "../../src/script/parser"
+import { APPLE, EAT, SOUP, STIR } from "../testutils/testentities";
 import { setUpEnv } from "../testutils/testutils"
 
 test("Test simple write expression", () => {
@@ -135,7 +139,27 @@ test("Test array access", () => {
     expect(messages).toStrictEqual(["bar", "foo"]);
 });
 
-test("Test match operator", () => {
+test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
-    //const fn = parse("stir($this) => 'you stir the soup'");
+    const fn = parse("stir($self) => write('you stir the ' + self)");
+    const command = start().verb(STIR).object(SOUP);
+    fn(env.newChild({[COMMAND]: command}));
+    expect(messages).toContain("you stir the soup");
+})
+
+test("Test match operator, unsuccessful match", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse("stir($self) => write('you stir the ' + self)");
+    const command = start().verb(EAT).object(APPLE);
+    fn(env.newChild({[COMMAND]: command}));
+    expect(messages.length).toBe(0);
+})
+
+test("Test match operator, return string", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse("stir($self) => 'you stir the ' + self");
+    const command = start().verb(STIR).object(SOUP);
+    const result = fn(env.newChild({[COMMAND]: command}));
+    expect(messages.length).toBe(0);
+    expect(result).toEqual("you stir the soup");
 })
