@@ -2,6 +2,8 @@ import { Obj, AnyArray, EnvFn, Env } from "./env";
 import { OutputConsumer, print } from "./messages/output";
 import { VerbBuilder, VerbTrait } from "./verb"
 import { captureObject, matchBuilder, matchVerb } from "./commandmatcher";
+import { createMatcherThunk } from "./script/matchParser";
+import { mkResult, mkThunk } from "./script/thunk";
 
 const PLAYER = Symbol("__PLAYER__");
 export const OUTPUT = Symbol("__OUTPUT__");
@@ -16,9 +18,9 @@ export interface Player {
 export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Player;
 export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
-const LOOK = {
-    matcher : matchBuilder().withVerb(matchVerb("look")).build(),
-    action : (env:Env) => {
+const LOOK = createMatcherThunk(
+    matchBuilder().withVerb(matchVerb("look")).build(),
+    mkThunk(env => {
         const location = env.execute("getLocation", {});
         const entity = env.execute("getEntity", {"id":location}) as Obj;
         const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
@@ -31,25 +33,29 @@ const LOOK = {
             env.execute("write", {"value": item["name"] ?? item["id"]});
             env.execute("write", {"value":"<br/>"});
         }
-    } 
-}
+        return mkResult(true);
+    })
+);
 
-const GET = {
-    matcher : matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
-    action : (env : Env) => {
+
+const GET = createMatcherThunk(
+    matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
+    mkThunk(env => {
         const itemId = env.getStr("item");
         env.set([itemId,"location"], "INVENTORY");
-    }
-}
+        return mkResult(true);
+    })
+);
 
-const DROP = {
-    matcher : matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
-    action : (env : Env) => {
+const DROP = createMatcherThunk(
+    matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
+    mkThunk(env => {
         const itemId = env.getStr("item");
         const location = getPlayer(env).location;
         env.set([itemId,"location"], location);
-    }
-}
+        return mkResult(true);
+    })
+);
 
 // TODO we should load this from a data file
 export const DEFAULT_VERBS = [

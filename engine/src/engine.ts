@@ -2,7 +2,6 @@ import { Verb } from "./verb"
 import { Entity } from "./entity"
 import { createRootEnv } from "./env"
 import { ContextEntities, getAllCommands, buildSearchContext, searchExact } from "./commandsearch"
-import { Action } from "./action";
 import { Obj } from "./types";
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
 import { OutputConsumer } from "./messages/output";
@@ -11,6 +10,8 @@ import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
 import * as _ from "lodash"
 import { addLibraryFunctions } from "./script/library";
+import { Thunk } from "./script/thunk";
+import { COMMAND } from "./script/matchParser";
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -119,23 +120,19 @@ export class BasicEngine implements Engine {
   }
   
   execute(command: string[]): void {
-    const allEntities = _.flatten(Object.values(this.context.entities))
-    const actions : Action[] = [...allEntities, ...this.context.verbs]
+    const allContextEntities = _.flatten(Object.values(this.context.entities))
+    const actions : Thunk[] = [...allContextEntities, ...this.context.verbs]
                                   .flatMap(obj => obj?.actions ?? []);
 
     const searchContext = buildSearchContext(this.context.entities, this.context.verbs);
-    const searchState = searchExact(command, searchContext);
-    if (!searchState) {
+    const matchedCommand = searchExact(command, searchContext);
+    if (!matchedCommand) {
       throw new Error("Could not match command: " + JSON.stringify(command));
     }
 
     for (const action of actions) {
-        const result = action.matcher(searchState);
-        if (result.isMatch) {
-          this.env.executeFn(action.action, result.captures ?? {});
-          this.context = this.getContext();
-          // TODO Break out?  Or run all matching actions?
-        }
+        action.resolve(this.env.newChild({[COMMAND] : matchedCommand}))
+        this.context = this.getContext();
     }
 
     // Find and execute any rules

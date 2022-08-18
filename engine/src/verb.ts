@@ -1,6 +1,6 @@
-import { Action } from "./action";
 import { Obj } from "./types";
 import { getString } from "./obj";
+import { Thunk } from "./script/thunk";
 
 export type VerbContext = string;
 
@@ -17,7 +17,7 @@ export class Verb {
   readonly attributes : string[];
   readonly traits : VerbTrait[];
   readonly modifiers : string[];
-  readonly actions : Action[];
+  readonly actions : Thunk[];
   readonly contexts : VerbContext[];
 
   constructor(id : string,
@@ -25,7 +25,7 @@ export class Verb {
               attributes : string[],
               traits : VerbTrait[],
               modifiers : string[],
-              actions : Action[],
+              actions : Thunk[],
               contexts : VerbContext[]) {
     this.id = id;
     this.props = props;
@@ -60,7 +60,7 @@ export class VerbBuilder {
   attributes : string[] = [];
   traits : VerbTrait[] = [];
   modifiers : string[] = [];
-  actions : Action[] = [];
+  actions : Thunk[] = [];
   contexts : VerbContext[] = [];
 
   constructor(props : Obj) {
@@ -94,7 +94,7 @@ export class VerbBuilder {
     return this;
   }
   
-  withAction(action : Action) : VerbBuilder {
+  withAction(action : Thunk) : VerbBuilder {
     this.actions.push(action);
     return this;
   }

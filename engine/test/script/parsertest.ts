@@ -1,4 +1,3 @@
-import { toString } from "lodash";
 import { start } from "../../src/command";
 import { COMMAND } from "../../src/script/matchParser";
 import { parse } from "../../src/script/parser"

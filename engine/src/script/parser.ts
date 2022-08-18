@@ -1,5 +1,5 @@
 import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression} from 'jsep';
-import { Result, EnvFn, Thunk, ThunkType, mkThunk } from "./thunk"
+import { Result, EnvFn, Thunk, ThunkType, mkThunk, mkResult } from "./thunk"
 
 import { Env } from '../env'
 import * as _ from 'lodash'
@@ -98,7 +98,7 @@ function evaluateCallExpression(callExpression : CallExpression) : Thunk {
         }
         return result;
     }
-    return mkThunk(callExpression, envFn)
+    return mkThunk(envFn, callExpression)
 }
 
 function evaluateBuiltInArgs(calleeName : string, args : Expression[]) {
@@ -138,7 +138,7 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
             return mkResult(obj[property]);
         }
     }
-    return mkThunk(memberExpression, envFn, builtInProperty? "property" : "normal");
+    return mkThunk(envFn, memberExpression, builtInProperty? "property" : "normal");
 }
 
 function getBuiltInProperty(expression : Expression) : string | undefined {
@@ -160,7 +160,7 @@ function getBuiltInProperty(expression : Expression) : string | undefined {
 function evalutateName(expression : Expression) : Thunk {
     switch(expression.type) {
         case "Identifier":
-            return mkThunk(expression, _ => mkResult((expression as Identifier).name));
+            return mkThunk(_ => mkResult((expression as Identifier).name), expression);
         case "Literal":
             return evaluateLiteral(expression as Literal);
         default:
@@ -188,7 +188,7 @@ function evaluateIdentifier(identifier : Identifier) : Thunk {
             envFn = env => mkResult(env.get(identifier.name));
             break;
     }
-    return mkThunk(identifier, envFn, type);
+    return mkThunk(envFn, identifier, type);
 }
 
 function getIdentifierType(identifier : Identifier) : ThunkType {
@@ -218,7 +218,7 @@ function evaluateBinaryExpression(expression : BinaryExpression)  : Thunk {
         const right = rightThunk.resolve(env).getValue();
         return mkResult(fn(left, right));
     }
-    return mkThunk(expression, envFn);
+    return mkThunk(envFn, expression);
 }
 
 function evalutateMatchExpression(expression : BinaryExpression) : Thunk {
@@ -230,7 +230,7 @@ function evalutateMatchExpression(expression : BinaryExpression) : Thunk {
 function evaluateArrayExpression(expression : ArrayExpression) : Thunk {
     const elementThunks = expression.elements.map(e => evaluate(e));
     const envFn : EnvFn = env => mkResult(elementThunks.map(thunk => thunk.resolve(env).getValue()));
-    return mkThunk(expression, envFn);
+    return mkThunk(envFn, expression);
 }
 
 /**
@@ -239,23 +239,23 @@ function evaluateArrayExpression(expression : ArrayExpression) : Thunk {
  * @param result 
  * @returns 
  */
-export function mkResult(result : unknown, properties = {}) : Result {
-    const isAlreadyResult = result && _.has(result,"value");
-    if (isAlreadyResult) { 
-        return result as Result;
-    }
-    const resultObj = { 
-        value : result,
-        getValue : () => {
-            return resultObj.value;
-        }
-    };
-    return {...resultObj, ...properties};
-}
+//export function mkResult(result : unknown, properties = {}) : Result {
+//    const isAlreadyResult = result && _.has(result,"value");
+//    if (isAlreadyResult) { 
+//        return result as Result;
+//    }
+//    const resultObj = { 
+//        value : result,
+//        getValue : () => {
+//            return resultObj.value;
+//        }
+//    };
+//    return {...resultObj, ...properties};
+//}
 
 function evaluateLiteral(literal : Literal) : Thunk {
     const envFn : EnvFn =  _ => mkResult(literal.value);
-    return mkThunk(literal, envFn);
+    return mkThunk(envFn, literal);
 }
 
 export function bindParams(params : string[], fn : EnvFn) : EnvFn {

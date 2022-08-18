@@ -1,7 +1,7 @@
 import { MultiDict } from "./util/multidict";
 import { Obj, ObjValue } from "./types";
 import { getString, getArray } from "./obj";
-import { Action } from "./action";
+import { Thunk } from "./script/thunk";
 
 
 enum PROPS {
@@ -12,24 +12,26 @@ enum PROPS {
 
 //type VerbModMap = {[key:string]: string[]};
 
+// TODO I don't think we need a class for this, possibly not even an interface
+// The engine builder should just construct an object with the appropriate properties
 export class Entity {
   readonly id : string;
   readonly props : Obj;
   readonly verbs : VerbMatcher[];
-  readonly cverbs : VerbMatcher[];
   readonly verbModifiers : MultiDict<string>;
-  readonly actions : Action[];
+
+  // TODO should actions, just be thunks
+  // like the before/after properties are supposed to be?
+  readonly actions : Thunk[];
 
   constructor(id : string, 
               props : Obj,
               verbs : VerbMatcher[],
-              cverbs : VerbMatcher[],
               verbModifiers: MultiDict<string>,
-              actions : Action[]) {
+              actions : Thunk[]) {
      this.id = id;
      this.props = props;
      this.verbs = verbs;
-     this.cverbs = cverbs;
      this.verbModifiers = verbModifiers;
      this.actions = actions;
    }
@@ -62,14 +64,12 @@ export class Entity {
 export interface VerbMatcher {
   readonly verb : string;
   readonly attribute? : string;
-  //readonly qualifier : boolean;
 }
 
 function buildVerbMatcher(verb : string, attribute? : string) : VerbMatcher {
   return {
     verb: verb,
     attribute: attribute,
-    //qualifier: false,
   };
 }
 
@@ -77,9 +77,9 @@ export class EntityBuilder {
   id : string;
   props : Obj;
   verbs : VerbMatcher[] = [];
-  cverbs : VerbMatcher[] = [];
   verbModifiers : MultiDict<string> = {};
-  actions : Action[] = [];
+  //actions : Action[] = [];
+  actions : Thunk[] = [];
   
   constructor(props : Obj) {
     if (!props) {
@@ -110,7 +110,7 @@ export class EntityBuilder {
     return this;
   }
 
-  withAction(action : Action) {
+  withAction(action : Thunk) {
     this.actions.push(action);
   }
 
@@ -126,7 +126,7 @@ export class EntityBuilder {
   }
 
   build() : Entity {
-    return new Entity(this.id, this.props, this.verbs, this.cverbs, this.verbModifiers, this.actions);   
+    return new Entity(this.id, this.props, this.verbs, this.verbModifiers, this.actions);   
   }
 }
 

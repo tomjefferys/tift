@@ -4,12 +4,13 @@ import { getString, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
-import { Action } from "./action"
 import { Env, Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";
 import { matchBuilder, matchModifier, matchVerb } from "./commandmatcher";
+import { EnvFn, mkResult, mkThunk, Thunk } from "./script/thunk";
+import { createMatcherThunk } from "./script/matchParser";
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
@@ -83,6 +84,7 @@ export function makeVerb(obj : Obj) : Verb {
    return builder.build();
 }
 
+// This is only called from tests
 export function makeEntity(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj)
@@ -125,13 +127,13 @@ export function makeRule(obj : Obj) : Obj {
     return obj;
 }
 
-function createMoveToAction(dir : string, dest : string) : Action {
+function createMoveToAction(dir : string, dest : string) : Thunk {
     const matcher = matchBuilder().withVerb(matchVerb("go")).withModifier(matchModifier("direction", dir)).build();
-    const action = (env : Env) => env.execute("moveTo", {"dest" : dest});
-    return {
-      matcher : matcher,
-      action : action
+    const action : EnvFn = (env : Env) => {
+        env.execute("moveTo", {"dest" : dest});
+        return mkResult(true);
     }
+    return createMatcherThunk(matcher, mkThunk(action));
 }
 
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {

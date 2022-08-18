@@ -3,8 +3,7 @@ import { matchBuilder, matchVerb, matchObject, captureObject,
             matchAttribute, matchIndirectObject, captureIndirectObject,
             Matcher, ALWAYS_FAIL, attributeMatchBuilder,
             matchAnyModifier} from "../commandmatcher";
-import { mkThunk, Thunk, EnvFn } from "./thunk"
-import { mkResult } from "./parser"
+import { mkThunk, Thunk, EnvFn, mkResult } from "./thunk"
 import { Command } from "../command";
 
 export const COMMAND = Symbol("__COMMAND__");
@@ -35,18 +34,18 @@ export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
         default:
             throw new Error("Invalid match expression: " + matchExpr);
     }
-    
-    //const compoundMatch = getCompoundMatcher(matchExpr);
 
     const matcher = createMatcher(compoundMatch);
 
+    return  createMatcherThunk(matcher, onMatch);
+}
 
+export function createMatcherThunk(matcher : Matcher, onMatch : Thunk, expression? : Expression) : Thunk {
     // This is going to return a thunk, so how should it work?
     // 1. put state in the env
     // 2. call the matcher, based on the state
     // 3. put captures into th env
     // 4. execute onMatch
-
     const envfn : EnvFn = env => {
         const searchState = env.get(COMMAND) as Command;
         const matchResult = matcher(searchState);
@@ -55,7 +54,7 @@ export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
                     : mkResult(undefined, {});
     }
 
-    return mkThunk(matchExpr, envfn);
+    return mkThunk(envfn, expression);
 }
 
 function createMatcher(compoundMatch : CompoundMatch) : Matcher {

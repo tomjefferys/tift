@@ -250,7 +250,7 @@ export const searchNext = (partial : string[],
  * @param context 
  * @param searchNode 
  * @param state 
- * @returns 
+ * @returns a Command, or undefined if no match could be found
  */
 export const searchExact = (command : string[],
                             context : SearchContext, 
