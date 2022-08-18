@@ -1,8 +1,7 @@
 import { MultiDict } from "./util/multidict";
-import { Obj, ObjValue } from "./types";
+import { Obj } from "./env";
 import { getString, getArray } from "./obj";
 import { Thunk } from "./script/thunk";
-
 
 enum PROPS {
   ID = "id",
@@ -10,55 +9,29 @@ enum PROPS {
   TYPE = "type"
 }
 
-//type VerbModMap = {[key:string]: string[]};
+export interface Entity {
+  id : string,
+  verbs : VerbMatcher[],
+  verbModifiers : MultiDict<string>
+  actions : Thunk[];
+  [props : string]: unknown
+}
 
-// TODO I don't think we need a class for this, possibly not even an interface
-// The engine builder should just construct an object with the appropriate properties
-export class Entity {
-  readonly id : string;
-  readonly props : Obj;
-  readonly verbs : VerbMatcher[];
-  readonly verbModifiers : MultiDict<string>;
+export function getName(entity : Entity) : string {
+  return entity["name"] as string ?? entity.id;
+}
 
-  // TODO should actions, just be thunks
-  // like the before/after properties are supposed to be?
-  readonly actions : Thunk[];
-
-  constructor(id : string, 
-              props : Obj,
-              verbs : VerbMatcher[],
-              verbModifiers: MultiDict<string>,
-              actions : Thunk[]) {
-     this.id = id;
-     this.props = props;
-     this.verbs = verbs;
-     this.verbModifiers = verbModifiers;
-     this.actions = actions;
-   }
-
-   getName() : string {
-     return this.props["name"] as string ?? this.id;
-   }
-
-   getProp(name: string) : ObjValue {
-     if (!this.props[name]) {
-        throw new Error("Entity: " + this.id + " does not contain property: " + name);
-     }
-     return this.props[name];
-   }
-
-  hasTag(tag : string) : boolean {
-    const tags = getArray(this.props[PROPS.TAGS] ?? []);
-    return tags.indexOf(tag) != -1;
-  }
-
-  getType() : string {
-    const type = this.props[PROPS.TYPE];
+export function getType(entity : Entity) : string {
+    const type = entity[PROPS.TYPE];
     if (!type) {
-      throw new Error("Entity: " + this.id + " has no type");
+      throw new Error("Entity: " + entity.id + " has no type");
     }
-    return getString(type);
+    return type as string;
   }
+
+export function hasTag(entity : Entity, tag : string) : boolean {
+    const tags = (entity[PROPS.TAGS] ?? []) as string[];
+    return tags.indexOf(tag) != -1;
 }
 
 export interface VerbMatcher {
@@ -78,7 +51,6 @@ export class EntityBuilder {
   props : Obj;
   verbs : VerbMatcher[] = [];
   verbModifiers : MultiDict<string> = {};
-  //actions : Action[] = [];
   actions : Thunk[] = [];
   
   constructor(props : Obj) {
@@ -126,7 +98,7 @@ export class EntityBuilder {
   }
 
   build() : Entity {
-    return new Entity(this.id, this.props, this.verbs, this.verbModifiers, this.actions);   
+    return {...this.props, id : this.id, verbs : this.verbs, verbModifiers : this.verbModifiers, actions : this.actions};
   }
 }
 

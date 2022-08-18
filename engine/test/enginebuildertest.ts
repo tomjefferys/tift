@@ -134,7 +134,6 @@ test("Build room", () => {
     const room = makeRoom(obj);
 
     expect(room.id).toEqual("cave");
-    expect(room.props).toBeDefined();
     expect(room.verbs).toHaveLength(2);
     expect(room.verbs).toContainEqual({"verb":"go"});
     expect(room.verbs).toContainEqual({"verb":"look"});

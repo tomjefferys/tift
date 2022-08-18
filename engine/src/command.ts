@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Entity } from "./entity";
+import { Entity, getName } from "./entity";
 import { IdValue, mkIdValue } from "./shared";
 import { Verb } from "./verb"
 
@@ -104,7 +104,7 @@ function getWords(node : SentenceNode) : IdValue<string>[] {
             break;
         case "directObject":
         case "indirectObject":
-            word = mkIdValue(part.entity.id, part.entity.getName());
+            word = mkIdValue(part.entity.id, getName(part.entity));
             break;
         case "preposition":
         case "modifier":

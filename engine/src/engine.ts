@@ -1,8 +1,7 @@
 import { Verb } from "./verb"
-import { Entity } from "./entity"
-import { createRootEnv } from "./env"
+import { Entity, getName, getType, hasTag } from "./entity"
+import { createRootEnv, Obj } from "./env"
 import { ContextEntities, getAllCommands, buildSearchContext, searchExact } from "./commandsearch"
-import { Obj } from "./types";
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
 import { OutputConsumer } from "./messages/output";
 import { IdValue } from "./shared";
@@ -52,7 +51,7 @@ export class BasicEngine implements Engine {
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
     const environment = {} as Obj; 
     objs.forEach(obj => environment[obj.id as string] = obj); // FIXME reject anything without an id
-    entities.forEach(entity => environment[entity.id] = entity.props);
+    entities.forEach(entity => environment[entity.id] = entity);
     verbs.forEach(verb => environment[verb.id] = verb.props);
 
     this.entities = entities.reduce((map : EntityMap, entity) => {map[entity.id] = entity; return map}, {} );
@@ -145,13 +144,13 @@ export class BasicEngine implements Engine {
 
   getStatus() : string {
     const location = this.entities[getPlayer(this.env).location];
-    return location.getName() ?? location.id;
+    return getName(location) ?? location.id;
   }
 }
 
 function findStartingLocation(entities : Entity[]) : string {
   const startingLocs = entities.filter(
-      entity => entity.getType() === TYPE.ROOM && entity.hasTag(TAG.START));
+      entity => getType(entity) === TYPE.ROOM && hasTag(entity, TAG.START));
   if (startingLocs.length == 0) {
     throw new Error("No starting location defined");
   }
