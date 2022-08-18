@@ -1,5 +1,6 @@
 import _ from "lodash";
-import { Entity, getName } from "./entity";
+import { Entity } from "./entity";
+import { getName } from "./nameable";
 import { IdValue, mkIdValue } from "./shared";
 import { Verb } from "./verb"
 
@@ -100,7 +101,7 @@ function getWords(node : SentenceNode) : IdValue<string>[] {
     const part = node.part;
     switch(part.type) {
         case "verb":
-            word = mkIdValue(part.verb.id, part.verb.getName());
+            word = mkIdValue(part.verb.id, getName(part.verb));
             break;
         case "directObject":
         case "indirectObject":

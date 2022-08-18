@@ -1,6 +1,6 @@
 import { Obj, AnyArray, EnvFn, Env } from "./env";
 import { OutputConsumer, print } from "./messages/output";
-import { VerbBuilder, VerbTrait } from "./verb"
+import { VerbBuilder } from "./verb"
 import { captureObject, matchBuilder, matchVerb } from "./commandmatcher";
 import { createMatcherThunk } from "./script/matchParser";
 import { mkResult, mkThunk } from "./script/thunk";
@@ -60,20 +60,20 @@ const DROP = createMatcherThunk(
 // TODO we should load this from a data file
 export const DEFAULT_VERBS = [
       new VerbBuilder({"id":"go"})
-                  .withTrait(VerbTrait.Intransitive)
+                  .withTrait("intransitive")
                   .withModifier("direction")
                   .build(),
       new VerbBuilder({"id":"look"})
-                  .withTrait(VerbTrait.Intransitive)
+                  .withTrait("intransitive")
                   .withAction(LOOK)
                   .build(),
       new VerbBuilder({"id":"get"})
-                  .withTrait(VerbTrait.Transitive)
+                  .withTrait("transitive")
                   .withAction(GET)
                   .withContext("environment")
                   .build(),
       new VerbBuilder({"id":"drop"})
-                  .withTrait(VerbTrait.Transitive)
+                  .withTrait("transitive")
                   .withAction(DROP)
                   .withContext("inventory")
                   .withContext("holding")

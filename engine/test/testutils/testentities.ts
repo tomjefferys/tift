@@ -1,14 +1,14 @@
-import { VerbBuilder, VerbTrait } from "../../src/verb";
+import { VerbBuilder } from "../../src/verb";
 import { EntityBuilder } from "../../src/entity";
 
 
 export const STIR = new VerbBuilder({"id":"stir"})
-                     .withTrait(VerbTrait.Transitive)
+                     .withTrait("transitive")
                      .withAttribute("with")
                      .build();
 
 export const EAT = new VerbBuilder({"id":"eat"})
-                     .withTrait(VerbTrait.Transitive)
+                     .withTrait("transitive")
                      .build();
 
 export const SOUP = new EntityBuilder({"id" : "soup"})
@@ -26,7 +26,7 @@ export const SPOON = new EntityBuilder({"id" : "spoon"})
                      .build();
 
 export const GO = new VerbBuilder({"id":"go"})
-                  .withTrait(VerbTrait.Intransitive)
+                  .withTrait("intransitive")
                   .withModifier("direction")
                   .build();
 
@@ -38,7 +38,7 @@ export const CAVE = new EntityBuilder({"id" : "cave"})
                   .build();
 
 export const PUSH = new VerbBuilder({"id":"push"})
-                    .withTrait(VerbTrait.Transitive)
+                    .withTrait("transitive")
                     .withModifier("direction")
                     .build();
 
@@ -47,16 +47,16 @@ export const BOX = new EntityBuilder({"id" : "box"})
                     .build();
 
 export const LOOK = new VerbBuilder({"id":"look"})
-                  .withTrait(VerbTrait.Intransitive)
+                  .withTrait("intransitive")
                   .build();
 
 export const GET = new VerbBuilder({"id":"get"})
-                  .withTrait(VerbTrait.Transitive)
+                  .withTrait("transitive")
                   .withContext("environment")
                   .build();
 
 export const DROP = new VerbBuilder({"id":"drop"})
-                  .withTrait(VerbTrait.Transitive)
+                  .withTrait("transitive")
                   .withContext("inventory")
                   .withContext("holding")
                   .build();

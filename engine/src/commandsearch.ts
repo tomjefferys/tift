@@ -1,4 +1,4 @@
-import { Verb, VerbContext } from "./verb"
+import { isIntransitive, isTransitive, Verb, VerbContext } from "./verb"
 import { VerbMap } from "./types"
 import { Entity, VerbMatcher } from "./entity"
 import { MultiDict } from "./util/multidict"
@@ -155,7 +155,7 @@ const getVerbs = (entities : Entity[], verbs : VerbMap, context : VerbContext) :
 
 const directObjectSearch : SearchFn = (context, state) => {
   const verb = state.getPoS("verb")?.verb;
-  const objs = verb && verb.isTransitive() ? getDirectObjects(context, verb) : [];
+  const objs = verb && isTransitive(verb) ? getDirectObjects(context, verb) : [];
   return objs.map(obj => castDirectable(state).object(obj));
 }
 
@@ -178,8 +178,8 @@ const modifierSearch : SearchFn = (context, state) => {
     const newModifiers = verb? getVerbModifiers(context, verb) : {};
     return multidict.entries(newModifiers).map(([modType, modValue]) => castModifiable(state).modifier(modType, modValue))}
 
-const TRANS_VERB = getVerbSearch(verb => verb.isTransitive());
-const INTRANS_VERB = getVerbSearch(verb => verb.isIntransitive());
+const TRANS_VERB = getVerbSearch(verb => isTransitive(verb));
+const INTRANS_VERB = getVerbSearch(verb => isIntransitive(verb));
 const DIRECT_OBJECT = directObjectSearch;
 const ATTRIBUTE = attributeSearch;
 const INDIRECT_OBJECT = indirectObjectSearch;

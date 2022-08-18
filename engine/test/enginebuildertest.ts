@@ -1,5 +1,4 @@
 import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule } from "../src/enginebuilder";
-import { VerbTrait } from "../src/verb";
 import { setUpEnv } from "./testutils/testutils"
 import { EnvFn } from "../src/env"
 import * as fs from "fs";
@@ -36,7 +35,7 @@ test("Test make modifiable verb", () => {
     expect(verb.modifiers).toContain("direction");
     expect(verb.modifiers).toContain("speed");
     expect(verb.traits).toHaveLength(1);
-    expect(verb.traits).toContain(VerbTrait.Intransitive);
+    expect(verb.traits).toContain("intransitive");
 });
 
 test("Test make attributed verb", () => {
@@ -58,8 +57,8 @@ test("Test make attributed verb", () => {
       expect(verb.attributes).toHaveLength(1);
       expect(verb.attributes).toContain("with");
       expect(verb.traits).toHaveLength(2);
-      expect(verb.traits).toContain(VerbTrait.Intransitive);
-      expect(verb.traits).toContain(VerbTrait.Transitive);
+      expect(verb.traits).toContain("intransitive");
+      expect(verb.traits).toContain("transitive");
 });
 
 test("Test make simple entity", () => {

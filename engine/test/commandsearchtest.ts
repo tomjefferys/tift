@@ -1,17 +1,17 @@
 import {getAllCommands, ContextEntities, searchNext, searchExact, SearchContext } from "../src/commandsearch";
 import {Command} from "../src/command"
 import {Entity, EntityBuilder} from "../src/entity";
-import {Verb, VerbBuilder, VerbTrait} from "../src/verb";
+import {Verb, VerbBuilder} from "../src/verb";
 import * as _ from "lodash"
 import { VerbMap } from "../src/types";
 
 const STIR = new VerbBuilder({"id":"stir"})
-                     .withTrait(VerbTrait.Transitive)
+                     .withTrait("transitive")
                      .withAttribute("with")
                      .build();
 
 const EAT = new VerbBuilder({"id":"eat"})
-                     .withTrait(VerbTrait.Transitive)
+                     .withTrait("transitive")
                      .build();
 
 const SOUP = new EntityBuilder({"id" : "soup"})
@@ -29,7 +29,7 @@ const SPOON = new EntityBuilder({"id" : "spoon"})
                      .build();
 
 const GO = new VerbBuilder({"id":"go"})
-                  .withTrait(VerbTrait.Intransitive)
+                  .withTrait("intransitive")
                   .withModifier("direction")
                   .build();
 
@@ -41,7 +41,7 @@ const CAVE = new EntityBuilder({"id" : "cave"})
                   .build();
 
 const PUSH = new VerbBuilder({"id":"push"})
-                    .withTrait(VerbTrait.Transitive)
+                    .withTrait("transitive")
                     .withModifier("direction")
                     .build();
 
@@ -50,16 +50,16 @@ const BOX = new EntityBuilder({"id" : "box"})
                     .build();
 
 const LOOK = new VerbBuilder({"id":"look"})
-                  .withTrait(VerbTrait.Intransitive)
+                  .withTrait("intransitive")
                   .build();
 
 const GET = new VerbBuilder({"id":"get"})
-                  .withTrait(VerbTrait.Transitive)
+                  .withTrait("transitive")
                   .withContext("environment")
                   .build();
 
 const DROP = new VerbBuilder({"id":"drop"})
-                  .withTrait(VerbTrait.Transitive)
+                  .withTrait("transitive")
                   .withContext("inventory")
                   .withContext("holding")
                   .build();

@@ -2,6 +2,7 @@ import { MultiDict } from "./util/multidict";
 import { Obj } from "./env";
 import { getString, getArray } from "./obj";
 import { Thunk } from "./script/thunk";
+import { Nameable } from "./nameable";
 
 enum PROPS {
   ID = "id",
@@ -9,16 +10,12 @@ enum PROPS {
   TYPE = "type"
 }
 
-export interface Entity {
+export interface Entity extends Nameable {
   id : string,
   verbs : VerbMatcher[],
   verbModifiers : MultiDict<string>
   actions : Thunk[];
   [props : string]: unknown
-}
-
-export function getName(entity : Entity) : string {
-  return entity["name"] as string ?? entity.id;
 }
 
 export function getType(entity : Entity) : string {

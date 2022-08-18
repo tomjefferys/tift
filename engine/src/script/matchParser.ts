@@ -5,6 +5,7 @@ import { matchBuilder, matchVerb, matchObject, captureObject,
             matchAnyModifier} from "../commandmatcher";
 import { mkThunk, Thunk, EnvFn, mkResult } from "./thunk"
 import { Command } from "../command";
+import { isTransitive } from "../verb";
 
 export const COMMAND = Symbol("__COMMAND__");
 
@@ -72,7 +73,7 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
         builder.withVerb(matchVerb(compoundMatch.nameMatch.name))
 
         const args = compoundMatch.argMatches.slice().reverse(); // Reverse list so we can use pop 
-        if (verb.isTransitive()) {
+        if (isTransitive(verb)) {
             // First match will be the direct object
             const directObject = args.pop();
             builder.withObject(directObject ? getObjectMatcher(directObject) : ALWAYS_FAIL);

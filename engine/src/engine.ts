@@ -1,5 +1,5 @@
 import { Verb } from "./verb"
-import { Entity, getName, getType, hasTag } from "./entity"
+import { Entity, getType, hasTag } from "./entity"
 import { createRootEnv, Obj } from "./env"
 import { ContextEntities, getAllCommands, buildSearchContext, searchExact } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
@@ -11,6 +11,7 @@ import * as _ from "lodash"
 import { addLibraryFunctions } from "./script/library";
 import { Thunk } from "./script/thunk";
 import { COMMAND } from "./script/matchParser";
+import { getName } from "./nameable";
 
 type EntityMap = {[key:string]:Entity}
 type VerbMap = {[key:string]:Verb}
@@ -52,7 +53,7 @@ export class BasicEngine implements Engine {
     const environment = {} as Obj; 
     objs.forEach(obj => environment[obj.id as string] = obj); // FIXME reject anything without an id
     entities.forEach(entity => environment[entity.id] = entity);
-    verbs.forEach(verb => environment[verb.id] = verb.props);
+    verbs.forEach(verb => environment[verb.id] = verb);
 
     this.entities = entities.reduce((map : EntityMap, entity) => {map[entity.id] = entity; return map}, {} );
     this.verbs = verbs.reduce((map : VerbMap, verb) => {map[verb.id] = verb; return map}, {} );

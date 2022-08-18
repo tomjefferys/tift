@@ -1,4 +1,4 @@
-import { Verb, VerbBuilder, VerbTrait } from "./verb";
+import { Verb, VerbBuilder } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
 import { getString, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
@@ -73,10 +73,10 @@ export function makeVerb(obj : Obj) : Verb {
         tag => {
             switch(tag) {
               case 'transitive':
-                builder.withTrait(VerbTrait.Transitive);
+                builder.withTrait("transitive");
                 break;
               case 'intransitive':
-                builder.withTrait(VerbTrait.Intransitive);
+                builder.withTrait("intransitive");
                 break;
               default:
                 break;

@@ -1,56 +1,31 @@
 import { Obj } from "./types";
 import { getString } from "./obj";
 import { Thunk } from "./script/thunk";
+import { Nameable } from "./nameable";
 
 export type VerbContext = string;
 
-export enum VerbTrait {
-  Transitive,
-  Intransitive,
-  Modifiable
+export type VerbTrait = "transitive" | "intransitive" | "modifiable";
+
+export interface Verb extends Nameable {
+  id : string;
+  attributes : string[];
+  traits : VerbTrait[];
+  modifiers : string[];
+  actions : Thunk[];
+  contexts : VerbContext[];
 }
 
+export function isTransitive(verb : Verb) {
+    return verb.traits.includes("transitive");
+}
 
-export class Verb {
-  readonly id : string;
-  readonly props : Obj;
-  readonly attributes : string[];
-  readonly traits : VerbTrait[];
-  readonly modifiers : string[];
-  readonly actions : Thunk[];
-  readonly contexts : VerbContext[];
+export function isIntransitive(verb : Verb) {
+    return verb.traits.includes("intransitive");
+}
 
-  constructor(id : string,
-              props : Obj,
-              attributes : string[],
-              traits : VerbTrait[],
-              modifiers : string[],
-              actions : Thunk[],
-              contexts : VerbContext[]) {
-    this.id = id;
-    this.props = props;
-    this.attributes = attributes;
-    this.traits = traits;
-    this.modifiers = modifiers;
-    this.actions = actions;
-    this.contexts = contexts;
-  }
-
-  isTransitive() : boolean {
-    return this.traits.includes(VerbTrait.Transitive);
-  }
-
-  isIntransitive() : boolean {
-    return this.traits.includes(VerbTrait.Intransitive);
-  }
-  
-  isModifiable() : boolean {
-    return this.modifiers.length != 0;
-  }
-
-  getName() : string {
-    return this.props["name"] as string ?? this.id;
-  }
+export function isModifiable(verb : Verb) : boolean {
+  return verb.modifiers.length !== 0;
 }
 
 export class VerbBuilder {
@@ -105,9 +80,13 @@ export class VerbBuilder {
   }
 
   build() : Verb {
-    return new Verb(this.id, this.props, this.attributes, this.traits, this.modifiers, this.actions, this.contexts);
+    return {...this.props,
+             id : this.id, 
+             attributes : this.attributes, 
+             traits : this.traits,
+             modifiers : this.modifiers, 
+             actions : this.actions, 
+             contexts : this.contexts };
   }
-  
-
 }
 
