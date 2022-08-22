@@ -272,23 +272,24 @@ export class Env {
     /**
      * @returns the names of all object in this (and parent) envs
      */
-    // TODO, this is really ugly, tidy up!
     getAllObjectNames() : ObjPath[] {
         const objNames = this.parent?.getAllObjectNames() ?? [];
-        for(const ns of this.getNamespaces()) {
-            const nsObj = this.getNameSpace(ns);
-            ifPresent(nsObj, obj => {
-                for(const [name,value] of Object.entries(obj)) {
-                    if (_.isObject(value)) {
-                        const path = [...ns, name];
-                        if (!this.isNameSpace(path) && !objNames.find(p => pathsEqual(p, path))) {
-                            objNames.push(path);
-                        }
-                    }
-                }
-            })
-        }
+        this.getNamespaces()
+            .flatMap(ns => this.getObjectNamesFromNameSpace(ns))
+            .filter(path => !objNames.find(p => pathsEqual(p,path)))
+            .forEach(path => objNames.push(path));
         return objNames;
+    }
+
+    /**
+     * @returns all objects for the specified namespace
+     */
+    getObjectNamesFromNameSpace(ns : NameSpace) : ObjPath[] {
+        const nsObj = this.getNameSpace(ns) ?? {};
+        return Object.entries(nsObj)
+                     .filter(([_key, value]) => _.isObject(value))
+                     .map(([key, _value]) => [...ns, key])
+                     .filter(path => !this.isNameSpace(path));
     }
 
     /**

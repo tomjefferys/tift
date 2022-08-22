@@ -5,6 +5,8 @@ import { captureObject, matchBuilder, matchVerb } from "./commandmatcher";
 import { createMatcherThunk } from "./script/matchParser";
 import { mkResult, mkThunk } from "./script/thunk";
 
+const NS_ENTITIES = "entities";
+
 const PLAYER = Symbol("__PLAYER__");
 export const OUTPUT = Symbol("__OUTPUT__");
 
@@ -22,7 +24,7 @@ const LOOK = createMatcherThunk(
     matchBuilder().withVerb(matchVerb("look")).build(),
     mkThunk(env => {
         const location = env.execute("getLocation", {});
-        const entity = env.execute("getEntity", {"id":"entities." + location}) as Obj;  // TODO find better way of prepending the namespace
+        const entity = env.execute("getEntity", {"id":location}) as Obj;
         const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
         env.execute("write", {"value":desc});
         env.execute("write", {"value":"<br/>"});
@@ -42,7 +44,7 @@ const GET = createMatcherThunk(
     matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
     mkThunk(env => {
         const itemId = env.getStr("item");
-        env.set(["entities", itemId, "location"], "INVENTORY");         // TODO find better way of prepending the namespace
+        env.set([NS_ENTITIES, itemId, "location"], "INVENTORY");
         return mkResult(true);
     })
 );
@@ -52,7 +54,7 @@ const DROP = createMatcherThunk(
     mkThunk(env => {
         const itemId = env.getStr("item");
         const location = getPlayer(env).location;
-        env.set(["entities", itemId, "location"], location);            // TODO find better way of prepending the namespace
+        env.set([NS_ENTITIES, itemId, "location"], location);
         return mkResult(true);
     })
 );
@@ -88,7 +90,7 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     
     moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),
     getLocation : env => getPlayer(env).location,
-    getEntity : env => env.get(env.getStr("id")),
+    getEntity : env => env.get([NS_ENTITIES, env.getStr("id")]),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
     writeMessage : env => getOutput(env)(env.get("message"))
 }
