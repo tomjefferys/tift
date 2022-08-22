@@ -271,6 +271,39 @@ test("Test find with namespace", () => {
     expect(child.findObjs(obj => obj["baz"] === "qux")).toHaveLength(2);
 })
 
-// TODO test overlapping namespaces
-// TODO test set simple property in namespace
+test("Test set simple property in namespace", () => {
+    const root = createRootEnv({"namespace" : { "bar" : { "baz" : "qux"}}}, "readonly", [["namespace"]]);
+    const child = root.newChild();
+    child.set("namespace.foo", "corge");
+
+    expect(child.get("namespace.foo")).toStrictEqual("corge");
+    expect(child.findObjs(_ => true)).toHaveLength(1);
+});
+
+test("Test overlapping namespaces", () => {
+    const root = createRootEnv({
+            "namespace1" : { 
+                "bar" : { "baz" : "qux"},
+                "namespace2" : { "corge" : "grault" }
+            }
+        }, "readonly", [["namespace1"], ["namespace1","namespace2"]]);
+    const child = root.newChild();
+
+    expect(root.get("namespace1.bar")).toStrictEqual({ "baz" : "qux" });
+    expect(root.get("namespace1.bar.baz")).toStrictEqual("qux");
+    expect(root.get("namespace1.namespace2.corge")).toStrictEqual("grault");
+
+    expect(child.get("namespace1.bar")).toStrictEqual({ "baz" : "qux" });
+    expect(child.get("namespace1.bar.baz")).toStrictEqual("qux");
+    expect(child.get("namespace1.namespace2.corge")).toStrictEqual("grault");
+
+    child.set("namespace1.corge", { "foo" : "grault" } );
+    expect(child.get("namespace1.corge")).toEqual({ "foo" : "grault"});
+
+    const allObjs = child.findObjs(_ => true)
+    expect(allObjs).toHaveLength(2);
+    expect(allObjs).toEqual(expect.arrayContaining([{ "baz" : "qux"}, { "foo" : "grault" }]));
+
+});
+
 
