@@ -17,7 +17,7 @@ export function listOutputConsumer(messages : string[]) : OutputConsumer {
 
 export function setUpEnv() : [Env, string[]] {
     const messages : string[] = [];
-    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages)}, true);
+    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages)}, "writable");
     const write : EnvFn = bindParams(["value"], env => {
         const value = env.get("value");
         return env.get("OUTPUT")(print(value));

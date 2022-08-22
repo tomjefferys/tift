@@ -11,10 +11,7 @@ import * as _ from "lodash"
 import { addLibraryFunctions } from "./script/library";
 import { Thunk } from "./script/thunk";
 import { COMMAND } from "./script/matchParser";
-import { getName } from "./nameable";
-
-type EntityMap = {[key:string]:Entity}
-type VerbMap = {[key:string]:Verb}
+import { getName, Nameable } from "./nameable";
 
 enum TAG {
   START = "start"
@@ -31,8 +28,8 @@ export interface Engine {
 }
 
 export interface EngineState {
-  entities : {[key:string]:Entity};
-  verbs : {[key:string]:Verb};
+  getEntities : () => Entity[];
+  getVerbs : () => Verb[];
 }
 
 interface CommandContext {
@@ -42,21 +39,20 @@ interface CommandContext {
 
 export class BasicEngine implements Engine {
   private readonly env;
-  // FIXME entites are both being stored in the env, and here.
-  // I think they should only be in the env (possibly cached here)
-  readonly entities : EntityMap;
-  readonly verbs : VerbMap;
   private context : CommandContext;
   private commands : IdValue<string>[][];
 
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
+    // FIXME this isn't working, because env.find doesn't look for sub objects
+    const envEntities = {} as Obj;
+    const envVerbs = {} as Obj;
     const environment = {} as Obj; 
     objs.forEach(obj => environment[obj.id as string] = obj); // FIXME reject anything without an id
-    entities.forEach(entity => environment[entity.id] = entity);
-    verbs.forEach(verb => environment[verb.id] = verb);
+    entities.forEach(entity => envEntities[entity.id] = entity);
+    verbs.forEach(verb => envVerbs[verb.id] = verb);
 
-    this.entities = entities.reduce((map : EntityMap, entity) => {map[entity.id] = entity; return map}, {} );
-    this.verbs = verbs.reduce((map : VerbMap, verb) => {map[verb.id] = verb; return map}, {} );
+    environment.entities = envEntities;
+    environment.verbs = envVerbs;
 
     const start = findStartingLocation(entities);
     makePlayer(environment, start);
@@ -64,7 +60,7 @@ export class BasicEngine implements Engine {
     makeOutputConsumer(environment, outputConsumer);
     addLibraryFunctions(environment);
 
-    const rootEnv = createRootEnv(environment, false);
+    const rootEnv = createRootEnv(environment, "readonly", [["entities"], ["verbs"]]);
     this.env = rootEnv.newChild();
 
     this.context = this.getContext();
@@ -77,24 +73,25 @@ export class BasicEngine implements Engine {
     // Entity for the current location
     const contextEntities : MultiDict<Entity> = {};
     const location = getPlayer(this.env).location;
-    const locationEntity = this.entities[location];
-    if (locationEntity) {
-      multidict.add(contextEntities, "environment", locationEntity);
+    const locationEntity = this.env.findObjs(obj => obj?.id === location);
+    if (locationEntity.length) {
+      multidict.add(contextEntities, "environment", locationEntity[0]);
     }
 
     // Get any other entities that are here
-    this.env.findObjs(obj => obj?.location === location)
-            .map(obj => this.entities[obj.id])
+    this.env.findObjs(obj => obj?.location === location) // Also check it is an entity
             .forEach(entity => multidict.add(contextEntities, "environment", entity));
 
     // Get inventory entities
-    this.env.findObjs(obj => obj?.location === "INVENTORY")
-            .map(obj => this.entities[obj.id])
+    this.env.findObjs(obj => obj?.location === "INVENTORY") // Also check it is an entity
             .forEach(entity => multidict.add(contextEntities, "inventory", entity));
+
+    const verbs  = this.env.findObjs(obj => obj?.type === "verb") as Verb[];
   
     return {
       entities: contextEntities,
-      verbs: Object.values(this.verbs)
+      //verbs: Object.values(this.verbs)
+      verbs: verbs
     }
   }
 
@@ -144,8 +141,20 @@ export class BasicEngine implements Engine {
   }
 
   getStatus() : string {
-    const location = this.entities[getPlayer(this.env).location];
-    return getName(location) ?? location.id;
+    const playerLocation = getPlayer(this.env).location
+    const locations = this.env.findObjs(obj => obj?.id === playerLocation) as Nameable[];
+    if (!locations.length) {
+      throw new Error("Could not find player location");
+    }
+    return getName(locations[0]);
+  }
+
+  getEntities() : Entity[] {
+    return this.env.findObjs(obj => obj["type"] === "room" || obj["type"] === "object" || obj["type"] === "item") as Entity[];
+  }
+
+  getVerbs() : Verb[] {
+    return this.env.findObjs(obj => obj["type"] === "verb") as Verb[];
   }
 }
 

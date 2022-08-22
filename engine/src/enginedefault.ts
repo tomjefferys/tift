@@ -22,7 +22,7 @@ const LOOK = createMatcherThunk(
     matchBuilder().withVerb(matchVerb("look")).build(),
     mkThunk(env => {
         const location = env.execute("getLocation", {});
-        const entity = env.execute("getEntity", {"id":location}) as Obj;
+        const entity = env.execute("getEntity", {"id":"entities." + location}) as Obj;  // TODO find better way of prepending the namespace
         const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
         env.execute("write", {"value":desc});
         env.execute("write", {"value":"<br/>"});
@@ -42,7 +42,7 @@ const GET = createMatcherThunk(
     matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
     mkThunk(env => {
         const itemId = env.getStr("item");
-        env.set([itemId,"location"], "INVENTORY");
+        env.set(["entities", itemId, "location"], "INVENTORY");         // TODO find better way of prepending the namespace
         return mkResult(true);
     })
 );
@@ -52,7 +52,7 @@ const DROP = createMatcherThunk(
     mkThunk(env => {
         const itemId = env.getStr("item");
         const location = getPlayer(env).location;
-        env.set([itemId,"location"], location);
+        env.set(["entities", itemId, "location"], location);            // TODO find better way of prepending the namespace
         return mkResult(true);
     })
 );

@@ -8,12 +8,13 @@ export type VerbContext = string;
 export type VerbTrait = "transitive" | "intransitive" | "modifiable";
 
 export interface Verb extends Nameable {
-  id : string;
-  attributes : string[];
-  traits : VerbTrait[];
-  modifiers : string[];
-  actions : Thunk[];
-  contexts : VerbContext[];
+  id : string,
+  attributes : string[],
+  traits : VerbTrait[],
+  modifiers : string[],
+  actions : Thunk[],
+  contexts : VerbContext[],
+  [props : string] : unknown
 }
 
 export function isTransitive(verb : Verb) {
@@ -81,6 +82,7 @@ export class VerbBuilder {
 
   build() : Verb {
     return {...this.props,
+             type : "verb",
              id : this.id, 
              attributes : this.attributes, 
              traits : this.traits,
