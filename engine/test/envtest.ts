@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { createRootEnv, OVERRIDE } from "../src/env";
+import { createRootEnv, Obj, OVERRIDE } from "../src/env";
 
 test("test empty env", () => {
     const env = createRootEnv({}, "writable");
@@ -306,4 +306,36 @@ test("Test overlapping namespaces", () => {
 
 });
 
+test("Limit search to namespace", () => {
+    const root = createRootEnv({
+        "namespace1" : { 
+            "bar" : { "baz" : "qux"},
+            "namespace2" : { 
+                "bar" : { "baz" : "grault" }, 
+                "foo" : { "baz" : "qux"}
+            }
+        },
+        "namespace3" : {
+            "corge" : { "baz" : "qux" }
+        }
+    }, "readonly", [["namespace1"],["namespace1","namespace2"],["namespace3"]]);
+
+    const child = root.newChild();
+
+    const predicate = (obj : Obj) => obj["baz"] === "qux";
+
+    expect(child.findObjs(predicate)).toHaveLength(3);
+    expect(child.findObjs(predicate, [])).toHaveLength(0);
+    expect(child.findObjs(predicate, [["namespace3"]])).toHaveLength(1);
+    expect(child.findObjs(predicate, [["namespace1"]])).toHaveLength(1);
+    expect(child.findObjs(predicate, [["namespace1","namespace2"]])).toHaveLength(1);
+    expect(child.findObjs(predicate, [["namespace1"], ["namespace2"]])).toHaveLength(1); // ["namespace2"] does not exist
+    expect(child.findObjs(predicate, [["namespace1"], ["namespace1", "namespace2"]])).toHaveLength(2);
+    expect(child.findObjs(predicate, [["namespace3"], ["namespace1", "namespace2"]])).toHaveLength(2);
+    expect(child.findObjs(predicate, [["namespace1"], ["namespace3"]])).toHaveLength(2);
+    expect(child.findObjs(predicate, [["namespace1"], ["namespace3"]])).toHaveLength(2);
+    expect(child.findObjs(predicate, [["namespace1"], ["namespace1", "namespace2"], ["namespace3"]])).toHaveLength(3);
+
+
+})
 

@@ -271,12 +271,11 @@ export class Env {
     /**
      * @returns the names of all object in this (and parent) envs
      */
-    getAllObjectNames() : ObjPath[] {
-        const objNames = this.parent?.getAllObjectNames() ?? [];
-        this.getNamespaces()
-            .flatMap(ns => this.getObjectNamesFromNameSpace(ns))
-            .filter(path => !objNames.find(p => pathsEqual(p,path)))
-            .forEach(path => objNames.push(path));
+    getAllObjectNames(namespaces : NameSpace[]) : ObjPath[] {
+        const objNames = this.parent?.getAllObjectNames(namespaces) ?? [];
+        namespaces.flatMap(ns => this.getObjectNamesFromNameSpace(ns))
+                  .filter(path => !objNames.find(p => pathsEqual(p,path)))
+                  .forEach(path => objNames.push(path));
         return objNames;
     }
 
@@ -296,8 +295,8 @@ export class Env {
      * @param predicate 
      * @returns 
      */
-    findObjs(predicate: (obj: Obj) => boolean) : Obj[] {
-        const allNames = [...this.getAllObjectNames()];
+    findObjs(predicate: (obj: Obj) => boolean, namespaces : NameSpace[] = this.getNamespaces()) : Obj[] {
+        const allNames = [...this.getAllObjectNames(namespaces)];
         return allNames.map(name => this.get(name))
                        .filter(predicate);
     }
