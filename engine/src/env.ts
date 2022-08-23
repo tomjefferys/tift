@@ -1,6 +1,5 @@
 import * as _ from "lodash"
-import { ifPresent, Optional } from "./util/optional";
-
+import { Optional } from "./util/optional";
 
 export const OVERRIDE = Symbol("__override__");
 

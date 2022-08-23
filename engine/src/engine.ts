@@ -1,7 +1,7 @@
 import { Verb } from "./verb"
 import { Entity, getType, hasTag } from "./entity"
 import { createRootEnv, Obj } from "./env"
-import { ContextEntities, getAllCommands, buildSearchContext, searchExact } from "./commandsearch"
+import { ContextEntities, getAllCommands, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
 import { OutputConsumer } from "./messages/output";
 import { IdValue } from "./shared";
@@ -43,7 +43,6 @@ export class BasicEngine implements Engine {
   private commands : IdValue<string>[][];
 
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
-    // FIXME this isn't working, because env.find doesn't look for sub objects
     const envEntities = {} as Obj;
     const envVerbs = {} as Obj;
     const environment = {} as Obj; 
@@ -90,30 +89,12 @@ export class BasicEngine implements Engine {
   
     return {
       entities: contextEntities,
-      //verbs: Object.values(this.verbs)
       verbs: verbs
     }
   }
 
   getWords(partial : string[]): IdValue<string>[] {
-    const nextWords : IdValue<string>[] = [];
-    for(const command of this.commands) {
-      if (partial.length < command.length) {
-        let match = true;
-        let i=0;
-        for(const word of partial) {
-          if (word !== command[i].id) {
-            match = false;
-            break;
-          }
-          i++;
-        }
-        if (match) {
-          nextWords.push(command[i]);
-        }
-      }
-    }
-    return _.uniqWith(nextWords, _.isEqual);
+    return getNextWords(partial, this.context.entities, this.context.verbs);
   }
   
   execute(command: string[]): void {

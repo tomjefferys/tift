@@ -143,20 +143,16 @@ test("Test inventory context", () => {
   commands = getAllCommandIds({"inventory":[APPLE]}, [GET, DROP]);
   expect(commands).toHaveLength(1);
   expect(commands).toEqual(expect.arrayContaining([["drop", "apple"]]));
-
-  //commands = getAllCommandIds({"holding":[APPLE]}, [GET, DROP]);
-  //expect(commands).toHaveLength(1);
-  //expect(commands).toEqual(expect.arrayContaining([["drop", "apple"]]));
 });
 
 test("Test partial search", () => {
   const context : SearchContext = {
     objs : {"default" : [BOX, CAVE]},
-    verbs : createVerbMap([PUSH])
+    verbs : createVerbMap([PUSH, GO])
   }
 
   let next = searchNext([], context);
-  expect(getCommandWords(next)).toStrictEqual([["push"]]);
+  expect(getCommandWords(next)).toStrictEqual([["go"], ["push"]]);
 
   next = searchNext(["push"], context);
   expect(getCommandWords(next)).toStrictEqual([["push", "box"]]);

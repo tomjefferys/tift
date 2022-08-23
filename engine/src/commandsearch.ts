@@ -3,6 +3,7 @@ import { VerbMap } from "./types"
 import { Entity, VerbMatcher } from "./entity"
 import { MultiDict } from "./util/multidict"
 import { IdValue } from "./shared"
+import * as _ from "lodash"
 import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
 import * as Arrays from "./util/arrays"
@@ -27,6 +28,15 @@ export function getAllCommands(objs: ContextEntities, verbs: Verb[]) : IdValue<s
   const context = buildSearchContext(objs, verbs);
   return searchAll(context)
           .map(state => state.getWords());
+}
+
+export function getNextWords(partial : string[], objs : ContextEntities, verbs : Verb[]) : IdValue<string>[] {
+  const context = buildSearchContext(objs, verbs);
+  const nextWords = searchNext(partial, context)
+          .map(state => _.last(state.getWords()))
+          .filter(Boolean)
+          .map(word => word as IdValue<string>);
+  return nextWords;
 }
 
 export interface SearchContext {
