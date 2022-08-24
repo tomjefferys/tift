@@ -40,7 +40,6 @@ interface CommandContext {
 export class BasicEngine implements Engine {
   private readonly env;
   private context : CommandContext;
-  private commands : IdValue<string>[][];
 
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
     const envEntities = {} as Obj;
@@ -63,9 +62,6 @@ export class BasicEngine implements Engine {
     this.env = rootEnv.newChild();
 
     this.context = this.getContext();
-
-    // FIXME this should be done a bit at a time
-    this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
 
   getContext() : CommandContext {
@@ -117,8 +113,6 @@ export class BasicEngine implements Engine {
     const rules = this.env.findObjs(obj => obj["type"] === "rule");
     const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
     expressions.forEach(expr => expr(this.env));
-
-    this.commands = getAllCommands(this.context.entities, this.context.verbs);
   }
 
   getStatus() : string {
