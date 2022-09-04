@@ -1,18 +1,19 @@
 import { Obj } from "./types";
 import { getString } from "./obj";
-import { Thunk } from "./script/thunk";
 import { Nameable } from "./nameable";
+import { ActionSource } from "./actionsource";
+import { AfterAction, BeforeAction, MainAction } from "./script/phaseaction";
 
 export type VerbContext = string;
 
 export type VerbTrait = "transitive" | "intransitive" | "modifiable";
 
-export interface Verb extends Nameable {
+export interface Verb extends Nameable, ActionSource {
   id : string,
   attributes : string[],
   traits : VerbTrait[],
   modifiers : string[],
-  actions : Thunk[],
+  actions : MainAction[],
   contexts : VerbContext[],
   [props : string] : unknown
 }
@@ -36,7 +37,9 @@ export class VerbBuilder {
   attributes : string[] = [];
   traits : VerbTrait[] = [];
   modifiers : string[] = [];
-  actions : Thunk[] = [];
+  before : BeforeAction[] = [];
+  actions : MainAction[] = [];
+  after : AfterAction[] = [];
   contexts : VerbContext[] = [];
 
   constructor(props : Obj) {
@@ -69,9 +72,19 @@ export class VerbBuilder {
     this.modifiers.push(modifier);
     return this;
   }
+
+  withBefore(action : BeforeAction) : VerbBuilder {
+    this.before.push(action);
+    return this;
+  }
   
-  withAction(action : Thunk) : VerbBuilder {
+  withAction(action : MainAction) : VerbBuilder {
     this.actions.push(action);
+    return this;
+  }
+
+  withAfter(action : AfterAction) : VerbBuilder {
+    this.after.push(action);
     return this;
   }
 
@@ -87,7 +100,9 @@ export class VerbBuilder {
              attributes : this.attributes, 
              traits : this.traits,
              modifiers : this.modifiers, 
+             before : this.before,
              actions : this.actions, 
+             after : this.after,
              contexts : this.contexts };
   }
 }

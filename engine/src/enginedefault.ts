@@ -2,8 +2,8 @@ import { Obj, AnyArray, EnvFn, Env } from "./env";
 import { OutputConsumer, print } from "./messages/output";
 import { VerbBuilder } from "./verb"
 import { captureObject, matchBuilder, matchVerb } from "./commandmatcher";
-import { createMatcherThunk } from "./script/matchParser";
 import { mkResult, mkThunk } from "./script/thunk";
+import { phaseActionBuilder } from "./script/phaseaction";
 
 const NS_ENTITIES = "entities";
 
@@ -20,44 +20,46 @@ export interface Player {
 export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Player;
 export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
-const LOOK = createMatcherThunk(
-    matchBuilder().withVerb(matchVerb("look")).build(),
-    mkThunk(env => {
-        const location = env.execute("getLocation", {});
-        const entity = env.execute("getEntity", {"id":location}) as Obj;
-        const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
-        env.execute("write", {"value":desc});
-        env.execute("write", {"value":"<br/>"});
+const LOOK = phaseActionBuilder()
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("look")).build(),
+            mkThunk(env => {
+                const location = env.execute("getLocation", {});
+                const entity = env.execute("getEntity", {"id":location}) as Obj;
+                const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
+                env.execute("write", {"value":desc});
+                env.execute("write", {"value":"<br/>"});
 
-        const items = env.findObjs(obj => obj.location === location);
+                const items = env.findObjs(obj => obj.location === location);
 
-        for(const item of items) {
-            env.execute("write", {"value": item["name"] ?? item["id"]});
-            env.execute("write", {"value":"<br/>"});
-        }
-        return mkResult(true);
-    })
-);
+                for(const item of items) {
+                    env.execute("write", {"value": item["name"] ?? item["id"]});
+                    env.execute("write", {"value":"<br/>"});
+                }
+                return mkResult(true);
+    }));
 
+const GET = phaseActionBuilder()
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
+            mkThunk(env => {
+                const itemId = env.getStr("item");
+                env.set([NS_ENTITIES, itemId, "location"], "INVENTORY");
+                return mkResult(true);
+            }));
 
-const GET = createMatcherThunk(
-    matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
-    mkThunk(env => {
-        const itemId = env.getStr("item");
-        env.set([NS_ENTITIES, itemId, "location"], "INVENTORY");
-        return mkResult(true);
-    })
-);
-
-const DROP = createMatcherThunk(
-    matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
-    mkThunk(env => {
-        const itemId = env.getStr("item");
-        const location = getPlayer(env).location;
-        env.set([NS_ENTITIES, itemId, "location"], location);
-        return mkResult(true);
-    })
-);
+const DROP = phaseActionBuilder()
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
+            mkThunk(env => {
+                const itemId = env.getStr("item");
+                const location = getPlayer(env).location;
+                env.set([NS_ENTITIES, itemId, "location"], location);
+                return mkResult(true);
+            }));
 
 // TODO we should load this from a data file
 export const DEFAULT_VERBS = [

@@ -42,9 +42,13 @@ const KEYWORD_PROPS = ["then", "else", "case"];
 
 export const ARGS = "__args__"; 
 
+export function parseToTree(expression : string) {
+    return jsep(expression);
+}
+
 export function parse(expression : string, objPath? : string) : (env : Env) => unknown {
     try {
-        const parseTree = jsep(expression);
+        const parseTree = parseToTree(expression);
         const compiledExpression = evaluate(parseTree);
         return env => compiledExpression.resolve(env).value;
     } catch (e) {

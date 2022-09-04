@@ -9,8 +9,8 @@ import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";
 import { matchBuilder, matchModifier, matchVerb } from "./commandmatcher";
-import { EnvFn, mkResult, mkThunk, Thunk } from "./script/thunk";
-import { createMatcherThunk } from "./script/matchParser";
+import { EnvFn, mkResult, mkThunk } from "./script/thunk";
+import { MainAction, phaseActionBuilder } from "./script/phaseaction";
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
@@ -127,13 +127,18 @@ export function makeRule(obj : Obj) : Obj {
     return obj;
 }
 
-function createMoveToAction(dir : string, dest : string) : Thunk {
+function createMoveToAction(dir : string, dest : string) : MainAction {
     const matcher = matchBuilder().withVerb(matchVerb("go")).withModifier(matchModifier("direction", dir)).build();
     const action : EnvFn = (env : Env) => {
         env.execute("moveTo", {"dest" : dest});
         return mkResult(true);
     }
-    return createMatcherThunk(matcher, mkThunk(action));
+    return phaseActionBuilder()
+            .withPhase("main")
+            .withMatcherOnMatch(
+                matcher, 
+                mkThunk(action)
+            );
 }
 
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {

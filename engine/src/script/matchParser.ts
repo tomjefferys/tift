@@ -22,6 +22,11 @@ interface CompoundMatch {
 }
 
 export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
+    const matcher = evalutateMatchExpression(matchExpr)
+    return  createMatcherThunk(matcher, onMatch);
+}
+
+export function evalutateMatchExpression(matchExpr : Expression) : Matcher {
     let compoundMatch : CompoundMatch;
     switch(matchExpr.type) {
         case "CallExpression":
@@ -36,9 +41,7 @@ export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
             throw new Error("Invalid match expression: " + matchExpr);
     }
 
-    const matcher = createMatcher(compoundMatch);
-
-    return  createMatcherThunk(matcher, onMatch);
+    return createMatcher(compoundMatch);
 }
 
 export function createMatcherThunk(matcher : Matcher, onMatch : Thunk, expression? : Expression) : Thunk {

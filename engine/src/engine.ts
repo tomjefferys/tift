@@ -1,17 +1,17 @@
 import { Verb } from "./verb"
 import { Entity, getType, hasTag } from "./entity"
 import { createRootEnv, Obj } from "./env"
-import { ContextEntities, getAllCommands, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
+import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
 import { OutputConsumer } from "./messages/output";
 import { IdValue } from "./shared";
 import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
-import * as _ from "lodash"
+import * as _ from "lodash";
+import * as arrays from "./util/arrays";
 import { addLibraryFunctions } from "./script/library";
-import { Thunk } from "./script/thunk";
-import { COMMAND } from "./script/matchParser";
 import { getName, Nameable } from "./nameable";
+import { getBestMatchAction } from "./script/phaseaction";
 
 enum TAG {
   START = "start"
@@ -70,7 +70,7 @@ export class BasicEngine implements Engine {
     const location = getPlayer(this.env).location;
     const locationEntity = this.env.findObjs(obj => obj?.id === location);
     if (locationEntity.length) {
-      multidict.add(contextEntities, "environment", locationEntity[0]);
+      multidict.add(contextEntities, "location", locationEntity[0]);
     }
 
     // Get any other entities that are here
@@ -95,8 +95,6 @@ export class BasicEngine implements Engine {
   
   execute(command: string[]): void {
     const allContextEntities = _.flatten(Object.values(this.context.entities))
-    const actions : Thunk[] = [...allContextEntities, ...this.context.verbs]
-                                  .flatMap(obj => obj?.actions ?? []);
 
     const searchContext = buildSearchContext(this.context.entities, this.context.verbs);
     const matchedCommand = searchExact(command, searchContext);
@@ -104,10 +102,47 @@ export class BasicEngine implements Engine {
       throw new Error("Could not match command: " + JSON.stringify(command));
     }
 
-    for (const action of actions) {
-        action.resolve(this.env.newChild({[COMMAND] : matchedCommand}))
-        this.context = this.getContext();
+    // Inform has the following order for actions
+    // 1. Scope/Context
+    // 2. Room
+    // 3. Object being acted on
+    const location = _.head(multidict.get(this.context.entities, "location"));
+    const directObject = matchedCommand.getPoS("directObject")?.entity;
+    const indirectObject = matchedCommand.getPoS("indirectObject")?.entity;
+    const inScopeEnitites = arrays.of(indirectObject, directObject, location);
+    allContextEntities.forEach(entity => arrays.pushIfUnique(inScopeEnitites, entity, (entity1, entity2) => entity1.id === entity2.id));
+    inScopeEnitites.reverse();
+
+    let handled = false;
+    for(const entity of inScopeEnitites) {
+      const action = getBestMatchAction(entity.before, matchedCommand);
+      if (action) {
+        const result = action.perform(this.env, matchedCommand);
+        if (result) {
+          if (_.isString(result)) {
+            // Output the string
+          }
+          handled = true;
+          break;
+        }
+      }
     }
+
+    if (!handled) {
+      const verb = matchedCommand.getPoS("verb")?.verb;
+      const actionSources = [location, verb]; // TODO should all main actions be stored as verbs?
+      for (const actionSource of actionSources) {
+        const action = getBestMatchAction(actionSource?.actions ?? [], matchedCommand);
+        if (action) {
+          action.perform(this.env, matchedCommand);
+          break;
+        }
+      }
+    }
+
+    // TODO after actions
+
+    this.context = this.getContext();
 
     // Find and execute any rules
     const rules = this.env.findObjs(obj => obj["type"] === "rule");
@@ -115,6 +150,7 @@ export class BasicEngine implements Engine {
     expressions.forEach(expr => expr(this.env));
   }
 
+ 
   getStatus() : string {
     const playerLocation = getPlayer(this.env).location
     const locations = this.env.findObjs(obj => obj?.id === playerLocation) as Nameable[];

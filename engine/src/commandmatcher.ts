@@ -14,20 +14,26 @@ import { Command, PoSType } from "./command";
 
 // So what is the data structure
 
+const SCORE_NO_MATCH = { score : 0 };
+const SCORE_WILDCARD = { score : 1 };
+const SCORE_EXACT = { score : 2  };
+const SCORE_OBJ_EXACT = { score : 10 };
+
 
 export type Matcher = (command : Command) => MatchResult;
 
 export interface MatchResult {
     isMatch : boolean,
+    score : number,
     captures? : {[key:string]:string}
 }
 
-const FAILED_MATCH : MatchResult = { isMatch : false };
+const FAILED_MATCH : MatchResult = { isMatch : false, ...SCORE_NO_MATCH };
 
 export const ALWAYS_FAIL : Matcher = (_state) => FAILED_MATCH;
 
 function failIfProvided(part : PoSType) : Matcher {
-    return command => ({ isMatch : !command.getPoS(part) })
+    return command => ({ isMatch : !command.getPoS(part), ...SCORE_NO_MATCH })
 }
 
 class MatchBuilder {
@@ -110,31 +116,52 @@ export const matchBuilder = () : MatchBuilder => new MatchBuilder();
 export const attributeMatchBuilder = () => new AttributeMatchBuilder();
 
 export const matchVerb = (verbId : string) : Matcher => 
-                        command => ({ isMatch : Boolean(command.getVerb(verbId)) });
+                        command => {
+                            const match = Boolean(command.getVerb(verbId)); 
+                            return match ? { isMatch : true, ...SCORE_EXACT } : FAILED_MATCH;
+                        };
 
 export const matchObject = (objectId : string) : Matcher => 
-                    command => ({ isMatch : Boolean(command.getDirectObject(objectId)) });
+                    command => {
+                        const match = Boolean(command.getDirectObject(objectId)); 
+                        return match ? { isMatch : true, ...SCORE_OBJ_EXACT } : FAILED_MATCH;
+                    };
 
 export const matchIndirectObject = (objectId : string) : Matcher => 
-                    command => ({ isMatch : Boolean(command.getIndirectObject(objectId)) });
+                    command => {
+                        const match = Boolean(command.getIndirectObject(objectId));
+                        return match ? { isMatch : true, ...SCORE_OBJ_EXACT } : FAILED_MATCH;
+                    }
 
 export const matchAttribute = (attribute : string) : Matcher =>
-                    command => ({ isMatch : Boolean(command.getPreposition(attribute)) });
+                    command => {
+                        const match = Boolean(command.getPreposition(attribute));
+                        return match ? { isMatch : true, ...SCORE_EXACT } : FAILED_MATCH;
+                    }
 
 export const matchModifier = (modType : string, modifier : string) : Matcher =>
-                    command => ({ isMatch : Boolean(command.getModifier(modType, modifier)) });
+                    command => {
+                        const match = Boolean(command.getModifier(modType, modifier));
+                        return match ? { isMatch : true, ...SCORE_EXACT } : FAILED_MATCH;
+                    }
 
 export const matchAnyModifier = (modValue : string) : Matcher => 
-                    command => ({ isMatch : Boolean(command.find(part => part.type === "modifier" && part.value === modValue))})
+                    command => {
+                        const match = Boolean(command.find(part => part.type === "modifier" && part.value === modValue));
+                        return match ? { isMatch : true, ...SCORE_EXACT } : FAILED_MATCH;
+                    }
 
 export const matchNoModifiers = () : Matcher => 
-                    command => ({ isMatch : command.getModifiers().length === 0})
+                    command => {
+                        const match = command.getModifiers().length === 0;
+                        return match ? { isMatch : true, ...SCORE_NO_MATCH } : FAILED_MATCH;
+                    }
 
 export const captureObject = (captureName : string) : Matcher => 
         command => {
             const directObject = command.getPoS("directObject");
             return (directObject !== undefined)
-                            ? { isMatch : true, captures : { [captureName] : directObject.entity.id }}
+                            ? { isMatch : true, captures : { [captureName] : directObject.entity.id }, ...SCORE_WILDCARD}
                             : FAILED_MATCH;
         }
 
@@ -142,7 +169,7 @@ export const captureIndirectObject = (captureName : string) : Matcher =>
         command => {
             const indirectObject = command.getPoS("indirectObject");
             return (indirectObject !== undefined )
-                            ? { isMatch : true, captures : { [captureName] : indirectObject.entity.id }}
+                            ? { isMatch : true, captures : { [captureName] : indirectObject.entity.id }, ...SCORE_WILDCARD}
                             : FAILED_MATCH;
         }
 
@@ -156,5 +183,6 @@ const combineMatches : (...matches : MatchResult[]) => MatchResult =
         captures : {
             ...(result1?.captures ?? {}),
             ...(result2?.captures ?? {})
-        } 
+        },
+        score : result1.score + result2.score
     }));

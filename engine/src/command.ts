@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { ActionSource, emptyActionSource } from "./actionsource";
 import { Entity } from "./entity";
 import { getName } from "./nameable";
 import { IdValue, mkIdValue } from "./shared";
@@ -41,6 +42,8 @@ export interface SentenceNode {
     size() : number;
 
     getWords() : IdValue<string>[];
+
+    getActions() : ActionSource;
 
     toString() : string;
 
@@ -118,6 +121,30 @@ function getWords(node : SentenceNode) : IdValue<string>[] {
     const words = (node.previous && node.previous.part.type !== "start")? getWords(node.previous) : [];
     words.push(word);
     return words;
+}
+
+function getActions(node : SentenceNode) : ActionSource {
+    const actionSource = (node.previous && node.previous?.part.type !== "start")? getActions(node.previous) : emptyActionSource();
+
+    const part = node.part;
+    let next : ActionSource;
+    switch(part.type) {
+        case "verb":
+            next = part.verb;
+            break;
+        case "directObject":
+        case "indirectObject":
+            next = part.entity;
+            break;
+        default:
+            next = emptyActionSource();
+    }
+
+    return {
+        before : [...actionSource.before, ...next.before],
+        actions : [...actionSource.actions, ...next.actions],
+        after : [...actionSource.after, ...next.after]
+    }
 }
 
 export function start() : SentenceNode & Verbable {
@@ -235,7 +262,9 @@ function makeNode(part : Part, prev? : SentenceNode) : SentenceNode {
 
         toString  : () => getWords(node).map(idValue => idValue.id).reduce((item, acc) => item + ", " + acc),
 
-        getWords : () => getWords(node)
+        getWords : () => getWords(node),
+
+        getActions : () => getActions(node)
 
     }
     return node;

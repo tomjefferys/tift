@@ -1,8 +1,9 @@
 import { MultiDict } from "./util/multidict";
 import { Obj } from "./env";
 import { getString, getArray } from "./obj";
-import { Thunk } from "./script/thunk";
 import { Nameable } from "./nameable";
+import { ActionSource } from "./actionsource";
+import { AfterAction, MainAction, BeforeAction } from "./script/phaseaction";
 
 enum PROPS {
   ID = "id",
@@ -10,11 +11,10 @@ enum PROPS {
   TYPE = "type"
 }
 
-export interface Entity extends Nameable {
+export interface Entity extends Nameable, ActionSource {
   id : string,
   verbs : VerbMatcher[],
   verbModifiers : MultiDict<string>
-  actions : Thunk[];
   [props : string]: unknown
 }
 
@@ -48,7 +48,9 @@ export class EntityBuilder {
   props : Obj;
   verbs : VerbMatcher[] = [];
   verbModifiers : MultiDict<string> = {};
-  actions : Thunk[] = [];
+  before : BeforeAction[] = [];
+  actions : MainAction[] = [];
+  after : AfterAction[] = [];
   
   constructor(props : Obj) {
     if (!props) {
@@ -79,8 +81,19 @@ export class EntityBuilder {
     return this;
   }
 
-  withAction(action : Thunk) {
+  withBefore(action : BeforeAction) {
+    this.before.push(action);
+    return this;
+  }
+
+  withAction(action : MainAction) {
     this.actions.push(action);
+    return this;
+  }
+
+  withAfter(action : AfterAction) {
+    this.after.push(action);
+    return this;
   }
 
   withProp(name : string, value : string) {
@@ -95,7 +108,13 @@ export class EntityBuilder {
   }
 
   build() : Entity {
-    return {...this.props, id : this.id, verbs : this.verbs, verbModifiers : this.verbModifiers, actions : this.actions};
+    return {...this.props,
+            id : this.id,
+            verbs : this.verbs,
+            verbModifiers : this.verbModifiers,
+            before : this.before,
+            actions : this.actions,
+            after : this.after };
   }
 }
 

@@ -11,6 +11,7 @@ test("Test simple match", () => {
     const command = verb(LOOK);
     const result = matcher(command);
     expect(result.isMatch).toBeTruthy();
+    expect(result.score).toBe(2);
 })
 
 test("Test match with direct object", () => {
@@ -21,6 +22,7 @@ test("Test match with direct object", () => {
     const command = verb(EAT).object(APPLE);
     const result = matcher(command);
     expect(result.isMatch).toBeTruthy();
+    expect(result.score).toBe(12);
 })
 
 test("Test match with direct object capture", () => {
@@ -32,6 +34,7 @@ test("Test match with direct object capture", () => {
     const result = matcher(command);
     expect(result.isMatch).toBeTruthy();
     expect(result.captures).toStrictEqual({ "food" : "apple"});
+    expect(result.score).toBe(3);
 })
 
 test("Test partial match", () => {
@@ -41,6 +44,7 @@ test("Test partial match", () => {
     const command = verb(EAT).object(APPLE);
     const result = matcher(command);
     expect(result.isMatch).toBeFalsy();
+    expect(result.score).toBe(2);
 })
 
 test("Test attribute match", () => {
@@ -56,6 +60,7 @@ test("Test attribute match", () => {
     
     const result = matcher(command);
     expect(result.isMatch).toBeTruthy();
+    expect(result.score).toBe(24);
 })
 
 test("Test capture indirect object", () => {
@@ -72,6 +77,7 @@ test("Test capture indirect object", () => {
     const result = matcher(command);
     expect(result.isMatch).toBeTruthy();
     expect(result.captures).toStrictEqual({"tool" : "spoon"})
+    expect(result.score).toBe(15);
 })
 
 test("Test capture direct and indirect object", () => {
@@ -88,6 +94,7 @@ test("Test capture direct and indirect object", () => {
     const result = matcher(command);
     expect(result.isMatch).toBeTruthy();
     expect(result.captures).toStrictEqual({"container" : "soup", "tool" : "spoon"})
+    expect(result.score).toBe(6);
 })
 
 test("Test capture with modifier", () => {
@@ -100,4 +107,5 @@ test("Test capture with modifier", () => {
 
     const result = matcher(command);
     expect(result.isMatch).toBeTruthy();
+    expect(result.score).toBe(4);
 });
