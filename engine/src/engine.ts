@@ -130,13 +130,10 @@ export class BasicEngine implements Engine {
 
     if (!handled) {
       const verb = matchedCommand.getPoS("verb")?.verb;
-      const actionSources = [location, verb]; // TODO should all main actions be stored as verbs?
-      for (const actionSource of actionSources) {
-        const action = getBestMatchAction(actionSource?.actions ?? [], matchedCommand);
-        if (action) {
-          action.perform(this.env, matchedCommand);
-          break;
-        }
+      const action = getBestMatchAction(verb?.actions ?? [], matchedCommand);
+      if (action) {
+        action.perform(this.env, matchedCommand);
+        handled = true;
       }
     }
 

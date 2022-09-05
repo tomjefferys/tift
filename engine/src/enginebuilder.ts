@@ -4,13 +4,10 @@ import { getString, forEach, forEachEntry, ifExists } from "./obj";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
-import { Env, Obj } from "./env"
+import { Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";
-import { matchBuilder, matchModifier, matchVerb } from "./commandmatcher";
-import { EnvFn, mkResult, mkThunk } from "./script/thunk";
-import { MainAction, phaseActionBuilder } from "./script/phaseaction";
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
@@ -110,7 +107,6 @@ export function makeRoom(obj : Obj) : Entity {
             throw new Error(obj.id + " contains invalid destination for: " + dir);
         }
         builder.withVerbModifier("direction", dir);
-        builder.withAction(createMoveToAction(dir, dest));
     }
     builder.withVerb("look");
     return builder.build();
@@ -125,20 +121,6 @@ export function makeRule(obj : Obj) : Obj {
     const compiled = expressions.map((expr, index) => parse(expr, obj["id"] + ".run[" + index + "]"));
     obj["__COMPILED__"] = compiled;
     return obj;
-}
-
-function createMoveToAction(dir : string, dest : string) : MainAction {
-    const matcher = matchBuilder().withVerb(matchVerb("go")).withModifier(matchModifier("direction", dir)).build();
-    const action : EnvFn = (env : Env) => {
-        env.execute("moveTo", {"dest" : dest});
-        return mkResult(true);
-    }
-    return phaseActionBuilder()
-            .withPhase("main")
-            .withMatcherOnMatch(
-                matcher, 
-                mkThunk(action)
-            );
 }
 
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {

@@ -173,6 +173,15 @@ export const captureIndirectObject = (captureName : string) : Matcher =>
                             : FAILED_MATCH;
         }
 
+export const captureModifier = (modType : string) : Matcher => 
+        command => {
+            const modifiers = command.getModifiers()
+                                    .filter(modifier => modifier.modType == modType);
+            return (modifiers.length)
+                        ? { isMatch : true, captures : { [modType] : modifiers[0].value }, ...SCORE_WILDCARD} // TODO what if >1 modifiers?
+                        : FAILED_MATCH;
+        }
+
 const matchAll : (command : Command, ...matchers : Matcher[]) => MatchResult = 
     (state, ...matchers) => combineMatches(...matchers.map(matcher => matcher(state)));
 

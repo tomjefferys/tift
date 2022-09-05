@@ -1,7 +1,7 @@
 import { Obj, AnyArray, EnvFn, Env } from "./env";
 import { OutputConsumer, print } from "./messages/output";
 import { VerbBuilder } from "./verb"
-import { captureObject, matchBuilder, matchVerb } from "./commandmatcher";
+import { captureModifier, captureObject, matchBuilder, matchVerb } from "./commandmatcher";
 import { mkResult, mkThunk } from "./script/thunk";
 import { phaseActionBuilder } from "./script/phaseaction";
 
@@ -40,6 +40,21 @@ const LOOK = phaseActionBuilder()
                 return mkResult(true);
     }));
 
+const GO = phaseActionBuilder()
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("go")).withModifier(captureModifier("direction")).build(),
+            mkThunk(env => {
+                const location = env.execute("getLocation", {});
+                const entity = env.execute("getEntity", {"id" : location}) as Obj;
+                const destination = entity?.exits[env.get("direction")];
+                if (destination) {
+                    env.execute("moveTo", {"dest" : destination});
+                }
+                return mkResult(true);
+            })
+        );
+
 const GET = phaseActionBuilder()
         .withPhase("main")
         .withMatcherOnMatch(
@@ -65,6 +80,7 @@ const DROP = phaseActionBuilder()
 export const DEFAULT_VERBS = [
       new VerbBuilder({"id":"go"})
                   .withTrait("intransitive")
+                  .withAction(GO)
                   .withModifier("direction")
                   .build(),
       new VerbBuilder({"id":"look"})
