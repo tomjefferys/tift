@@ -117,10 +117,10 @@ export class BasicEngine implements Engine {
     for(const entity of inScopeEnitites) {
       const action = getBestMatchAction(entity.before, matchedCommand);
       if (action) {
-        const result = action.perform(this.env, matchedCommand);
+        const result = action.perform(this.env, matchedCommand)?.getValue();
         if (result) {
           if (_.isString(result)) {
-            // Output the string
+            this.env.execute("write", {"value":result});
           }
           handled = true;
           break;

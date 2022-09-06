@@ -2,24 +2,29 @@ import { Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
 import { listOutputConsumer } from "./testutils/testutils"
 
+let messages : string[];
+let builder : EngineBuilder;
+let engine : Engine;
+
+beforeEach(() => {
+    messages = [];
+    builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
+});
+
 test("Test single room, no exits", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "northRoom",
         type : "room",
         tags : [ "start" ]
     })
-    const engine = builder.build();
-    expect(getWordIds(engine, [])).toStrictEqual(["go","look"]);
-    expect(getWordIds(engine, ["go"])).toStrictEqual([]);
-    expect(getWordIds(engine, ["eat"])).toStrictEqual([]);
+    engine = builder.build();
+    expectWords([], ["go", "look"]);
+    expectWords(["go"], []);
+    expectWords(["eat"], []);
     expect(messages).toHaveLength(0);
 });
 
 test("Test single room, with one exit", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "northRoom",
         type : "room",
@@ -28,17 +33,15 @@ test("Test single room, with one exit", () => {
         },
         tags : [ "start" ]
     })
-    const engine = builder.build();
-    expect(getWordIds(engine, [])).toStrictEqual(["go", "look"]);
-    expect(getWordIds(engine, ["go"])).toStrictEqual(["south"]);
-    expect(getWordIds(engine, ["go", "south"])).toStrictEqual([]);
-    expect(getWordIds(engine, ["eat"])).toStrictEqual([]);
+    engine = builder.build();
+    expectWords([], ["go", "look"]);
+    expectWords(["go"], ["south"]);
+    expectWords(["go", "south"], []);
+    expectWords(["eat"], []);
     expect(messages).toHaveLength(0);
 })
 
 test("Test single room, with two exits", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "northRoom",
         type : "room",
@@ -48,19 +51,16 @@ test("Test single room, with two exits", () => {
         },
         tags : [ "start" ]
     })
-    const engine = builder.build();
-    expect(getWordIds(engine, [])).toStrictEqual(["go", "look"]);
-    expect(getWordIds(engine, ["go"])).toHaveLength(2);
-    expect(getWordIds(engine, ["go"])).toEqual(expect.arrayContaining(["south", "east"]));
-    expect(getWordIds(engine, ["go", "south"])).toStrictEqual([]);
-    expect(getWordIds(engine, ["go", "east"])).toStrictEqual([]);
-    expect(getWordIds(engine, ["eat"])).toStrictEqual([]);
+    engine = builder.build();
+    expectWords([], ["go", "look"]);
+    expectWords(["go"],["south", "east"]);
+    expectWords(["go", "south"], []);
+    expectWords(["go", "east"], []);
+    expectWords(["eat"], []);
     expect(messages).toHaveLength(0);
 })
 
 test("Test two rooms", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "northRoom",
         name : "The North Room",
@@ -79,22 +79,17 @@ test("Test two rooms", () => {
             north : "northRoom"
         }
     })
-    const engine = builder.build();
+    engine = builder.build();
 
-    expect(getWordIds(engine, ["go"])).toStrictEqual(["south"]);
-    engine.execute(["look"]);
-    expect(messages).toEqual(["The room is dark and square","<br/>"]);
-    messages.length = 0;
+    expectWords(["go"],["south"]);
+    executeAndTest(["look"], { expected : ["The room is dark and square", "<br/>"]});
     
-    engine.execute(["go", "south"]);
-    expect(getWordIds(engine, ["go"])).toStrictEqual(["north"]);
-    engine.execute(["look"]);
-    expect(messages).toEqual(["The South Room", "<br/>"]);
+    executeAndTest(["go", "south"], {});
+    executeAndTest(["look"], { expected : ["The South Room"] });
+    expectWords(["go"],["north"]);
 })
 
 test("Test room with item", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "theRoom",
         name : "The Room",
@@ -109,19 +104,14 @@ test("Test room with item", () => {
         location : "theRoom",
         tags : ["carryable"]
     });
-    const engine = builder.build();
+    engine = builder.build();
     engine.execute(["look"]);
-    const look = messages.join(" ");
-    expect(look).toContain("An almost empty room");
-    expect(look).toContain("an ordinary item");
+    executeAndTest(["look"], { expected : ["An almost empty room", "an ordinary item"]});
 
-    const words = getWordIds(engine, []);
-    expect(words).toEqual(expect.arrayContaining(["go","look","get"]));
+    expectWords([], ["go", "look", "get"]);
 })
 
 test("Test get item", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "theRoom",
         name : "The Room",
@@ -137,20 +127,13 @@ test("Test get item", () => {
         tags : ["carryable"]
     });
 
-    const engine = builder.build();
-    engine.execute(["look"]);
-    let look = messages.join(" ");
-    messages.length = 0;
-    expect(look).toContain("an ordinary item");
-    engine.execute(["get","anItem"]);
-    engine.execute(["look"]);
-    look = messages.join(" ");
-    expect(look).not.toContain("an ordinary item");
+    engine = builder.build();
+    executeAndTest(["look"], {expected : ["an ordinary item"]});
+    executeAndTest(["get", "anItem"], {});
+    executeAndTest(["look"], { notExpected : ["an ordinary item"]});
 })
 
 test("Test get named item", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "theRoom",
         name : "The Room",
@@ -165,23 +148,16 @@ test("Test get named item", () => {
         location : "theRoom",
         tags : ["carryable"]
     });
-    const engine = builder.build();
-    engine.execute(["look"]);
-    expect(messages).toContain("rusty key");
-    messages.length = 0;
+    engine = builder.build();
+    executeAndTest(["look"], { expected : ["rusty key"]});
 
-    const words = engine.getWords(["get"]);
-    expect(words).toEqual(expect.arrayContaining([{id: "key", value: "rusty key"}]))
+    expectWords(["get"], ["key"]);
 
-    engine.execute(["get", "key"]);
-
-    engine.execute(["look"]);
-    expect(messages).not.toContain("rusty key");
+    executeAndTest(["get", "key"], {});
+    executeAndTest(["look"], { notExpected : ["rusty key"]});
 })
 
 test("Test get/drop", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "theRoom",
         type : "room",
@@ -193,36 +169,21 @@ test("Test get/drop", () => {
         location : "theRoom",
         tags : ["carryable"]
     });
-    const engine = builder.build();
-    engine.execute(["look"]);
-    expect(messages).toContain("theRoom");
-    expect(messages).toContain("key");
-    messages.length = 0;
+    engine = builder.build();
+    executeAndTest(["look"], { expected : ["theRoom", "key"]});
 
-    let words = getWordIds(engine, []);
-    expect(words).toContain("get");
-    expect(words).not.toContain("drop");
+    expectWords([], ["go", "look", "get"]);
 
-    engine.execute(["get","key"])
-    engine.execute(["look"]);
-    expect(messages).toContain("theRoom");
-    expect(messages).not.toContain("key");
-    messages.length = 0;
+    executeAndTest(["get", "key"], {});
+    executeAndTest(["look"], { expected : ["theRoom"], notExpected : ["key"]});
 
-    words = getWordIds(engine, []);
-    expect(words).not.toContain("get");
-    expect(words).toContain("drop");
+    expectWords([], ["go", "look", "drop"]);
    
-    engine.execute(["drop","key"])
-    engine.execute(["look"]);
-    expect(messages).toContain("theRoom");
-    expect(messages).toContain("key");
-
+    executeAndTest(["drop", "key"], {});
+    executeAndTest(["look"], { expected : ["theRoom", "key"]});
 });
 
 test("Test simple rules", () => {
-    const messages : string[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
     builder.withObj({
         id : "theRoom",
         type : "room",
@@ -233,11 +194,63 @@ test("Test simple rules", () => {
         type : "rule",
         run : ["print('hello world')"]
     })
-    const engine = builder.build();
-    engine.execute(["look"]);
-    expect(messages).toContain("theRoom");
-    expect(messages).toContain("hello world");
+    engine = builder.build();
+    executeAndTest(["look"], { expected : ["theRoom", "hello world"]});
 });
+
+test("Test before action", () => {
+    builder.withObj({
+        id : "theRoom",
+        name : "The Room",
+        desc : "An almost empty room",
+        type : "room",
+        tags : [ "start" ]
+    });
+    builder.withObj({
+        id : "hotRock",
+        name : "hot rock",
+        type : "item",
+        location : "theRoom",
+        before : "get(hotRock) => 'Ouch!'",
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "coolRock",
+        name : "cool rock",
+        type : "item",
+        location : "theRoom",
+        tags : ["carryable"]
+    });
+
+    engine = builder.build();
+    executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
+    executeAndTest(["get", "hotRock"], { expected : ["Ouch!"]});
+    executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
+    executeAndTest(["get", "coolRock"], { notExpected : ["Ouch!"]});
+    executeAndTest(["look"], { expected : ["hot rock"], notExpected : ["cool rock"]});
+});
+
+interface ExpectedStrings {
+    expected? : string[],
+    notExpected? : string[]
+}
+
+function executeAndTest(command : string[], expectedMessages : ExpectedStrings) {
+    engine.execute(command);
+    expectedMessages.expected?.forEach(str => {
+        expect(messages).toContain(str);
+    })
+    expectedMessages.notExpected?.forEach(str => {
+        expect(messages).not.toContain(str);
+    })
+    messages.length = 0;
+} 
+
+function expectWords(command : string[], expectedNextWords : string[]) {
+    const words = getWordIds(engine, (command));
+    expect(words).toHaveLength(expectedNextWords.length);
+    expect(words).toEqual(expect.arrayContaining(expectedNextWords));
+}
 
 function getWordIds(engine : Engine, partial : string[]) : string[] {
     return engine.getWords(partial).map(idWord => idWord.id);

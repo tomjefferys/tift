@@ -6,8 +6,9 @@ import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
 import { Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
-import _ from "lodash";
+import _, { before, isObjectLike } from "lodash";
 import { parse } from "./script/parser";
+import { BeforeAction, Phase, phaseActionBuilder } from "./script/phaseaction";
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
@@ -90,6 +91,8 @@ export function makeEntity(obj : Obj) : Entity {
 
 export function makeItem(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
+    makeEntityVerbs(builder, obj);
+    addActions(builder, obj);
     const tags = obj?.tags ?? [];
     if (tags.includes("carryable")) {
         builder.withVerb("get");
@@ -101,6 +104,7 @@ export function makeItem(obj : Obj) : Entity {
 export function makeRoom(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj);
+    addActions(builder, obj);
     builder.withVerb("go");
     for(const [dir, dest] of Object.entries(obj["exits"] ?? {})) {
         if (typeof dest !== "string") {
@@ -121,6 +125,42 @@ export function makeRule(obj : Obj) : Obj {
     const compiled = expressions.map((expr, index) => parse(expr, obj["id"] + ".run[" + index + "]"));
     obj["__COMPILED__"] = compiled;
     return obj;
+}
+
+function addActions(builder : EntityBuilder, obj : Obj) {
+    getActionStrings(obj, "before")
+        .map(action => phaseActionBuilder().withPhase("before").withExpression(action))
+        .forEach(beforeAction => builder.withBefore(beforeAction));
+
+    getActionStrings(obj, "actions")
+        .map(action => phaseActionBuilder().withPhase("main").withExpression(action))
+        .forEach(mainAction => builder.withAction(mainAction));
+
+    getActionStrings(obj, "after")
+        .map(action => phaseActionBuilder().withPhase("after").withExpression(action))
+        .forEach(mainAction => builder.withAfter(mainAction));
+    
+}
+
+function getActionStrings(obj : Obj, field : string) : string[] {
+    const actionData = obj[field];
+    const actions : string[] = [];
+    if (actionData) {
+        if (_.isString(actionData)) {
+            actions.push(actionData);
+        } else if (_.isArray(actionData)) {
+            for(const action of actionData) {
+                if (_.isString(action)) {
+                    actions.push(action);
+                } else {
+                    throw new Error("Non string found whilst parsing before actions: " + action);
+                }
+            }
+        } else {
+            throw new Error("Before is an unsupported type: " + actionData);
+        }
+    }
+    return actions;
 }
 
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
