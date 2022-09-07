@@ -27,6 +27,13 @@ desc: An old rusty key
 location: pool
 tags: [carryable]
 ---
+item: hotRock
+name: hot rock
+desc: a burning hot piece of recently solidified lava
+location: entrance
+tags: [carryable]
+before: get(hotRock) => "Ouch!"
+---
 rule: rule1
 run:
   - if(random(1,2) == 1).then(print("A cold wind runs straight through you"))
