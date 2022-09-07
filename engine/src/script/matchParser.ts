@@ -3,7 +3,6 @@ import { matchBuilder, matchVerb, matchObject, captureObject,
             matchAttribute, matchIndirectObject, captureIndirectObject,
             Matcher, ALWAYS_FAIL, attributeMatchBuilder,
             matchAnyModifier} from "../commandmatcher";
-import { mkThunk, Thunk, EnvFn, mkResult } from "./thunk"
 import { Command } from "../command";
 import { isTransitive } from "../verb";
 
@@ -19,11 +18,6 @@ interface CompoundMatch {
     nameMatch : UnitMatch,
     argMatches : UnitMatch[],
     member? : CompoundMatch
-}
-
-export function evaluateMatch(matchExpr : Expression, onMatch : Thunk) : Thunk {
-    const matcher = evalutateMatchExpression(matchExpr)
-    return  createMatcherThunk(matcher, onMatch);
 }
 
 export function evalutateMatchExpression(matchExpr : Expression) : Matcher {
@@ -44,30 +38,13 @@ export function evalutateMatchExpression(matchExpr : Expression) : Matcher {
     return createMatcher(compoundMatch);
 }
 
-export function createMatcherThunk(matcher : Matcher, onMatch : Thunk, expression? : Expression) : Thunk {
-    // This is going to return a thunk, so how should it work?
-    // 1. put state in the env
-    // 2. call the matcher, based on the state
-    // 3. put captures into th env
-    // 4. execute onMatch
-    const envfn : EnvFn = env => {
-        const searchState = env.get(COMMAND) as Command;
-        const matchResult = matcher(searchState);
-        return matchResult.isMatch
-                    ? onMatch.resolve(env.newChild(matchResult.captures))
-                    : mkResult(undefined, {});
-    }
-
-    return mkThunk(envfn, expression);
-}
-
 function createMatcher(compoundMatch : CompoundMatch) : Matcher {
     // We build a matcher here, using the provided state
     // The state helps define what the match possbilities are, eg
     //    a transitive verb should always have a direct object
     // We could possibly not bother with the intermediate data structure here
     //    but this makes the code a bit clearer, and handled captures in a nicer way
-    return (command : Command) =>  {
+    return (command : Command, objId : string) =>  {
         const builder = matchBuilder();
         const verb = command.getPoS("verb")?.verb;
         if (!verb) {
@@ -98,7 +75,7 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
         }
         const matcher = builder.build();
     
-        return matcher(command);
+        return matcher(command, objId);
     }
 }
 
@@ -115,6 +92,8 @@ function getCompoundMatcher(callExpression : CallExpression) : CompoundMatch {
         case "Identifier":
             name = getMatcher(callExpression.callee as Identifier);
             break;
+        case "ThisExpression":
+
         case "MemberExpression":
             [name, parent] = getParentMatcher(callExpression.callee as MemberExpression);
             break;

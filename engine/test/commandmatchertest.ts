@@ -9,7 +9,7 @@ test("Test simple match", () => {
                         .withVerb(matchVerb("look"))
                         .build();
     const command = verb(LOOK);
-    const result = matcher(command);
+    const result = matcher(command, LOOK.id);
     expect(result.isMatch).toBeTruthy();
     expect(result.score).toBe(2);
 })
@@ -20,7 +20,7 @@ test("Test match with direct object", () => {
                             .withObject(matchObject("apple"))
                             .build();
     const command = verb(EAT).object(APPLE);
-    const result = matcher(command);
+    const result = matcher(command, APPLE.id);
     expect(result.isMatch).toBeTruthy();
     expect(result.score).toBe(12);
 })
@@ -31,7 +31,7 @@ test("Test match with direct object capture", () => {
                             .withObject(captureObject("food"))
                             .build();
     const command = verb(EAT).object(APPLE);
-    const result = matcher(command);
+    const result = matcher(command, APPLE.id);
     expect(result.isMatch).toBeTruthy();
     expect(result.captures).toStrictEqual({ "food" : "apple"});
     expect(result.score).toBe(3);
@@ -42,7 +42,7 @@ test("Test partial match", () => {
                             .withVerb(matchVerb("eat"))
                             .build();
     const command = verb(EAT).object(APPLE);
-    const result = matcher(command);
+    const result = matcher(command, APPLE.id);
     expect(result.isMatch).toBeFalsy();
     expect(result.score).toBe(2);
 })
@@ -58,7 +58,7 @@ test("Test attribute match", () => {
     
     const command = verb(STIR).object(SOUP).preposition("with").object(SPOON);
     
-    const result = matcher(command);
+    const result = matcher(command, SOUP.id);
     expect(result.isMatch).toBeTruthy();
     expect(result.score).toBe(24);
 })
@@ -74,7 +74,7 @@ test("Test capture indirect object", () => {
     
     const command = verb(STIR).object(SOUP).preposition("with").object(SPOON);
     
-    const result = matcher(command);
+    const result = matcher(command, SOUP.id);
     expect(result.isMatch).toBeTruthy();
     expect(result.captures).toStrictEqual({"tool" : "spoon"})
     expect(result.score).toBe(15);
@@ -91,7 +91,7 @@ test("Test capture direct and indirect object", () => {
     
     const command = verb(STIR).object(SOUP).preposition("with").object(SPOON);
     
-    const result = matcher(command);
+    const result = matcher(command, SOUP.id);
     expect(result.isMatch).toBeTruthy();
     expect(result.captures).toStrictEqual({"container" : "soup", "tool" : "spoon"})
     expect(result.score).toBe(6);
@@ -105,7 +105,7 @@ test("Test capture with modifier", () => {
 
     const command = verb(GO).modifier("direction", "north");
 
-    const result = matcher(command);
+    const result = matcher(command, GO.id);
     expect(result.isMatch).toBeTruthy();
     expect(result.score).toBe(4);
 });

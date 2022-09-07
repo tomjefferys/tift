@@ -115,9 +115,9 @@ export class BasicEngine implements Engine {
 
     let handled = false;
     for(const entity of inScopeEnitites) {
-      const action = getBestMatchAction(entity.before, matchedCommand);
+      const action = getBestMatchAction(entity.before, matchedCommand, entity.id);
       if (action) {
-        const result = action.perform(this.env, matchedCommand)?.getValue();
+        const result = action.perform(this.env, entity.id, matchedCommand)?.getValue();
         if (result) {
           if (_.isString(result)) {
             this.env.execute("write", {"value":result});
@@ -130,10 +130,12 @@ export class BasicEngine implements Engine {
 
     if (!handled) {
       const verb = matchedCommand.getPoS("verb")?.verb;
-      const action = getBestMatchAction(verb?.actions ?? [], matchedCommand);
-      if (action) {
-        action.perform(this.env, matchedCommand);
-        handled = true;
+      if (verb) {
+        const action = getBestMatchAction(verb.actions, matchedCommand, verb.id);
+        if (action) {
+          action.perform(this.env, verb.id, matchedCommand);
+          handled = true;
+        }
       }
     }
 

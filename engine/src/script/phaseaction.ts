@@ -14,9 +14,9 @@ export type Phase = "before" | "main" | "after";
 
 export interface PhaseAction {
     type : Phase,
-    perform : (env : Env, command : Command) => Result,
-    score : (command : Command) => number,
-    isMatch : (command : Command) => boolean
+    perform : (env : Env, objId : string, command : Command) => Result,
+    score : (command : Command, objId : string) => number,
+    isMatch : (command : Command, objId : string) => boolean
 }
 
 export interface BeforeAction extends PhaseAction {
@@ -44,9 +44,9 @@ type ObjectType<T> =
 
 export class PhaseActionBuilder implements Partial<PhaseAction> {
     type? : Phase;
-    perform? : (env : Env, command : Command) => Result;
-    score? : (command : Command) => number;
-    isMatch? : (command : Command) => boolean
+    perform? : (env : Env, objId : string, command : Command) => Result;
+    score? : (command : Command, objId : string) => number;
+    isMatch? : (command : Command, objId : string) => boolean
 
     withPhase<T extends Phase>(phase : T) : this & Pick<ObjectType<T>, 'type'> {
         return Object.assign(this, { type : phase});
@@ -60,12 +60,12 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
 
     withMatcherOnMatch(matcher : Matcher, onMatch : Thunk) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
         return Object.assign(this,{
-                perform : (env : Env, command : Command) => {
-                    const result = matcher(command);
+                perform : (env : Env, objId : string,  command : Command) => {
+                    const result = matcher(command, objId);
                     return result.isMatch? onMatch.resolve(env.newChild(result.captures)) :  mkResult(undefined, {});
                 },
-                score : (command : Command) => matcher(command).score,
-                isMatch : (command : Command) => matcher(command).isMatch
+                score : (command : Command, objId : string) => matcher(command, objId).score,
+                isMatch : (command : Command, objId : string) => matcher(command, objId).isMatch
         });
     }
 }
@@ -75,11 +75,11 @@ export function phaseActionBuilder() {
 }
 
 
-export function getBestMatchAction(actions : PhaseAction[], command : Command) : Optional<PhaseAction> {
+export function getBestMatchAction(actions : PhaseAction[], command : Command, objId : string) : Optional<PhaseAction> {
     let score = 0;
     let bestMatch = undefined;
     for(const action of actions) {
-      const actionScore = action.score(command);
+      const actionScore = action.score(command, objId);
       if (actionScore > score) {
         score = actionScore;
         bestMatch = action;

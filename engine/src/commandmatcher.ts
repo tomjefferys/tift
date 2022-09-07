@@ -20,7 +20,7 @@ const SCORE_EXACT = { score : 2  };
 const SCORE_OBJ_EXACT = { score : 10 };
 
 
-export type Matcher = (command : Command) => MatchResult;
+export type Matcher = (command : Command, objId : string) => MatchResult;
 
 export interface MatchResult {
     isMatch : boolean,
@@ -30,7 +30,7 @@ export interface MatchResult {
 
 const FAILED_MATCH : MatchResult = { isMatch : false, ...SCORE_NO_MATCH };
 
-export const ALWAYS_FAIL : Matcher = (_state) => FAILED_MATCH;
+export const ALWAYS_FAIL : Matcher = (_state, _objId) => FAILED_MATCH;
 
 function failIfProvided(part : PoSType) : Matcher {
     return command => ({ isMatch : !command.getPoS(part), ...SCORE_NO_MATCH })
@@ -73,7 +73,7 @@ class MatchBuilder {
         const modMatchers = this.modifiers.length ? this.modifiers : [matchNoModifiers()];
         const matchers : Matcher[] = [verbMatcher, objMatcher, attributeMatcher, ...modMatchers];
 
-        return command => matchAll(command, ...matchers);
+        return (command, objId) => matchAll(command, objId, ...matchers);
     }
 }
 
@@ -107,7 +107,7 @@ class AttributeMatchBuilder {
         }
         const attrMatcher = this.attribute;
         const objMatcher = this.obj;
-        return state => matchAll(state, attrMatcher, objMatcher);
+        return (command, objId) => matchAll(command, objId, attrMatcher, objMatcher);
     }
 }
 
@@ -115,44 +115,44 @@ export const matchBuilder = () : MatchBuilder => new MatchBuilder();
 
 export const attributeMatchBuilder = () => new AttributeMatchBuilder();
 
-export const matchVerb = (verbId : string) : Matcher => 
-                        command => {
-                            const match = Boolean(command.getVerb(verbId)); 
+export const matchVerb = (matchStr : string) : Matcher => 
+                        (command, objId) => {
+                            const match = Boolean(command.getVerb(getId(matchStr, objId))); 
                             return match ? { isMatch : true, ...SCORE_EXACT } : FAILED_MATCH;
                         };
 
-export const matchObject = (objectId : string) : Matcher => 
-                    command => {
-                        const match = Boolean(command.getDirectObject(objectId)); 
+export const matchObject = (matchStr : string) : Matcher => 
+                    (command, objId) => {
+                        const match = Boolean(command.getDirectObject(getId(matchStr, objId))); 
                         return match ? { isMatch : true, ...SCORE_OBJ_EXACT } : FAILED_MATCH;
                     };
 
-export const matchIndirectObject = (objectId : string) : Matcher => 
-                    command => {
-                        const match = Boolean(command.getIndirectObject(objectId));
+export const matchIndirectObject = (matchStr : string) : Matcher => 
+                    (command, objId) => {
+                        const match = Boolean(command.getIndirectObject(getId(matchStr, objId)));
                         return match ? { isMatch : true, ...SCORE_OBJ_EXACT } : FAILED_MATCH;
                     }
 
-export const matchAttribute = (attribute : string) : Matcher =>
-                    command => {
-                        const match = Boolean(command.getPreposition(attribute));
+export const matchAttribute = (matchStr : string) : Matcher =>
+                    (command, _objId) => {
+                        const match = Boolean(command.getPreposition(matchStr));
                         return match ? { isMatch : true, ...SCORE_EXACT } : FAILED_MATCH;
                     }
 
 export const matchModifier = (modType : string, modifier : string) : Matcher =>
-                    command => {
+                    (command, _objId) => {
                         const match = Boolean(command.getModifier(modType, modifier));
                         return match ? { isMatch : true, ...SCORE_EXACT } : FAILED_MATCH;
                     }
 
 export const matchAnyModifier = (modValue : string) : Matcher => 
-                    command => {
+                    (command, _objId) => {
                         const match = Boolean(command.find(part => part.type === "modifier" && part.value === modValue));
                         return match ? { isMatch : true, ...SCORE_EXACT } : FAILED_MATCH;
                     }
 
 export const matchNoModifiers = () : Matcher => 
-                    command => {
+                    (command, _objId) => {
                         const match = command.getModifiers().length === 0;
                         return match ? { isMatch : true, ...SCORE_NO_MATCH } : FAILED_MATCH;
                     }
@@ -182,8 +182,8 @@ export const captureModifier = (modType : string) : Matcher =>
                         : FAILED_MATCH;
         }
 
-const matchAll : (command : Command, ...matchers : Matcher[]) => MatchResult = 
-    (state, ...matchers) => combineMatches(...matchers.map(matcher => matcher(state)));
+const matchAll : (command : Command, objId : string, ...matchers : Matcher[]) => MatchResult = 
+    (command, objId, ...matchers) => combineMatches(...matchers.map(matcher => matcher(command, objId)));
 
 
 const combineMatches : (...matches : MatchResult[]) => MatchResult =
@@ -195,3 +195,6 @@ const combineMatches : (...matches : MatchResult[]) => MatchResult =
         },
         score : result1.score + result2.score
     }));
+
+// TODO change to use 'this' instead of 'self`.  This has special handling in jest
+const getId : (matchStr : string, objId : string) => string = (matchStr, objId) => matchStr === "self" ? objId : matchStr;

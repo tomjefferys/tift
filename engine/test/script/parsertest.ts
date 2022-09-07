@@ -1,6 +1,6 @@
 import { start } from "../../src/command";
-import { COMMAND } from "../../src/script/matchParser";
 import { parse } from "../../src/script/parser"
+import { phaseActionBuilder } from "../../src/script/phaseaction";
 import { APPLE, EAT, SOUP, STIR } from "../testutils/testentities";
 import { setUpEnv } from "../testutils/testutils"
 
@@ -140,25 +140,54 @@ test("Test array access", () => {
 
 test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
-    const fn = parse("stir($self) => write('you stir the ' + self)");
+    const action =  phaseActionBuilder()
+        .withPhase("main")
+        .withExpression("stir($self) => write('you stir the ' + self)");
+
     const command = start().verb(STIR).object(SOUP);
-    fn(env.newChild({[COMMAND]: command}));
+    action.perform(env, "", command);
     expect(messages).toContain("you stir the soup");
 })
 
 test("Test match operator, unsuccessful match", () => {
     const [env, messages] = setUpEnv();
-    const fn = parse("stir($self) => write('you stir the ' + self)");
+    const action = phaseActionBuilder()
+        .withPhase("main")
+        .withExpression("stir($self) => write('you stir the ' + self)");
     const command = start().verb(EAT).object(APPLE);
-    fn(env.newChild({[COMMAND]: command}));
+    action.perform(env, "", command);
     expect(messages.length).toBe(0);
 })
 
 test("Test match operator, return string", () => {
     const [env, messages] = setUpEnv();
-    const fn = parse("stir($self) => 'you stir the ' + self");
+    const action = phaseActionBuilder()
+            .withPhase("main")
+            .withExpression("stir($self) => 'you stir the ' + self");
     const command = start().verb(STIR).object(SOUP);
-    const result = fn(env.newChild({[COMMAND]: command}));
+    const result = action.perform(env, "", command);
     expect(messages.length).toBe(0);
-    expect(result).toEqual("you stir the soup");
+    expect(result.getValue()).toEqual("you stir the soup");
+})
+
+test("Test match operator using 'self'", () => {
+    const [env, messages] = setUpEnv();
+    const action = phaseActionBuilder()
+            .withPhase("main")
+            .withExpression("stir(self) => 'you stir the soup'");
+    const command = start().verb(STIR).object(SOUP);
+    const result = action.perform(env, SOUP.id, command);
+    expect(messages.length).toBe(0);
+    expect(result.getValue()).toEqual("you stir the soup");
+})
+
+test("Test match operator using 'self', not a match", () => {
+    const [env, messages] = setUpEnv();
+    const action = phaseActionBuilder()
+            .withPhase("main")
+            .withExpression("stir(self) => 'you stir the soup'");
+    const command = start().verb(STIR).object(SOUP);
+    const result = action.perform(env, APPLE.id, command);
+    expect(messages.length).toBe(0);
+    expect(result.getValue()).toBeFalsy();
 })

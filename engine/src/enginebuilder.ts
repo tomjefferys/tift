@@ -6,9 +6,9 @@ import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
 import { Obj } from "./env"
 import { OutputConsumer } from "./messages/output";
-import _, { before, isObjectLike } from "lodash";
+import _ from "lodash";
 import { parse } from "./script/parser";
-import { BeforeAction, Phase, phaseActionBuilder } from "./script/phaseaction";
+import { phaseActionBuilder } from "./script/phaseaction";
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
