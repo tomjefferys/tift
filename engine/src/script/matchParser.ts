@@ -93,7 +93,8 @@ function getCompoundMatcher(callExpression : CallExpression) : CompoundMatch {
             name = getMatcher(callExpression.callee as Identifier);
             break;
         case "ThisExpression":
-
+            // FIXME
+            break;
         case "MemberExpression":
             [name, parent] = getParentMatcher(callExpression.callee as MemberExpression);
             break;

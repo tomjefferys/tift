@@ -1,9 +1,9 @@
 import { Verb } from "./verb"
 import { Entity, getType, hasTag } from "./entity"
-import { createRootEnv, Obj } from "./env"
+import { createRootEnv, Env, Obj } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer } from "./enginedefault";
-import { OutputConsumer } from "./messages/output";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput } from "./enginedefault";
+import { OutputConsumer, OutputMessage } from "./messages/output";
 import { IdValue } from "./shared";
 import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
@@ -11,7 +11,8 @@ import * as _ from "lodash";
 import * as arrays from "./util/arrays";
 import { addLibraryFunctions } from "./script/library";
 import { getName, Nameable } from "./nameable";
-import { getBestMatchAction } from "./script/phaseaction";
+import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
+import { SentenceNode } from "./command";
 
 enum TAG {
   START = "start"
@@ -35,6 +36,11 @@ export interface EngineState {
 interface CommandContext {
   entities : ContextEntities;
   verbs : Verb[];
+}
+
+interface OutputProxy {
+  flush : () => void;
+  hasContent : () => boolean;
 }
 
 export class BasicEngine implements Engine {
@@ -113,33 +119,45 @@ export class BasicEngine implements Engine {
     allContextEntities.forEach(entity => arrays.pushIfUnique(inScopeEnitites, entity, (entity1, entity2) => entity1.id === entity2.id));
     inScopeEnitites.reverse();
 
-    let handled = false;
+    // Create a new child environment with it's own output conusmer
+    const [childEnv, mainOutputProxy] = this.createOutputProxy();
+
+    // Before actions
+    let handledBefore = false;
     for(const entity of inScopeEnitites) {
-      const action = getBestMatchAction(entity.before, matchedCommand, entity.id);
-      if (action) {
-        const result = action.perform(this.env, entity.id, matchedCommand)?.getValue();
-        if (result) {
-          if (_.isString(result)) {
-            this.env.execute("write", {"value":result});
-          }
-          handled = true;
+      handledBefore = executeBestMatchAction(entity.before, childEnv, matchedCommand, entity.id);
+      if (handledBefore) {
+        break;
+      }
+    }
+
+    // Main actions
+    let handledMain = false;
+    if (!handledBefore) {
+      const verb = matchedCommand.getPoS("verb")?.verb;
+      if (verb) {
+        handledMain = executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb.id);
+      }
+    }
+
+    // After actions
+    const [afterChildEnv, afterOutputProxy] = this.createOutputProxy();
+    if (handledMain) {
+      let handledAfter = false;
+      for(const entity of inScopeEnitites) {
+        handledAfter = executeBestMatchAction(entity.after, afterChildEnv, matchedCommand, entity.id);
+        if (handledAfter) {
           break;
         }
       }
     }
 
-    if (!handled) {
-      const verb = matchedCommand.getPoS("verb")?.verb;
-      if (verb) {
-        const action = getBestMatchAction(verb.actions, matchedCommand, verb.id);
-        if (action) {
-          action.perform(this.env, verb.id, matchedCommand);
-          handled = true;
-        }
-      }
+    // Flush the output
+    if (afterOutputProxy.hasContent()) {
+      afterOutputProxy.flush();
+    } else {
+      mainOutputProxy.flush();
     }
-
-    // TODO after actions
 
     this.context = this.getContext();
 
@@ -148,6 +166,8 @@ export class BasicEngine implements Engine {
     const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
     expressions.forEach(expr => expr(this.env));
   }
+
+
 
  
   getStatus() : string {
@@ -166,6 +186,34 @@ export class BasicEngine implements Engine {
   getVerbs() : Verb[] {
     return this.env.findObjs(obj => obj["type"] === "verb") as Verb[];
   }
+
+  createOutputProxy() : [Env, OutputProxy] {
+    const messages : OutputMessage[] = [];
+    const childEnvObj = {};
+    makeOutputConsumer(childEnvObj, message => messages.push(message));
+    const childEnv = this.env.newChild(childEnvObj);
+    const principalOutput = getOutput(this.env);
+    const outputProxy = {
+      flush : () => messages.forEach(message => principalOutput(message)),
+      hasContent : () => messages.length > 0
+    }
+    return [childEnv, outputProxy];
+  }
+}
+
+function executeBestMatchAction(actions : PhaseAction[], env : Env, command : SentenceNode, agentId : string ) {
+  const action = getBestMatchAction(actions, command, agentId); // FIXME getBestMatchAction, and action.perform have params in different orders
+  let handled = false;
+  if (action) {
+    const result = action.perform(env, agentId, command)?.getValue();
+    if (result) {
+      if (_.isString(result)) {
+        env.execute("write", {"value":result});
+      }
+      handled = true;
+    }
+  }
+  return handled;
 }
 
 function findStartingLocation(entities : Entity[]) : string {

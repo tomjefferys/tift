@@ -6,17 +6,53 @@ let messages : string[];
 let builder : EngineBuilder;
 let engine : Engine;
 
+
+const THE_ROOM = {
+    id : "theRoom",
+    name : "The Room",
+    desc : "An almost empty room",
+    type : "room",
+    tags : [ "start" ]
+};
+
+const ORDINARY_ITEM = {
+    id : "anItem",
+    name : "an ordinary item",
+    type : "item",
+    location : "theRoom",
+    tags : ["carryable"]
+};
+
+const OTHER_ITEM = {
+    id : "otherItem",
+    name : "another item",
+    type : "item",
+    location : "theRoom",
+    tags : ["carryable"]
+};
+
+const YET_ANOTHER_ITEM = {
+    id : "otherItem2",
+    name : "another another item",
+    type : "item",
+    location : "theRoom",
+    tags : ["carryable"]
+};
+
+const NORTH_ROOM = {
+    id : "northRoom",
+    type : "room",
+    tags : [ "start" ]
+};
+
+
 beforeEach(() => {
     messages = [];
     builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
 });
 
 test("Test single room, no exits", () => {
-    builder.withObj({
-        id : "northRoom",
-        type : "room",
-        tags : [ "start" ]
-    })
+    builder.withObj(NORTH_ROOM)
     engine = builder.build();
     expectWords([], ["go", "look"]);
     expectWords(["go"], []);
@@ -26,12 +62,10 @@ test("Test single room, no exits", () => {
 
 test("Test single room, with one exit", () => {
     builder.withObj({
-        id : "northRoom",
-        type : "room",
+        ...NORTH_ROOM,
         exits : {
             south : "southRoom"
         },
-        tags : [ "start" ]
     })
     engine = builder.build();
     expectWords([], ["go", "look"]);
@@ -43,13 +77,11 @@ test("Test single room, with one exit", () => {
 
 test("Test single room, with two exits", () => {
     builder.withObj({
-        id : "northRoom",
-        type : "room",
+        ...NORTH_ROOM,
         exits : {
             south : "southRoom",
             east : "eastRoom"
         },
-        tags : [ "start" ]
     })
     engine = builder.build();
     expectWords([], ["go", "look"]);
@@ -62,14 +94,11 @@ test("Test single room, with two exits", () => {
 
 test("Test two rooms", () => {
     builder.withObj({
-        id : "northRoom",
-        name : "The North Room",
+        ...NORTH_ROOM,
         desc : "The room is dark and square",
-        type : "room",
         exits : {
             south : "southRoom"
         },
-        tags : [ "start" ]
     })
     builder.withObj({
         id : "southRoom",
@@ -90,20 +119,8 @@ test("Test two rooms", () => {
 })
 
 test("Test room with item", () => {
-    builder.withObj({
-        id : "theRoom",
-        name : "The Room",
-        desc : "An almost empty room",
-        type : "room",
-        tags : [ "start" ]
-    });
-    builder.withObj({
-        id : "anItem",
-        name : "an ordinary item",
-        type : "item",
-        location : "theRoom",
-        tags : ["carryable"]
-    });
+    builder.withObj(THE_ROOM);
+    builder.withObj(ORDINARY_ITEM);
     engine = builder.build();
     engine.execute(["look"]);
     executeAndTest(["look"], { expected : ["An almost empty room", "an ordinary item"]});
@@ -112,20 +129,8 @@ test("Test room with item", () => {
 })
 
 test("Test get item", () => {
-    builder.withObj({
-        id : "theRoom",
-        name : "The Room",
-        desc : "An almost empty room",
-        type : "room",
-        tags : [ "start" ]
-    });
-    builder.withObj({
-        id : "anItem",
-        name : "an ordinary item",
-        type : "item",
-        location : "theRoom",
-        tags : ["carryable"]
-    });
+    builder.withObj(THE_ROOM);
+    builder.withObj(ORDINARY_ITEM);
 
     engine = builder.build();
     executeAndTest(["look"], {expected : ["an ordinary item"]});
@@ -134,13 +139,7 @@ test("Test get item", () => {
 })
 
 test("Test get named item", () => {
-    builder.withObj({
-        id : "theRoom",
-        name : "The Room",
-        desc : "An almost empty room",
-        type : "room",
-        tags : [ "start" ]
-    });
+    builder.withObj(THE_ROOM);
     builder.withObj({
         id : "key",
         name : "rusty key",
@@ -158,11 +157,7 @@ test("Test get named item", () => {
 })
 
 test("Test get/drop", () => {
-    builder.withObj({
-        id : "theRoom",
-        type : "room",
-        tags : [ "start" ]
-    });
+    builder.withObj(THE_ROOM);
     builder.withObj({
         id : "key",
         type : "item",
@@ -170,48 +165,39 @@ test("Test get/drop", () => {
         tags : ["carryable"]
     });
     engine = builder.build();
-    executeAndTest(["look"], { expected : ["theRoom", "key"]});
+    executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 
     expectWords([], ["go", "look", "get"]);
 
     executeAndTest(["get", "key"], {});
-    executeAndTest(["look"], { expected : ["theRoom"], notExpected : ["key"]});
+    executeAndTest(["look"], { expected : ["An almost empty room"], notExpected : ["key"]});
 
     expectWords([], ["go", "look", "drop"]);
    
     executeAndTest(["drop", "key"], {});
-    executeAndTest(["look"], { expected : ["theRoom", "key"]});
+    executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 });
 
 test("Test simple rules", () => {
-    builder.withObj({
-        id : "theRoom",
-        type : "room",
-        tags : [ "start" ]
-    });
+    builder.withObj(THE_ROOM);
     builder.withObj({
         id : "rule1",
         type : "rule",
         run : ["print('hello world')"]
     })
     engine = builder.build();
-    executeAndTest(["look"], { expected : ["theRoom", "hello world"]});
+    executeAndTest(["look"], { expected : ["An almost empty room", "hello world"]});
 });
 
-test("Test before action", () => {
-    builder.withObj({
-        id : "theRoom",
-        name : "The Room",
-        desc : "An almost empty room",
-        type : "room",
-        tags : [ "start" ]
-    });
+test("Test before and after actions", () => {
+    builder.withObj(THE_ROOM);
     builder.withObj({
         id : "hotRock",
         name : "hot rock",
         type : "item",
         location : "theRoom",
-        before : "get(hotRock) => 'Ouch!'",
+        before : "get(self) => 'Ouch!'",
+        after : "get(self) => 'Bingo!'",
         tags : ["carryable"]
     });
     builder.withObj({
@@ -219,15 +205,55 @@ test("Test before action", () => {
         name : "cool rock",
         type : "item",
         location : "theRoom",
+        after : "get(self) => 'Bingo!'",
         tags : ["carryable"]
     });
 
     engine = builder.build();
     executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
-    executeAndTest(["get", "hotRock"], { expected : ["Ouch!"]});
+    executeAndTest(["get", "hotRock"], { expected : ["Ouch!"], notExpected : ["Bingo!"]});
     executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
-    executeAndTest(["get", "coolRock"], { notExpected : ["Ouch!"]});
+    executeAndTest(["get", "coolRock"], { expected : ["Bingo!"], notExpected : ["Ouch!"]});
     executeAndTest(["look"], { expected : ["hot rock"], notExpected : ["cool rock"]});
+});
+
+test("Test before precedence", () => {
+    builder.withObj({
+        ...THE_ROOM,
+        before : [
+            "get(self) => 'cant get a room!'",
+            "get($item) => 'No using wildcard gets here'",
+            "get(anItem) => 'No getting the ordinary item'",
+            "get(otherItem) => false",
+            "get(otherItem2) => false"]
+    });
+    builder.withObj({
+        ...ORDINARY_ITEM,
+        before : [
+            "get(self) => 'This item really cant be picked up'",
+            "get(otherItem) => 'This inscope item can also stop other items being picked up'"
+        ]
+    })
+    builder.withObj({
+        ...OTHER_ITEM,
+        after : "get(self) => 'Got the other item!'"
+    })
+    builder.withObj({
+        ...YET_ANOTHER_ITEM,
+        after : "get(self) => 'Finally something gettable'"
+    })
+    engine = builder.build();
+     
+    executeAndTest(["look"], { expected : ["an ordinary item", "another item", "another another item"]});
+
+    executeAndTest(["get", "anItem"], { expected : ["No getting the ordinary item"]});
+    executeAndTest(["look"], { expected : ["an ordinary item", "another item", "another another item"]});
+
+    executeAndTest(["get", "otherItem"], { expected : ["This inscope item can also stop other items being picked up"]});
+    executeAndTest(["look"], { expected : ["an ordinary item", "another item", "another another item"]});
+
+    executeAndTest(["get", "otherItem2"], { expected : ["Finally something gettable"]});
+    executeAndTest(["look"], { expected : ["an ordinary item", "another item"]});
 });
 
 interface ExpectedStrings {
