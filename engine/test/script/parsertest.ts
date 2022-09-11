@@ -170,22 +170,22 @@ test("Test match operator, return string", () => {
     expect(result.getValue()).toEqual("you stir the soup");
 })
 
-test("Test match operator using 'self'", () => {
+test("Test match operator using 'this'", () => {
     const [env, messages] = setUpEnv();
     const action = phaseActionBuilder()
             .withPhase("main")
-            .withExpression("stir(self) => 'you stir the soup'");
+            .withExpression("stir(this) => 'you stir the soup'");
     const command = start().verb(STIR).object(SOUP);
     const result = action.perform(env, SOUP.id, command);
     expect(messages.length).toBe(0);
     expect(result.getValue()).toEqual("you stir the soup");
 })
 
-test("Test match operator using 'self', not a match", () => {
+test("Test match operator using 'this', not a match", () => {
     const [env, messages] = setUpEnv();
     const action = phaseActionBuilder()
             .withPhase("main")
-            .withExpression("stir(self) => 'you stir the soup'");
+            .withExpression("stir(this) => 'you stir the soup'");
     const command = start().verb(STIR).object(SOUP);
     const result = action.perform(env, APPLE.id, command);
     expect(messages.length).toBe(0);

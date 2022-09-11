@@ -59,14 +59,16 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
     }
 
     withMatcherOnMatch(matcher : Matcher, onMatch : Thunk) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
-        return Object.assign(this,{
+        const phaseAction =  Object.assign(this,{
                 perform : (env : Env, objId : string,  command : Command) => {
                     const result = matcher(command, objId);
                     return result.isMatch? onMatch.resolve(env.newChild(result.captures)) :  mkResult(undefined, {});
                 },
                 score : (command : Command, objId : string) => matcher(command, objId).score,
-                isMatch : (command : Command, objId : string) => matcher(command, objId).isMatch
+                isMatch : (command : Command, objId : string) => matcher(command, objId).isMatch,
+                toString : () => matcher.toString() + " => " + onMatch
         });
+        return phaseAction;
     }
 }
 

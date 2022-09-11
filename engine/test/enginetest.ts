@@ -196,8 +196,8 @@ test("Test before and after actions", () => {
         name : "hot rock",
         type : "item",
         location : "theRoom",
-        before : "get(self) => 'Ouch!'",
-        after : "get(self) => 'Bingo!'",
+        before : "get(this) => 'Ouch!'",
+        after : "get(this) => 'Bingo!'",
         tags : ["carryable"]
     });
     builder.withObj({
@@ -205,7 +205,7 @@ test("Test before and after actions", () => {
         name : "cool rock",
         type : "item",
         location : "theRoom",
-        after : "get(self) => 'Bingo!'",
+        after : "get(this) => 'Bingo!'",
         tags : ["carryable"]
     });
 
@@ -221,7 +221,7 @@ test("Test before precedence", () => {
     builder.withObj({
         ...THE_ROOM,
         before : [
-            "get(self) => 'cant get a room!'",
+            "get(this) => 'cant get a room!'",
             "get($item) => 'No using wildcard gets here'",
             "get(anItem) => 'No getting the ordinary item'",
             "get(otherItem) => false",
@@ -230,17 +230,17 @@ test("Test before precedence", () => {
     builder.withObj({
         ...ORDINARY_ITEM,
         before : [
-            "get(self) => 'This item really cant be picked up'",
+            "get(this) => 'This item really cant be picked up'",
             "get(otherItem) => 'This inscope item can also stop other items being picked up'"
         ]
     })
     builder.withObj({
         ...OTHER_ITEM,
-        after : "get(self) => 'Got the other item!'"
+        after : "get(this) => 'Got the other item!'"
     })
     builder.withObj({
         ...YET_ANOTHER_ITEM,
-        after : "get(self) => 'Finally something gettable'"
+        after : "get(this) => 'Finally something gettable'"
     })
     engine = builder.build();
      
