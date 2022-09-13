@@ -1,17 +1,15 @@
 import * as _ from "lodash"
+import { Path, PathElement, pathElementEquals, fromValueList } from "./path";
+import { parsePath } from "./script/pathparser";
 import { Optional } from "./util/optional";
 
 export const OVERRIDE = Symbol("__override__");
 
 export type ReadOnly = "readonly" | "writable";
 
-export type ObjKey = string | symbol;
-
-// Either an ObjKey, or an array of ObjKeys with at least one element
-export type ObjPath = ObjKey | ObjKey[];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export type Obj = {[key:ObjKey]:any};
+export type Obj = {[key:string | symbol]:any};
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type AnyArray = unknown[];
@@ -53,12 +51,12 @@ export class Env {
      * @param name 
      * @param value 
      */
-    // TODO need syntax for accessing arrays
-    set(name : ObjPath, value : any) {
+    set(name : Path | string | symbol, value : any) {
+        const setPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
         if (!this.writable) {
             throw new Error("Can't set variable on readonly env");
         }
-        const [ns, path] = this.matchNameSpace(name);
+        const [ns, path] = this.matchNameSpace(setPath);
         this.setToNameSpace(ns, path, value);
     }
 
@@ -80,26 +78,27 @@ export class Env {
         return obj;
     }
 
-    setToNameSpace(ns : NameSpace, path : ObjPath, value : any) {
-        const [head,tail] = dotSplit(path);
+    setToNameSpace(ns : NameSpace, path : Path, value : any) {
+        const [head,tail] = splitPath(path);
         const [env, isOverride] = this.findWritableEnv(ns, head) ?? [this, false];
         const nsObj = env.getNameSpace(ns, true); 
         if (nsObj === undefined) {
             throw new Error("Could not get namespace: " + ns);
         }
+        const headValue = head.getValue();
         if (!tail) {
-            nsObj[head] = value;
+            nsObj[headValue] = value;
             return;
         }
-        const obj = nsObj[head] ?? {};
+        const obj = nsObj[headValue] ?? {};
         if (typeof obj !== "object") {
-            throw new Error(head.toString() + " is not an object");
+            throw new Error(headValue.toString() + " is not an object");
         }
         if (isOverride) {
             obj[OVERRIDE] = true;
         }
-        if (!nsObj[head]) {
-            nsObj[head] = obj;
+        if (!nsObj[headValue]) {
+            nsObj[headValue] = obj;
         }
         setToObj(obj, tail, value);
     }
@@ -109,24 +108,25 @@ export class Env {
      * @param name 
      * @returns 
      */
-    get(name : ObjPath) : any {
-        const [ns, path] = this.matchNameSpace(name);
+    get(name : Path | string | symbol) : any {
+        const getPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
+        const [ns, path] = this.matchNameSpace(getPath);
         return this.getFromNameSpace(ns, path);
     }
 
-    getFromNameSpace(ns : NameSpace, path : ObjPath) {
+    getFromNameSpace(ns : NameSpace, path : Path) {
         if (!path || (_.isArray(path) && !path.length)) {
             throw new Error("Can't get empty path from namespace: " + ns);
         }
 
-        const [head,tail] = dotSplit(path);
+        const [head,tail] = splitPath(path);
         const env = this.findEnv(ns, head);
 
         if (!env) {
-            throw new Error("No such varible " + _.flattenDeep([...ns, path]).join(".").toString());
+            throw new Error("No such varible " + _.flattenDeep([...ns, path.map(e => e.getValue())]).join(".").toString());
         }
 
-        const value = _.get(env.properties, [...ns, head]);
+        const value = _.get(env.properties, [...ns, head.getValue()]);
         return (typeof value === "object")
             ? env.getObjProperty(ns, head, tail)
             : value;
@@ -138,11 +138,13 @@ export class Env {
      * @returns 
      */
     getStr(name : string) : string {
-        return this.get(name).toString();
+        const path = parsePath(name);
+        return this.get(path).toString();
     }
 
     getArr(name : string) : AnyArray {
-        const arr = this.get(name);
+        const path = parsePath(name);
+        const arr = this.get(path);
         if (!Array.isArray(arr)) {
             throw new Error(name + " is not an array");
         }
@@ -160,8 +162,8 @@ export class Env {
      * @param head 
      * @param tail 
      */
-    private getObjProperty(ns : NameSpace, head : ObjKey, tail : ObjPath | undefined) : any {
-        const value = _.get(this.properties, [...ns, head]);
+    private getObjProperty(ns : NameSpace, head : PathElement, tail : Path | undefined) : any {
+        const value = _.get(this.properties, [...ns, head.getValue()]);
 
         if (typeof value !== "object") {
             throw new Error(head.toString() + " is not an object");
@@ -169,7 +171,7 @@ export class Env {
 
         let obj;
         if (value[OVERRIDE] && this.parent) {
-            obj = this.parent?.getFromNameSpace(ns, head);
+            obj = this.parent?.getFromNameSpace(ns, [head]);
             _.merge(obj, value);
             delete obj[OVERRIDE];
             removeNulls(obj);
@@ -186,8 +188,8 @@ export class Env {
      * @param name the name of the property
      * @returns the matching environment
      */
-    private findEnv(ns : NameSpace, name : ObjKey) : Optional<Env> {
-        return _.has(this.properties,[...ns, name])
+    private findEnv(ns : NameSpace, name : PathElement) : Optional<Env> {
+        return _.has(this.properties,[...ns, name.getValue()])
                 ? this
                 : this.parent?.findEnv(ns, name);
     }
@@ -197,8 +199,8 @@ export class Env {
      * @param name the name of the property
      * @returns true if the property exists
      */
-    private hasProperty(ns : NameSpace, name : ObjKey) : boolean {
-        return _.has(this.properties,[...ns, name])
+    private hasProperty(ns : NameSpace, name : PathElement) : boolean {
+        return _.has(this.properties,[...ns, name.getValue()])
                     ? true
                     : this.parent?.hasProperty(ns, name) ?? false;
     }
@@ -212,9 +214,9 @@ export class Env {
      * @returns A tuple of the writable env, and an boolean indicating if 
      *          this is an override
      */
-    private findWritableEnv(ns : NameSpace, name : ObjKey) : [Env,boolean] | undefined {
+    private findWritableEnv(ns : NameSpace, name : PathElement) : [Env,boolean] | undefined {
         let result : [Env,boolean] | undefined = undefined;
-        if (_.has(this.properties, [...ns, name]) && this.writable) {
+        if (_.has(this.properties, [...ns, name.getValue()]) && this.writable) {
             result = [this,false];
         } else if (this.parent) {
             if (this.parent.writable) {
@@ -233,7 +235,7 @@ export class Env {
      * @returns the result of the function
      */
     execute(name : string, bindings : Obj ) : ReturnType {
-        const fn = this.get(name);
+        const fn = this.get(parsePath(name));
         return this.executeFn(fn, bindings);
     }
 
@@ -264,14 +266,14 @@ export class Env {
         return 1 + (this.parent?.getDepth() ?? 0);
     }
 
-    isNameSpace(path : ObjPath) : boolean {
-        return !!this.getNamespaces().find(ns => pathsEqual(path, ns));
+    isNameSpace(path : Path) : boolean {
+        return !!this.getNamespaces().find(ns => pathsEqual(path, fromValueList(ns)));
     }
 
     /**
      * @returns the names of all object in this (and parent) envs
      */
-    getAllObjectNames(namespaces : NameSpace[]) : ObjPath[] {
+    getAllObjectNames(namespaces : NameSpace[]) : Path[] {
         const objNames = this.parent?.getAllObjectNames(namespaces) ?? [];
         namespaces.flatMap(ns => this.getObjectNamesFromNameSpace(ns))
                   .filter(path => !objNames.find(p => pathsEqual(p,path)))
@@ -282,11 +284,11 @@ export class Env {
     /**
      * @returns all objects for the specified namespace
      */
-    getObjectNamesFromNameSpace(ns : NameSpace) : ObjPath[] {
+    getObjectNamesFromNameSpace(ns : NameSpace) : Path[] {
         const nsObj = this.getNameSpace(ns) ?? {};
         return Object.entries(nsObj)
                      .filter(([_key, value]) => _.isObject(value))
-                     .map(([key, _value]) => [...ns, key])
+                     .map(([key, _value]) => fromValueList([...ns, key]))
                      .filter(path => !this.isNameSpace(path));
     }
 
@@ -301,15 +303,16 @@ export class Env {
                        .filter(predicate);
     }
 
-    matchNameSpace(path : ObjPath) : [NameSpace, ObjPath] {
-        let longestMatch : Optional<[NameSpace, ObjPath]> = undefined;
+    matchNameSpace(path : Path | string) : [NameSpace, Path] {
+        const nsPath = _.isString(path)? parsePath(path) : path;
+        let longestMatch : Optional<[NameSpace, Path]> = undefined;
         for(const ns of this.getNamespaces()) {
-            const [match, tail] = hasPrefix(path, ns);
+            const [match, tail] = hasPrefix(nsPath, fromValueList(ns));
             if (match && (longestMatch === undefined || ns.length > longestMatch[0].length)) {
                 longestMatch = [ns, tail];
             }
         }
-        return longestMatch ?? [[], path];
+        return longestMatch ?? [[], nsPath];
     }
 }
 
@@ -318,11 +321,11 @@ export class Env {
  * @param obj 
  * @param name 
  */
-function getFromObj(obj : Obj, path : ObjPath) : any {
-    const [head, tail] = dotSplit(path);
-    const value = obj[head];
+function getFromObj(obj : Obj, path : Path) : any {
+    const [head, tail] = splitPath(path);
+    const value = obj[head.getValue()];
     if (!value) {
-        throw new Error("Variable " + head.toString() + " does not exist");
+        throw new Error("Variable " + head.getValue().toString() + " does not exist");
     }
     if (!tail) {
         return value;
@@ -350,15 +353,15 @@ function removeNulls(obj : Obj) {
  * @param obj 
  * @param name 
  */
-function setToObj(obj : Obj, name : ObjPath, value : any) {
-    const [head,tail] = dotSplit(name);
+function setToObj(obj : Obj, name : Path, value : any) {
+    const [head,tail] = splitPath(name);
     if (!tail) {
-        obj[head] = value;
+        obj[head.getValue()] = value;
         return;
     }
-    const child = obj[head] ?? {};
-    if (!obj[head]) {
-        obj[head] = child;
+    const child = obj[head.getValue()] ?? {};
+    if (!obj[head.getValue()]) {
+        obj[head.getValue()] = child;
     }
     if (typeof child !== "object") {
         throw new Error(head.toString() + " is not an object");
@@ -367,22 +370,21 @@ function setToObj(obj : Obj, name : ObjPath, value : any) {
 }
 
 /**
- * Split a string on the first dot, eg "foo.bar.baz" -> ["foo","bar.baz"]
+ * Split a path, into it's head and tail
  * @param name
  * @returns 
  */
-function dotSplit(path : ObjPath) : [ObjKey, ObjPath | undefined] {
+function splitPath(path : Path) : [PathElement, Path | undefined] {
     if (typeof path === "symbol") {
         return [path, undefined];
     } else {
-        const components = (_.isString(path))? path.split(".") : path;
-        const head = components[0];
-        const tail = (components.length > 1)? components.slice(1) : undefined;
+        const head = path[0];
+        const tail = (path.length > 1)? path.slice(1) : undefined;
         return [head, tail];
     }
 }
 
-function hasPrefix(path? : ObjPath, prefix? : ObjPath) : [boolean, ObjPath] {
+function hasPrefix(path? : Path, prefix? : Path) : [boolean, Path] {
     if (!prefix) { 
         // No prefix left, it's match.
         return [true, path ?? []];
@@ -391,18 +393,18 @@ function hasPrefix(path? : ObjPath, prefix? : ObjPath) : [boolean, ObjPath] {
         // No path left, but still have prefix.  No match.
         return [false, []];
     }
-    const [pathHead, pathTail] = dotSplit(path);
-    const [prefixHead, prefixTail] = dotSplit(prefix);
-    return pathHead === prefixHead? hasPrefix(pathTail, prefixTail) : [false, []];
+    const [pathHead, pathTail] = splitPath(path);
+    const [prefixHead, prefixTail] = splitPath(prefix);
+    return pathElementEquals(pathHead, prefixHead)? hasPrefix(pathTail, prefixTail) : [false, []];
 }
 
-function pathsEqual(path1? : ObjPath, path2? : ObjPath) : boolean {
+function pathsEqual(path1? : Path, path2? : Path) : boolean {
     if (!path1 || !path2) {
         return path1 === path2;
     }
-    const [head1, tail1] = dotSplit(path1);
-    const [head2, tail2] = dotSplit(path2);
-    return (head1 === head2)? pathsEqual(tail1, tail2) : false;
+    const [head1, tail1] = splitPath(path1);
+    const [head2, tail2] = splitPath(path2);
+return (pathElementEquals(head1, head2))? pathsEqual(tail1, tail2) : false;
 }
 
 /** 

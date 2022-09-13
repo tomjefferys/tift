@@ -3,6 +3,7 @@ import { Result, EnvFn, Thunk, ThunkType, mkThunk, mkResult } from "./thunk"
 
 import { Env } from '../env'
 import * as _ from 'lodash'
+import { parsePathExpr } from './pathparser';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type BinaryFunction = (l : any, r : any) => any;
@@ -161,14 +162,7 @@ function getBuiltInProperty(expression : Expression) : string | undefined {
  * return instead the identifiers "name"  (ie the literal strig value of the identifier)
  */
 function evalutateName(expression : Expression) : Thunk {
-    switch(expression.type) {
-        case "Identifier":
-            return mkThunk(_ => mkResult((expression as Identifier).name), expression);
-        case "Literal":
-            return evaluateLiteral(expression as Literal);
-        default:
-            throw new Error("Unknown member property expression: " + expression.type);
-    }
+    return mkThunk(_ => mkResult(parsePathExpr(expression), expression));
 }
 
 /**

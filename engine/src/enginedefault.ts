@@ -4,6 +4,7 @@ import { VerbBuilder } from "./verb"
 import { captureModifier, captureObject, matchBuilder, matchVerb } from "./commandmatcher";
 import { mkResult, mkThunk } from "./script/thunk";
 import { phaseActionBuilder } from "./script/phaseaction";
+import { makePath } from "./path";
 
 const NS_ENTITIES = "entities";
 
@@ -61,7 +62,7 @@ const GET = phaseActionBuilder()
             matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const itemId = env.getStr("item");
-                env.set([NS_ENTITIES, itemId, "location"], "INVENTORY");
+                env.set(makePath([NS_ENTITIES, itemId, "location"]), "INVENTORY");
                 return mkResult(true);
             }));
 
@@ -72,7 +73,7 @@ const DROP = phaseActionBuilder()
             mkThunk(env => {
                 const itemId = env.getStr("item");
                 const location = getPlayer(env).location;
-                env.set([NS_ENTITIES, itemId, "location"], location);
+                env.set(makePath([NS_ENTITIES, itemId, "location"]), location);
                 return mkResult(true);
             }));
 
@@ -103,12 +104,12 @@ export const DEFAULT_VERBS = [
 const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     setLocation : env => {
         const dest = env.getStr("dest");
-        env.set([PLAYER, "location"], dest);
+        env.set(makePath([PLAYER, "location"]), dest);
     },
     
     moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),
     getLocation : env => getPlayer(env).location,
-    getEntity : env => env.get([NS_ENTITIES, env.getStr("id")]),
+    getEntity : env => env.get(makePath([NS_ENTITIES, env.getStr("id")])),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
     writeMessage : env => getOutput(env)(env.get("message"))
 }

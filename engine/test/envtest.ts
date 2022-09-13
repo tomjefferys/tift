@@ -1,5 +1,6 @@
 import _ from "lodash";
-import { createRootEnv, Obj, OVERRIDE } from "../src/env";
+import { createRootEnv, NameSpace, Obj, OVERRIDE } from "../src/env";
+import { Path, toValueList } from "../src/path";
 
 test("test empty env", () => {
     const env = createRootEnv({}, "writable");
@@ -205,12 +206,12 @@ test("Test namespaces", () => {
     expect(root.getNamespaces()).toStrictEqual([[], ["foo"], ["grault", "garply"]]);
     expect(child.getNamespaces()).toStrictEqual([[], ["foo"], ["grault", "garply"]]);
 
-    expect(root.matchNameSpace("foo")).toStrictEqual([["foo"],[]])
-    expect(root.matchNameSpace("foo.bar")).toStrictEqual([["foo"],["bar"]]);
+    expect(resultToValueList(root.matchNameSpace("foo"))).toStrictEqual([["foo"],[]])
+    expect(resultToValueList(root.matchNameSpace("foo.bar"))).toStrictEqual([["foo"],["bar"]]);
 
-    expect(root.matchNameSpace("grault")).toStrictEqual([[],"grault"]);
-    expect(root.matchNameSpace("grault.garply")).toStrictEqual([["grault", "garply"], []]);
-    expect(root.matchNameSpace("grault.garply.waldo")).toStrictEqual([["grault", "garply"], ["waldo"]]);
+    expect(resultToValueList(root.matchNameSpace("grault"))).toStrictEqual([[],["grault"]]);
+    expect(resultToValueList(root.matchNameSpace("grault.garply"))).toStrictEqual([["grault", "garply"], []]);
+    expect(resultToValueList(root.matchNameSpace("grault.garply.waldo"))).toStrictEqual([["grault", "garply"], ["waldo"]]);
 });
 
 test("Test namespace get", () => {
@@ -339,3 +340,7 @@ test("Limit search to namespace", () => {
 
 })
 
+function resultToValueList(result : [NameSpace, Path]) : [NameSpace, (string | symbol | number)[]] {
+    const [ns, path] = result;
+    return [ns, toValueList(path)];
+}

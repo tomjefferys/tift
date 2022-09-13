@@ -138,6 +138,32 @@ test("Test array access", () => {
     expect(messages).toStrictEqual(["bar", "foo"]);
 });
 
+test("Test object property", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(player.score, 100),
+            write(player.score)
+        )
+    `)
+    fn(env);
+    expect(messages).toStrictEqual(["100"]);
+});
+
+test("Test set array item", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(obj.arr, ["foo", "bar"]),
+            set(obj.arr[0], "baz"),
+            write(obj.arr[0]),
+            write(obj.arr[1])
+        )
+    `)
+    fn(env);
+    expect(messages).toStrictEqual(["baz", "bar"]);
+})
+
 test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
     const action =  phaseActionBuilder()
