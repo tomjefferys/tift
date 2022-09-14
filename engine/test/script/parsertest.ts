@@ -53,6 +53,68 @@ test("Test if don't evaluate both sides", () => {
     expect(messages).toContain("bar");
 });
 
+test("Test switch", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(a, 2),
+            switch(a)
+                .case(1).then(write('one'))
+                .case(2).then(write('two'))
+                .default('three')
+        )
+    `);
+    fn(env.newChild({}));
+    expect(messages).toStrictEqual(['two']);
+});
+
+test("Test switch return result", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(a, 2),
+            set(b, switch(a)
+                    .case(1).then('one')
+                    .case(2).then('two')
+                    .default('three')),
+            write(b)
+        )
+    `);
+    fn(env.newChild({}));
+    expect(messages).toStrictEqual(['two']);
+})
+
+test("Test switch default value", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+    do(
+        set(a, 3),
+        set(b, switch(a)
+                .case(1).then('one')
+                .case(2).then('two')
+                .default('three')),
+        write(b)
+    )
+    `);
+    fn(env.newChild({}));
+    expect(messages).toStrictEqual(['three']);
+})
+
+test("Test switch fall through", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(a,1),
+            set(b, switch(a)
+                        .case(1).case(2).then("one or two")
+                        .default('three')),
+            write(b)
+        )
+    `)
+    fn(env.newChild({}));
+    expect(messages).toStrictEqual(['one or two']);
+})
+
 test("Test empty do", () => {
     const [env, messages] = setUpEnv();
     const fn = parse("do()");

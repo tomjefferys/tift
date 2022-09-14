@@ -35,10 +35,11 @@ const BUILTINS : {[key:string]:EnvFn} = {
     "if" : makeIf(),
     "do" : makeDo(),
     "set" : makeSet(),
-    "def" : makeDef()
+    "def" : makeDef(),
+    "switch" : makeSwitch()
 }
 
-const KEYWORD_PROPS = ["then", "else", "case"];
+const KEYWORD_PROPS = ["then", "else", "case", "default"];
 
 export const ARGS = "__args__"; 
 
@@ -314,24 +315,49 @@ function makeIf() : EnvFn {
 
 /**
  * Switch statement
- * switch(expr)
- *  .case(1, "foo")
- *  .case(2, "bar")
- *  .case(3, "baz")
- *  .default("qux")
  * 
  * or could we do:
  * switch(expr)
  *  .case(1).then("foo")
  *  .case(2).then("bar")
- *  .case(3).then("baz")
+ *  .case(3).case(4).then("baz")
  *  .default("qux")
  */
-//export function makeSwitch() : EnvFn {
-//    type Case = {"case" : EnvFn };
-//    type Then = {"then" : EnvFn };
-//
-//    const mkCase = (expr)
-//}
+function makeSwitch() : EnvFn {
+  type CaseThenDefault = {"case" : EnvFn, "then" : EnvFn, "default" : EnvFn };
+
+  const mkCaseThenDefault = (exprResult : unknown, isMatch : boolean, value : unknown) 
+                    : CaseThenDefault => {
+    return {
+        "case" : bindParams(["caseExpr"], (env : Env) => {
+            // case(expr), record if it's a match
+            const caseValue = env.get("caseExpr").resolve(env).getValue();           
+            const newIsMatch = isMatch || caseValue === exprResult;
+            const resultProps = mkCaseThenDefault(exprResult, newIsMatch, value);
+            return mkResult(value, resultProps);
+        }),
+        "then" : bindParams(["thenExpr"], (env : Env) => {
+            // then(expr) if isMatch set value, and reset isMatch
+            const newValue = (isMatch)? env.get("thenExpr").resolve(env).getValue() : value;
+            const resultProps = mkCaseThenDefault(exprResult, false, newValue);
+            return mkResult(newValue, resultProps);
+        }),
+        "default" : bindParams(["defaultExpr"], (env : Env) => {
+            // if value is undefined, set value to the default 
+            const newValue = (_.isUndefined(value))? env.get("defaultExpr").resolve(env).getValue() : value;
+            const resultProps = mkCaseThenDefault(exprResult, false, newValue);
+            return mkResult(newValue, resultProps);
+        })
+    }
+  } 
+
+  const switchFn : EnvFn = env => {
+    const exprResult = env.get("expr")(env).getValue();  
+    const resultProps = mkCaseThenDefault(exprResult, false, undefined);
+    return mkResult(undefined, resultProps);
+  }
+
+  return bindParams(["expr"], switchFn);
+}
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
