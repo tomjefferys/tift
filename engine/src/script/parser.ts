@@ -1,4 +1,4 @@
-import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression, IPlugin} from 'jsep';
+import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression, IPlugin, UnaryExpression} from 'jsep';
 import { Result, EnvFn, Thunk, ThunkType, mkThunk, mkResult } from "./thunk"
 
 import { Env } from '../env'
@@ -13,9 +13,16 @@ jsep.addBinaryOp("=>", 0);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type BinaryFunction = (l : any, r : any) => any;
+type UnaryFunction = (n : any) => any;
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+const UNARY_FUNCTIONS : {[key:string]:UnaryFunction} = {
+    "+" : n => +n,
+    "-" : n => -n,
+    "!" : n => !n,
+    "~" : n => ~n
+}
 
 const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
     "+": (l,r) => l + r,
@@ -87,6 +94,8 @@ export function evaluate(expression : Expression) : Thunk {
             return evaluateIdentifier(expression as Identifier);
         case "Literal":
             return evaluateLiteral(expression as Literal);
+        case "UnaryExpression":
+            return evaluateUnaryExpressoin(expression as UnaryExpression);
         case "BinaryExpression":
             return evaluateBinaryExpression(expression as BinaryExpression);
         case "ArrayExpression":
@@ -221,6 +230,18 @@ function getIdentifierType(identifier : Identifier) : ThunkType {
     }
 }
 
+function evaluateUnaryExpressoin(expression : UnaryExpression) : Thunk {
+    const argThunk = evaluate(expression.argument);
+    const fn = UNARY_FUNCTIONS[expression.operator];
+    if (!fn) {
+        throw new Error("Unknown operator: " + expression.operator);
+    }
+    const envFn : EnvFn = env => {
+        const arg = argThunk.resolve(env).getValue();
+        return mkResult(fn(arg));
+    }
+    return mkThunk(envFn, expression);
+}
 
 function evaluateBinaryExpression(expression : BinaryExpression)  : Thunk {
     const leftThunk = evaluate(expression.left);
@@ -259,7 +280,11 @@ function evaluateAssignmentExpression(assignment : AssignmentExpression) : Thunk
         const nameExpr = evaluateName(assignment.left);
         const leftExpr = evaluate(assignment.left);
         const rightExpr = evaluate(assignment.right);
-        const valueFn : EnvFn = env => mkResult(assignmentFn(leftExpr.resolve(env).getValue(), rightExpr.resolve(env).getValue()));
+        const valueFn : EnvFn = env => {
+            const left = leftExpr.resolve(env).getValue();
+            const right = rightExpr.resolve(env).getValue();
+            return mkResult(assignmentFn(left, right));
+        }
         return mkThunk(env => set(env, nameExpr.resolve, valueFn));
     } else {
         throw new Error("Unsupported assignment operator: " + assignment.operator);

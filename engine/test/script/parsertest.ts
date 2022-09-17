@@ -282,6 +282,23 @@ test("Test enhanced assignment", () => {
     expect(messages).toStrictEqual(["12", "8"]);
 });
 
+test("Test unary expression", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            a = 2,
+            b = false,
+            write(-a),
+            write(-(-a)),
+            write(!b),
+            write(!!b)
+        )
+    `)
+    fn(env);
+    expect(messages).toStrictEqual(["-2", "2", "true", "false"]);
+});
+
+
 
 test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
