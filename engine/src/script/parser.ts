@@ -1,4 +1,4 @@
-import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression, IPlugin, UnaryExpression} from 'jsep';
+import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression, IPlugin, UnaryExpression, ThisExpression, Compound} from 'jsep';
 import { Result, EnvFn, Thunk, ThunkType, mkThunk, mkResult } from "./thunk"
 
 import { Env } from '../env'
@@ -100,6 +100,10 @@ export function evaluate(expression : Expression) : Thunk {
             return evaluateBinaryExpression(expression as BinaryExpression);
         case "ArrayExpression":
             return evaluateArrayExpression(expression as ArrayExpression);
+        case "ThisExpression":
+            return evaluateThis(expression as ThisExpression);
+        case "Compound":
+            return evaluateCompound(expression as Compound);
         case "AssignmentExpression":
             return evaluateAssignmentExpression(expression as AssignmentExpression);
 
@@ -264,9 +268,22 @@ function evaluateArrayExpression(expression : ArrayExpression) : Thunk {
     return mkThunk(envFn, expression);
 }
 
+function evaluateThis(_this : ThisExpression) : Thunk {
+    return mkThunk(env => mkResult(env.get("this")));
+}
+
 function evaluateLiteral(literal : Literal) : Thunk {
     const envFn : EnvFn =  _ => mkResult(literal.value);
     return mkThunk(envFn, literal);
+}
+
+function evaluateCompound(compound : Compound) {
+    const envFn : EnvFn = env => {
+        const bodyThunks = compound.body.map(e => evaluate(e));
+        const resolved = resolveThunks(bodyThunks, env);
+        return mkResult(_.last(resolved));
+    }
+    return mkThunk(envFn, compound);
 }
 
 function evaluateAssignmentExpression(assignment : AssignmentExpression) : Thunk {

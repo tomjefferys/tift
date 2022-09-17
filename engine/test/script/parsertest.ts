@@ -298,7 +298,32 @@ test("Test unary expression", () => {
     expect(messages).toStrictEqual(["-2", "2", "true", "false"]);
 });
 
+test("Test this expression", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            this = "hello ",
+            this += "world",
+            write(this)
+        )
+    `)
+    fn(env);
+    expect(messages).toStrictEqual(["hello world"]);
+})
 
+test("Test compound", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+            set(a, 3),
+            set(b, a + 7),
+            write(a),
+            write(b),
+            a + b
+        `);
+    const result = fn(env);
+    expect(result).toBe(13);
+    expect(messages).toStrictEqual(["3", "10"]);
+})
 
 test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
