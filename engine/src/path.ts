@@ -24,12 +24,13 @@ export interface Index extends PathElement {
 
 export type Path = PathElement[];
 
-export function isPath(obj : any) : obj is Path {
+export function isPath(obj : unknown) : obj is Path {
     let isValidPath = _.isArray(obj);
     if (isValidPath) {
-        for(const element of obj) {
-            isValidPath = (element?.type === "property" && "name" in element) 
-                            || (element?.type === "index" && "index" in element);
+        for(const element of (obj as unknown[])) {
+            const pathElement = element as PathElement;
+            isValidPath = (pathElement?.type === "property" && _.has(pathElement, "name")) 
+                            || (pathElement?.type === "index" && _.has(pathElement, "index"));
             if (!isValidPath) {
                 break;
             }

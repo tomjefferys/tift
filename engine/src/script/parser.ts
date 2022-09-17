@@ -36,6 +36,21 @@ const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
     "^": (l,r) => l ^ r
 }
 
+const ASSIGNMENT_FUNCTIONS : {[key:string]:BinaryFunction} = {
+    "*=" : (l,r) => l * r,
+    "**=" : (l,r) => l ** r,
+    "/=" : (l,r) => l / r,
+    "%=" : (l,r) => l & r,
+    "+=" : (l,r) => l + r,
+    "-=" : (l,r) => l - r,
+    "<<=" : (l,r) => l << r,
+    ">>=" : (l,r) => l >> r,
+    ">>>=" : (l,r) => l >>> r,
+    "&=" : (l,r) => l & r,
+    "^=" : (l,r) => l ^ r,
+    "|=" : (l,r) => l | r
+}
+
 const BUILTINS : {[key:string]:EnvFn} = {
     "if" : makeIf(),
     "do" : makeDo(),
@@ -238,6 +253,14 @@ function evaluateAssignmentExpression(assignment : AssignmentExpression) : Thunk
         const leftExpr = evaluateName(assignment.left);
         const rightExpr = evaluate(assignment.right);
         return mkThunk(env => set(env, leftExpr.resolve, rightExpr.resolve), assignment);
+
+    } else if (_.has(ASSIGNMENT_FUNCTIONS, assignment.operator)) {
+        const assignmentFn = ASSIGNMENT_FUNCTIONS[assignment.operator];
+        const nameExpr = evaluateName(assignment.left);
+        const leftExpr = evaluate(assignment.left);
+        const rightExpr = evaluate(assignment.right);
+        const valueFn : EnvFn = env => mkResult(assignmentFn(leftExpr.resolve(env).getValue(), rightExpr.resolve(env).getValue()));
+        return mkThunk(env => set(env, nameExpr.resolve, valueFn));
     } else {
         throw new Error("Unsupported assignment operator: " + assignment.operator);
     }

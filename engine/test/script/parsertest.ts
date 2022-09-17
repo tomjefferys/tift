@@ -266,6 +266,22 @@ test("Test assignment, set array item", () => {
     expect(messages).toStrictEqual(["baz", "bar"]);
 })
 
+test("Test enhanced assignment", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            a = 2,
+            b = 4,
+            b *= a,
+            a += 5 + 5,
+            write(a),
+            write(b)
+        )
+    `)
+    fn(env);
+    expect(messages).toStrictEqual(["12", "8"]);
+});
+
 
 test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
