@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/tomjefferys/tift#readme",
   "dependencies": {
+    "@jsep-plugin/assignment": "^1.2.0",
     "@types/lodash": "^4.14.182",
     "jest": "^27.4.7",
     "js-yaml": "^4.1.0",

@@ -226,6 +226,47 @@ test("Test set array item", () => {
     expect(messages).toStrictEqual(["baz", "bar"]);
 })
 
+test("Test assignment", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            a = 3,
+            b = a + 7,
+            write(a),
+            write(b)
+        )
+    `);
+    fn(env);
+    expect(messages).toStrictEqual(["3", "10"]);
+});
+
+test("Test assignment, set object property", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            player.score = 100,
+            write(player.score)
+        )
+    `)
+    fn(env);
+    expect(messages).toStrictEqual(["100"]);
+});
+
+test("Test assignment, set array item", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            obj.arr = ["foo", "bar"],
+            obj.arr[0] = "baz",
+            write(obj.arr[0]),
+            write(obj.arr[1])
+        )
+    `)
+    fn(env);
+    expect(messages).toStrictEqual(["baz", "bar"]);
+})
+
+
 test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
     const action =  phaseActionBuilder()

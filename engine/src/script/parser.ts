@@ -1,16 +1,21 @@
-import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression} from 'jsep';
+import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression, IPlugin} from 'jsep';
 import { Result, EnvFn, Thunk, ThunkType, mkThunk, mkResult } from "./thunk"
 
 import { Env } from '../env'
 import * as _ from 'lodash'
 import { parsePathExpr } from './pathparser';
+import { isPath } from '../path';
+import  jsepAssignment, { AssignmentExpression } from '@jsep-plugin/assignment';
+
+// Configure Jsep
+jsep.plugins.register(jsepAssignment as unknown as IPlugin);
+jsep.addBinaryOp("=>", 0);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type BinaryFunction = (l : any, r : any) => any;
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-jsep.addBinaryOp("=>", 0);
 
 const BINARY_FUNCTIONS : {[key:string]:BinaryFunction} = {
     "+": (l,r) => l + r,
@@ -71,6 +76,8 @@ export function evaluate(expression : Expression) : Thunk {
             return evaluateBinaryExpression(expression as BinaryExpression);
         case "ArrayExpression":
             return evaluateArrayExpression(expression as ArrayExpression);
+        case "AssignmentExpression":
+            return evaluateAssignmentExpression(expression as AssignmentExpression);
 
     }
     throw new Error("Unknown expression type: " + expression.type);
@@ -109,7 +116,7 @@ function evaluateCallExpression(callExpression : CallExpression) : Thunk {
 function evaluateBuiltInArgs(calleeName : string, args : Expression[]) {
     let argThunks : Thunk[];
     if (calleeName === "set" || calleeName === "def") {
-        argThunks = [evalutateName(args[0]), evaluate(args[1])];
+        argThunks = [evaluateName(args[0]), evaluate(args[1])];
     } else {
         argThunks = args.map(arg => evaluate(arg));
     }
@@ -136,7 +143,7 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
             return mkResult(obj[builtInProperty]);
         }
     } else {
-        const propertyThunk = evalutateName(memberExpression.property);
+        const propertyThunk = evaluateName(memberExpression.property);
         envFn = env => {
             const obj = objThunk.resolve(env).getValue() as {[key:string]:unknown}
             const property = propertyThunk.resolve(env).getValue() as string;
@@ -162,7 +169,7 @@ function getBuiltInProperty(expression : Expression) : string | undefined {
  * If it's an identifier don't look up the identifier in the environment, 
  * return instead the identifiers "name"  (ie the literal strig value of the identifier)
  */
-function evalutateName(expression : Expression) : Thunk {
+function evaluateName(expression : Expression) : Thunk {
     return mkThunk(_ => mkResult(parsePathExpr(expression), expression));
 }
 
@@ -226,6 +233,16 @@ function evaluateLiteral(literal : Literal) : Thunk {
     return mkThunk(envFn, literal);
 }
 
+function evaluateAssignmentExpression(assignment : AssignmentExpression) : Thunk {
+    if (assignment.operator === "=") {
+        const leftExpr = evaluateName(assignment.left);
+        const rightExpr = evaluate(assignment.right);
+        return mkThunk(env => set(env, leftExpr.resolve, rightExpr.resolve), assignment);
+    } else {
+        throw new Error("Unsupported assignment operator: " + assignment.operator);
+    }
+}
+
 export function bindParams(params : string[], fn : EnvFn) : EnvFn {
     return env => {
         const args = env.get(ARGS);
@@ -254,16 +271,23 @@ function makeDef() : EnvFn {
  * @returns 
  */
 function makeSet() : EnvFn {
-    const setFn = (env : Env) => {
-        if (!env.parent) {
-            throw new Error("Can't set: no parent environment");
-        }
-        const name = env.get("name")(env).getValue();
-        const value = env.get("value")(env).getValue();
-        env.parent.set(name, value);
-        return mkResult(value);
-    }
+    const setFn = (env : Env) => set(env, env.get("name"), env.get("value"));
     return bindParams(["name", "value"], setFn);
+}
+
+function set(env : Env, nameFn : EnvFn, valueFn : EnvFn) : Result {
+    if (!env.parent) {
+        throw new Error("Can't set: no parent environment");
+    }
+
+    const name = nameFn(env).getValue();
+    const value = valueFn(env).getValue();
+    if (_.isString(name) || _.isSymbol(name) || isPath(name)) {
+        env.parent.set(name, value);
+    } else {
+        throw new Error("Can't set, " + name + " is an invalid setter path");
+    }
+    return mkResult(value);
 }
 
 /**
@@ -289,7 +313,7 @@ function makeDo() : EnvFn {
 function makeIf() : EnvFn {
     type ThenElse = {"then" : EnvFn, "else" : EnvFn}
 
-    // Create the then/else methods.  exprResult is the reusult of the boolen expression, value is 
+    // Create the then/else methods.  exprResult is the result of the boolen expression, value is 
     // the current value to be returned.  The value is passed in via the then/else methods
     const mkThenElse = (exprResult : unknown, value : unknown) : ThenElse => {
         return {

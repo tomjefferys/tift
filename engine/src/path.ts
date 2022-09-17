@@ -24,6 +24,20 @@ export interface Index extends PathElement {
 
 export type Path = PathElement[];
 
+export function isPath(obj : any) : obj is Path {
+    let isValidPath = _.isArray(obj);
+    if (isValidPath) {
+        for(const element of obj) {
+            isValidPath = (element?.type === "property" && "name" in element) 
+                            || (element?.type === "index" && "index" in element);
+            if (!isValidPath) {
+                break;
+            }
+        }
+    }
+    return isValidPath;
+}
+
 export function property(name : NameType) : Property {
     const prop : Property = {
         type : "property",
