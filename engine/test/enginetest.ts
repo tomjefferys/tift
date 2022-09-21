@@ -111,7 +111,7 @@ test("Test two rooms", () => {
     engine = builder.build();
 
     expectWords(["go"],["south"]);
-    executeAndTest(["look"], { expected : ["The room is dark and square", "<br/>"]});
+    executeAndTest(["look"], { expected : ["The room is dark and square", ""]});
     
     executeAndTest(["go", "south"], {});
     executeAndTest(["look"], { expected : ["The South Room"] });

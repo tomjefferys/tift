@@ -30,13 +30,13 @@ const LOOK = phaseActionBuilder()
                 const entity = env.execute("getEntity", {"id":location}) as Obj;
                 const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
                 env.execute("write", {"value":desc});
-                env.execute("write", {"value":"<br/>"});
+                env.execute("write", {"value":""});
 
                 const items = env.findObjs(obj => obj.location === location);
 
                 for(const item of items) {
                     env.execute("write", {"value": item["name"] ?? item["id"]});
-                    env.execute("write", {"value":"<br/>"});
+                    env.execute("write", {"value":""});
                 }
                 return mkResult(true);
     }));

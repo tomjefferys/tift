@@ -34,7 +34,7 @@ function execute() {
   state.status = engine.getStatus();
   if (output.length) {
     const values = output.map(message => message.value);
-    state.text.push(values.join(" "));
+    values.forEach(value => state.text.push(value));
     output.length = 0;
   }
 }
