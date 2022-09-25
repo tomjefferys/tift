@@ -3,7 +3,7 @@ import Controls from './components/Controls.vue'
 import Output from './components/Output.vue'
 import { reactive } from 'vue';
 //@ts-ignore
-import { getEngine } from '@engine/main.ts';
+import { getEngine, Input } from '@engine/main.ts';
 //@ts-ignore
 import { Engine } from '@engine/engine.ts'
 //@ts-ignore
@@ -17,27 +17,51 @@ const engine : Engine = getEngine((message: OutputMessage) => output.push(messag
 
 const state = reactive({ 
   command : [] as IdValue[],
-  words : engine.getWords([]),
+  words : [] as IdValue[],
   text : [] as string[],
-  status : engine.getStatus()
+  status : ""
   });
+
+getStatus();
+getWords([]);
 
 function wordSelected(word: IdValue) {
   state.command.push(word.id);
-  state.words = engine.getWords(state.command);
+  getWords(state.command);
 }
 
 function execute() {
-  engine.execute(state.command);
-  state.command = [];
-  state.words = engine.getWords([]);
-  state.status = engine.getStatus();
+  engine.send(Input.execute(state.command));
   if (output.length) {
     const values = output.map(message => message.value);
     values.forEach(value => state.text.push(value));
     output.length = 0;
   }
+  state.command = [];
+  getWords([]);
+  getStatus();
 }
+
+function getWords(command : string[]) {
+  engine.send(Input.getNextWords(command));
+  for(const message of output) {
+    if (message.type === "Words") {
+      state.words = message.words;
+    }
+  }
+  output.length = 0;
+}
+
+function getStatus() {
+  engine.send(Input.getStatus());
+  for(const message of output) {
+    if (message.type === "Status") {
+      state.status = message.status;
+    }
+  }
+  output.length = 0;
+}
+
 </script>
 
 <template>

@@ -1,6 +1,7 @@
 import { loadFromYaml } from "./enginebuilder";
 import { Engine } from "./engine";
 import { OutputConsumer } from "./messages/output";
+import { InputMessage } from "./messages/input"
 
 const data = `
 ---
@@ -42,4 +43,26 @@ run:
 export function getEngine(outputConsumer : OutputConsumer) : Engine {
   const engine = loadFromYaml(data, outputConsumer);
   return engine;
+}
+
+export namespace Input {
+  export function getNextWords(command : string[]) : InputMessage {
+    return {
+        type : "GetWords",
+        command : command
+    };
+  }
+
+  export function execute(command : string[]) : InputMessage {
+    return {
+        type : "Execute",
+        command : command
+    }
+  }
+
+  export function getStatus() : InputMessage {
+    return {
+        type : "GetStatus"
+    }
+  }
 }

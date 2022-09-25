@@ -1,4 +1,3 @@
-import { Print } from "tift-engine/src/messages/output";
 import { IdValue } from "tift-engine/src/shared";
 import { Display, DisplayState } from "./display";
 import { EngineFacade } from "./enginefacade";
@@ -40,7 +39,7 @@ export class CommandState {
             if (words.length === 0) {
                 this.messages.push(this.command.map(word => word.value).join(" "));
                 this.engine.execute(this.command.map(word => word.id));
-                this.engine.flushMessages(message => this.messages.push((message as Print).value))
+                this.engine.flushMessages(message => this.messages.push(message));
                 this.command.length = 0;
             }
             this.input.length = 0;

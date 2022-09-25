@@ -4,7 +4,7 @@ import { createRootEnv, Env, Obj } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "./messages/output";
-import { IdValue } from "./shared";
+import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
 import * as _ from "lodash";
@@ -13,6 +13,7 @@ import { addLibraryFunctions } from "./script/library";
 import { getName, Nameable } from "./nameable";
 import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
+import { InputMessage } from "./messages/input";
 
 enum TAG {
   START = "start"
@@ -23,9 +24,10 @@ enum TYPE {
 }
 
 export interface Engine {
-  getWords(partialCommand : string[]) : IdValue<string>[];
-  execute(command : string[]) : void;
-  getStatus() : string;
+  send(message : InputMessage) : void;
+  //getWords(partialCommand : string[]) : IdValue<string>[];
+  //execute(command : string[]) : void;
+  //getStatus() : string;
 }
 
 export interface EngineState {
@@ -46,6 +48,7 @@ interface OutputProxy {
 export class BasicEngine implements Engine {
   private readonly env;
   private context : CommandContext;
+  private output : OutputConsumer;
 
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
     const envEntities = {} as Obj;
@@ -65,6 +68,9 @@ export class BasicEngine implements Engine {
     addLibraryFunctions(environment);
 
     const rootEnv = createRootEnv(environment, "readonly", [["entities"], ["verbs"]]);
+
+    this.output = outputConsumer;
+
     this.env = rootEnv.newChild();
 
     this.context = this.getContext();
@@ -95,8 +101,24 @@ export class BasicEngine implements Engine {
     }
   }
 
-  getWords(partial : string[]): IdValue<string>[] {
-    return getNextWords(partial, this.context.entities, this.context.verbs);
+  send(message : InputMessage) : void {
+      switch(message.type) {
+        case "GetWords":
+          this.getWords(message.command);
+          break;
+        case "GetStatus":
+          this.getStatus();
+          break;
+        case "Execute":
+          this.execute(message.command);
+          break;
+      }
+  }
+
+  getWords(partial : string[]) : void {
+    const nextWords = getNextWords(partial, this.context.entities, this.context.verbs);
+    const message = Output.words( partial, nextWords);
+    this.output(message);
   }
   
   execute(command: string[]): void {
@@ -170,13 +192,14 @@ export class BasicEngine implements Engine {
 
 
  
-  getStatus() : string {
+  getStatus() : void {
     const playerLocation = getPlayer(this.env).location
     const locations = this.env.findObjs(obj => obj?.id === playerLocation) as Nameable[];
     if (!locations.length) {
       throw new Error("Could not find player location");
     }
-    return getName(locations[0]);
+    const status = getName(locations[0]);
+    this.output(Output.status(status));
   }
 
   getEntities() : Entity[] {

@@ -1,8 +1,10 @@
 import { Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
-import { listOutputConsumer } from "./testutils/testutils"
+import { listOutputConsumer } from "./testutils/testutils";
+import * as Input from "../src/messages/input";
 
 let messages : string[];
+let wordsResponse : string[];
 let builder : EngineBuilder;
 let engine : Engine;
 
@@ -48,7 +50,8 @@ const NORTH_ROOM = {
 
 beforeEach(() => {
     messages = [];
-    builder = new EngineBuilder().withOutput(listOutputConsumer(messages));
+    wordsResponse = [];
+    builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse));
 });
 
 test("Test single room, no exits", () => {
@@ -122,7 +125,7 @@ test("Test room with item", () => {
     builder.withObj(THE_ROOM);
     builder.withObj(ORDINARY_ITEM);
     engine = builder.build();
-    engine.execute(["look"]);
+    engine.send(Input.execute(["look"]));
     executeAndTest(["look"], { expected : ["An almost empty room", "an ordinary item"]});
 
     expectWords([], ["go", "look", "get"]);
@@ -262,7 +265,7 @@ interface ExpectedStrings {
 }
 
 function executeAndTest(command : string[], expectedMessages : ExpectedStrings) {
-    engine.execute(command);
+    engine.send(Input.execute(command));
     expectedMessages.expected?.forEach(str => {
         expect(messages).toContain(str);
     })
@@ -279,5 +282,8 @@ function expectWords(command : string[], expectedNextWords : string[]) {
 }
 
 function getWordIds(engine : Engine, partial : string[]) : string[] {
-    return engine.getWords(partial).map(idWord => idWord.id);
+    engine.send(Input.getNextWords(partial));
+    const words = [...wordsResponse];
+    wordsResponse.length = 0;
+    return words;
 }
