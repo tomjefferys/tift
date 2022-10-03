@@ -123,7 +123,7 @@ export class Env {
         const env = this.findEnv(ns, head);
 
         if (!env) {
-            throw new Error("No such varible " + _.flattenDeep([...ns, path.map(e => e.getValue())]).join(".").toString());
+            throw new Error("No such varible " + _.flattenDeep([...ns, path.map(e => e.getValue().toString())]).join(".").toString());
         }
 
         const value = _.get(env.properties, [...ns, head.getValue()]);

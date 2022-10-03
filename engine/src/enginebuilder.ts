@@ -12,9 +12,9 @@ import { phaseActionBuilder } from "./script/phaseaction";
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
-    private verbs : Verb[] = [];
-    private entities : Entity[] = [];
-    private objs : Obj[] = [];
+    verbs : Verb[] = [];
+    entities : Entity[] = [];
+    objs : Obj[] = [];
 
     constructor() {
         DEFAULT_VERBS.forEach(verb => this.verbs.push(verb));
@@ -46,6 +46,11 @@ export class EngineBuilder {
         return this;
     }
 
+    fromYaml(data : string) {
+        const objs = getObjs(data);
+        objs.forEach(obj => this.withObj(obj));
+    }
+
     build() : Engine & EngineState {
         if (!this.outputConsumer) {
             throw new Error("No output counsumer specified")
@@ -60,6 +65,13 @@ export function loadFromYaml(data: string, outputConsumer : OutputConsumer) : En
     const builder = new EngineBuilder().withOutput(outputConsumer);
     objs.forEach(obj => builder.withObj(obj));
     return builder.build();
+}
+
+export function addFromYaml(engine : Engine, data : string) {
+    const objs = getObjs(data);
+    const builder = new EngineBuilder();
+    objs.forEach(obj => builder.withObj(obj));
+
 }
 
 export function makeVerb(obj : Obj) : Verb {

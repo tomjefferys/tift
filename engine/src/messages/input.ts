@@ -1,4 +1,4 @@
-export type InputMessage = GetWords | Execute | GetStatus;
+export type InputMessage = GetWords | Execute | GetStatus | Load | Start;
 
 export interface GetWords {
     type : "GetWords",
@@ -14,22 +14,11 @@ export interface GetStatus {
     type : "GetStatus"
 }
 
-export function getNextWords(command : string[]) : InputMessage {
-    return {
-        type : "GetWords",
-        command : command
-    };
+export interface Load {
+    type : "Load",
+    data : string
 }
 
-export function execute(command : string[]) : InputMessage {
-    return {
-        type : "Execute",
-        command : command
-    }
-}
-
-export function getStatus() : InputMessage {
-    return {
-        type : "GetStatus"
-    }
+export interface Start {
+    type : "Start"
 }

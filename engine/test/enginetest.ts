@@ -1,7 +1,7 @@
 import { Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
 import { listOutputConsumer } from "./testutils/testutils";
-import * as Input from "../src/messages/input";
+import { Input } from "../src/main";
 
 let messages : string[];
 let wordsResponse : string[];
@@ -57,6 +57,8 @@ beforeEach(() => {
 test("Test single room, no exits", () => {
     builder.withObj(NORTH_ROOM)
     engine = builder.build();
+    engine.send(Input.start());
+
     expectWords([], ["go", "look"]);
     expectWords(["go"], []);
     expectWords(["eat"], []);
@@ -71,6 +73,8 @@ test("Test single room, with one exit", () => {
         },
     })
     engine = builder.build();
+    engine.send(Input.start());
+
     expectWords([], ["go", "look"]);
     expectWords(["go"], ["south"]);
     expectWords(["go", "south"], []);
@@ -87,6 +91,8 @@ test("Test single room, with two exits", () => {
         },
     })
     engine = builder.build();
+    engine.send(Input.start());
+
     expectWords([], ["go", "look"]);
     expectWords(["go"],["south", "east"]);
     expectWords(["go", "south"], []);
@@ -112,6 +118,7 @@ test("Test two rooms", () => {
         }
     })
     engine = builder.build();
+    engine.send(Input.start());
 
     expectWords(["go"],["south"]);
     executeAndTest(["look"], { expected : ["The room is dark and square", ""]});
@@ -125,6 +132,8 @@ test("Test room with item", () => {
     builder.withObj(THE_ROOM);
     builder.withObj(ORDINARY_ITEM);
     engine = builder.build();
+    engine.send(Input.start());
+    
     engine.send(Input.execute(["look"]));
     executeAndTest(["look"], { expected : ["An almost empty room", "an ordinary item"]});
 
@@ -136,6 +145,8 @@ test("Test get item", () => {
     builder.withObj(ORDINARY_ITEM);
 
     engine = builder.build();
+    engine.send(Input.start());
+
     executeAndTest(["look"], {expected : ["an ordinary item"]});
     executeAndTest(["get", "anItem"], {});
     executeAndTest(["look"], { notExpected : ["an ordinary item"]});
@@ -151,6 +162,7 @@ test("Test get named item", () => {
         tags : ["carryable"]
     });
     engine = builder.build();
+    engine.send(Input.start());
     executeAndTest(["look"], { expected : ["rusty key"]});
 
     expectWords(["get"], ["key"]);
@@ -168,6 +180,7 @@ test("Test get/drop", () => {
         tags : ["carryable"]
     });
     engine = builder.build();
+    engine.send(Input.start());
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 
     expectWords([], ["go", "look", "get"]);
@@ -189,6 +202,7 @@ test("Test simple rules", () => {
         run : ["print('hello world')"]
     })
     engine = builder.build();
+    engine.send(Input.start());
     executeAndTest(["look"], { expected : ["An almost empty room", "hello world"]});
 });
 
@@ -213,6 +227,7 @@ test("Test before and after actions", () => {
     });
 
     engine = builder.build();
+    engine.send(Input.start());
     executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
     executeAndTest(["get", "hotRock"], { expected : ["Ouch!"], notExpected : ["Bingo!"]});
     executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
@@ -246,6 +261,7 @@ test("Test before precedence", () => {
         after : "get(this) => 'Finally something gettable'"
     })
     engine = builder.build();
+    engine.send(Input.start());
      
     executeAndTest(["look"], { expected : ["an ordinary item", "another item", "another another item"]});
 

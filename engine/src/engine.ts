@@ -13,7 +13,8 @@ import { addLibraryFunctions } from "./script/library";
 import { getName, Nameable } from "./nameable";
 import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
-import { InputMessage } from "./messages/input";
+import { InputMessage, Load } from "./messages/input";
+import { EngineBuilder } from "./enginebuilder";
 
 enum TAG {
   START = "start"
@@ -25,9 +26,6 @@ enum TYPE {
 
 export interface Engine {
   send(message : InputMessage) : void;
-  //getWords(partialCommand : string[]) : IdValue<string>[];
-  //execute(command : string[]) : void;
-  //getStatus() : string;
 }
 
 export interface EngineState {
@@ -46,34 +44,44 @@ interface OutputProxy {
 }
 
 export class BasicEngine implements Engine {
-  private readonly env;
+  private readonly rootEnv : Env;
+  private readonly env : Env;
   private context : CommandContext;
   private output : OutputConsumer;
 
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
-    const envEntities = {} as Obj;
-    const envVerbs = {} as Obj;
-    const environment = {} as Obj; 
-    objs.forEach(obj => environment[obj.id as string] = obj); // FIXME reject anything without an id
-    entities.forEach(entity => envEntities[entity.id] = entity);
-    verbs.forEach(verb => envVerbs[verb.id] = verb);
+    this.rootEnv = createRootEnv({ "entities" : {}, "verbs" : {}}, "readonly", [["entities"], ["verbs"]]);
+    this.addContent(entities, verbs, objs);
 
-    environment.entities = envEntities;
-    environment.verbs = envVerbs;
+    const rootProps = this.rootEnv.properties;
 
-    const start = findStartingLocation(entities);
-    makePlayer(environment, start);
-    makeDefaultFunctions(environment);
-    makeOutputConsumer(environment, outputConsumer);
-    addLibraryFunctions(environment);
-
-    const rootEnv = createRootEnv(environment, "readonly", [["entities"], ["verbs"]]);
+    makeDefaultFunctions(rootProps);
+    makeOutputConsumer(rootProps, outputConsumer);
+    addLibraryFunctions(rootProps);
 
     this.output = outputConsumer;
 
-    this.env = rootEnv.newChild();
+    this.env = this.rootEnv.newChild();
 
+    this.context = {
+      entities : {},
+      verbs : []
+    }
+  }
+
+  start() {
+    const rootProps = this.rootEnv.properties;
+    const start = findStartingLocation(_.values(rootProps["entities"]));
+    makePlayer(rootProps, start);
     this.context = this.getContext();
+  }
+
+  addContent(entities : Entity[], verbs : Verb[], objs : Obj[]) {
+    const props = this.rootEnv.properties;
+    // These need adding to the readonly root Env
+    objs.forEach(obj => props[obj.id as string] = obj); // FIXME reject anything without an id
+    entities.forEach(entity => props["entities"][entity.id] = entity);
+    verbs.forEach(verb => props["verbs"][verb.id] = verb);
   }
 
   getContext() : CommandContext {
@@ -112,7 +120,19 @@ export class BasicEngine implements Engine {
         case "Execute":
           this.execute(message.command);
           break;
+        case "Load": 
+          this.loadData(message);
+          break;
+        case "Start":
+          this.start();
+          break;
       }
+  }
+
+  loadData(message : Load) {
+    const builder = new EngineBuilder();
+    builder.fromYaml(message.data);
+    this.addContent(builder.entities, builder.verbs, builder.objs);
   }
 
   getWords(partial : string[]) : void {

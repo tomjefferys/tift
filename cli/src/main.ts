@@ -1,4 +1,5 @@
 import * as readline from "readline";
+import * as fs from "fs";
 import { CommandState } from "./commandstate";
 import { Display } from "./display";
 import { createEngine } from "./enginefacade";
@@ -7,6 +8,10 @@ readline.emitKeypressEvents(process.stdin);
 
 const display = new Display(process.stdout);
 const engine = createEngine();
+const data = fs.readFileSync("../example/simple.yaml", "utf8");
+engine.load(data);
+engine.start();
+
 const commandState = new CommandState(engine, display); 
 
 const stdin = process.stdin;

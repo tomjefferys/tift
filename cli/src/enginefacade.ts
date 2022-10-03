@@ -21,8 +21,6 @@ export class EngineFacade {
     constructor(messageConsumer : MessageConsumer, engine : Engine) {
         this.engine = engine;
         this.messageConsumer = messageConsumer;
-        this.engine.send(Input.getStatus());
-        this.engine.send(Input.getNextWords([]));
     }
 
     getWords(command : string[] = this.messageConsumer.wordCache[0]) {
@@ -42,11 +40,22 @@ export class EngineFacade {
     getStatus() : string {
         return this.messageConsumer.status;
     }
+
+    load(data : string) {
+        this.engine.send(Input.load(data));
+    }
+
+    start() {
+        this.engine.send(Input.start());
+        this.engine.send(Input.getStatus());
+        this.engine.send(Input.getNextWords([]));
+    }
     
     flushMessages(printHandler : PrintHandler) {
         this.messageConsumer.flushPrintMessages(printHandler);
     }
 }
+
 
 class MessageConsumer {
     printMessages : string[] = [];

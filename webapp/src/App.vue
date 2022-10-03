@@ -11,6 +11,42 @@ import { OutputConsumer, OutputMessage } from '@engine/messages/output.ts'
 //@ts-ignore
 import { IdValue } from '@engine/shared.ts'
 
+const adventure = `
+---
+room: cave
+desc: A dark dank cave
+exits:
+  north: entrance
+  south: pool
+tags: [start]
+---
+room: entrance
+desc: Sunlight casts a pool of illumination over the rocky and uneven floor
+exits:
+  south: cave
+---
+room: pool
+desc: A deep pool of cold clear water exends over the southern end of the chamber
+exits:
+  north: cave
+---
+item: key
+name: rusty key
+desc: An old rusty key
+location: pool
+tags: [carryable]
+---
+item: hotRock
+name: hot rock
+desc: a burning hot piece of recently solidified lava
+location: entrance
+tags: [carryable]
+before: get(hotRock) => "Ouch!"
+---
+rule: rule1
+run:
+  - if(random(1,2) == 1).then(print("A cold wind runs straight through you"))
+`;
 
 const output : OutputMessage[] = [];
 const engine : Engine = getEngine((message: OutputMessage) => output.push(message));
@@ -22,6 +58,9 @@ const state = reactive({
   status : ""
   });
 
+
+load(adventure);
+start();
 getStatus();
 getWords([]);
 
@@ -60,6 +99,14 @@ function getStatus() {
     }
   }
   output.length = 0;
+}
+
+function load(data : string) {
+  engine.send(Input.load(data));
+}
+
+function start() {
+  engine.send(Input.start());
 }
 
 </script>
