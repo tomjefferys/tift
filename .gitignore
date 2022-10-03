@@ -4,7 +4,6 @@
 *.swn
 !jest.config.js
 out
-.vscode
 notes.txt
 node_modules
 webapp/dist

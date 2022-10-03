@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "My VueJS Chrome",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}",
+            //"preLaunchTask": "serve",
+            // "userDataDir": "${env:HOME}/.vscode/vscode-chrome-debug-userdatadir" 
+            // This config is to always use the same configuration for the chrome app (system wide) 
+            // therefore you can install the prefered extensions once and they will stay!
+            // Taken from here: https://stackoverflow.com/questions/51725854/run-vscode-chrome-debugger-with-its-extensions
+        }
+    ]
+}
