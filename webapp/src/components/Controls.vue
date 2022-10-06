@@ -32,12 +32,27 @@ function wordSelected(word: string) {
         </div>
     </div>
     <div class="textout">
-        <div v-for="word in words">
-            <Word :word="word" @selected="wordSelected"/>
-        </div>
+        <TransitionGroup name="words">
+            <div v-for="word in words" :key="word">
+                <Word :word="word" @selected="wordSelected"/>
+            </div>
+        </TransitionGroup>
     </div>
 </template>
 
 <style scoped>
+.words-move, 
+.words-enter-active,
+.words-leave-active {
+  transition: all 0.5s ease;
+}
+.words-enter-from,
+.words-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
 
+.words-leave-active {
+  position: absolute;
+}
 </style>
