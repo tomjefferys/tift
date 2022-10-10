@@ -31,13 +31,14 @@ const state = reactive({
   status : ""
   });
 
-function wordSelected(word: IdValue) {
-  state.command.push(word.id);
-  getWords(state.command);
+function wordSelected(word: IdValue<string>) {
+  state.command.push(word);
+  getWords(state.command.map(word => word.id));
 }
 
 function execute() {
-  engine.send(Input.execute(state.command));
+  engine.send(Input.execute(state.command.map(word => word.id)));
+  state.text.push("> " + state.command.map(word => word.value).join(" "));
   if (output.length) {
     const values = output.map(message => message.value);
     values.forEach(value => state.text.push(value));
@@ -81,7 +82,7 @@ function start() {
 <template>
     <div id="mainFrame">
       <div id="outputArea">
-        <Output :text="state.text" :status="state.status"/>
+         <Output :text="state.text" :status="state.status" :command="state.command"/>
       </div>
       <div id="inputArea">
         <Controls
@@ -110,6 +111,7 @@ function start() {
 
 #mainFrame {
   height: 100vh;
+  overflow: hidden;
 }
 
 </style>

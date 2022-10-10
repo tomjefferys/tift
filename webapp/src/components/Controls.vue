@@ -2,23 +2,25 @@
 import { ref, computed } from 'vue';
 import Command from "./Command.vue";
 import Word from "./Word.vue";
+//@ts-ignore
+import { IdValue } from '@engine/shared.ts'
 
 const props = defineProps<{
-    command: string[],
-    words: string[]
+    command: IdValue<string>[],
+    words: IdValue<string>[]
 }>();
 
 const emit = defineEmits<{
-  (e: 'wordSelected', word: string) : void,
+  (e: 'wordSelected', word: IdValue<string>) : void,
   (e: 'execute') : void
 }>();
 
 
-const combinedCommand = computed(() => "command:" + props.command.join(" "));
+const combinedCommand = computed(() => "command:" + props.command.map(word => word.value).join(" "));
 
 //const command = ref("");
 
-function wordSelected(word: string) {
+function wordSelected(word: IdValue<string>) {
     //command.value += " " + word;
     emit('wordSelected', word);
 }
