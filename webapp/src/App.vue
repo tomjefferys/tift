@@ -5,11 +5,11 @@ import { reactive } from 'vue';
 //@ts-ignore
 import { getEngine, Input } from '@engine/main.ts';
 //@ts-ignore
-import { Engine } from '@engine/engine.ts'
+import type { Engine } from '@engine/engine.ts'
 //@ts-ignore
-import { OutputConsumer, OutputMessage } from '@engine/messages/output.ts'
+import type { OutputMessage } from '@engine/messages/output.ts'
 //@ts-ignore
-import { IdValue } from '@engine/shared.ts'
+import type { IdValue } from '@engine/shared.ts'
 
 fetch('./adventure.yaml')
   .then((response) => response.text())

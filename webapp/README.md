@@ -50,3 +50,12 @@ npm run test:unit
 ```sh
 npm run lint
 ```
+
+### VS Code takeover mode 
+Avoids "Cannot find module errors" when using the VSCode Volar extension
+
+1. your project workspace, bring up the command palette with Ctrl + Shift + P (macOS: Cmd + Shift + P).
+2. Type built and select "Extensions: Show Built-in Extensions".
+3. Type typescript in the extension search box (do not remove @builtin prefix).
+4. Click the little gear icon of "TypeScript and JavaScript Language Features", and select "Disable (Workspace)".
+5. Reload the workspace. Takeover mode will be enabled when you open a Vue or TS file.
