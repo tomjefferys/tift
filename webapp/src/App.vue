@@ -56,7 +56,11 @@ function getWords(command : string[]) {
   engine.send(Input.getNextWords(command));
   for(const message of output) {
     if (message.type === "Words") {
-      state.words = message.words;
+      if (message.words.length) {
+        state.words = message.words;
+      } else {
+        execute();
+      }
     }
   }
   output.length = 0;
