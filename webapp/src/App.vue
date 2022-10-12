@@ -10,6 +10,8 @@ import type { Engine } from '@engine/engine.ts'
 import type { OutputMessage } from '@engine/messages/output.ts'
 //@ts-ignore
 import type { IdValue } from '@engine/shared.ts'
+import { message, type OutputEntry } from './outputentry';
+import { command } from './outputentry';
 
 fetch('./adventure.yaml')
   .then((response) => response.text())
@@ -27,7 +29,7 @@ const engine : Engine = getEngine((message: OutputMessage) => output.push(messag
 const state = reactive({ 
   command : [] as IdValue[],
   words : [] as IdValue[],
-  text : [] as string[],
+  text : [] as OutputEntry[],
   status : ""
   });
 
@@ -38,9 +40,10 @@ function wordSelected(word: IdValue<string>) {
 
 function execute() {
   engine.send(Input.execute(state.command.map(word => word.id)));
-  state.text.push("> " + state.command.map(word => word.value).join(" "));
+  const outputEntry = command(state.command.map(word => word.value).join(" "));
+  state.text.push(outputEntry);
   if (output.length) {
-    const values = output.map(message => message.value);
+    const values = output.map(entry => message(entry.value));
     values.forEach(value => state.text.push(value));
     output.length = 0;
   }

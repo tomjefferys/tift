@@ -3,10 +3,11 @@ import StatusBar from "./StatusBar.vue";
 //@ts-ignore
 import { IdValue } from '@engine/shared.ts'
 import { ref, onUpdated } from "vue";
+import type { OutputEntry } from "@/outputentry";
 
 const props = defineProps<{
     status : string,
-    text: string[],
+    text: OutputEntry[],
     command: IdValue<string>[]
 }>();
 
@@ -25,9 +26,10 @@ onUpdated(() => {
     </div>
     <div ref="textout" id="textout">
         <p v-for="output in text">
-           {{output}}
+            <span v-if="output.type == 'message'" class="message">{{output.message}}</span>
+            <span v-if="output.type == 'command'" class="command">&gt; {{output.command}}</span>
         </p>
-        &gt; <span v-for="word in command">{{word.value}}&nbsp;</span>
+        &gt; <span v-for="word in command" class="command">{{word.value}}&nbsp;</span>
     </div>
 </template>
 
@@ -36,5 +38,13 @@ onUpdated(() => {
 #textout {
   height: 90%;
   overflow:auto;
+}
+
+.message {
+    color: lightgray
+}
+
+.command {
+    color: lightgreen
 }
 </style>
