@@ -25,7 +25,7 @@ onUpdated(() => {
         <StatusBar :status="status"/>
     </div>
     <div ref="textout" id="textout">
-        <p v-for="output in text">
+        <p v-for="output in text" class="outputPara">
             <span v-if="output.type == 'message'" class="message">{{output.message}}</span>
             <span v-if="output.type == 'command'" class="command">&gt; {{output.command}}</span>
         </p>
@@ -37,7 +37,10 @@ onUpdated(() => {
 
 #textout {
   height: 90%;
-  overflow:auto;
+  overflow: auto;
+  max-width: 70ch;
+  margin: 0 auto
+
 }
 
 .message {
@@ -46,5 +49,10 @@ onUpdated(() => {
 
 .command {
     color: lightgreen
+}
+
+.outputPara {
+    /*max-width: 20ch;*/
+    text-align: left;
 }
 </style>
