@@ -10,7 +10,7 @@ const display = new Display(process.stdout);
 const engine = createEngine();
 const data = fs.readFileSync("../example/simple.yaml", "utf8");
 engine.load(data);
-engine.start();
+engine.configure({ "autoLook" : true });
 
 const commandState = new CommandState(engine, display); 
 
@@ -26,6 +26,8 @@ stdin.resume();
 
 stdin.setEncoding( 'utf8' );
 
+engine.start();
+commandState.flush();
 commandState.update();
 
 const letter = /[a-zA-Z]/

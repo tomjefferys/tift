@@ -17,6 +17,7 @@ fetch('./adventure.yaml')
   .then((response) => response.text())
   .then(data => {
     load(data);
+    configure({ "autoLook" : true})
     start();
     getStatus();
     getWords([]);
@@ -42,14 +43,18 @@ function execute() {
   engine.send(Input.execute(state.command.map(word => word.id)));
   const outputEntry = command(state.command.map(word => word.value).join(" "));
   state.text.push(outputEntry);
+  handleMessages();
+  state.command = [];
+  getWords([]);
+  getStatus();
+}
+
+function handleMessages() {
   if (output.length) {
     const values = output.map(entry => message(entry.value));
     values.forEach(value => state.text.push(value));
     output.length = 0;
   }
-  state.command = [];
-  getWords([]);
-  getStatus();
 }
 
 function getWords(command : string[]) {
@@ -80,8 +85,13 @@ function load(data : string) {
   engine.send(Input.load(data));
 }
 
+function configure(properties : {[key:string] : boolean | number | string}) {
+  engine.send(Input.config(properties));
+}
+
 function start() {
   engine.send(Input.start());
+  handleMessages();
 }
 
 </script>

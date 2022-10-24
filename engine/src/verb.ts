@@ -6,7 +6,7 @@ import { AfterAction, BeforeAction, MainAction } from "./script/phaseaction";
 
 export type VerbContext = string;
 
-export type VerbTrait = "transitive" | "intransitive" | "modifiable";
+export type VerbTrait = "transitive" | "intransitive" | "modifiable" | "instant";
 
 export interface Verb extends Nameable, ActionSource {
   id : string,
@@ -24,6 +24,12 @@ export function isTransitive(verb : Verb) {
 
 export function isIntransitive(verb : Verb) {
     return verb.traits.includes("intransitive");
+}
+
+// An "instant" verb does not take any time to execute
+// so won't increment turn count, or trigger any rules
+export function isInstant(verb : Verb) {
+    return verb.traits.includes("instant");
 }
 
 export function isModifiable(verb : Verb) : boolean {

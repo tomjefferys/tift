@@ -47,6 +47,11 @@ const NORTH_ROOM = {
     tags : [ "start" ]
 };
 
+const SOUTH_ROOM = {
+    id : "southRoom",
+    type : "room"
+}
+
 
 beforeEach(() => {
     messages = [];
@@ -59,7 +64,7 @@ test("Test single room, no exits", () => {
     engine = builder.build();
     engine.send(Input.start());
 
-    expectWords([], ["go", "look"]);
+    expectWords([], ["go", "look", "wait"]);
     expectWords(["go"], []);
     expectWords(["eat"], []);
     expect(messages).toHaveLength(0);
@@ -75,7 +80,7 @@ test("Test single room, with one exit", () => {
     engine = builder.build();
     engine.send(Input.start());
 
-    expectWords([], ["go", "look"]);
+    expectWords([], ["go", "look", "wait"]);
     expectWords(["go"], ["south"]);
     expectWords(["go", "south"], []);
     expectWords(["eat"], []);
@@ -93,7 +98,7 @@ test("Test single room, with two exits", () => {
     engine = builder.build();
     engine.send(Input.start());
 
-    expectWords([], ["go", "look"]);
+    expectWords([], ["go", "look", "wait"]);
     expectWords(["go"],["south", "east"]);
     expectWords(["go", "south"], []);
     expectWords(["go", "east"], []);
@@ -110,9 +115,8 @@ test("Test two rooms", () => {
         },
     })
     builder.withObj({
-        id : "southRoom",
+        ...SOUTH_ROOM,
         name : "The South Room",
-        type : "room",
         exits : {
             north : "northRoom"
         }
@@ -128,6 +132,35 @@ test("Test two rooms", () => {
     expectWords(["go"],["north"]);
 })
 
+test("Test auto look", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        exits : {
+            south : "southRoom"
+        },
+    })
+    builder.withObj({
+        ...SOUTH_ROOM,
+        name : "The South Room",
+        desc : "The room is light and round",
+        exits : {
+            north : "northRoom"
+        }
+    })
+    engine = builder.build();
+    engine.send(Input.config({"autoLook" : true }));
+    engine.send(Input.start());
+
+    expect(messages).toContain("The room is dark and square");
+    messages.length = 0;
+
+    executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] })
+    executeAndTest(["go", "north"], { expected : [ "The North Room" ] })
+    executeAndTest(["go", "south"], { expected : [ "The South Room" ] })
+})
+
 test("Test room with item", () => {
     builder.withObj(THE_ROOM);
     builder.withObj(ORDINARY_ITEM);
@@ -137,7 +170,7 @@ test("Test room with item", () => {
     engine.send(Input.execute(["look"]));
     executeAndTest(["look"], { expected : ["An almost empty room", "an ordinary item"]});
 
-    expectWords([], ["go", "look", "get"]);
+    expectWords([], ["go", "look", "get", "wait"]);
 })
 
 test("Test get item", () => {
@@ -183,12 +216,12 @@ test("Test get/drop", () => {
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 
-    expectWords([], ["go", "look", "get"]);
+    expectWords([], ["go", "look", "get", "wait"]);
 
     executeAndTest(["get", "key"], {});
     executeAndTest(["look"], { expected : ["An almost empty room"], notExpected : ["key"]});
 
-    expectWords([], ["go", "look", "drop"]);
+    expectWords([], ["go", "look", "drop", "wait"]);
    
     executeAndTest(["drop", "key"], {});
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
@@ -203,7 +236,7 @@ test("Test simple rules", () => {
     })
     engine = builder.build();
     engine.send(Input.start());
-    executeAndTest(["look"], { expected : ["An almost empty room", "hello world"]});
+    executeAndTest(["wait"], { expected : ["Time passes", "hello world"]});
 });
 
 test("Test before and after actions", () => {

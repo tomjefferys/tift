@@ -45,6 +45,10 @@ export class EngineFacade {
         this.engine.send(Input.load(data));
     }
 
+    configure(properties : {[key:string] : boolean | number | string}) {
+        this.engine.send(Input.config(properties));
+    }
+
     start() {
         this.engine.send(Input.start());
         this.engine.send(Input.getStatus());

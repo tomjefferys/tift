@@ -125,6 +125,7 @@ export function makeRoom(obj : Obj) : Entity {
         builder.withVerbModifier("direction", dir);
     }
     builder.withVerb("look");
+    builder.withVerb("wait");
     return builder.build();
 }
 

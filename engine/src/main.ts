@@ -1,4 +1,3 @@
-import { loadFromYaml } from "./enginebuilder";
 import { BasicEngine, Engine } from "./engine";
 import { OutputConsumer } from "./messages/output";
 import { InputMessage } from "./messages/input"
@@ -38,5 +37,9 @@ export namespace Input {
 
   export function start() : InputMessage {
     return { type : "Start" }
+  }
+
+  export function config(properties : {[key:string] : boolean | number | string}) : InputMessage {
+    return { type : "Config", properties : properties };
   }
 }

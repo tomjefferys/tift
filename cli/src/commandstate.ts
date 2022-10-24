@@ -49,6 +49,11 @@ export class CommandState {
         this.display.update(displayState);
     }
 
+    flush() {
+        this.engine.flushMessages(message => this.messages.push(message));
+        this.display.update(this.getDisplayState());
+    }
+
     printStatus() {
         const status = this.engine.getStatus();
         this.display.printLine(status + "\n");

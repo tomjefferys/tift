@@ -8,14 +8,15 @@ import { makePath } from "./path";
 
 const NS_ENTITIES = "entities";
 
-const PLAYER = Symbol("__PLAYER__");
+export const PLAYER = Symbol("__PLAYER__");
 export const OUTPUT = Symbol("__OUTPUT__");
 
 export interface Player {
     location : string, 
     score : number,
     inventory : AnyArray,
-    setLocation : EnvFn
+    setLocation : EnvFn,
+    visitedLocations : string[]
 }
 
 export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Player;
@@ -40,6 +41,16 @@ const LOOK = phaseActionBuilder()
                 }
                 return mkResult(true);
     }));
+
+const WAIT = phaseActionBuilder()
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("wait")).build(),
+            mkThunk(env => {
+                env.execute("write", {"value" : "Time passes"});
+                return mkResult(true);
+    }));
+        
 
 const GO = phaseActionBuilder()
         .withPhase("main")
@@ -86,7 +97,12 @@ export const DEFAULT_VERBS = [
                   .build(),
       new VerbBuilder({"id":"look"})
                   .withTrait("intransitive")
+                  .withTrait("instant")
                   .withAction(LOOK)
+                  .build(),
+      new VerbBuilder({"id":"wait"})
+                  .withTrait("intransitive")
+                  .withAction(WAIT)
                   .build(),
       new VerbBuilder({"id":"get"})
                   .withTrait("transitive")
@@ -119,7 +135,8 @@ export function makePlayer(obj : Obj, start : string) {
         location : start,
         score : 0,
         inventory : [],
-        setLocation : env => player.location = env.getStr("dest")
+        setLocation : env => player.location = env.getStr("dest"),
+        visitedLocations : [start]
     };
     obj[PLAYER] = player;
 }

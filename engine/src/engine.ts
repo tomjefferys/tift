@@ -1,8 +1,8 @@
-import { Verb } from "./verb"
+import { isInstant, Verb } from "./verb"
 import { Entity, getType, hasTag } from "./entity"
 import { createRootEnv, Env, Obj } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput } from "./enginedefault";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "./messages/output";
 import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
@@ -15,6 +15,9 @@ import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
 import { InputMessage, Load } from "./messages/input";
 import { EngineBuilder } from "./enginebuilder";
+import { makePath } from "./path";
+import { Config } from "./config"
+import * as Conf from "./config"
 
 enum TAG {
   START = "start"
@@ -44,6 +47,7 @@ interface OutputProxy {
 }
 
 export class BasicEngine implements Engine {
+  private readonly config : Config = {};
   private readonly rootEnv : Env;
   private readonly env : Env;
   private context : CommandContext;
@@ -74,6 +78,9 @@ export class BasicEngine implements Engine {
     const start = findStartingLocation(_.values(rootProps["entities"]));
     makePlayer(rootProps, start);
     this.context = this.getContext();
+    if (Conf.getBoolean(this.config, Conf.AUTO_LOOK)) {
+      this.execute(["look"]);
+    }
   }
 
   addContent(entities : Entity[], verbs : Verb[], objs : Obj[]) {
@@ -126,6 +133,9 @@ export class BasicEngine implements Engine {
         case "Start":
           this.start();
           break;
+        case "Config":
+          this.setConfig(message.properties);
+          break;
       }
   }
 
@@ -135,12 +145,16 @@ export class BasicEngine implements Engine {
     this.addContent(builder.entities, builder.verbs, builder.objs);
   }
 
+  setConfig(newConfig : Config) {
+    Object.assign(this.config, newConfig);
+  } 
+
   getWords(partial : string[]) : void {
     const nextWords = getNextWords(partial, this.context.entities, this.context.verbs);
     const message = Output.words( partial, nextWords);
     this.output(message);
   }
-  
+
   execute(command: string[]): void {
     const allContextEntities = _.flatten(Object.values(this.context.entities))
 
@@ -175,8 +189,8 @@ export class BasicEngine implements Engine {
 
     // Main actions
     let handledMain = false;
+    const verb = matchedCommand.getPoS("verb")?.verb;
     if (!handledBefore) {
-      const verb = matchedCommand.getPoS("verb")?.verb;
       if (verb) {
         handledMain = executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb.id);
       }
@@ -203,10 +217,30 @@ export class BasicEngine implements Engine {
 
     this.context = this.getContext();
 
+    // See if we're in a new location
+    if (Conf.getBoolean(this.config, Conf.AUTO_LOOK)) {
+      const newLocation = _.head(multidict.get(this.context.entities, "location"));
+      if (newLocation && location?.id !== newLocation.id) {
+        const player = getPlayer(this.env);
+        if (player.visitedLocations.includes(newLocation.id)) {
+          this.output(Output.print(getName(newLocation)));
+        } else {
+          const locations = player.visitedLocations;
+          locations.push(newLocation.id);
+          this.env.set(makePath([PLAYER, "visitedLocations"]), locations);
+
+          // TODO This shouldn't trigger any rules
+          this.execute(["look"]);
+        }
+      } 
+    }
+
     // Find and execute any rules
-    const rules = this.env.findObjs(obj => obj["type"] === "rule");
-    const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
-    expressions.forEach(expr => expr(this.env));
+    if (verb && !isInstant(verb)) {
+      const rules = this.env.findObjs(obj => obj["type"] === "rule");
+      const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
+      expressions.forEach(expr => expr(this.env));
+    }
   }
 
 
