@@ -12,6 +12,7 @@ import type { OutputMessage } from '@engine/messages/output.ts'
 import type { IdValue } from '@engine/shared.ts'
 import { message, type OutputEntry } from './outputentry';
 import { command } from './outputentry';
+import * as showdown from "showdown";
 
 fetch('./adventure.yaml')
   .then((response) => response.text())
@@ -51,11 +52,13 @@ function execute() {
 
 function handleMessages() {
   if (output.length) {
-    const values = output.map(entry => message(entry.value));
+    let convertor = new showdown.Converter()
+    const values = output.map(entry => message(convertor.makeHtml(entry.value)));
     values.forEach(value => state.text.push(value));
     output.length = 0;
   }
 }
+
 
 function getWords(command : string[]) {
   engine.send(Input.getNextWords(command));

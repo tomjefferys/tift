@@ -157,8 +157,8 @@ test("Test auto look", () => {
     messages.length = 0;
 
     executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] })
-    executeAndTest(["go", "north"], { expected : [ "The North Room" ] })
-    executeAndTest(["go", "south"], { expected : [ "The South Room" ] })
+    executeAndTest(["go", "north"], { expected : [ "**The North Room**" ] })
+    executeAndTest(["go", "south"], { expected : [ "**The South Room**" ] })
 })
 
 test("Test room with item", () => {

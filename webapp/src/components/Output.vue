@@ -26,7 +26,7 @@ onUpdated(() => {
     </div>
     <div ref="textout" id="textout">
         <p v-for="output in text" class="outputPara">
-            <span v-if="output.type == 'message'" class="message">{{output.message}}</span>
+            <span v-if="output.type == 'message'" class="message" v-html="output.message"></span>
             <span v-if="output.type == 'command'" class="command">&gt; {{output.command}}</span>
         </p>
         &gt; <span v-for="word in command" class="command">{{word.value}}&nbsp;</span>

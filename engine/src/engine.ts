@@ -18,6 +18,7 @@ import { EngineBuilder } from "./enginebuilder";
 import { makePath } from "./path";
 import { Config } from "./config"
 import * as Conf from "./config"
+import { bold } from "./markdown"
 
 enum TAG {
   START = "start"
@@ -79,6 +80,8 @@ export class BasicEngine implements Engine {
     makePlayer(rootProps, start);
     this.context = this.getContext();
     if (Conf.getBoolean(this.config, Conf.AUTO_LOOK)) {
+      const locationEntity = this.env.findObjs(obj => obj?.id === start);
+      this.output(Output.print(bold(getName(locationEntity[0] as Nameable))));
       this.execute(["look"]);
     }
   }
@@ -222,14 +225,12 @@ export class BasicEngine implements Engine {
       const newLocation = _.head(multidict.get(this.context.entities, "location"));
       if (newLocation && location?.id !== newLocation.id) {
         const player = getPlayer(this.env);
-        if (player.visitedLocations.includes(newLocation.id)) {
-          this.output(Output.print(getName(newLocation)));
-        } else {
+        this.output(Output.print(bold(getName(newLocation))));
+
+        if (!player.visitedLocations.includes(newLocation.id)) {
           const locations = player.visitedLocations;
           locations.push(newLocation.id);
           this.env.set(makePath([PLAYER, "visitedLocations"]), locations);
-
-          // TODO This shouldn't trigger any rules
           this.execute(["look"]);
         }
       } 
