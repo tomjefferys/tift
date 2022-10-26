@@ -136,7 +136,7 @@ export function makePlayer(obj : Obj, start : string) {
         score : 0,
         inventory : [],
         setLocation : env => player.location = env.getStr("dest"),
-        visitedLocations : [start]
+        visitedLocations : []
     };
     obj[PLAYER] = player;
 }

@@ -12,13 +12,14 @@ import * as arrays from "./util/arrays";
 import { addLibraryFunctions } from "./script/library";
 import { getName, Nameable } from "./nameable";
 import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
-import { SentenceNode } from "./command";
+import { Command, SentenceNode } from "./command";
 import { InputMessage, Load } from "./messages/input";
 import { EngineBuilder } from "./enginebuilder";
 import { makePath } from "./path";
 import { Config } from "./config"
 import * as Conf from "./config"
 import { bold } from "./markdown"
+import { Optional } from "./util/optional";
 
 enum TAG {
   START = "start"
@@ -47,12 +48,25 @@ interface OutputProxy {
   hasContent : () => boolean;
 }
 
+interface PluginActionContext {
+  start? : CommandContext,
+  end : CommandContext,
+  env : Env,
+  output : OutputConsumer,
+  execute : (command : string[]) => void
+}
+
+type PluginAction = (context : PluginActionContext) => void;
+
 export class BasicEngine implements Engine {
   private readonly config : Config = {};
   private readonly rootEnv : Env;
   private readonly env : Env;
   private context : CommandContext;
   private output : OutputConsumer;
+  private startActions : PluginAction[] = [];
+  private postExecutionActions : PluginAction[] = [];
+  private started = false;
 
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
     this.rootEnv = createRootEnv({ "entities" : {}, "verbs" : {}}, "readonly", [["entities"], ["verbs"]]);
@@ -75,14 +89,26 @@ export class BasicEngine implements Engine {
   }
 
   start() {
+    if (this.started) {
+      throw new Error("Engine is already started");
+    }
+    this.setupPluginActions();
     const rootProps = this.rootEnv.properties;
     const start = findStartingLocation(_.values(rootProps["entities"]));
     makePlayer(rootProps, start);
     this.context = this.getContext();
+
+    // Run any plugin actions
+    const actionContext = this.createPluginActionContext(undefined, this.context);
+    this.startActions.forEach(action => action(actionContext));
+
+    this.started = true;
+  }
+
+  setupPluginActions() {
     if (Conf.getBoolean(this.config, Conf.AUTO_LOOK)) {
-      const locationEntity = this.env.findObjs(obj => obj?.id === start);
-      this.output(Output.print(bold(getName(locationEntity[0] as Nameable))));
-      this.execute(["look"]);
+      this.postExecutionActions.push(AUTOLOOK);
+      this.startActions.push(AUTOLOOK);
     }
   }
 
@@ -171,7 +197,7 @@ export class BasicEngine implements Engine {
     // 1. Scope/Context
     // 2. Room
     // 3. Object being acted on
-    const location = _.head(multidict.get(this.context.entities, "location"));
+    const location = getLocation(this.context);
     const directObject = matchedCommand.getPoS("directObject")?.entity;
     const indirectObject = matchedCommand.getPoS("indirectObject")?.entity;
     const inScopeEnitites = arrays.of(indirectObject, directObject, location);
@@ -193,10 +219,8 @@ export class BasicEngine implements Engine {
     // Main actions
     let handledMain = false;
     const verb = matchedCommand.getPoS("verb")?.verb;
-    if (!handledBefore) {
-      if (verb) {
-        handledMain = executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb.id);
-      }
+    if (!handledBefore && verb) {
+      handledMain = executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb.id);
     }
 
     // After actions
@@ -218,23 +242,12 @@ export class BasicEngine implements Engine {
       mainOutputProxy.flush();
     }
 
+    const oldContext = this.context;
     this.context = this.getContext();
 
-    // See if we're in a new location
-    if (Conf.getBoolean(this.config, Conf.AUTO_LOOK)) {
-      const newLocation = _.head(multidict.get(this.context.entities, "location"));
-      if (newLocation && location?.id !== newLocation.id) {
-        const player = getPlayer(this.env);
-        this.output(Output.print(bold(getName(newLocation))));
-
-        if (!player.visitedLocations.includes(newLocation.id)) {
-          const locations = player.visitedLocations;
-          locations.push(newLocation.id);
-          this.env.set(makePath([PLAYER, "visitedLocations"]), locations);
-          this.execute(["look"]);
-        }
-      } 
-    }
+    // Run any post execution actions
+    const postExecutionContext = this.createPluginActionContext(oldContext, this.context);
+    this.postExecutionActions.forEach(action => action(postExecutionContext));
 
     // Find and execute any rules
     if (verb && !isInstant(verb)) {
@@ -244,7 +257,15 @@ export class BasicEngine implements Engine {
     }
   }
 
-
+  createPluginActionContext(start : Optional<CommandContext>, end : CommandContext) : PluginActionContext {
+    return {
+      start : start,
+      end : end,
+      env : this.env,
+      output : this.output,
+      execute : (command : string[]) => this.execute(command)
+    }
+  }
 
  
   getStatus() : void {
@@ -279,6 +300,22 @@ export class BasicEngine implements Engine {
   }
 }
 
+const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
+  const oldLocation = (context.start) ? getLocation(context.start) : undefined;
+  const newLocation = getLocation(context.end);
+  if (newLocation && oldLocation?.id !== newLocation.id) {
+    const player = getPlayer(context.env);
+    context.output(Output.print(bold(getName(newLocation))));
+
+    if (!player.visitedLocations.includes(newLocation.id)) {
+      const locations = player.visitedLocations;
+      locations.push(newLocation.id);
+      context.env.set(makePath([PLAYER, "visitedLocations"]), locations);
+      context.execute(["look"]);
+    }
+  } 
+}
+
 function executeBestMatchAction(actions : PhaseAction[], env : Env, command : SentenceNode, agentId : string ) {
   const action = getBestMatchAction(actions, command, agentId); // FIXME getBestMatchAction, and action.perform have params in different orders
   let handled = false;
@@ -304,4 +341,8 @@ function findStartingLocation(entities : Entity[]) : string {
     throw new Error("Multiple starting locations found");
   }
   return startingLocs[0].id;
+}
+
+function getLocation(context : CommandContext) : Optional<Entity> {
+  return _.head(multidict.get(context.entities, "location"));
 }
