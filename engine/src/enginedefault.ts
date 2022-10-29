@@ -22,32 +22,33 @@ export interface Player {
 export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Player;
 export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
+export const LOOK_FN = (env : Env) => {
+    const location = getLocationEntity(env);
+    const desc = location["desc"] ?? location["name"] ?? location["id"];
+    write(env, desc);
+    write(env, "");
+
+    const items = env.findObjs(obj => obj.location === location.id);
+
+    for(const item of items) {
+        write(env, item["name"] ?? item["id"])
+        write(env, "");
+    }
+    return mkResult(true);
+}
+
 const LOOK = phaseActionBuilder()
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("look")).build(),
-            mkThunk(env => {
-                const location = env.execute("getLocation", {});
-                const entity = env.execute("getEntity", {"id":location}) as Obj;
-                const desc = entity["desc"] ?? entity["name"] ?? entity["id"];
-                env.execute("write", {"value":desc});
-                env.execute("write", {"value":""});
-
-                const items = env.findObjs(obj => obj.location === location);
-
-                for(const item of items) {
-                    env.execute("write", {"value": item["name"] ?? item["id"]});
-                    env.execute("write", {"value":""});
-                }
-                return mkResult(true);
-    }));
+            mkThunk(LOOK_FN));
 
 const WAIT = phaseActionBuilder()
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("wait")).build(),
             mkThunk(env => {
-                env.execute("write", {"value" : "Time passes"});
+                write(env,  "Time passes");
                 return mkResult(true);
     }));
         
@@ -57,9 +58,8 @@ const GO = phaseActionBuilder()
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("go")).withModifier(captureModifier("direction")).build(),
             mkThunk(env => {
-                const location = env.execute("getLocation", {});
-                const entity = env.execute("getEntity", {"id" : location}) as Obj;
-                const destination = entity?.exits[env.get("direction")];
+                const location = getLocationEntity(env);
+                const destination = location?.exits[env.get("direction")];
                 if (destination) {
                     env.execute("moveTo", {"dest" : destination});
                 }
@@ -83,7 +83,7 @@ const DROP = phaseActionBuilder()
             matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
             mkThunk(env => {
                 const itemId = env.getStr("item");
-                const location = getPlayer(env).location;
+                const location = getLocation(env); //getPlayer(env).location;
                 env.set(makePath([NS_ENTITIES, itemId, "location"]), location);
                 return mkResult(true);
             }));
@@ -124,10 +124,27 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     },
     
     moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),
-    getLocation : env => getPlayer(env).location,
-    getEntity : env => env.get(makePath([NS_ENTITIES, env.getStr("id")])),
+    getLocation : env => getLocation(env),
+    getEntity : env => getEntity(env, env.getStr("id")),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
     writeMessage : env => getOutput(env)(env.get("message"))
+}
+
+export function write(env : Env, message : string) {
+    env.execute("write", {"value": message});
+}
+
+export function getLocation(env : Env) {
+    return getPlayer(env).location;
+}
+
+export function getEntity(env : Env, id : string) {
+    return env.get(makePath([NS_ENTITIES, id]));
+}
+
+export function getLocationEntity(env : Env) {
+    const locationId = env.execute("getLocation", {});
+    return getEntity(env, locationId as string);
 }
 
 export function makePlayer(obj : Obj, start : string) {

@@ -2,7 +2,7 @@ import { isInstant, Verb } from "./verb"
 import { Entity, getType, hasTag } from "./entity"
 import { createRootEnv, Env, Obj } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER } from "./enginedefault";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "./messages/output";
 import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
@@ -12,7 +12,7 @@ import * as arrays from "./util/arrays";
 import { addLibraryFunctions } from "./script/library";
 import { getName, Nameable } from "./nameable";
 import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
-import { Command, SentenceNode } from "./command";
+import { SentenceNode } from "./command";
 import { InputMessage, Load } from "./messages/input";
 import { EngineBuilder } from "./enginebuilder";
 import { makePath } from "./path";
@@ -52,8 +52,6 @@ interface PluginActionContext {
   start? : CommandContext,
   end : CommandContext,
   env : Env,
-  output : OutputConsumer,
-  execute : (command : string[]) => void
 }
 
 type PluginAction = (context : PluginActionContext) => void;
@@ -121,16 +119,17 @@ export class BasicEngine implements Engine {
   }
 
   getContext() : CommandContext {
-    // Entity for the current location
     const contextEntities : MultiDict<Entity> = {};
-    const location = getPlayer(this.env).location;
-    const locationEntity = this.env.findObjs(obj => obj?.id === location);
-    if (locationEntity.length) {
-      multidict.add(contextEntities, "location", locationEntity[0]);
+
+    // Entity for the current location
+    const locationEntity = getLocationEntity(this.env); //this.env.findObjs(obj => obj?.id === location);
+
+    if (locationEntity) {
+      multidict.add(contextEntities, "location", locationEntity);
     }
 
     // Get any other entities that are here
-    this.env.findObjs(obj => obj?.location === location) // Also check it is an entity
+    this.env.findObjs(obj => obj?.location === locationEntity?.id) // Also check it is an entity
             .forEach(entity => multidict.add(contextEntities, "environment", entity));
 
     // Get inventory entities
@@ -185,54 +184,29 @@ export class BasicEngine implements Engine {
   }
 
   execute(command: string[]): void {
-    const allContextEntities = _.flatten(Object.values(this.context.entities))
-
     const searchContext = buildSearchContext(this.context.entities, this.context.verbs);
     const matchedCommand = searchExact(command, searchContext);
     if (!matchedCommand) {
       throw new Error("Could not match command: " + JSON.stringify(command));
     }
 
-    // Inform has the following order for actions
-    // 1. Scope/Context
-    // 2. Room
-    // 3. Object being acted on
-    const location = getLocation(this.context);
-    const directObject = matchedCommand.getPoS("directObject")?.entity;
-    const indirectObject = matchedCommand.getPoS("indirectObject")?.entity;
-    const inScopeEnitites = arrays.of(indirectObject, directObject, location);
-    allContextEntities.forEach(entity => arrays.pushIfUnique(inScopeEnitites, entity, (entity1, entity2) => entity1.id === entity2.id));
-    inScopeEnitites.reverse();
+    // Get ordered list of in scope entities
+    const inScopeEnitites = this.sortEntities(matchedCommand);
 
     // Create a new child environment with it's own output conusmer
     const [childEnv, mainOutputProxy] = this.createOutputProxy();
 
     // Before actions
-    let handledBefore = false;
-    for(const entity of inScopeEnitites) {
-      handledBefore = executeBestMatchAction(entity.before, childEnv, matchedCommand, entity.id);
-      if (handledBefore) {
-        break;
-      }
-    }
+    const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, childEnv, matchedCommand, entity.id) )
 
-    // Main actions
-    let handledMain = false;
+    // Main action
     const verb = matchedCommand.getPoS("verb")?.verb;
-    if (!handledBefore && verb) {
-      handledMain = executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb.id);
-    }
+    const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb.id) : false;
 
     // After actions
     const [afterChildEnv, afterOutputProxy] = this.createOutputProxy();
     if (handledMain) {
-      let handledAfter = false;
-      for(const entity of inScopeEnitites) {
-        handledAfter = executeBestMatchAction(entity.after, afterChildEnv, matchedCommand, entity.id);
-        if (handledAfter) {
-          break;
-        }
-      }
+      inScopeEnitites.some(entity => executeBestMatchAction(entity.after, afterChildEnv, matchedCommand, entity.id));
     }
 
     // Flush the output
@@ -257,13 +231,32 @@ export class BasicEngine implements Engine {
     }
   }
 
+  /**
+   * Arrange entities in the following execution order
+   * 1. Scope/Context
+   * 2. Room
+   * 3. Object being acted on
+   * 4. The indirect object 
+   * 
+   * @param matchedCommand 
+   * @returns 
+   */
+  sortEntities(matchedCommand : SentenceNode) : Entity[] {
+    const allContextEntities = _.flatten(Object.values(this.context.entities))
+    const location = getLocationFromContext(this.context);
+    const directObject = matchedCommand.getPoS("directObject")?.entity;
+    const indirectObject = matchedCommand.getPoS("indirectObject")?.entity;
+    const inScopeEnitites = arrays.of(indirectObject, directObject, location);
+    allContextEntities.forEach(entity => arrays.pushIfUnique(inScopeEnitites, entity, (entity1, entity2) => entity1.id === entity2.id));
+    inScopeEnitites.reverse();
+    return inScopeEnitites;
+  }
+
   createPluginActionContext(start : Optional<CommandContext>, end : CommandContext) : PluginActionContext {
     return {
       start : start,
       end : end,
-      env : this.env,
-      output : this.output,
-      execute : (command : string[]) => this.execute(command)
+      env : this.env
     }
   }
 
@@ -301,17 +294,17 @@ export class BasicEngine implements Engine {
 }
 
 const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
-  const oldLocation = (context.start) ? getLocation(context.start) : undefined;
-  const newLocation = getLocation(context.end);
+  const oldLocation = (context.start) ? getLocationFromContext(context.start) : undefined;
+  const newLocation = getLocationFromContext(context.end);
   if (newLocation && oldLocation?.id !== newLocation.id) {
     const player = getPlayer(context.env);
-    context.output(Output.print(bold(getName(newLocation))));
+    write(context.env, bold(getName(newLocation)));
 
     if (!player.visitedLocations.includes(newLocation.id)) {
       const locations = player.visitedLocations;
       locations.push(newLocation.id);
       context.env.set(makePath([PLAYER, "visitedLocations"]), locations);
-      context.execute(["look"]);
+      LOOK_FN(context.env);
     }
   } 
 }
@@ -343,6 +336,6 @@ function findStartingLocation(entities : Entity[]) : string {
   return startingLocs[0].id;
 }
 
-function getLocation(context : CommandContext) : Optional<Entity> {
+function getLocationFromContext(context : CommandContext) : Optional<Entity> {
   return _.head(multidict.get(context.entities, "location"));
 }
