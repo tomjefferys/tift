@@ -119,9 +119,11 @@ function App() {
 
   return (
     <div className="App">
-      <div id="mainFrame">
-        <Output messages={messagesRef.current ?? []} status={status}/>
-        <div id="inputArea">
+      <div className="mainFrame">
+        <div className="outputArea">
+          <Output messages={messagesRef.current ?? []} status={status}/>
+        </div>
+        <div id="inputArea" className="inputArea">
           <Controls words={words ?? []} wordSelected={(event,word) => setCommand([...command, word])}/>
         </div>
       </div>

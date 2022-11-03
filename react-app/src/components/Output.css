@@ -1,0 +1,14 @@
+.textOut {
+    max-width: 70ch;
+    margin: 0 auto;
+}
+
+.textOutWrapper {
+    height: 90%;
+    width: 100%;
+    overflow: auto;
+}
+
+.outputPara {
+    text-align: left;
+}
