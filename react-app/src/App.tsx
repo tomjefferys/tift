@@ -6,6 +6,7 @@ import { IdValue } from "tift-engine/src/shared";
 import { OutputMessage } from "tift-engine/src/messages/output";
 import Output from "./components/Output"
 import Controls from './components/Controls';
+import { commandEntry, messageEntry, OutputEntry } from './outputentry';
 
 
 const adventure = 
@@ -72,7 +73,7 @@ function App() {
 
   // Store messages as a ref, as the can be updated multiple times between renders
   // and using a state makes it tricky to get the most up to date values
-  const messagesRef = useRef<string[]>();
+  const messagesRef = useRef<OutputEntry[]>([]);
 
   const engineRef = useRef<Engine | null>(null)
 
@@ -83,7 +84,8 @@ function App() {
   useEffect(() => {
     messagesRef.current = [];
     const outputConsumer = getOutputConsumer(
-      message => messagesRef.current = [...(messagesRef?.current ?? []), message],
+      //message => messagesRef.current = [ ...(messagesRef?.current ?? []), messageEntry(message) ],
+      message => messagesRef.current?.push(messageEntry(message)),
       words => setWords(words),
       status => setStatus(status)
     );
@@ -102,6 +104,7 @@ function App() {
   useEffect(() => {
     const engine = engineRef.current;
     if (engine && command.length && !words.length) {
+      messagesRef.current?.push(commandEntry(command.map(word => word.value).join(" ")))
       execute(command);
       engine.send(Input.getStatus());
       setCommand([]);
@@ -121,7 +124,7 @@ function App() {
     <div className="App">
       <div className="mainFrame">
         <div className="outputArea">
-          <Output messages={messagesRef.current ?? []} status={status}/>
+          <Output entries={messagesRef.current ?? []} status={status} command={command.map(word => word.value).join(" ")}/>
         </div>
         <div id="inputArea" className="inputArea">
           <Controls words={words ?? []} wordSelected={(event,word) => setCommand([...command, word])}/>

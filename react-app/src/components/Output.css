@@ -9,6 +9,11 @@
     overflow: auto;
 }
 
-.outputPara {
+.outputMessage {
     text-align: left;
+}
+
+.outputCommand {
+    text-align: left;
+    color: green;
 }

@@ -12,10 +12,11 @@
     "@types/react-dom": "^18.0.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^8.0.3",
     "react-scripts": "5.0.1",
+    "tift-engine": "file:../engine",
     "typescript": "^4.8.4",
-    "web-vitals": "^2.1.4",
-    "tift-engine": "file:../engine"
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
