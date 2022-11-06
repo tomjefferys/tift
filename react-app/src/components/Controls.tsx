@@ -1,5 +1,4 @@
 import React from "react";
-import { words } from "tift-engine/src/messages/output";
 import { IdValue } from "tift-engine/src/shared";
 
 interface ControlProps {

@@ -8,63 +8,7 @@ import Output from "./components/Output"
 import Controls from './components/Controls';
 import { commandEntry, messageEntry, OutputEntry } from './outputentry';
 
-
-const adventure = 
-`---
-room: cave
-desc: A dark dank cave
-exits:
-  north: entrance
-  south: pool
-tags: [start]
----
-room: entrance
-desc: Sunlight casts a pool of illumination over the rocky and uneven floor
-exits:
-  south: cave
----
-room: pool
-desc: A deep pool of cold clear water exends over the southern end of the chamber
-exits:
-  north: cave
----
-item: key
-name: rusty key
-desc: An old rusty key
-location: pool
-tags: [carryable]
----
-item: hotRock
-name: hot rock
-desc: a burning hot piece of recently solidified lava
-location: entrance
-tags: [carryable]
-before: get(hotRock) => "Ouch!"
----
-rule: rule1
-run:
-  - if(random(1,2) == 1).then(print("A cold wind runs straight through you"))
-`
-
-function getOutputConsumer(messageConsumer : (message : string) => void,
-                           wordsConsumer : (words : IdValue<string>[]) => void,
-                           statusConsumer : (status : string) => void) : (outputMessage : OutputMessage) => void {
-  return (outputMessage) => {
-    switch(outputMessage.type) {
-      case "Print":
-        messageConsumer(outputMessage.value);
-        break;
-      case "Words":
-        wordsConsumer(outputMessage.words);
-        break;
-      case "Status":
-        statusConsumer(outputMessage.status);
-        break;
-      default:
-        throw new Error("Unsupported OutputMessage Type: " + outputMessage.type);
-    }
-  }
-}
+const GAME_FILE = "adventure.yaml";
 
 function App() {
   const [command, setCommand] = useState<IdValue<string>[]>([]);
@@ -80,11 +24,26 @@ function App() {
   const getWords = (command : IdValue<string>[]) => engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
   const execute = (command : IdValue<string>[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
+  // Load a game file from the `public` folder
+  const loadGame = (name : string) => 
+          fetch(process.env.PUBLIC_URL + "/" + name)
+            .then((response) => response.text())
+            .then(data => {
+              const engine = engineRef.current;
+              if (engine == null) {
+                throw new Error("Engine has not been initialized");
+              }
+              engine.send(Input.load(data));
+              engine.send(Input.config({"autoLook" : true}));
+              engine.send(Input.start());
+              getWords([]);
+              engine.send(Input.getStatus());
+            })
+
   // Initialization
   useEffect(() => {
     messagesRef.current = [];
     const outputConsumer = getOutputConsumer(
-      //message => messagesRef.current = [ ...(messagesRef?.current ?? []), messageEntry(message) ],
       message => messagesRef.current?.push(messageEntry(message)),
       words => setWords(words),
       status => setStatus(status)
@@ -93,14 +52,11 @@ function App() {
 
     engineRef.current = engine;
 
-    engine.send(Input.load(adventure));
-    engine.send(Input.config({"autoLook" : true}));
-    engine.send(Input.start());
-    getWords([]);
-    engine.send(Input.getStatus());
+    loadGame(GAME_FILE);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When words updated
+  // words updated
   useEffect(() => {
     const engine = engineRef.current;
     if (engine && command.length && !words.length) {
@@ -110,9 +66,9 @@ function App() {
       setCommand([]);
       getWords([]);
     }
-  }, [words]);
+  }, [words, command]);
 
-  // When command updated
+  // command updated
   useEffect(() => {
     const engine = engineRef.current;
     if (engine) {
@@ -132,6 +88,26 @@ function App() {
       </div>
     </div>
   );
+}
+
+function getOutputConsumer(messageConsumer : (message : string) => void,
+                           wordsConsumer : (words : IdValue<string>[]) => void,
+                           statusConsumer : (status : string) => void) : (outputMessage : OutputMessage) => void {
+  return (outputMessage) => {
+    switch(outputMessage.type) {
+      case "Print":
+        messageConsumer(outputMessage.value);
+        break;
+      case "Words":
+        wordsConsumer(outputMessage.words);
+        break;
+      case "Status":
+        statusConsumer(outputMessage.status);
+        break;
+      default:
+        throw new Error("Unsupported OutputMessage Type: " + outputMessage.type);
+    }
+  }
 }
 
 export default App;
