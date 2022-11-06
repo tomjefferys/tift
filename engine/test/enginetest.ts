@@ -153,7 +153,7 @@ test("Test auto look", () => {
     engine.send(Input.config({"autoLook" : true }));
     engine.send(Input.start());
 
-    expect(messages).toContain("The room is dark and square");
+    expect(messages.join()).toContain("The room is dark and square");
     messages.length = 0;
 
     executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] })
@@ -315,11 +315,12 @@ interface ExpectedStrings {
 
 function executeAndTest(command : string[], expectedMessages : ExpectedStrings) {
     engine.send(Input.execute(command));
+    const joined = messages.join("\n");
     expectedMessages.expected?.forEach(str => {
-        expect(messages).toContain(str);
+        expect(joined).toContain(str);
     })
     expectedMessages.notExpected?.forEach(str => {
-        expect(messages).not.toContain(str);
+        expect(joined).not.toContain(str);
     })
     messages.length = 0;
 } 

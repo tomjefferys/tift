@@ -5,6 +5,8 @@ import { captureModifier, captureObject, matchBuilder, matchVerb } from "./comma
 import { mkResult, mkThunk } from "./script/thunk";
 import { phaseActionBuilder } from "./script/phaseaction";
 import { makePath } from "./path";
+import * as Mustache from "mustache"
+import { getName, Nameable } from "./nameable";
 
 const NS_ENTITIES = "entities";
 
@@ -22,18 +24,31 @@ export interface Player {
 export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Player;
 export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
+const LOOK_TEMPLATE : string = 
+`{{desc}}
+
+{{#hasItems}}
+You can see:
+{{/hasItems}}
+{{#items}}
+ - {{.}}
+{{/items}}`;
+
 export const LOOK_FN = (env : Env) => {
     const location = getLocationEntity(env);
     const desc = location["desc"] ?? location["name"] ?? location["id"];
-    write(env, desc);
-    write(env, "");
-
     const items = env.findObjs(obj => obj.location === location.id);
 
-    for(const item of items) {
-        write(env, item["name"] ?? item["id"])
-        write(env, "");
+    const view = {
+        "desc" : desc,
+        "hasItems" : Boolean(items.length),
+        "items" : items.map(item => getName(item as Nameable)) 
     }
+
+    const output = Mustache.render(LOOK_TEMPLATE, view);
+
+    write(env, output);
+
     return mkResult(true);
 }
 

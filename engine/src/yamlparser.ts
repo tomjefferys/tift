@@ -1,5 +1,5 @@
 import { loadAll } from "js-yaml"
-import * as fs from "fs"
+//import * as fs from "fs"
 import { Obj } from "./types"
 
 const prototypes = {
@@ -8,11 +8,6 @@ const prototypes = {
   "item":{"type":"item"},
   "rule":{"type":"rule"},
   "verb":{"type":"verb"}
-}
-
-export function loadObjs(fileName: string) {
-  const data = fs.readFileSync(fileName, "utf8");
-  return getObjs(data);
 }
 
 export function getObjs(data: string) {
