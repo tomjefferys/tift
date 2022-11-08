@@ -67,7 +67,7 @@ export function toValueList(path : Path) : PathElementType[] {
     return path.map(e => e.getValue());
 }
 
-export function fromValueList(values : PathElementType[]) {
+export function fromValueList(values : PathElementType[]) : PathElement[] {
     return values.map(value => _.isNumber(value)? index(value) : property(value));
 }
 

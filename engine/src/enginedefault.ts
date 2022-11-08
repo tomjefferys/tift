@@ -7,6 +7,7 @@ import { phaseActionBuilder } from "./script/phaseaction";
 import { makePath } from "./path";
 import * as Mustache from "mustache"
 import { getName, Nameable } from "./nameable";
+import { formatEntityString } from "./util/mustacheUtils";
 
 const NS_ENTITIES = "entities";
 
@@ -36,7 +37,10 @@ You can see:
 
 export const LOOK_FN = (env : Env) => {
     const location = getLocationEntity(env);
-    const desc = location["desc"] ?? location["name"] ?? location["id"];
+    const desc = (location["desc"] && formatEntityString(env, location, "desc")) 
+                        ?? location["name"]
+                        ?? location["id"];
+    // Desc should have any moustache expressions expanded
     const items = env.findObjs(obj => obj.location === location.id);
 
     const view = {

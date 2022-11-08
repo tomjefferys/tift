@@ -132,6 +132,15 @@ export class Env {
             : value;
     }
 
+    has(name : Path | string | symbol) : boolean {
+        const getPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
+        const [ns, path] = this.matchNameSpace(getPath);
+
+        const [head,_tail] = splitPath(path);
+        const env = this.findEnv(ns, head);
+        return Boolean(env);
+    }
+
     /**
      * Get a variable as a string
      * @param name 
@@ -307,6 +316,7 @@ export class Env {
         const nsPath = _.isString(path)? parsePath(path) : path;
         let longestMatch : Optional<[NameSpace, Path]> = undefined;
         for(const ns of this.getNamespaces()) {
+            // FIXME there's a type mismatch here, looks like nsPath is maybe the wrong type
             const [match, tail] = hasPrefix(nsPath, fromValueList(ns));
             if (match && (longestMatch === undefined || ns.length > longestMatch[0].length)) {
                 longestMatch = [ns, tail];

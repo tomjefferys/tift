@@ -18,6 +18,14 @@ export function listOutputConsumer(messages : string[], words : string[]) : Outp
     }
 }
 
+export function defaultOutputConsumer() : [OutputConsumer, string[], string[]] {
+    const messages : string[] = [];
+    const words : string[] = [];
+    const consumer = listOutputConsumer(messages, words);
+    return [consumer, messages, words];
+
+}
+
 export function setUpEnv() : [Env, string[], string[]] {
     const messages : string[] = [];
     const words : string[] = [];
