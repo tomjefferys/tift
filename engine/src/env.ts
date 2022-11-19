@@ -1,16 +1,18 @@
 import * as _ from "lodash"
-import { Path, PathElement, pathElementEquals, fromValueList } from "./path";
+import { Path, PathElement, pathElementEquals, fromValueList, makePath, toValueList } from "./path";
 import { parsePath } from "./script/pathparser";
 import { Optional } from "./util/optional";
 
 export const OVERRIDE = Symbol("__override__");
+export const REFERENCE = Symbol("__reference__");
+export const NAMESPACE = Symbol("__namespace__");
+export const NOT_FOUND = Symbol("__notfound__");
 
 export type ReadOnly = "readonly" | "writable";
 
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type Obj = {[key:string | symbol]:any};
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type AnyArray = unknown[];
 
@@ -51,8 +53,11 @@ export class Env {
      * @param name 
      * @param value 
      */
-    set(name : Path | string | symbol, value : any) {
-        const setPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
+    set(name : Path | string | symbol, value : any) : void {
+        let setPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
+
+        setPath = this.expandReferences(setPath);
+
         if (!this.writable) {
             throw new Error("Can't set variable on readonly env");
         }
@@ -108,22 +113,72 @@ export class Env {
      * @param name 
      * @returns 
      */
-    get(name : Path | string | symbol) : any {
-        const getPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
+    get(name : Path | string | symbol, followReferences = true) : any {
+        let getPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
+
+        if (followReferences) {
+            getPath = this.expandReferences(getPath);
+        }
         const [ns, path] = this.matchNameSpace(getPath);
         return this.getFromNameSpace(ns, path);
     }
 
+    expandReferences(path : Path, expandedPath : Path = []) : Path {
+        const [head, tail] = splitPath(path);
+        const [newPath, found] = this.followReferences([...expandedPath, head]);
+        if (!found) {
+            return [...newPath, ...(tail ?? [])];
+        } else {
+            return (tail && tail.length)? this.expandReferences(tail, newPath) : newPath;       
+        }
+    }
+
+    followReferences(path : Path, visited : Path[] = []) : [Path, boolean]{
+        let result = path;
+        let target = this.get(path, false);
+        if (isReference(target)) {
+            const newPath = target[REFERENCE];
+            if (visited.includes(newPath)) {
+                throw new Error("Loop detecected following references: " + JSON.stringify(visited.map(p => toValueList(p))));
+            }
+            [result, target] = this.followReferences(newPath, [...visited, path]);
+        }
+        return [result, isFound(target)];
+    }
+
+    /**
+     * Creates a proxy object that contains references to all objects in a namespace
+     * @param ns 
+     */
+    createNamespaceReferences(ns : NameSpace) {
+        const handler = {
+            getOwnPropertyDescriptor : (target : any, property : any) => {
+                const value = handler.get(target, property);
+                return isFound(value) ? { configurable : true, enumerable : true, value } : undefined;
+            },
+            // If the requested object exist in the nameaspace, return a reference to it
+            get : (_target : any, key : any) => {
+                return (this.has(makePath([...ns, key]))) 
+                        ? this.reference(makePath([...ns, key])) 
+                        : notFound(makePath([key]));
+            },
+            has : (_target : any, key : any) => {
+                return this.has([...ns, key]);
+            }
+        }
+        return new Proxy({}, handler);
+    }
+
     getFromNameSpace(ns : NameSpace, path : Path) {
         if (!path || (_.isArray(path) && !path.length)) {
-            throw new Error("Can't get empty path from namespace: " + ns);
+            return nameSpace(ns);
         }
 
         const [head,tail] = splitPath(path);
         const env = this.findEnv(ns, head);
 
         if (!env) {
-            throw new Error("No such varible " + _.flattenDeep([...ns, path.map(e => e.getValue().toString())]).join(".").toString());
+            return notFound([...fromValueList(ns), head]);
         }
 
         const value = _.get(env.properties, [...ns, head.getValue()]);
@@ -135,6 +190,10 @@ export class Env {
     has(name : Path | string | symbol) : boolean {
         const getPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
         const [ns, path] = this.matchNameSpace(getPath);
+
+        if (ns.length && !path.length) {
+            return true;
+        }
 
         const [head,_tail] = splitPath(path);
         const env = this.findEnv(ns, head);
@@ -198,6 +257,7 @@ export class Env {
      * @returns the matching environment
      */
     private findEnv(ns : NameSpace, name : PathElement) : Optional<Env> {
+        // Could we check for references here?
         return _.has(this.properties,[...ns, name.getValue()])
                 ? this
                 : this.parent?.findEnv(ns, name);
@@ -316,13 +376,20 @@ export class Env {
         const nsPath = _.isString(path)? parsePath(path) : path;
         let longestMatch : Optional<[NameSpace, Path]> = undefined;
         for(const ns of this.getNamespaces()) {
-            // FIXME there's a type mismatch here, looks like nsPath is maybe the wrong type
             const [match, tail] = hasPrefix(nsPath, fromValueList(ns));
             if (match && (longestMatch === undefined || ns.length > longestMatch[0].length)) {
                 longestMatch = [ns, tail];
             }
         }
         return longestMatch ?? [[], nsPath];
+    }
+
+    reference(pathParam : string | Path) : { [REFERENCE] : Path } {
+        const path = _.isString(pathParam) ? parsePath(pathParam) : pathParam;
+        if (!this.has(path)) {
+            throw Error("Can't create reference to non-extant path: " + JSON.stringify(path));
+        }
+        return { [REFERENCE] : path};
     }
 }
 
@@ -335,7 +402,7 @@ function getFromObj(obj : Obj, path : Path) : any {
     const [head, tail] = splitPath(path);
     const value = obj[head.getValue()];
     if (!value) {
-        throw new Error("Variable " + head.getValue().toString() + " does not exist");
+        return notFound(path);
     }
     if (!tail) {
         return value;
@@ -414,7 +481,11 @@ function pathsEqual(path1? : Path, path2? : Path) : boolean {
     }
     const [head1, tail1] = splitPath(path1);
     const [head2, tail2] = splitPath(path2);
-return (pathElementEquals(head1, head2))? pathsEqual(tail1, tail2) : false;
+    return (pathElementEquals(head1, head2))? pathsEqual(tail1, tail2) : false;
+}
+
+function isReference(value : unknown) : boolean {
+    return _.isObject(value) && _.has(value, REFERENCE);
 }
 
 /** 
@@ -422,4 +493,16 @@ return (pathElementEquals(head1, head2))? pathsEqual(tail1, tail2) : false;
  */
 export function createRootEnv(obj : Obj, readonly : ReadOnly = "writable", namespaces : NameSpace[] = []) : Env {
     return new Env(readonly == "writable", obj, [[], ...namespaces]);
+}
+
+function nameSpace(ns : NameSpace) : {[NAMESPACE] : NameSpace} {
+    return { [NAMESPACE] : ns };
+}
+
+export function isFound(value : unknown) : boolean {
+    return !(_.isObject(value) && _.has(value, NOT_FOUND));
+}
+
+function notFound(path : Path) : { [NOT_FOUND] : Path } {
+    return { [NOT_FOUND] : path }
 }

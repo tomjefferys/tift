@@ -25,7 +25,7 @@ export interface Player {
 export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Player;
 export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
-const LOOK_TEMPLATE : string = 
+const LOOK_TEMPLATE = 
 `{{desc}}
 
 {{#hasItems}}

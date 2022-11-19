@@ -1,6 +1,5 @@
 import { formatEntityString } from "../../src/util/mustacheUtils";
-import { Env, createRootEnv } from "../../src/env";
-import { BasicEngine } from "../../src/engine";
+import { createRootEnv } from "../../src/env";
 import { defaultOutputConsumer } from "../testutils/testutils";
 import { EngineBuilder } from "../../src/enginebuilder";
 import { Input } from "../../src/main";
@@ -41,7 +40,7 @@ test("Test formatEntityString when looking with different entity", () => {
     const room1 = {
         id : "theRoom1",
         name : "The Room",
-        desc : "An almost empty room {{theRoom2.name}}",
+        desc : "An almost empty room {{detail}} from here you can see {{theRoom2.name}}",
         detail : "except for a flickering light",
         type : "room",
         tags : [ "start" ]
@@ -64,6 +63,5 @@ test("Test formatEntityString when looking with different entity", () => {
 
     engine.send(Input.start());
     engine.send(Input.execute(["look"]));
-    console.log(messages.join(" "));
-    //expect(messages.join(" ").trim()).toEqual("An almost empty room except for a flickering light");
+    expect(messages.join(" ").trim()).toEqual("An almost empty room except for a flickering light from here you can see Another Room");
 });

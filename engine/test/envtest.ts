@@ -1,12 +1,11 @@
 import _ from "lodash";
-import { createRootEnv, NameSpace, Obj, OVERRIDE } from "../src/env";
+import { createRootEnv, isFound, NameSpace, Obj, OVERRIDE } from "../src/env";
 import { Path, toValueList } from "../src/path";
 
 test("test empty env", () => {
     const env = createRootEnv({}, "writable");
-    const test = () => env.get("test");
-
-    expect(test).toThrowError();
+    const result = env.get("test");
+    expect(isFound(result)).toBeFalsy();
 });
 
 test("test simple set and get", () => {
@@ -25,7 +24,7 @@ test("test child env", () => {
 
     expect(root.get("var1")).toEqual("foo");
     expect(root.get("var2")).toEqual("bar");
-    expect(() => root.get("var3")).toThrowError();
+    expect(isFound(root.get("var3"))).toBeFalsy();
 
     expect(child.get("var1")).toEqual("foo");
     expect(child.get("var2")).toEqual("bar");
@@ -336,9 +335,148 @@ test("Limit search to namespace", () => {
     expect(child.findObjs(predicate, [["namespace1"], ["namespace3"]])).toHaveLength(2);
     expect(child.findObjs(predicate, [["namespace1"], ["namespace3"]])).toHaveLength(2);
     expect(child.findObjs(predicate, [["namespace1"], ["namespace1", "namespace2"], ["namespace3"]])).toHaveLength(3);
-
-
 })
+
+test("Test reference to value", () => {
+    const root = createRootEnv({
+        "foo" : { "bar" : "baz"},
+    });
+
+    const child = root.newChild({"bar" : root.reference("foo.bar")});
+    const result = child.get("bar");
+
+    expect(result).toEqual("baz");
+
+    child.set("bar", "qux");
+
+    const childResultAfterSet = child.get("bar");
+
+    expect(childResultAfterSet).toEqual("qux");
+    
+    const parentResultAfterSet = root.get("foo.bar");
+    expect(parentResultAfterSet).toEqual("qux");
+});
+
+test("Test reference to object", () => {
+    const root = createRootEnv({
+        "foo" : { "bar" : { "baz" : "qux" }}
+    });
+
+    const child = root.newChild({"bar" : root.reference("foo.bar")});
+    const result = child.get("bar.baz");
+    expect(result).toEqual("qux");
+})
+
+test("Test reference to object (set)", () => {
+    const root = createRootEnv({
+        "foo" : { "bar" : { "baz" : "qux" }}
+    });
+
+    const child = root.newChild({"bar" : root.reference("foo.bar")});
+    expect(child.get("bar.baz")).toEqual("qux");
+
+    child.set("bar.baz", "corge");
+    expect(child.get("bar.baz")).toEqual("corge");
+    expect(root.get("foo.bar.baz")).toEqual("corge");
+})
+
+test("Test reference to namespace", () => {
+    const root = createRootEnv({
+        "namespace1" : { "foo" : "bar" }
+    }, "writable", [["namespace1"]]);
+
+    const child = root.newChild({ "ref" : root.reference("namespace1")});
+    expect(child.get("ref.foo")).toEqual("bar");
+});
+
+test("Test references: different scope levels", () => {
+    const root = createRootEnv({
+        "entities" : {
+            "foo" : { "bar" : "baz" },
+            "qux" : { "bar" : "grualt" }
+        },
+        "verbs" : {
+            "look" : { "intransitive" : true }
+        }
+    }, "readonly", [["entities"], ["verbs"]]);
+
+    const child1 = root.newChild();
+    const child2 = child1.newChild(child1.createNamespaceReferences(["entities"]));
+    const child3 = child2.newChild({ "this" : child2.reference("entities.foo")});
+
+    expect(child3.get("this.bar")).toEqual("baz");
+    expect(child3.get("foo.bar")).toEqual("baz");
+    expect(child3.get("qux.bar")).toEqual("grualt");
+    expect(child3.get("entities.foo.bar")).toEqual("baz");
+    expect(child3.get("entities.qux.bar")).toEqual("grualt");
+    expect(child3.get("verbs.look.intransitive")).toEqual(true);
+});
+
+test("Test references: different scope levels: test setting", () => {
+    const root = createRootEnv({
+        "entities" : {
+            "foo" : { "bar" : "baz" },
+            "qux" : { "bar" : "grault" }
+        },
+        "verbs" : {
+            "look" : { "intransitive" : true }
+        }
+    }, "readonly", [["entities"], ["verbs"]]);
+
+    const child1 = root.newChild();
+    const child2 = child1.newChild(child1.createNamespaceReferences(["entities"]));
+    const child3 = child2.newChild({ "this" : child2.reference("entities.foo")});
+
+    child3.set("this.bar", "xyzzy");
+    child3.set("qux.bar",  "corge");
+
+    expect(child3.get("this.bar")).toEqual("xyzzy");
+    expect(child3.get("foo.bar")).toEqual("xyzzy");
+    expect(child3.get("qux.bar")).toEqual("corge");
+    expect(child3.get("entities.foo.bar")).toEqual("xyzzy");
+    expect(child3.get("entities.qux.bar")).toEqual("corge");
+
+    expect(child2.get("foo.bar")).toEqual("xyzzy");
+    expect(child2.get("entities.foo.bar")).toEqual("xyzzy");
+    expect(child2.get("entities.qux.bar")).toEqual("corge");
+
+    expect(child1.get("entities.foo.bar")).toEqual("xyzzy");
+    expect(child1.get("entities.qux.bar")).toEqual("corge");
+
+    expect(root.get("entities.foo.bar")).toEqual("baz");
+    expect(root.get("entities.qux.bar")).toEqual("grault");
+})
+
+test("Test references to references", () => {
+    const root = createRootEnv({
+        "entities" : {
+            "foo" : { "bar" : "baz" },
+            "qux" : { "bar" : "grault" }
+        },
+        "verbs" : {
+            "look" : { "intransitive" : true }
+        }
+    }, "readonly", [["entities"], ["verbs"]]);
+
+    const child1 = root.newChild();
+    const child2 = child1.newChild({ "corge" : child1.reference("entities.foo") });
+    const child3 = child2.newChild({ "xyzzy" : child2.reference("corge") });
+
+    expect(child3.get("xyzzy.bar")).toEqual("baz");
+
+    child3.set("xyzzy.qux", "garply");
+
+    expect(child3.get("xyzzy.qux")).toEqual("garply");
+    expect(child3.get("corge.qux")).toEqual("garply");
+    expect(child3.get("entities.foo.qux")).toEqual("garply");
+
+    expect(child2.get("corge.qux")).toEqual("garply");
+    expect(child2.get("entities.foo.qux")).toEqual("garply");
+    
+    expect(child1.get("entities.foo.qux")).toEqual("garply");
+
+    expect(isFound(root.get("entities.foo.qux"))).toBeFalsy();
+});
 
 function resultToValueList(result : [NameSpace, Path]) : [NameSpace, (string | symbol | number)[]] {
     const [ns, path] = result;

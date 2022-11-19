@@ -1,18 +1,20 @@
 // Helper code for handling mustache templates
-import { Env, Obj } from "../env"
+import { Env, isFound, Obj } from "../env"
 import * as _ from "lodash"
 import * as Mustache from "mustache"
-import * as Path from "../path"
 
 export function formatEntityString(env : Env, entity : Obj, entityField : string) {
-    const entityEnv = env.newChild(entity);
+    const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
+    const entityEnv = entitiesEnv.newChild(entity);
 
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const handler = {
-        has : (target : any, key : any) => {
-            return _.has(target, key) || env.has(Path.fromValueList(["entities",key])); 
+        has : (_target : any, key : any) => {
+            return entityEnv.has(key); 
         },
-        get : (target : any, key : any) => {
-            return _.get(target, key) ?? env.get(Path.fromValueList(["entities", key]));
+        get : (_target : any, key : any) => {
+            const value = entityEnv.get(key);
+            return isFound(value) ? value : "NOT FOUND";
         }
     }
     const proxy = new Proxy(entity, handler);
