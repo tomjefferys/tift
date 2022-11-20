@@ -6,6 +6,7 @@ import * as _ from 'lodash'
 import { parsePathExpr } from './pathparser';
 import { isPath } from '../path';
 import  jsepAssignment, { AssignmentExpression } from '@jsep-plugin/assignment';
+import { Optional } from '../util/optional';
 
 // Configure Jsep
 jsep.plugins.register(jsepAssignment as unknown as IPlugin);
@@ -63,7 +64,8 @@ const BUILTINS : {[key:string]:EnvFn} = {
     "do" : makeDo(),
     "set" : makeSet(),
     "def" : makeDef(),
-    "switch" : makeSwitch()
+    "switch" : makeSwitch(),
+    "fn" : makeFn()
 }
 
 const KEYWORD_PROPS = ["then", "else", "case", "default"];
@@ -145,6 +147,13 @@ function evaluateBuiltInArgs(calleeName : string, args : Expression[]) {
     let argThunks : Thunk[];
     if (calleeName === "set" || calleeName === "def") {
         argThunks = [evaluateName(args[0]), evaluate(args[1])];
+    } else if (calleeName === "fn") {
+        const parameters = args[0];
+        if (parameters.type === "ArrayExpression") {
+            argThunks = [evaluateNameArray(parameters as ArrayExpression), evaluate(args[1])]
+        } else {
+            throw new Error("First parameter of function definition should be an array of parameters");
+        }
     } else {
         argThunks = args.map(arg => evaluate(arg));
     }
@@ -199,6 +208,11 @@ function getBuiltInProperty(expression : Expression) : string | undefined {
  */
 function evaluateName(expression : Expression) : Thunk {
     return mkThunk(_ => mkResult(parsePathExpr(expression), expression));
+}
+
+function evaluateNameArray(expression : ArrayExpression) : Thunk {
+    const envFn : EnvFn = _ => mkResult(expression.elements.map(element => parsePathExpr(element)));
+    return mkThunk(envFn, expression);
 }
 
 /**
@@ -308,13 +322,14 @@ function evaluateAssignmentExpression(assignment : AssignmentExpression) : Thunk
     }
 }
 
-export function bindParams(params : string[], fn : EnvFn) : EnvFn {
+export function bindParams(params : string[], fn : EnvFn, closureEnv : Optional<Env> = undefined) : EnvFn {
     return env => {
         const args = env.get(ARGS);
+        const scope = closureEnv ?? env
         for(let i=0; i<args.length && i<params.length; i++) {
-            env.def(params[i], args[i]);
+            scope.def(params[i], args[i]);
         }
-        return fn(env);
+        return fn(scope);
     }
 }
 
@@ -400,6 +415,15 @@ function makeIf() : EnvFn {
     }
 
     return bindParams(["expr"], ifFn);
+}
+
+function makeFn() : EnvFn {
+    const fnFn : EnvFn = env => {
+        const params = env.get("params")(env).getValue();
+        const body = env.get("body");
+        return mkResult(bindParams(params, body, env));
+    }
+    return bindParams(["params", "body"], fnFn);
 }
 
 /**

@@ -325,6 +325,33 @@ test("Test compound", () => {
     expect(messages).toStrictEqual(["3", "10"]);
 })
 
+test("Test simple function definition", () => {
+    const [env, _] = setUpEnv();
+    const fn = parse(`
+        def(add, fn([param1, param2], param1 + param2)),
+        add(2,3)
+    `)
+    const result = fn(env);
+    expect(result).toBe(5);
+})
+
+test("Test function, simple closure", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        def(createAdd, fn([param1], do(
+            fn([param2], param1 + param2)
+        ))),
+        def(addSeven, createAdd(7)),
+        addSeven(3)
+    `);
+    const result = fn(env);
+    expect(result).toBe(10);
+})
+
+test("Test function, nested closures", () => {
+
+})
+
 test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
     const action =  phaseActionBuilder()
