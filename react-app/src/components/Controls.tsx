@@ -1,4 +1,5 @@
 import React from "react";
+import "./Controls.css";
 import { IdValue } from "tift-engine/src/shared";
 
 interface ControlProps {
@@ -12,14 +13,16 @@ interface WordProps {
 }
 
 const Controls = ({ words, wordSelected } : ControlProps) => (
-    <div>
+    <div className="buttonContainer">
         {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
     </div>
 );
 
 const WordButton = ({ word, wordSelected } : WordProps) => (
-    <div>
-        <button value={word.id} onClick={(event) => wordSelected(event, word)}>{word.value}</button>
+    <div className="buttonCell">
+        <button className="wordButton" 
+                value={word.id} 
+                onClick={(event) => wordSelected(event, word)}>{word.value}</button>
     </div>
 )
 

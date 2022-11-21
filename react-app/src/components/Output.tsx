@@ -20,15 +20,16 @@ const CommandEntry = ({ value } : EntryProps) => (<p className="outputCommand">&
 const Output = ({ entries, status, command } : OutputProps) => {
 
     const entriesEndRef = useRef<HTMLDivElement>(null);
-
+    const statusBarRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         entriesEndRef.current?.scrollIntoView({ behavior : "auto"});
+        statusBarRef.current?.scrollIntoView({ behavior : "auto" });
     });
 
     return (
         <React.Fragment>
-            <div className="statusBar">
+            <div className="statusBar" ref={statusBarRef}>
                 <StatusBar status={status}/>
             </div>
             <div className="textOutWrapper">
