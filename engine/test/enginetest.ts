@@ -227,6 +227,21 @@ test("Test get/drop", () => {
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 });
 
+test("Test examine", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "teapot",
+        type : "item",
+        location : "theRoom",
+        desc : "A little teapot, {{dimensions}}",
+        dimensions : "short and stout"
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    expectWords([], ["go", "look", "examine", "wait"]);
+    executeAndTest(["examine", "teapot"], { expected : ["A little teapot, short and stout"]});
+});
+
 test("Test simple rules", () => {
     builder.withObj(THE_ROOM);
     builder.withObj({

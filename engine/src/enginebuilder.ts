@@ -110,6 +110,9 @@ export function makeItem(obj : Obj) : Entity {
         builder.withVerb("get");
         builder.withVerb("drop");
     }
+    if (_.has(obj, "desc")) {
+        builder.withVerb("examine");
+    }
     return builder.build();
 }
 

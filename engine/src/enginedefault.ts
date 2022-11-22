@@ -107,6 +107,18 @@ const DROP = phaseActionBuilder()
                 return mkResult(true);
             }));
 
+const EXAMINE = phaseActionBuilder()
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("examine")).withObject(captureObject("item")).build(),
+            mkThunk(env => {
+                const itemId = env.getStr("item");
+                const item = getEntity(env, itemId);
+                const output = formatEntityString(env, item, "desc");
+                write(env, output);
+                return mkResult(true);
+            }));
+
 // TODO we should load this from a data file
 export const DEFAULT_VERBS = [
       new VerbBuilder({"id":"go"})
@@ -133,6 +145,11 @@ export const DEFAULT_VERBS = [
                   .withAction(DROP)
                   .withContext("inventory")
                   .withContext("holding")
+                  .build(),
+      new VerbBuilder({"id":"examine"})
+                  .withTrait("transitive")
+                  .withTrait("instant")
+                  .withAction(EXAMINE)
                   .build()
 ];
 
