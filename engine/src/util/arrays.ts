@@ -19,6 +19,17 @@ export function prefixEquals<T>(arr1 : T[], arr2 : T[]) : boolean {
 }
 
 /**
+ * Checks if the first array is a prefix of the second
+ * @param arr1 the prefix
+ * @param arr2 the array to check it agains
+ * @returns
+ */
+export function isPrefixOf<T>(arr1 : T[], arr2 : T[]) : boolean {
+    const arr2Slice = arr2.slice(0, arr1.length);
+    return equals(arr1, arr2Slice);
+}
+
+/**
  * shallow equals on two arrays
  * @param arr1 
  * @param arr2 
