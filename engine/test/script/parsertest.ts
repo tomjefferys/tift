@@ -349,7 +349,17 @@ test("Test function, simple closure", () => {
 })
 
 test("Test function, nested closures", () => {
-
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        def(createAdd, fn([param1], do(
+            def(nestedAdd, fn([param2], param1 + param2)),
+            fn([param3], nestedAdd(2) + param3)
+        ))),
+        def(addSeven, createAdd(7)),
+        addSeven(3)
+    `);
+    const result = fn(env);
+    expect(result).toBe(12);
 })
 
 test("Test match operator, successful match", () => {
