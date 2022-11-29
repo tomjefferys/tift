@@ -1,4 +1,12 @@
 import { ProxyManager, replayHistory } from "../../src/util/historyproxy";
+import { Chance } from "chance"
+import { RandomObjectGenerator } from "../testutils/randomobjectgenerator";
+import _ from "lodash"
+
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+const MASTER_CHANCE = new Chance();
 
 type PropType = string | symbol;
 
@@ -103,9 +111,38 @@ test("Test history compression", () => {
 
     proxy.foo.baz = "quux";
     expect(manager.getHistory()).toEqual([set(["corge"], "three"), set(["foo", "bar"], "qux"), set(["foo", "baz"], "quux")]);
-    
+
     proxy.foo = "xyzzy";
     expect(manager.getHistory()).toEqual([set(["corge"], "three"), set(["foo"], "xyzzy")]);
+});
+
+test("Test random objects", () => {
+    for(let i=0; i<100; i++) {
+        const seed = MASTER_CHANCE.integer();
+        const chance = new Chance(seed);
+
+        // Create a new object
+        const generator = new RandomObjectGenerator(chance);
+        const original = generator.get(10);
+
+        // Keep a copy of the original
+        const originalClone = _.cloneDeep(original);
+
+        // Run some random updates
+        const manager = new ProxyManager();
+        const proxy = manager.createProxy(original);
+        generator.update(proxy, 10);
+
+        // Should now be different from the original
+        expect(original).not.toStrictEqual(originalClone);
+        expect(proxy).not.toStrictEqual(originalClone);
+
+        // Replay the history on the original clone
+        const [newObj, _newManager] = replayHistory(originalClone, manager.getHistory());
+
+        // Check the are the same
+        expect(newObj, "Seed = [" + seed + "]").toStrictEqual(proxy);
+    }
 });
 
 function set(property : PropType[], newValue : any) { 

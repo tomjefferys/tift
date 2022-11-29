@@ -1,7 +1,10 @@
 // A proxy object that records mutations to an object
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import _ from "lodash";
 import { isPrefixOf } from "./arrays";
+
+const IS_PROXY = Symbol("isProxy");
 
 type PropType = string | symbol;
 
@@ -18,8 +21,13 @@ interface Del {
     property : PropType[]
 }
 
+/**
+ * Proxy manager. Creates proxys, and track changes to them
+ * Automatically proxies child objects on get
+ */
 export class ProxyManager {
     private history : Action[];
+    fullHistory : Action[] = [];
 
     constructor(history : Action[] = []) {
         this.history = history;
@@ -39,14 +47,20 @@ export class ProxyManager {
 
     private createHandler(prefix : PropType[]) : object {
         return {
-            get : (target : object, property : PropType) => {
+            get : (target : any, property : PropType) => {
+                if (property === IS_PROXY) {
+                    return true;
+                }
                 const value = Reflect.get(target, property);
-                return (_.isObject(value)) 
-                            ? this.createProxy(value, [...prefix, property])
-                            : value;
+                return shouldCreateProxy(target, property, value)
+                        ? this.createProxy(value, [...prefix, property])
+                        : value;
             },
             set : (target : object, property : PropType, newValue : any) => {
-                this.recordAction({type : "Set", property : [...prefix, property], newValue});
+                const path = [...prefix, property];
+                const action : Action = {type : "Set", property : path, newValue : _.isObject(newValue)? _.cloneDeep(newValue) : newValue};
+                this.recordAction(action);
+                this.fullHistory.push(action);
                 return Reflect.set(target, property, newValue);
             },
             deleteProperty : (target : object, property : PropType) => {
@@ -57,7 +71,25 @@ export class ProxyManager {
     }
 }
 
-export function replayHistory<T extends Object>(obj : T, history : Action[]) : [T, ProxyManager] {
+/**
+ * Do we need to wrap an object in a proxy
+ * Must not already be wrapped, must be an object, and the property being accessed must be an own property of
+ * the target object.
+ * @param target 
+ * @param property 
+ * @param value 
+ * @returns 
+ */
+const shouldCreateProxy = (target : any, property : PropType, value : any) =>
+    !target[IS_PROXY] && _.isObject(value) && Object.prototype.hasOwnProperty.call(target, property);
+
+/**
+ * Replay history on an object
+ * @param obj 
+ * @param history 
+ * @returns the new object, and it's ProxyManager
+ */
+export function replayHistory<T extends object>(obj : T, history : Action[]) : [T, ProxyManager] {
     history.forEach(action => {
         switch(action.type) {
             case "Set": 
