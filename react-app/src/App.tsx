@@ -9,6 +9,7 @@ import Controls from './components/Controls';
 import { commandEntry, messageEntry, OutputEntry } from './outputentry';
 
 const GAME_FILE = "adventure.yaml";
+//const GAME_FILE = "example.yaml";
 
 function App() {
   const [command, setCommand] = useState<IdValue<string>[]>([]);
@@ -103,6 +104,9 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         break;
       case "Status":
         statusConsumer(outputMessage.status);
+        break;
+      case "SaveState": 
+        console.log(JSON.stringify(outputMessage.state));
         break;
       default:
         throw new Error("Unsupported OutputMessage Type: " + outputMessage.type);
