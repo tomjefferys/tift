@@ -2,7 +2,7 @@ import { isInstant, Verb } from "./verb"
 import { Entity, getType, hasTag } from "./entity"
 import { createRootEnv, Env, Obj } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity } from "./enginedefault";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity, isEntity } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "./messages/output";
 import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
@@ -122,18 +122,18 @@ export class BasicEngine implements Engine {
     const contextEntities : MultiDict<Entity> = {};
 
     // Entity for the current location
-    const locationEntity = getLocationEntity(this.env); //this.env.findObjs(obj => obj?.id === location);
+    const locationEntity = getLocationEntity(this.env);
 
     if (locationEntity) {
       multidict.add(contextEntities, "location", locationEntity);
     }
 
     // Get any other entities that are here
-    this.env.findObjs(obj => obj?.location === locationEntity?.id) // Also check it is an entity
+    this.env.findObjs(obj => obj?.location === locationEntity?.id && isEntity(obj)) 
             .forEach(entity => multidict.add(contextEntities, "environment", entity));
 
     // Get inventory entities
-    this.env.findObjs(obj => obj?.location === "INVENTORY") // Also check it is an entity
+    this.env.findObjs(obj => obj?.location === "INVENTORY" && isEntity(obj))
             .forEach(entity => multidict.add(contextEntities, "inventory", entity));
 
     const verbs  = this.env.findObjs(obj => obj?.type === "verb") as Verb[];
@@ -171,6 +171,11 @@ export class BasicEngine implements Engine {
     const builder = new EngineBuilder();
     builder.fromYaml(message.data);
     this.addContent(builder.entities, builder.verbs, builder.objs);
+  }
+
+  save() {
+    const saveState = Output.saveState(this.env.properties);
+    this.output(saveState);
   }
 
   setConfig(newConfig : Config) {
@@ -229,6 +234,9 @@ export class BasicEngine implements Engine {
       const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
       expressions.forEach(expr => expr(this.env));
     }
+
+    // Send the current save state
+    this.save(); // TODO use a proxy to detect if anything has changed? (Use a counter, and increment it for every state change)
   }
 
   /**

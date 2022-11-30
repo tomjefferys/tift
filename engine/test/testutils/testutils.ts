@@ -12,6 +12,8 @@ export function listOutputConsumer(messages : string[], words : string[]) : Outp
             case "Words": 
                 message.words.forEach(word => words.push(word.id));
                 break;
+            case "SaveState":
+                break;
             default:
                 throw new Error("Can't handle type " + message.type);
         }

@@ -1,14 +1,16 @@
 import { IdValue } from "../shared";
 
-export type MessageType = "Print" | "Set" | "Look" | "Words" | "Status";
+//export type MessageType = "Print" | "Set" | "Look" | "Words" | "Status"
 
 interface Stringable {
     toString : () => string
 }
 
-export type OutputMessage = Print | SetVar | Look | Words | Status;
+export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState;
 
 export type OutputConsumer = (message : OutputMessage) => void;
+
+export type StateType = {[key:string | symbol]:unknown};
 
 export interface Print {
     type : "Print",
@@ -38,6 +40,11 @@ export interface Status {
     status : string
 }
 
+export interface SaveState {
+    type : "SaveState",
+    state : StateType
+}
+
 export function print(value : Stringable) : OutputMessage {
     return {
         type : "Print",
@@ -58,6 +65,10 @@ export function status(status : string) : OutputMessage {
         type : "Status",
         status : status
     }
+}
+
+export function saveState(state : StateType) : OutputMessage {
+    return { type : "SaveState", state };
 }
 
 export function SetVar(name : string, value : Stringable) : SetVar {

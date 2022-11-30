@@ -11,7 +11,7 @@ import { formatEntityString } from "./util/mustacheUtils";
 
 const NS_ENTITIES = "entities";
 
-export const PLAYER = Symbol("__PLAYER__");
+export const PLAYER = "__PLAYER__";
 export const OUTPUT = Symbol("__OUTPUT__");
 
 export interface Player {
@@ -41,7 +41,7 @@ export const LOOK_FN = (env : Env) => {
                         ?? location["name"]
                         ?? location["id"];
     // Desc should have any moustache expressions expanded
-    const items = env.findObjs(obj => obj.location === location.id);
+    const items = env.findObjs(obj => obj.location === location.id && isEntity(obj));
 
     const view = {
         "desc" : desc,
@@ -54,6 +54,11 @@ export const LOOK_FN = (env : Env) => {
     write(env, output);
 
     return mkResult(true);
+}
+
+export function isEntity(obj : Obj) : boolean {
+    // TODO find a better way of doing this
+    return Boolean(obj.type);
 }
 
 const LOOK = phaseActionBuilder()
