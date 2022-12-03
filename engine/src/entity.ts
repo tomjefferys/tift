@@ -26,7 +26,7 @@ export function getType(entity : Entity) : string {
     return type as string;
   }
 
-export function hasTag(entity : Entity, tag : string) : boolean {
+export function hasTag(entity : Obj, tag : string) : boolean {
     const tags = (entity[PROPS.TAGS] ?? []) as string[];
     return tags.indexOf(tag) != -1;
 }

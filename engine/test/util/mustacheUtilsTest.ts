@@ -5,7 +5,7 @@ import { EngineBuilder } from "../../src/enginebuilder";
 import { Input } from "../../src/main";
 
 test("Test formatEntityString", () => {
-    const env = createRootEnv({ "entities" : { "foo" : "bar", "baz" : "qux"}}, "readonly", [["entities"]]);
+    const env = createRootEnv({ "entities" : { "foo" : "bar", "baz" : "qux"}}, [["entities"]]);
     const entity = {
         "foo" : "corge",
         "desc" : "Foo: {{foo}}, Baz: {{baz}}"

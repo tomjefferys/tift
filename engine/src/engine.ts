@@ -58,7 +58,6 @@ type PluginAction = (context : PluginActionContext) => void;
 
 export class BasicEngine implements Engine {
   private readonly config : Config = {};
-  private readonly rootEnv : Env;
   private readonly env : Env;
   private context : CommandContext;
   private output : OutputConsumer;
@@ -67,18 +66,16 @@ export class BasicEngine implements Engine {
   private started = false;
 
   constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
-    this.rootEnv = createRootEnv({ "entities" : {}, "verbs" : {}}, "readonly", [["entities"], ["verbs"]]);
+    this.env = createRootEnv({ "entities" : {}, "verbs" : {}}, [["entities"], ["verbs"]]);
     this.addContent(entities, verbs, objs);
 
-    const rootProps = this.rootEnv.properties;
+    const rootProps = this.env.properties;
 
     makeDefaultFunctions(rootProps);
     makeOutputConsumer(rootProps, outputConsumer);
     addLibraryFunctions(rootProps);
 
     this.output = outputConsumer;
-
-    this.env = this.rootEnv.newChild();
 
     this.context = {
       entities : {},
@@ -91,8 +88,8 @@ export class BasicEngine implements Engine {
       throw new Error("Engine is already started");
     }
     this.setupPluginActions();
-    const rootProps = this.rootEnv.properties;
-    const start = findStartingLocation(_.values(rootProps["entities"]));
+    const rootProps = this.env.properties;
+    const start = findStartingLocation(this.env);
     makePlayer(rootProps, start);
     this.context = this.getContext();
 
@@ -111,7 +108,7 @@ export class BasicEngine implements Engine {
   }
 
   addContent(entities : Entity[], verbs : Verb[], objs : Obj[]) {
-    const props = this.rootEnv.properties;
+    const props = this.env.properties;
     // These need adding to the readonly root Env
     objs.forEach(obj => props[obj.id as string] = obj); // FIXME reject anything without an id
     entities.forEach(entity => props["entities"][entity.id] = entity);
@@ -332,9 +329,8 @@ function executeBestMatchAction(actions : PhaseAction[], env : Env, command : Se
   return handled;
 }
 
-function findStartingLocation(entities : Entity[]) : string {
-  const startingLocs = entities.filter(
-      entity => getType(entity) === TYPE.ROOM && hasTag(entity, TAG.START));
+function findStartingLocation(env : Env) : string {
+  const startingLocs = env.findObjs(obj => obj["type"] === TYPE.ROOM && hasTag(obj, TAG.START));
   if (startingLocs.length == 0) {
     throw new Error("No starting location defined");
   }

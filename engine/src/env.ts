@@ -1,6 +1,12 @@
-import * as _ from "lodash"
+
+/**
+ * Implenent exection environment using a history proxy to keep track of changes
+ */
+
+import _ from "lodash"
 import { Path, PathElement, pathElementEquals, fromValueList, makePath, toValueList } from "./path";
 import { parsePath } from "./script/pathparser";
+import { ProxyManager } from "./util/historyproxy";
 import { Optional } from "./util/optional";
 
 export const OVERRIDE = Symbol("__override__");
@@ -27,13 +33,13 @@ export type NameSpace = string[];
 export class Env {
     readonly parent? : Env;
     readonly properties : Obj;
-    readonly writable : boolean;
     readonly namespaces : NameSpace[];
+    readonly proxyManager : ProxyManager;
 
-    constructor(writable : boolean, properties : Obj, namespaces : NameSpace[] = [], parent? : Env) {
+    constructor(properties : Obj, namespaces : NameSpace[] = [], parent? : Env) {
+        this.proxyManager = new ProxyManager();
         this.parent = parent;
-        this.writable = writable;
-        this.properties = properties;
+        this.properties = this.proxyManager.createProxy(properties);
         this.namespaces = namespaces;
     }
 
@@ -58,9 +64,6 @@ export class Env {
 
         setPath = this.expandReferences(setPath);
 
-        if (!this.writable) {
-            throw new Error("Can't set variable on readonly env");
-        }
         const [ns, path] = this.matchNameSpace(setPath);
         this.setToNameSpace(ns, path, value);
     }
@@ -85,7 +88,7 @@ export class Env {
 
     setToNameSpace(ns : NameSpace, path : Path, value : any) {
         const [head,tail] = splitPath(path);
-        const [env, isOverride] = this.findWritableEnv(ns, head) ?? [this, false];
+        const env = this.findEnv(ns, head) ?? this;
         const nsObj = env.getNameSpace(ns, true); 
         if (nsObj === undefined) {
             throw new Error("Could not get namespace: " + ns);
@@ -98,9 +101,6 @@ export class Env {
         const obj = nsObj[headValue] ?? {};
         if (typeof obj !== "object") {
             throw new Error(headValue.toString() + " is not an object");
-        }
-        if (isOverride) {
-            obj[OVERRIDE] = true;
         }
         if (!nsObj[headValue]) {
             nsObj[headValue] = obj;
@@ -231,20 +231,10 @@ export class Env {
      * @param tail 
      */
     private getObjProperty(ns : NameSpace, head : PathElement, tail : Path | undefined) : any {
-        const value = _.get(this.properties, [...ns, head.getValue()]);
+        const obj = _.get(this.properties, [...ns, head.getValue()]);
 
-        if (typeof value !== "object") {
+        if (typeof obj !== "object") {
             throw new Error(head.toString() + " is not an object");
-        }
-
-        let obj;
-        if (value[OVERRIDE] && this.parent) {
-            obj = this.parent?.getFromNameSpace(ns, [head]);
-            _.merge(obj, value);
-            delete obj[OVERRIDE];
-            removeNulls(obj);
-        } else {
-            obj = value;
         }
 
         const result = tail? getFromObj(obj, tail) : obj;
@@ -275,29 +265,6 @@ export class Env {
     }
 
     /**
-     * Find a writable env that could contain a property
-     * Returns either the one containing the property, or if that one is 
-     *   readonly the closest writable descendent, in which case we are 
-     *   considering it an override
-     * @param name 
-     * @returns A tuple of the writable env, and an boolean indicating if 
-     *          this is an override
-     */
-    private findWritableEnv(ns : NameSpace, name : PathElement) : [Env,boolean] | undefined {
-        let result : [Env,boolean] | undefined = undefined;
-        if (_.has(this.properties, [...ns, name.getValue()]) && this.writable) {
-            result = [this,false];
-        } else if (this.parent) {
-            if (this.parent.writable) {
-                result = this.parent.findWritableEnv(ns, name);
-            } else if (this.parent.hasProperty(ns, name)) {
-                result = [this, true];
-            }
-        }
-        return result;
-    }
-
-    /**
      * execute a function and return the result
      * @param name the name of the function
      * @param bindings parameter binding
@@ -318,7 +285,7 @@ export class Env {
      * @returns a new child environment of the current environment
      */
     newChild(obj : Obj = {}) : Env {
-        return new Env(true, obj, [], this); 
+        return new Env(obj, [], this); 
     }
 
     addBindings(bindings : Obj) {
@@ -415,16 +382,6 @@ function getFromObj(obj : Obj, path : Path) : any {
     }
 }
 
-function removeNulls(obj : Obj) {
-    for(const [key, value] of Object.entries(obj)) {
-        if (value === null) {
-            delete obj[key];
-        } else if (_.isObject(value)) {
-            removeNulls(value);
-        }
-    }
-}
-
 /**
  * Set a value inside an object, referenced using dot syntax
  * @param obj 
@@ -491,8 +448,8 @@ function isReference(value : unknown) : boolean {
 /** 
  * Create a new root environment, based on the supplied object
  */
-export function createRootEnv(obj : Obj, readonly : ReadOnly = "writable", namespaces : NameSpace[] = []) : Env {
-    return new Env(readonly == "writable", obj, [[], ...namespaces]);
+export function createRootEnv(obj : Obj, namespaces : NameSpace[] = []) : Env {
+    return new Env(obj, [[], ...namespaces]);
 }
 
 function nameSpace(ns : NameSpace) : {[NAMESPACE] : NameSpace} {
