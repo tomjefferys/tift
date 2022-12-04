@@ -4,7 +4,7 @@ import { BinaryExpression, Expression } from "jsep";
 import _ from "lodash";
 import { Command } from "../command";
 import { Matcher } from "../commandmatcher";
-import { Env } from "../env";
+import { Env, Obj } from "../env";
 import { Optional } from "../util/optional";
 import { evalutateMatchExpression } from "./matchParser";
 import { evaluate, parseToTree } from "./parser";
@@ -14,7 +14,7 @@ export type Phase = "before" | "main" | "after";
 
 export interface PhaseAction {
     type : Phase,
-    perform : (env : Env, objId : string, command : Command) => Result,
+    perform : (env : Env, obj : Obj, command : Command) => Result,
     score : (command : Command, objId : string) => number,
     isMatch : (command : Command, objId : string) => boolean
 }
@@ -44,7 +44,7 @@ type ObjectType<T> =
 
 export class PhaseActionBuilder implements Partial<PhaseAction> {
     type? : Phase;
-    perform? : (env : Env, objId : string, command : Command) => Result;
+    perform? : (env : Env, obj : Obj, command : Command) => Result;
     score? : (command : Command, objId : string) => number;
     isMatch? : (command : Command, objId : string) => boolean
 
@@ -60,9 +60,10 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
 
     withMatcherOnMatch(matcher : Matcher, onMatch : Thunk) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
         const phaseAction =  Object.assign(this,{
-                perform : (env : Env, objId : string,  command : Command) => {
-                    const result = matcher(command, objId);
-                    return result.isMatch? onMatch.resolve(env.newChild(result.captures)) :  mkResult(undefined, {});
+                perform : (env : Env, obj : Obj,  command : Command) => {
+                    const result = matcher(command, obj.id);
+                    const resolverEnv = env.newChild(result.captures).newChild({"this" : obj});
+                    return result.isMatch? onMatch.resolve(resolverEnv) : mkResult(undefined, {});
                 },
                 score : (command : Command, objId : string) => matcher(command, objId).score,
                 isMatch : (command : Command, objId : string) => matcher(command, objId).isMatch,

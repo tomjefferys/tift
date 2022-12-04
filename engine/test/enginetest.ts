@@ -382,6 +382,38 @@ test("Test open door", () => {
     executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
 });
 
+test("Test setting 'this' in match action", () => {
+    builder.withObj(THE_ROOM)
+           .withObj({
+                id : "thing",
+                name : "thing",
+                type : "item",
+                location : "theRoom",
+                fuddled : false,
+                desc : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
+                verbs : ["fuddle"],
+                before : [
+                   "fuddle(this) => do(this.fuddled = true, 'Fuddled!')"
+                ]
+           })
+           .withObj({
+                id : "fuddle",
+                type : "verb",
+                tags : ["transitive"]
+           });
+
+    engine = builder.build();
+    engine.send(Input.start());
+
+    // Initial state
+    executeAndTest(["examine", "thing"], { expected : ["The thing is perfectly ok"]});
+
+    // Try fuddling
+    executeAndTest(["fuddle", "thing"], { expected : ["Fuddled!"]});
+    executeAndTest(["examine", "thing"], { expected : ["The thing is completely fuddled"]});
+
+});
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]

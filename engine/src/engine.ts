@@ -199,16 +199,16 @@ export class BasicEngine implements Engine {
     const [childEnv, mainOutputProxy] = this.createOutputProxy();
 
     // Before actions
-    const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, childEnv, matchedCommand, entity.id) )
+    const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, childEnv, matchedCommand, entity) )
 
     // Main action
     const verb = matchedCommand.getPoS("verb")?.verb;
-    const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb.id) : false;
+    const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb) : false;
 
     // After actions
     const [afterChildEnv, afterOutputProxy] = this.createOutputProxy();
     if (handledMain) {
-      inScopeEnitites.some(entity => executeBestMatchAction(entity.after, afterChildEnv, matchedCommand, entity.id));
+      inScopeEnitites.some(entity => executeBestMatchAction(entity.after, afterChildEnv, matchedCommand, entity));
     }
 
     // Flush the output
@@ -314,11 +314,11 @@ const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
   } 
 }
 
-function executeBestMatchAction(actions : PhaseAction[], env : Env, command : SentenceNode, agentId : string ) {
-  const action = getBestMatchAction(actions, command, agentId); // FIXME getBestMatchAction, and action.perform have params in different orders
+function executeBestMatchAction(actions : PhaseAction[], env : Env, command : SentenceNode, agent : Obj ) {
+  const action = getBestMatchAction(actions, command, agent.id); // FIXME getBestMatchAction, and action.perform have params in different orders
   let handled = false;
   if (action) {
-    const result = action.perform(env, agentId, command)?.getValue();
+    const result = action.perform(env, agent, command)?.getValue();
     if (result) {
       if (_.isString(result)) {
         env.execute("write", {"value":result});

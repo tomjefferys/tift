@@ -369,7 +369,7 @@ test("Test match operator, successful match", () => {
         .withExpression("stir($self) => write('you stir the ' + self.id)");
 
     const command = start().verb(STIR).object(SOUP);
-    action.perform(env, "", command);
+    action.perform(env, APPLE, command);
     expect(messages).toContain("you stir the soup");
 })
 
@@ -379,7 +379,7 @@ test("Test match operator, unsuccessful match", () => {
         .withPhase("main")
         .withExpression("stir($self) => write('you stir the ' + self)");
     const command = start().verb(EAT).object(APPLE);
-    action.perform(env, "", command);
+    action.perform(env, APPLE, command);
     expect(messages.length).toBe(0);
 })
 
@@ -389,7 +389,7 @@ test("Test match operator, return string", () => {
             .withPhase("main")
             .withExpression("stir($self) => 'you stir the ' + self.id");
     const command = start().verb(STIR).object(SOUP);
-    const result = action.perform(env, "", command);
+    const result = action.perform(env, SOUP, command);
     expect(messages.length).toBe(0);
     expect(result.getValue()).toEqual("you stir the soup");
 })
@@ -400,7 +400,7 @@ test("Test match operator using 'this'", () => {
             .withPhase("main")
             .withExpression("stir(this) => 'you stir the soup'");
     const command = start().verb(STIR).object(SOUP);
-    const result = action.perform(env, SOUP.id, command);
+    const result = action.perform(env, SOUP, command);
     expect(messages.length).toBe(0);
     expect(result.getValue()).toEqual("you stir the soup");
 })
@@ -411,7 +411,7 @@ test("Test match operator using 'this', not a match", () => {
             .withPhase("main")
             .withExpression("stir(this) => 'you stir the soup'");
     const command = start().verb(STIR).object(SOUP);
-    const result = action.perform(env, APPLE.id, command);
+    const result = action.perform(env, APPLE, command);
     expect(messages.length).toBe(0);
     expect(result.getValue()).toBeFalsy();
 })
