@@ -1,7 +1,8 @@
-import { Engine } from "../src/engine";
+import { BasicEngine, Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
 import { listOutputConsumer } from "./testutils/testutils";
 import { Input } from "../src/main";
+import { entriesIn } from "lodash";
 
 let messages : string[];
 let wordsResponse : string[];
@@ -321,6 +322,64 @@ test("Test before precedence", () => {
 
     executeAndTest(["get", "otherItem2"], { expected : ["Finally something gettable"]});
     executeAndTest(["look"], { expected : ["an ordinary item", "another item"]});
+});
+
+test("Test open door", () => {
+    builder.withObj({
+                ...THE_ROOM,
+                exits : { north : "northRoom" }})
+           .withObj({
+                ...NORTH_ROOM,
+                tags: []})
+           .withObj(SOUTH_ROOM)
+           .withObj({
+                id : "door",
+                name : "the door",
+                type : "item",
+                desc : "The door is {{#isOpen}}open{{/isOpen}}{{^isOpen}}closed{{/isOpen}}",
+                location : "theRoom",
+                isOpen : false,
+                verbs : ["open", "close"],
+                tags : ["openable"],
+                before : [
+                    "open(this) => openExit('theRoom', 'south', 'southRoom')",
+                    "close(this) => closeExit('theRoom', 'south')"],
+                after : [
+                    "open(this) => 'The door slowly opens'",
+                    "close(this) => 'The door slams shut'"]
+           })
+           .withObj({
+                id : "open",
+                type : "verb",
+                tags : ["transitive"],
+                actions : [
+                    "open($openable) => do(openable.isOpen = true, 'Opened!')"
+                ]
+           })
+           .withObj({
+                id : "close",
+                type : "verb",
+                tags : ["transitive"],
+                actions : [
+                    "close($openable) => do(openable.isOpen = false, 'Closed!')"
+                ]
+           })
+    engine = builder.build();
+    engine.send(Input.start());
+
+    // Initial state
+    executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
+    expectWords(["go"], ["north"]);
+
+    // Try opening the door
+    executeAndTest(["open", "door"], { expected : ["The door slowly opens"]});
+    executeAndTest(["examine", "door"], { expected : ["The door is open"]});
+    expectWords(["go"], ["north", "south"]);
+
+    // Try closing the door
+    executeAndTest(["close", "door"], { expected : ["The door slams shut"]});
+    expectWords(["go"], ["north"]);
+    executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
 });
 
 interface ExpectedStrings {

@@ -56,7 +56,7 @@ test("Test transitive verb without direct object", () => {
 
 test("Test direct object capture", () => {
     const command = start().verb(EAT).object(APPLE);
-    doMatch(command, "eat($food) ","do(write('matched!'), write(food))"  )
+    doMatch(command, "eat($food) ","do(write('matched!'), write(food.id))"  )
     expect(messages).toContain(MATCH_STRING);
     expect(messages).toContain("apple");
 });

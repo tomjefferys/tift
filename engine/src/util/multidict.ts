@@ -1,3 +1,5 @@
+import _ from "lodash";
+import { arrayValue } from "../types";
 
 export type KeyType = string;
 export type MultiDict<T> = {[key:KeyType]: T[]};
@@ -30,6 +32,16 @@ export function addUnique<T>(dict : MultiDict<T>, key : KeyType, values : T[]) {
 export function get<T>(dict : MultiDict<T>, key : KeyType) : T[] {
   const arr = dict[key];
   return arr ? arr : [];
+}
+
+export function remove<T>(dict : MultiDict<T>, key : KeyType, value : T) {
+  const arr = dict[key];
+  if (arr) {
+    const index = arr.indexOf(value);
+    if (index > -1) {
+      arr.splice(index, 1);
+    }
+  }
 }
 
 function entryToEntries<T>(entry : [KeyType, T[]]) : [KeyType, T][] {

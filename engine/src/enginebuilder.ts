@@ -10,6 +10,8 @@ import _ from "lodash";
 import { parse } from "./script/parser";
 import { phaseActionBuilder } from "./script/phaseaction";
 
+type ActionerBuilder = VerbBuilder | EntityBuilder;
+
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
     verbs : Verb[] = [];
@@ -91,6 +93,7 @@ export function makeVerb(obj : Obj) : Verb {
               default:
                 break;
     }});
+    addActions(builder, obj);
    return builder.build();
 }
 
@@ -143,7 +146,7 @@ export function makeRule(obj : Obj) : Obj {
     return obj;
 }
 
-function addActions(builder : EntityBuilder, obj : Obj) {
+function addActions(builder : ActionerBuilder, obj : Obj) {
     getActionStrings(obj, "before")
         .map(action => phaseActionBuilder().withPhase("before").withExpression(action))
         .forEach(beforeAction => builder.withBefore(beforeAction));

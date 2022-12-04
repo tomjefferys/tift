@@ -8,6 +8,9 @@ import { makePath } from "./path";
 import * as Mustache from "mustache"
 import { getName, Nameable } from "./nameable";
 import { formatEntityString } from "./util/mustacheUtils";
+import * as MultiDict from "./util/multidict";
+import { bindParams } from "./script/parser";
+import { times } from "lodash";
 
 const NS_ENTITIES = "entities";
 
@@ -96,8 +99,8 @@ const GET = phaseActionBuilder()
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
             mkThunk(env => {
-                const itemId = env.getStr("item");
-                env.set(makePath([NS_ENTITIES, itemId, "location"]), "INVENTORY");
+                const item = env.get("item");
+                item.location = "INVENTORY";
                 return mkResult(true);
             }));
 
@@ -106,9 +109,9 @@ const DROP = phaseActionBuilder()
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
             mkThunk(env => {
-                const itemId = env.getStr("item");
-                const location = getLocation(env); //getPlayer(env).location;
-                env.set(makePath([NS_ENTITIES, itemId, "location"]), location);
+                const item = env.get("item");
+                const location = getLocation(env);
+                item.location = location;
                 return mkResult(true);
             }));
 
@@ -117,8 +120,7 @@ const EXAMINE = phaseActionBuilder()
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("examine")).withObject(captureObject("item")).build(),
             mkThunk(env => {
-                const itemId = env.getStr("item");
-                const item = getEntity(env, itemId);
+                const item = env.get("item");
                 const output = formatEntityString(env, item, "desc");
                 write(env, output);
                 return mkResult(true);
@@ -168,7 +170,17 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     getLocation : env => getLocation(env),
     getEntity : env => getEntity(env, env.getStr("id")),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
-    writeMessage : env => getOutput(env)(env.get("message"))
+    writeMessage : env => getOutput(env)(env.get("message")),
+    openExit : bindParams(["room", "direction", "target"], 
+                        env => {
+                            addExit(env, env.getStr("room"), env.getStr("direction"), env.get("target"));
+                            return mkResult(null);
+                        } ),
+    closeExit : bindParams(["room", "direction"], 
+                        env => {
+                            closeExit(env, env.getStr("room"), env.getStr("direction"));
+                            return mkResult(null);
+                        } )
 }
 
 export function write(env : Env, message : string) {
@@ -207,4 +219,16 @@ export function makeDefaultFunctions(obj : Obj) {
 
 export function makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
     obj[OUTPUT] = outputConsumer;
+}
+
+function addExit(env : Env, roomId : string, direction : string, target : string) {
+    const room = getEntity(env, roomId);
+    room.exits[direction] = target;
+    MultiDict.add(room.verbModifiers, "direction", direction);
+}
+
+function closeExit(env : Env, roomId : string, direction : string) {
+    const room = getEntity(env, roomId);
+    delete room.exits[direction];
+    MultiDict.remove(room.verbModifiers, "direction", direction);
 }

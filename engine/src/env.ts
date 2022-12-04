@@ -238,7 +238,7 @@ export class Env {
         }
 
         const result = tail? getFromObj(obj, tail) : obj;
-        return _.cloneDeep(result);
+        return result;
     }
 
     /**

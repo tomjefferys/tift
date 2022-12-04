@@ -366,7 +366,7 @@ test("Test match operator, successful match", () => {
     const [env, messages] = setUpEnv();
     const action =  phaseActionBuilder()
         .withPhase("main")
-        .withExpression("stir($self) => write('you stir the ' + self)");
+        .withExpression("stir($self) => write('you stir the ' + self.id)");
 
     const command = start().verb(STIR).object(SOUP);
     action.perform(env, "", command);
@@ -387,7 +387,7 @@ test("Test match operator, return string", () => {
     const [env, messages] = setUpEnv();
     const action = phaseActionBuilder()
             .withPhase("main")
-            .withExpression("stir($self) => 'you stir the ' + self");
+            .withExpression("stir($self) => 'you stir the ' + self.id");
     const command = start().verb(STIR).object(SOUP);
     const result = action.perform(env, "", command);
     expect(messages.length).toBe(0);

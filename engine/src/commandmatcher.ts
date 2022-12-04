@@ -25,7 +25,7 @@ export type Matcher = (command : Command, objId : string) => MatchResult;
 export interface MatchResult {
     isMatch : boolean,
     score : number,
-    captures? : {[key:string]:string}
+    captures? : {[key:string]:unknown}
 }
 
 const FAILED_MATCH : MatchResult = { isMatch : false, ...SCORE_NO_MATCH };
@@ -186,7 +186,7 @@ export const captureObject = (captureName : string) : Matcher => {
                     const matcher : Matcher = command => {
                         const directObject = command.getPoS("directObject");
                         return (directObject !== undefined)
-                                        ? { isMatch : true, captures : { [captureName] : directObject.entity.id }, ...SCORE_WILDCARD}
+                                        ? { isMatch : true, captures : { [captureName] : directObject.entity }, ...SCORE_WILDCARD}
                                         : FAILED_MATCH;
                     }
                     matcher.toString = () => "DirectObj: $" + captureName;
@@ -197,7 +197,7 @@ export const captureIndirectObject = (captureName : string) : Matcher => {
                     const matcher : Matcher = command => {
                         const indirectObject = command.getPoS("indirectObject");
                         return (indirectObject !== undefined )
-                                        ? { isMatch : true, captures : { [captureName] : indirectObject.entity.id }, ...SCORE_WILDCARD}
+                                        ? { isMatch : true, captures : { [captureName] : indirectObject.entity }, ...SCORE_WILDCARD}
                                         : FAILED_MATCH;
                     }
                     matcher.toString = () => "IndirectObj: $" + captureName;

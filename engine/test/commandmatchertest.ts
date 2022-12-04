@@ -33,7 +33,8 @@ test("Test match with direct object capture", () => {
     const command = verb(EAT).object(APPLE);
     const result = matcher(command, APPLE.id);
     expect(result.isMatch).toBeTruthy();
-    expect(result.captures).toStrictEqual({ "food" : "apple"});
+    expect(result.captures).toHaveProperty("food");
+    expect(result.captures?.food).toMatchObject({ "id" : "apple" });
     expect(result.score).toBe(3);
 })
 
@@ -76,7 +77,8 @@ test("Test capture indirect object", () => {
     
     const result = matcher(command, SOUP.id);
     expect(result.isMatch).toBeTruthy();
-    expect(result.captures).toStrictEqual({"tool" : "spoon"})
+    expect(result.captures).toHaveProperty("tool");
+    expect(result.captures?.tool).toMatchObject({"id" : "spoon"});
     expect(result.score).toBe(15);
 })
 
@@ -93,7 +95,8 @@ test("Test capture direct and indirect object", () => {
     
     const result = matcher(command, SOUP.id);
     expect(result.isMatch).toBeTruthy();
-    expect(result.captures).toStrictEqual({"container" : "soup", "tool" : "spoon"})
+    expect(result.captures?.container).toMatchObject({ "id" : "soup" });
+    expect(result.captures?.tool).toMatchObject({ "id" : "spoon" });
     expect(result.score).toBe(6);
 })
 
