@@ -1,8 +1,7 @@
-import { BasicEngine, Engine } from "../src/engine";
+import { Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
 import { listOutputConsumer } from "./testutils/testutils";
 import { Input } from "../src/main";
-import { entriesIn } from "lodash";
 
 let messages : string[];
 let wordsResponse : string[];
@@ -411,7 +410,32 @@ test("Test setting 'this' in match action", () => {
     // Try fuddling
     executeAndTest(["fuddle", "thing"], { expected : ["Fuddled!"]});
     executeAndTest(["examine", "thing"], { expected : ["The thing is completely fuddled"]});
+});
 
+test("Test error when executing", () => {
+    builder.withObj(THE_ROOM)
+           .withObj({
+                id : "thing",
+                name : "thing",
+                type : "item",
+                location : "theRoom",
+                fuddled : false,
+                desc : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
+                verbs : ["fuddle"],
+                before : [
+                   "fuddle(this) => do(this.fuddled.bob = foo, 'Fuddled!')"
+                ]
+           })
+           .withObj({
+                id : "fuddle",
+                type : "verb",
+                tags : ["transitive"]
+           });
+
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["fuddle", "thing"], { expected : ["thing.before[0]", "Execution failed"]});
 });
 
 interface ExpectedStrings {

@@ -7,6 +7,7 @@ import { parsePathExpr } from './pathparser';
 import { isPath } from '../path';
 import  jsepAssignment, { AssignmentExpression } from '@jsep-plugin/assignment';
 import { Optional } from '../util/optional';
+import { rethrowCompileError } from '../util/errors';
 
 // Configure Jsep
 jsep.plugins.register(jsepAssignment as unknown as IPlugin);
@@ -72,18 +73,18 @@ const KEYWORD_PROPS = ["then", "else", "case", "default"];
 
 export const ARGS = "__args__"; 
 
-export function parseToTree(expression : string) {
-    return jsep(expression);
+export function parseToTree(expression : string, objPath? : string) {
+    try {
+        return jsep(expression);
+    } catch (e) {
+        rethrowCompileError(expression, e, objPath);
+    }
 }
 
 export function parse(expression : string, objPath? : string) : (env : Env) => unknown {
-    try {
-        const parseTree = parseToTree(expression);
-        const compiledExpression = evaluate(parseTree);
-        return env => compiledExpression.resolve(env).value;
-    } catch (e) {
-        throw new Error("Error compiling: " + (objPath? objPath + "\n" : "") + expression + "\n" + e);
-    }
+    const parseTree = parseToTree(expression, objPath);
+    const compiledExpression = evaluate(parseTree);
+    return env => compiledExpression.resolve(env).value;
 }
 
 export function evaluate(expression : Expression) : Thunk {

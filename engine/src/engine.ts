@@ -1,5 +1,5 @@
 import { isInstant, Verb } from "./verb"
-import { Entity, getType, hasTag } from "./entity"
+import { Entity, hasTag } from "./entity"
 import { createRootEnv, Env, Obj } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity, isEntity } from "./enginedefault";
@@ -20,6 +20,7 @@ import { Config } from "./config"
 import * as Conf from "./config"
 import { bold } from "./markdown"
 import { Optional } from "./util/optional";
+import { logError } from "./util/errors";
 
 enum TAG {
   START = "start"
@@ -142,6 +143,7 @@ export class BasicEngine implements Engine {
   }
 
   send(message : InputMessage) : void {
+    try { 
       switch(message.type) {
         case "GetWords":
           this.getWords(message.command);
@@ -162,6 +164,9 @@ export class BasicEngine implements Engine {
           this.setConfig(message.properties);
           break;
       }
+    } catch (e) {
+      logError(this.output, e);
+    }
   }
 
   loadData(message : Load) {

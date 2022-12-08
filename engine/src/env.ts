@@ -9,7 +9,6 @@ import { parsePath } from "./script/pathparser";
 import { ProxyManager } from "./util/historyproxy";
 import { Optional } from "./util/optional";
 
-export const OVERRIDE = Symbol("__override__");
 export const REFERENCE = Symbol("__reference__");
 export const NAMESPACE = Symbol("__namespace__");
 export const NOT_FOUND = Symbol("__notfound__");

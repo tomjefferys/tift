@@ -1,4 +1,5 @@
-import { ArrayExpression, BinaryExpression, CallExpression, Expression, Identifier, Literal, MemberExpression, UnaryExpression } from "jsep";
+import { AssignmentExpression } from "@jsep-plugin/assignment";
+import { ArrayExpression, BinaryExpression, CallExpression, Compound, Expression, Identifier, Literal, MemberExpression, UnaryExpression } from "jsep";
 
 export function exprToString(expr? : Expression) : string {
     if (!expr) {
@@ -6,7 +7,7 @@ export function exprToString(expr? : Expression) : string {
     }
     let str = "";
     switch(expr.type) {
-        case "Identitifer":
+        case "Identifier":
             str = (expr as Identifier).name;
             break;
         case "Literal":
@@ -37,6 +38,16 @@ export function exprToString(expr? : Expression) : string {
         case "MemberExpression": {
                 const memberExpr = expr as MemberExpression;
                 str = exprToString(memberExpr.object) + "." + exprToString(memberExpr.property);
+            }
+            break;
+        case "Compound": {
+                const compound = expr as Compound;
+                str = "(" + compound.body.map(element => exprToString(element)).join(", ") + ")";
+            }
+            break;
+        case "AssignmentExpression": {
+                const assignment = expr as AssignmentExpression;
+                str = exprToString(assignment.left) + assignment.operator + exprToString(assignment.right);
             }
             break;
         default: 

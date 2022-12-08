@@ -1,4 +1,4 @@
-import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule } from "../src/enginebuilder";
+import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule, makeItem } from "../src/enginebuilder";
 import { setUpEnv } from "./testutils/testutils"
 import { EnvFn } from "../src/env"
 import * as fs from "fs";
@@ -190,5 +190,24 @@ test("Build rule - error", () => {
       expect(error.message).toContain("rule1.run[0]");
       expect(error.message).toContain("write('hello world)");
     }
+});
 
+test("Build entity - action error", () => {
+    const obj = {
+        "id": "soup",
+        "type": "object",
+        "verbs": [
+          "stir"
+        ],
+        "before" : "stir(this) => do('stirred'"
+      };
+
+      try { 
+        makeItem(obj);
+        fail()
+      } catch(e) {
+        const error = e as Error;
+        expect(error.message).toContain("soup.before[0]");
+        expect(error.message).toContain("stir(this) => do('stirred'");
+      }
 });

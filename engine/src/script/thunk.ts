@@ -2,6 +2,7 @@ import { Env } from "../env"
 import { Expression } from "jsep";
 import * as _ from "lodash";
 import { exprToString } from "./expressionutils";
+import { rethrowExecutionError } from "../util/errors";
 
 export interface Result {
     value : unknown,
@@ -29,10 +30,16 @@ export interface Thunk {
 }
 
 export function mkThunk(envFn : EnvFn, expression? : Expression, type : ThunkType = "normal") : Thunk {
+    const errorHandledFn : EnvFn = env => {
+        try {
+            return envFn(env);
+        } catch(e) {
+            rethrowExecutionError(exprToString(expression), e);
+        }
+    }
     return {
-        resolve : envFn,
-        expression : expression,
-        type : type,
+        resolve : errorHandledFn,
+        expression, type,
         toString : () => exprToString(expression)
     }
 }

@@ -148,15 +148,21 @@ export function makeRule(obj : Obj) : Obj {
 
 function addActions(builder : ActionerBuilder, obj : Obj) {
     getActionStrings(obj, "before")
-        .map(action => phaseActionBuilder().withPhase("before").withExpression(action))
+        .map((action, index) => phaseActionBuilder(obj.id + ".before[" + index + "]")
+                                        .withPhase("before")
+                                        .withExpression(action))
         .forEach(beforeAction => builder.withBefore(beforeAction));
 
     getActionStrings(obj, "actions")
-        .map(action => phaseActionBuilder().withPhase("main").withExpression(action))
+        .map((action, index) => phaseActionBuilder(obj.id + ".actions[" + index + "]")
+                                        .withPhase("main")
+                                        .withExpression(action))
         .forEach(mainAction => builder.withAction(mainAction));
 
     getActionStrings(obj, "after")
-        .map(action => phaseActionBuilder().withPhase("after").withExpression(action))
+        .map((action, index) => phaseActionBuilder(obj.id + ".after[" + index + "]")
+                                        .withPhase("after")
+                                        .withExpression(action))
         .forEach(mainAction => builder.withAfter(mainAction));
     
 }

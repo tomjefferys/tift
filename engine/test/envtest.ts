@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { createRootEnv, isFound, NameSpace, Obj, OVERRIDE } from "../src/env";
+import { createRootEnv, isFound, NameSpace, Obj } from "../src/env";
 import { Path, toValueList } from "../src/path";
 
 test("test empty env", () => {
@@ -73,117 +73,6 @@ test("Set missing object with dot notation", () => {
     root.set("obj2.foo.bar", "baz");
     expect(root.get("obj2.foo.bar")).toEqual("baz");
 })
-
-//test("Attempt to set a readonly env", () => {
-//    const root = createRootEnv({"foo":"bar"});
-//    expect(() => root.set("baz","qux")).toThrowError();
-//    expect(() => root.set("foo", "qux")).toThrowError();
-//});
-
-//test("Test readonly root, and writable child", () => {
-//    const root = createRootEnv({"foo":"bar"});
-//    const child = root.newChild();
-//    expect(root.get("foo")).toEqual("bar");
-//    expect(child.get("foo")).toEqual("bar");
-//
-//    child.set("foo", "qux");
-//    expect(root.get("foo")).toEqual("bar");
-//    expect(child.get("foo")).toEqual("qux");
-//});
-
-//test("Test readonly root, correct descendent gets written to", () => {
-//    const root = createRootEnv({"foo":"bar"});
-//    const child = root.newChild();
-//    const grandchild = child.newChild();
-//
-//    expect(root.get("foo")).toEqual("bar");
-//    expect(child.get("foo")).toEqual("bar");
-//    expect(grandchild.get("foo")).toEqual("bar");
-//
-//    child.set("foo", "baz");
-//    expect(root.get("foo")).toEqual("bar");
-//    expect(child.get("foo")).toEqual("baz");
-//    expect(grandchild.get("foo")).toEqual("baz");
-//
-//    grandchild.set("foo", "qux");
-//    expect(root.get("foo")).toEqual("bar");
-//    expect(child.get("foo")).toEqual("qux");
-//    expect(grandchild.get("foo")).toEqual("qux");
-//
-//    grandchild.def("foo", "quux");
-//    expect(root.get("foo")).toEqual("bar");
-//    expect(child.get("foo")).toEqual("qux");
-//    expect(grandchild.get("foo")).toEqual("quux");
-//});
-
-//test("Test readonly root, with complex object", () => {
-//    const root = createRootEnv({"foo":{"bar":{"baz":"qux"}}});
-//    const child = root.newChild();
-//
-//    expect(() => root.set("foo.bar.baz", "corge")).toThrowError();
-//
-//    child.set("foo.bar.baz", "corge");
-//    expect(root.get("foo.bar.baz")).toEqual("qux");
-//    expect(child.get("foo.bar.baz")).toEqual("corge");
-//})
-
-//test("Test readonly root, with complex object, add new property", () => {
-//    const root = createRootEnv({"foo":{"bar":{"baz":"qux"}}});
-//    const child = root.newChild();
-//
-//    child.set("foo.bar.corge", "grault");
-//    expect(root.get("foo.bar")).toEqual( {"baz":"qux"} );
-//    expect(child.get("foo.bar")).toEqual( {"baz":"qux", "corge":"grault"} );
-//
-//});
-
-//test("Test readonly deeply nested root, with complex object", () => {
-//    const root = createRootEnv({"foo":{"bar":"baz"}});
-//    const child = root.newChild();
-//    const gchild = child.newChild();
-//    const ggchild = child.newChild();
-//
-//    ggchild.set("foo.bar", "qux");
-//
-//    expect(root.get("foo.bar")).toEqual("baz");
-//    expect(child.get("foo.bar")).toEqual("qux");
-//    expect(gchild.get("foo.bar")).toEqual("qux");
-//    expect(ggchild.get("foo.bar")).toEqual("qux");
-//});
-
-
-//test("Test get parent object props after child overridden", () => {
-//    const root = createRootEnv({"foo":{"bar":"baz", "qux" : "corge"}});
-//    const child = root.newChild();
-//    const gchild = child.newChild();
-//
-//    gchild.set("foo.bar", "grault");
-//    expect(root.get("foo.bar")).toEqual("baz");
-//    expect(root.get("foo.qux")).toEqual("corge");
-//   
-//    expect(child.get("foo.bar")).toEqual("grault");
-//    expect(child.get("foo.qux")).toEqual("corge");
-//
-//    expect(gchild.get("foo.bar")).toEqual("grault");
-//    expect(gchild.get("foo.qux")).toEqual("corge");
-//});
-
-//test("Test get top level object that's been overridden", () => {
-//    const root = createRootEnv({"foo":{"bar":"baz", "qux":"corge"}});
-//    const child = root.newChild();
-//
-//    child.set("foo.bar","grault");
-//    expect(root.get("foo")).toStrictEqual({"bar":"baz", "qux":"corge"});
-//    expect(child.get("foo")).toStrictEqual({"bar":"grault", "qux":"corge"});
-//});
-
-//test("Test deleting property", () => {
-//    const root = createRootEnv({"foo":{"bar":"baz", "qux":"corge"}});
-//    const child = root.newChild();
-//
-//    child.set("foo.bar", null);
-//    expect(child.get("foo")).toStrictEqual({"qux":"corge"});
-//})
 
 test("Test namespaces", () => {
     const obj = { 

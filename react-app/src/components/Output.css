@@ -17,3 +17,20 @@
     text-align: left;
     color: green;
 }
+
+.log-error {
+    text-align: left;
+    color: red;
+    white-space: pre-wrap;
+}
+
+.log-warn {
+    text-align: left;
+    color: yellow;
+    white-space: pre-wrap;
+}
+
+.log-info, .log-debug, .log-trace {
+    text-align: left;
+    white-space: pre-wrap;
+}

@@ -6,7 +6,7 @@ import { IdValue } from "tift-engine/src/shared";
 import { OutputMessage } from "tift-engine/src/messages/output";
 import Output from "./components/Output"
 import Controls from './components/Controls';
-import { commandEntry, messageEntry, OutputEntry } from './outputentry';
+import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from './outputentry';
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
@@ -26,11 +26,10 @@ function App() {
   const execute = (command : IdValue<string>[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
   // Load a game file from the `public` folder
-  const loadGame = (name : string) => 
+  const loadGame = (name : string, engine : Engine) => 
           fetch(process.env.PUBLIC_URL + "/" + name)
             .then((response) => response.text())
             .then(data => {
-              const engine = engineRef.current;
               if (engine == null) {
                 throw new Error("Engine has not been initialized");
               }
@@ -47,13 +46,14 @@ function App() {
     const outputConsumer = getOutputConsumer(
       message => messagesRef.current?.push(messageEntry(message)),
       words => setWords(words),
-      status => setStatus(status)
+      status => setStatus(status),
+      (level, message) => messagesRef.current?.push(logEntry(level, message))
     );
     const engine = getEngine(outputConsumer);
 
     engineRef.current = engine;
 
-    loadGame(GAME_FILE);
+    loadGame(GAME_FILE, engine);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -93,7 +93,8 @@ function App() {
 
 function getOutputConsumer(messageConsumer : (message : string) => void,
                            wordsConsumer : (words : IdValue<string>[]) => void,
-                           statusConsumer : (status : string) => void) : (outputMessage : OutputMessage) => void {
+                           statusConsumer : (status : string) => void,
+                           logConsumer : (level : LogLevel, message : string) => void) : (outputMessage : OutputMessage) => void {
   return (outputMessage) => {
     switch(outputMessage.type) {
       case "Print":
@@ -107,6 +108,9 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         break;
       case "SaveState": 
         console.log(JSON.stringify(outputMessage.state));
+        break;
+      case "Log":
+        logConsumer(outputMessage.level, outputMessage.message);
         break;
       default:
         throw new Error("Unsupported OutputMessage Type: " + outputMessage.type);

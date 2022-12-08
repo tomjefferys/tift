@@ -14,6 +14,9 @@ export function listOutputConsumer(messages : string[], words : string[]) : Outp
                 break;
             case "SaveState":
                 break;
+            case "Log":
+                messages.push(message.message);
+                break;
             default:
                 throw new Error("Can't handle type " + message.type);
         }

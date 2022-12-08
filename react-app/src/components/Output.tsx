@@ -14,8 +14,15 @@ interface EntryProps {
     value : string;
 }
 
+interface LogEntryProps {
+    logLevel : string,
+    message : string
+}
+
 const MessageEntry = ({ value } : EntryProps)  => (<div className="outputMessage"><ReactMarkdown>{value}</ReactMarkdown></div>)
 const CommandEntry = ({ value } : EntryProps) => (<p className="outputCommand">&gt; {value}</p>)
+const LogEntry = ({ logLevel, message } : LogEntryProps) => 
+        (<div className={"log-" + logLevel}> {message}{} </div>)
 
 const Output = ({ entries, status, command } : OutputProps) => {
 
@@ -34,10 +41,19 @@ const Output = ({ entries, status, command } : OutputProps) => {
             </div>
             <div className="textOutWrapper">
                 <div className="textOut">
-                    {entries.map((message : OutputEntry, index : number) =>
-                                    ((message.type === "message")
-                                        ? <MessageEntry key={index} value={message.message}/>
-                                        : <CommandEntry key={index} value={message.command}/>))}
+                    {entries.map((message : OutputEntry, index : number) => {
+                        switch(message.type) {
+                            case "message": 
+                                return <MessageEntry key={index} value={message.message}/>;
+                            case "command":
+                                return <CommandEntry key={index} value={message.command}/>;
+                            case "log":
+                                return <LogEntry key={index} 
+                                                 logLevel={message.level}
+                                                 message={message.message}/>;
+
+                        }
+                    })}
                     <CommandEntry value={command}/>
                 </div>
 

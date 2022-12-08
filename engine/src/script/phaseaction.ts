@@ -43,17 +43,24 @@ type ObjectType<T> =
     never;
 
 export class PhaseActionBuilder implements Partial<PhaseAction> {
+
+    objPath? : string; // Used to hold error context
+
     type? : Phase;
     perform? : (env : Env, obj : Obj, command : Command) => Result;
     score? : (command : Command, objId : string) => number;
     isMatch? : (command : Command, objId : string) => boolean
+
+    constructor(objPath? : string) {
+        this.objPath = objPath;
+    }
 
     withPhase<T extends Phase>(phase : T) : this & Pick<ObjectType<T>, 'type'> {
         return Object.assign(this, { type : phase});
     }
 
     withExpression(str : string) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'>{
-        const expression = parseToTree(str);
+        const expression = parseToTree(str, this.objPath);
         const [matcher, onMatch] = getMatcherCommand(expression, {phase : this.type, expression : str});
         return this.withMatcherOnMatch(matcher, onMatch);
     }
@@ -61,9 +68,14 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
     withMatcherOnMatch(matcher : Matcher, onMatch : Thunk) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
         const phaseAction =  Object.assign(this,{
                 perform : (env : Env, obj : Obj,  command : Command) => {
-                    const result = matcher(command, obj.id);
-                    const resolverEnv = env.newChild(result.captures).newChild({"this" : obj});
-                    return result.isMatch? onMatch.resolve(resolverEnv) : mkResult(undefined, {});
+                    try {
+                        const result = matcher(command, obj.id);
+                        const resolverEnv = env.newChild(result.captures).newChild({"this" : obj});
+                        return result.isMatch? onMatch.resolve(resolverEnv) : mkResult(undefined, {});
+                    } catch (e) {
+                        const message = e instanceof Error ? e.message : e;
+                        throw new Error("executing " + (this.objPath? this.objPath + "\n" : "") + message);
+                    }
                 },
                 score : (command : Command, objId : string) => matcher(command, objId).score,
                 isMatch : (command : Command, objId : string) => matcher(command, objId).isMatch,
@@ -73,8 +85,8 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
     }
 }
 
-export function phaseActionBuilder() {
-    return new PhaseActionBuilder();
+export function phaseActionBuilder(objPath? : string) {
+    return new PhaseActionBuilder(objPath);
 }
 
 

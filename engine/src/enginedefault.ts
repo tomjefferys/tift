@@ -10,7 +10,6 @@ import { getName, Nameable } from "./nameable";
 import { formatEntityString } from "./util/mustacheUtils";
 import * as MultiDict from "./util/multidict";
 import { bindParams } from "./script/parser";
-import { times } from "lodash";
 
 const NS_ENTITIES = "entities";
 

@@ -336,7 +336,7 @@ test("Test simple function definition", () => {
 })
 
 test("Test function, simple closure", () => {
-    const [env, messages] = setUpEnv();
+    const [env, _messages] = setUpEnv();
     const fn = parse(`
         def(createAdd, fn([param1], do(
             fn([param2], param1 + param2)
@@ -349,7 +349,7 @@ test("Test function, simple closure", () => {
 })
 
 test("Test function, nested closures", () => {
-    const [env, messages] = setUpEnv();
+    const [env, _messages] = setUpEnv();
     const fn = parse(`
         def(createAdd, fn([param1], do(
             def(nestedAdd, fn([param2], param1 + param2)),
