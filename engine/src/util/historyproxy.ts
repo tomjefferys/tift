@@ -8,15 +8,15 @@ const IS_PROXY = Symbol("isProxy");
 
 type PropType = string | symbol;
 
-type Action = Set | Del;
+export type Action = Set | Del;
 
-interface Set {
+export interface Set {
     type : "Set",
     property : PropType[],
     newValue : any
 }
 
-interface Del {
+export interface Del {
     type : "Del",
     property : PropType[]
 }
@@ -29,8 +29,11 @@ export class ProxyManager {
     private history : Action[];
     fullHistory : Action[] = [];
 
-    constructor(history : Action[] = []) {
+    private recordHistory : boolean;
+
+    constructor(recordHistory = false, history : Action[] = []) {
         this.history = history;
+        this.recordHistory = recordHistory;
     }
 
     createProxy<T extends object>(obj : T, prefix : PropType[] = []) : T {
@@ -41,6 +44,33 @@ export class ProxyManager {
         return [...this.history];
     }
 
+    /**
+     * Clear the proxy history
+     */
+    clearHistory() : void {
+        this.history.length = 0;
+        this.fullHistory.length = 0;
+    }
+
+    /**
+     * Enable recording for the proxy manager
+     */
+    startRecording() {
+        this.recordHistory = true;
+    }
+
+    /**
+     * Disable recording for the proxy manager
+     */
+    stopRecording() {
+        this.recordHistory = false;
+    }
+
+    /**
+     * Record an action, overwriting any previous actions relating to this property
+     * The process of overwriting enables the history to be kept as short as possible
+     * @param newAction 
+     */
     private recordAction(newAction : Action) {
         this.history = [...this.history.filter(action => !isPrefixOf(newAction.property, action.property)), newAction];
     }
@@ -57,14 +87,18 @@ export class ProxyManager {
                         : value;
             },
             set : (target : object, property : PropType, newValue : any) => {
-                const path = [...prefix, property];
-                const action : Action = {type : "Set", property : path, newValue : _.isObject(newValue)? _.cloneDeep(newValue) : newValue};
-                this.recordAction(action);
-                this.fullHistory.push(action);
+                if (this.recordHistory) {
+                    const path = [...prefix, property];
+                    const action : Action = {type : "Set", property : path, newValue : _.isObject(newValue)? _.cloneDeep(newValue) : newValue};
+                    this.recordAction(action);
+                    this.fullHistory.push(action);
+                }
                 return Reflect.set(target, property, newValue);
             },
             deleteProperty : (target : object, property : PropType) => {
-                this.recordAction({type : "Del", property : [...prefix, property]})
+                if (this.recordHistory) {
+                    this.recordAction({type : "Del", property : [...prefix, property]})
+                }
                 return Reflect.deleteProperty(target, property);
             }
         }
@@ -99,6 +133,6 @@ export function replayHistory<T extends object>(obj : T, history : Action[]) : [
                 _.unset(obj, action.property);
         }
     })
-    const proxyManager = new ProxyManager(history);
+    const proxyManager = new ProxyManager(false, history);
     return [proxyManager.createProxy(obj), proxyManager];
 }

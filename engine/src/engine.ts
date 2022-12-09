@@ -98,6 +98,7 @@ export class BasicEngine implements Engine {
     const actionContext = this.createPluginActionContext(undefined, this.context);
     this.startActions.forEach(action => action(actionContext));
 
+    this.env.proxyManager.clearHistory();
     this.started = true;
   }
 
@@ -176,7 +177,8 @@ export class BasicEngine implements Engine {
   }
 
   save() {
-    const saveState = Output.saveState(this.env.properties);
+    const history = this.env.proxyManager.getHistory();
+    const saveState = Output.saveState(history);
     this.output(saveState);
   }
 

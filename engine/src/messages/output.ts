@@ -1,4 +1,5 @@
 import { IdValue } from "../shared";
+import { Action } from "../util/historyproxy";
 
 interface Stringable {
     toString : () => string
@@ -7,8 +8,6 @@ interface Stringable {
 export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log
 
 export type OutputConsumer = (message : OutputMessage) => void;
-
-export type StateType = {[key:string | symbol]:unknown};
 
 export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
 
@@ -48,7 +47,7 @@ export interface Log {
 
 export interface SaveState {
     type : "SaveState",
-    state : StateType
+    state : Action[]
 }
 
 export function print(value : Stringable) : OutputMessage {
@@ -73,7 +72,7 @@ export function status(status : string) : OutputMessage {
     }
 }
 
-export function saveState(state : StateType) : OutputMessage {
+export function saveState(state : Action[]) : OutputMessage {
     return { type : "SaveState", state };
 }
 

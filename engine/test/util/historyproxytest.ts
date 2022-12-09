@@ -13,7 +13,7 @@ type PropType = string | symbol;
 type Obj = {[key:PropType] : any};
 
 test("Test set primitives", () => {
-    const manager = new ProxyManager(); 
+    const manager = new ProxyManager(true); 
     const target : {[key:string] : any} = {
         foo : "bar"
     };
@@ -29,7 +29,7 @@ test("Test set primitives", () => {
 });
 
 test("Test delete primitive", () => {
-    const manager = new ProxyManager();
+    const manager = new ProxyManager(true);
     const target : Obj = {
         foo : "bar",
         baz : "qux"
@@ -44,7 +44,7 @@ test("Test delete primitive", () => {
 });
 
 test("Test object property", () => {
-    const manager = new ProxyManager();
+    const manager = new ProxyManager(true);
     const target : Obj = {
         foo : { "bar" : "baz" },
         corge : "xyzzy"
@@ -58,7 +58,7 @@ test("Test object property", () => {
 });
 
 test("Test array setting", () => {
-    const manager = new ProxyManager();
+    const manager = new ProxyManager(true);
     const target : Obj = {
         foo : [ "bar", "baz"]
     }
@@ -68,7 +68,7 @@ test("Test array setting", () => {
 })
 
 test("Test replay history", () => {
-    const manager = new ProxyManager();
+    const manager = new ProxyManager(true);
     const original : Obj = {};
     const proxy = manager.createProxy(original);
     proxy.foo = "bar";
@@ -90,7 +90,7 @@ test("Test replay history", () => {
 });
 
 test("Test history compression", () => {
-    const manager = new ProxyManager();
+    const manager = new ProxyManager(true);
     const original : Obj = {
         foo : { "bar" : "baz" },
         corge : "xyzzy"
@@ -129,7 +129,7 @@ test("Test random objects", () => {
         const originalClone = _.cloneDeep(original);
 
         // Run some random updates
-        const manager = new ProxyManager();
+        const manager = new ProxyManager(true);
         const proxy = manager.createProxy(original);
         generator.update(proxy, 10);
 
