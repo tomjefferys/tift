@@ -99,6 +99,7 @@ export class BasicEngine implements Engine {
     this.startActions.forEach(action => action(actionContext));
 
     this.env.proxyManager.clearHistory();
+    this.env.proxyManager.startRecording();
     this.started = true;
   }
 
