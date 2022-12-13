@@ -12,7 +12,7 @@ export function rethrowExecutionError(expression : string, cause : unknown, path
 
 export function logError(output : OutputConsumer, e : unknown) {
     const message = Output.log("error", getCauseMessage(e));
-output(message);
+    output(message);
 }
 
 function rethrowError(type : string, expression : string, cause : unknown, path? : string) : never {

@@ -3,10 +3,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import _ from "lodash";
 import { isPrefixOf } from "./arrays";
+import * as objects from "./objects";
 
 const IS_PROXY = Symbol("isProxy");
 
-type PropType = string | symbol;
+type PropType = objects.PropType;
+type Obj = objects.Obj;
 
 export type Action = Set | Del;
 
@@ -66,6 +68,18 @@ export class ProxyManager {
         this.recordHistory = false;
     }
 
+    replayHistory(obj : Obj, history : Action[]) {
+        history.forEach(action => {
+            switch(action.type) {
+                case "Set": 
+                    objects.set(obj, action.property, action.newValue);
+                    break;
+                case "Del":
+                    objects.unset(obj, action.property);
+            }
+        });
+    }
+
     /**
      * Record an action, overwriting any previous actions relating to this property
      * The process of overwriting enables the history to be kept as short as possible
@@ -117,20 +131,22 @@ export class ProxyManager {
 const shouldCreateProxy = (target : any, property : PropType, value : any) =>
     !target[IS_PROXY] && _.isObject(value) && Object.prototype.hasOwnProperty.call(target, property);
 
+
 /**
  * Replay history on an object
  * @param obj 
  * @param history 
  * @returns the new object, and it's ProxyManager
  */
-export function replayHistory<T extends object>(obj : T, history : Action[]) : [T, ProxyManager] {
+//export function replayHistory<T extends object>(obj : T, history : Action[]) : [T, ProxyManager] {
+export function replayHistory(obj : Obj, history : Action[]) : [Obj, ProxyManager] {
     history.forEach(action => {
         switch(action.type) {
             case "Set": 
-                _.set(obj, action.property, action.newValue);
+                objects.set(obj, action.property, action.newValue);
                 break;
             case "Del":
-                _.unset(obj, action.property);
+                objects.unset(obj, action.property);
         }
     })
     const proxyManager = new ProxyManager(false, history);

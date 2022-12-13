@@ -35,8 +35,8 @@ export namespace Input {
     }
   }
 
-  export function start() : InputMessage {
-    return { type : "Start" }
+  export function start(saveData? : string) : InputMessage {
+    return { type : "Start", saveData };
   }
 
   export function config(properties : {[key:string] : boolean | number | string}) : InputMessage {

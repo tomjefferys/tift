@@ -1,10 +1,12 @@
 import { Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
-import { listOutputConsumer } from "./testutils/testutils";
+import { listOutputConsumer, SaveData } from "./testutils/testutils";
 import { Input } from "../src/main";
+import _ from "lodash";
 
 let messages : string[];
 let wordsResponse : string[];
+let saveData : SaveData;
 let builder : EngineBuilder;
 let engine : Engine;
 
@@ -56,7 +58,8 @@ const SOUTH_ROOM = {
 beforeEach(() => {
     messages = [];
     wordsResponse = [];
-    builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse));
+    saveData = { data : [] };
+    builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData));
 });
 
 test("Test single room, no exits", () => {
@@ -436,6 +439,71 @@ test("Test error when executing", () => {
     engine.send(Input.start());
 
     executeAndTest(["fuddle", "thing"], { expected : ["thing.before[0]", "Execution failed"]});
+});
+
+test("Test load save data", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        exits : {
+            south : "southRoom"
+        },
+    })
+    builder.withObj({
+        ...SOUTH_ROOM,
+        name : "The South Room",
+        desc : "The room is light and round",
+        exits : {
+            north : "northRoom"
+        }
+    })
+    engine = builder.build();
+    engine.send(Input.config({"autoLook" : true }));
+    engine.send(Input.start());
+
+    expect(messages.join()).toContain("The room is dark and square");
+    messages.length = 0;
+
+    executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] })
+    const saveStr = JSON.stringify(saveData.data);
+
+    engine = builder.build();
+    engine.send(Input.config({"autoLook" : true }));
+    engine.send(Input.start(saveStr));
+
+    const allMessages = messages.join();
+    expect(allMessages).toContain("The South Room");
+    expect(allMessages).not.toContain("The North Room");
+    expect(allMessages).not.toContain("the room is light and round");
+    expect(allMessages).not.toContain("The room is dark and square");
+});
+
+test("Test load save after getting item", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "key",
+        type : "item",
+        location : "theRoom",
+        tags : ["carryable"]
+    });
+    // Start a game
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
+
+    // Get the key
+    executeAndTest(["get", "key"], {});
+    const saveStr = JSON.stringify(saveData.data);
+
+    // Start a new game, using the save data
+    engine = builder.build();
+    engine.send(Input.start(saveStr));
+    executeAndTest(["look"], { expected : ["An almost empty room"], notExpected :["key"]});
+
+    expect(saveData.data).toEqual(
+        [{"type":"Set", "property":["entities", "key", "location"], "newValue":"INVENTORY"}])
+
 });
 
 interface ExpectedStrings {

@@ -21,6 +21,7 @@ import * as Conf from "./config"
 import { bold } from "./markdown"
 import { Optional } from "./util/optional";
 import { logError } from "./util/errors";
+import { Action } from "./util/historyproxy";
 
 enum TAG {
   START = "start"
@@ -84,7 +85,7 @@ export class BasicEngine implements Engine {
     }
   }
 
-  start() {
+  start(saveData? : string) {
     if (this.started) {
       throw new Error("Engine is already started");
     }
@@ -92,14 +93,21 @@ export class BasicEngine implements Engine {
     const rootProps = this.env.properties;
     const start = findStartingLocation(this.env);
     makePlayer(rootProps, start);
+
+    this.env.proxyManager.clearHistory();
+    this.env.proxyManager.startRecording();
+
+    if (saveData) {
+      const data = JSON.parse(saveData) as Action[];
+      this.env.replayHistory(data);
+    }
+
     this.context = this.getContext();
 
     // Run any plugin actions
     const actionContext = this.createPluginActionContext(undefined, this.context);
     this.startActions.forEach(action => action(actionContext));
 
-    this.env.proxyManager.clearHistory();
-    this.env.proxyManager.startRecording();
     this.started = true;
   }
 
@@ -160,7 +168,7 @@ export class BasicEngine implements Engine {
           this.loadData(message);
           break;
         case "Start":
-          this.start();
+          this.start(message.saveData);
           break;
         case "Config":
           this.setConfig(message.properties);

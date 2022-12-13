@@ -6,7 +6,7 @@
 import _ from "lodash"
 import { Path, PathElement, pathElementEquals, fromValueList, makePath, toValueList } from "./path";
 import { parsePath } from "./script/pathparser";
-import { ProxyManager } from "./util/historyproxy";
+import { Action, ProxyManager } from "./util/historyproxy";
 import { Optional } from "./util/optional";
 
 export const REFERENCE = Symbol("__reference__");
@@ -221,6 +221,10 @@ export class Env {
     getNamespaces() : NameSpace[] {
         const parentNamespaces = this.parent?.getNamespaces() ?? []
         return [...this.namespaces, ...parentNamespaces];
+    }
+
+    replayHistory(history : Action[]) {
+        this.proxyManager.replayHistory(this.properties, history);
     }
 
     /**

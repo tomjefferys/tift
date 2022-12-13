@@ -2,8 +2,11 @@ import { OutputConsumer } from "../../src/messages/output";
 import { bindParams } from "../../src/script/parser"
 import { Env, createRootEnv, EnvFn } from "../../src/env"
 import { print } from "../../src/messages/output"
+import { Action } from "../../src/util/historyproxy";
 
-export function listOutputConsumer(messages : string[], words : string[]) : OutputConsumer {
+export type SaveData = { data : Action[] };
+
+export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData ) : OutputConsumer {
     return message => {
         switch(message.type) {
             case "Print":
@@ -13,6 +16,7 @@ export function listOutputConsumer(messages : string[], words : string[]) : Outp
                 message.words.forEach(word => words.push(word.id));
                 break;
             case "SaveState":
+                saveData.data = message.state;
                 break;
             case "Log":
                 messages.push(message.message);
@@ -23,22 +27,24 @@ export function listOutputConsumer(messages : string[], words : string[]) : Outp
     }
 }
 
-export function defaultOutputConsumer() : [OutputConsumer, string[], string[]] {
+export function defaultOutputConsumer() : [OutputConsumer, string[], string[], SaveData] {
     const messages : string[] = [];
     const words : string[] = [];
-    const consumer = listOutputConsumer(messages, words);
-    return [consumer, messages, words];
+    const saveData = { data : [] }
+    const consumer = listOutputConsumer(messages, words, saveData);
+    return [consumer, messages, words, saveData];
 
 }
 
-export function setUpEnv() : [Env, string[], string[]] {
+export function setUpEnv() : [Env, string[], string[], SaveData] {
     const messages : string[] = [];
     const words : string[] = [];
-    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages, words)});
+    const saveData = { data : [] };
+    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages, words, saveData)});
     const write : EnvFn = bindParams(["value"], env => {
         const value = env.get("value");
         return env.get("OUTPUT")(print(value));
     });
     env.set("write", write);
-    return [env, messages, words];
+    return [env, messages, words, saveData];
 }
