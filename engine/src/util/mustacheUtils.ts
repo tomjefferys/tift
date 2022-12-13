@@ -1,5 +1,6 @@
 // Helper code for handling mustache templates
-import { Env, isFound, Obj } from "../env"
+import { Env, isFound } from "../env"
+import { Obj } from "./objects"
 import * as _ from "lodash"
 import * as Mustache from "mustache"
 

@@ -1,4 +1,4 @@
-import { Obj, AnyArray, EnvFn, Env } from "./env";
+import { AnyArray, EnvFn, Env } from "./env";
 import { OutputConsumer, print } from "./messages/output";
 import { VerbBuilder } from "./verb"
 import { captureModifier, captureObject, matchBuilder, matchVerb } from "./commandmatcher";
@@ -10,6 +10,7 @@ import { getName, Nameable } from "./nameable";
 import { formatEntityString } from "./util/mustacheUtils";
 import * as MultiDict from "./util/multidict";
 import { bindParams } from "./script/parser";
+import { Obj } from "./util/objects"
 
 const NS_ENTITIES = "entities";
 

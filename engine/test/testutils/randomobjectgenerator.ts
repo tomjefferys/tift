@@ -1,10 +1,7 @@
 import _ from "lodash"
+import { Obj, PropType } from "../../src/util/objects"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-type PropType = string | symbol;
-
-type Obj = {[key:PropType] : any};
 
 type Generator = (chance : Chance.Chance) => any;
 

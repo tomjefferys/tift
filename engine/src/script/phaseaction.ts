@@ -4,11 +4,12 @@ import { BinaryExpression, Expression } from "jsep";
 import _ from "lodash";
 import { Command } from "../command";
 import { Matcher } from "../commandmatcher";
-import { Env, Obj } from "../env";
+import { Env } from "../env";
 import { Optional } from "../util/optional";
 import { evalutateMatchExpression } from "./matchParser";
 import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
+import { Obj } from "../util/objects"
 
 export type Phase = "before" | "main" | "after";
 

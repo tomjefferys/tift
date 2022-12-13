@@ -2,15 +2,12 @@ import { ProxyManager, replayHistory } from "../../src/util/historyproxy";
 import { Chance } from "chance"
 import { RandomObjectGenerator } from "../testutils/randomobjectgenerator";
 import _ from "lodash"
+import { Obj, PropType } from "../../src/util/objects";
 
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const MASTER_CHANCE = new Chance();
-
-type PropType = string | symbol;
-
-type Obj = {[key:PropType] : any};
 
 test("Test set primitives", () => {
     const manager = new ProxyManager(true); 

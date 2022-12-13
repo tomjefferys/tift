@@ -1,6 +1,6 @@
 import { isInstant, Verb } from "./verb"
 import { Entity, hasTag } from "./entity"
-import { createRootEnv, Env, Obj } from "./env"
+import { createRootEnv, Env } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity, isEntity } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "./messages/output";
@@ -22,6 +22,7 @@ import { bold } from "./markdown"
 import { Optional } from "./util/optional";
 import { logError } from "./util/errors";
 import { Action } from "./util/historyproxy";
+import { Obj } from "./util/objects"
 
 enum TAG {
   START = "start"

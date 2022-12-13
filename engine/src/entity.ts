@@ -1,6 +1,5 @@
 import { MultiDict } from "./util/multidict";
-import { Obj } from "./env";
-import { getString, getArray } from "./obj";
+import { Obj, getString, getArray } from "./util/objects";
 import { Nameable } from "./nameable";
 import { ActionSource } from "./actionsource";
 import { AfterAction, MainAction, BeforeAction } from "./script/phaseaction";

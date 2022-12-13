@@ -1,6 +1,7 @@
 import _ from "lodash";
-import { createRootEnv, isFound, NameSpace, Obj } from "../src/env";
+import { createRootEnv, isFound, NameSpace } from "../src/env";
 import { Path, toValueList } from "../src/path";
+import { Obj } from "../src/util/objects"
 
 test("test empty env", () => {
     const env = createRootEnv({});

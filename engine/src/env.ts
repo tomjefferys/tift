@@ -3,21 +3,20 @@
  * Implenent exection environment using a history proxy to keep track of changes
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import _ from "lodash"
 import { Path, PathElement, pathElementEquals, fromValueList, makePath, toValueList } from "./path";
 import { parsePath } from "./script/pathparser";
 import { Action, ProxyManager } from "./util/historyproxy";
 import { Optional } from "./util/optional";
+import { Obj, isObject } from "./util/objects"
 
 export const REFERENCE = Symbol("__reference__");
 export const NAMESPACE = Symbol("__namespace__");
 export const NOT_FOUND = Symbol("__notfound__");
 
 export type ReadOnly = "readonly" | "writable";
-
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export type Obj = {[key:string | symbol]:any};
 
 export type AnyArray = unknown[];
 
@@ -98,7 +97,7 @@ export class Env {
             return;
         }
         const obj = nsObj[headValue] ?? {};
-        if (typeof obj !== "object") {
+        if (!isObject(obj)) {
             throw new Error(headValue.toString() + " is not an object");
         }
         if (!nsObj[headValue]) {
@@ -377,7 +376,7 @@ function getFromObj(obj : Obj, path : Path) : any {
     if (!tail) {
         return value;
     } else {
-        if (typeof value === "object") {
+        if (isObject(value)) {
             return getFromObj(value, tail);
         } else {
             throw new Error(head.toString() + " is not an object");
@@ -400,7 +399,7 @@ function setToObj(obj : Obj, name : Path, value : any) {
     if (!obj[head.getValue()]) {
         obj[head.getValue()] = child;
     }
-    if (typeof child !== "object") {
+    if (!isObject(child)) {
         throw new Error(head.toString() + " is not an object");
     } 
     setToObj(child, tail, value);

@@ -1,5 +1,4 @@
-import { Obj } from "./types";
-import { getString } from "./obj";
+import { Obj, getString } from "./util/objects";
 import { Nameable } from "./nameable";
 import { ActionSource } from "./actionsource";
 import { AfterAction, BeforeAction, MainAction } from "./script/phaseaction";

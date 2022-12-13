@@ -1,10 +1,10 @@
 import { Verb, VerbBuilder } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
-import { getString, forEach, forEachEntry, ifExists } from "./obj";
+import { getString, forEach, forEachEntry, ifExists } from "./util/objects";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
-import { Obj } from "./env"
+import { Obj } from "./util/objects"
 import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";

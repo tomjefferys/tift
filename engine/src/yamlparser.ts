@@ -1,6 +1,5 @@
 import { loadAll } from "js-yaml"
-//import * as fs from "fs"
-import { Obj } from "./types"
+import { Obj } from "./util/objects"
 
 const prototypes = {
   "room":{"type":"room"},

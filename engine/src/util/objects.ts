@@ -1,5 +1,7 @@
 export type PropType = string | symbol;
-export type Obj = {[key:PropType]:unknown};
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export type Obj = {[key:PropType]:any};
 
 /**
  * Set an object property using the supplied path.
@@ -65,6 +67,47 @@ export function unset(obj : Obj, path : PropType[]) : unknown {
  */
 export function isObject(value : unknown) : value is Obj {
     return typeof value === 'object' && value !== null
+}
+
+
+export function getString(value : unknown) : string {
+    if (typeof value != 'string') {
+      throw new Error(JSON.stringify(value) + " is not a string"); 
+    }
+    return value;
+  }
+  
+export function getArray(value : unknown) : unknown[] {
+  if (!Array.isArray(value)) {
+    throw new Error(JSON.stringify(value) + " is not an array");
+  }
+  return value;
+}
+
+export function getObj(value : unknown) : Obj {
+  if (!isObject(value)) {
+      throw new Error(JSON.stringify(value) + " is not an object");
+  }
+  return value as Obj;
+}
+
+export function forEach(value : unknown, fn : (value:unknown) => void) {
+  if (value && Array.isArray(value)) {
+    value.forEach(fn);
+  }
+}
+
+export function forEachEntry(value : unknown, fn : (key : string, value: unknown) => void) {
+  if (value && isObject(value)) {
+    Object.entries(value)
+          .forEach(entry => fn(entry[0], entry[1]));
+  }
+}
+
+export function ifExists<T>(value : T, fn : (value:T) => void) {
+  if (value) {
+    fn(value);
+  }
 }
 
 function splitPath(path : PropType[]) : [PropType, PropType[]] {
