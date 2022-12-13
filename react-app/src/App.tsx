@@ -10,6 +10,7 @@ import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from './o
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
+const AUTO_SAVE = "TIFT_AUTO_SAVE";
 
 function App() {
   const [command, setCommand] = useState<IdValue<string>[]>([]);
@@ -26,7 +27,7 @@ function App() {
   const execute = (command : IdValue<string>[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
   // Load a game file from the `public` folder
-  const loadGame = (name : string, engine : Engine) => 
+  const loadGame = (name : string, engine : Engine, saveData : string | null) => 
           fetch(process.env.PUBLIC_URL + "/" + name)
             .then((response) => response.text())
             .then(data => {
@@ -35,25 +36,37 @@ function App() {
               }
               engine.send(Input.load(data));
               engine.send(Input.config({"autoLook" : true}));
-              engine.send(Input.start());
+              console.log("Loading: " + saveData);
+              engine.send(Input.start((saveData != null)? saveData : undefined));
               getWords([]);
               engine.send(Input.getStatus());
             })
 
   // Initialization
   useEffect(() => {
+    if (engineRef.current !== null) {
+      return;
+    }
+
+    const saveGame = (saveData : string) => {
+      console.log("Saving: " + saveData);
+      window.localStorage.setItem(AUTO_SAVE, saveData);
+    }
+
     messagesRef.current = [];
     const outputConsumer = getOutputConsumer(
       message => messagesRef.current?.push(messageEntry(message)),
       words => setWords(words),
       status => setStatus(status),
-      (level, message) => messagesRef.current?.push(logEntry(level, message))
+      (level, message) => messagesRef.current?.push(logEntry(level, message)),
+      saveGame
     );
     const engine = getEngine(outputConsumer);
 
     engineRef.current = engine;
+    const saveData = window.localStorage.getItem(AUTO_SAVE);
 
-    loadGame(GAME_FILE, engine);
+    loadGame(GAME_FILE, engine, saveData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -94,7 +107,8 @@ function App() {
 function getOutputConsumer(messageConsumer : (message : string) => void,
                            wordsConsumer : (words : IdValue<string>[]) => void,
                            statusConsumer : (status : string) => void,
-                           logConsumer : (level : LogLevel, message : string) => void) : (outputMessage : OutputMessage) => void {
+                           logConsumer : (level : LogLevel, message : string) => void,
+                           saveConsumer : (saveData : string) => void) : (outputMessage : OutputMessage) => void {
   return (outputMessage) => {
     switch(outputMessage.type) {
       case "Print":
@@ -107,7 +121,7 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         statusConsumer(outputMessage.status);
         break;
       case "SaveState": 
-        console.log(JSON.stringify(outputMessage.state));
+        saveConsumer(JSON.stringify(outputMessage.state));
         break;
       case "Log":
         logConsumer(outputMessage.level, outputMessage.message);
