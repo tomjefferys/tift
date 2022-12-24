@@ -1,10 +1,12 @@
 import { BasicEngine, Engine } from "./engine";
-import { OutputConsumer } from "./messages/output";
+import { LogLevel, OutputConsumer, OutputMessage } from "./messages/output";
 import { InputMessage } from "./messages/input"
+import { IdValue } from "./shared";
+import { BiConsumer, Consumer } from "./util/functions";
 
 
 export function getEngine(outputConsumer : OutputConsumer) : Engine {
-  return new BasicEngine([], [], outputConsumer, []);
+  return new BasicEngine(outputConsumer);
 }
 
 export namespace Input {
@@ -41,5 +43,78 @@ export namespace Input {
 
   export function config(properties : {[key:string] : boolean | number | string}) : InputMessage {
     return { type : "Config", properties : properties };
+  }
+
+  export function reset() :InputMessage {
+    return { type : "Reset" };
+  }
+}
+
+/**
+ * Build a custom output consumer, with custom consumers provided for each message type
+ * Default no-op implementations are provided by default
+ */
+export class OutputConsumerBuilder {
+
+  messageConsumer? : Consumer<string>;
+  wordsConsumer? : BiConsumer<string[], IdValue<string>[]>;
+  statusConsumer? : Consumer<string>;
+  logConsumer? : BiConsumer<LogLevel,string>;
+  saveConsumer? : Consumer<string>;
+  defaultConsumer : Consumer<OutputMessage> = _message => { /* do nothing */ };
+
+  withMessageConsumer(messageConsumer : Consumer<string>) : OutputConsumerBuilder {
+    this.messageConsumer = messageConsumer;
+    return this;
+  }
+  
+  withWordsConsumer(wordsConsumer : BiConsumer<string[], IdValue<string>[]>) : OutputConsumerBuilder {
+    this.wordsConsumer = wordsConsumer;
+    return this;
+  }
+
+  withStatusConsumer(statusConsumer : Consumer<string>) : OutputConsumerBuilder {
+    this.statusConsumer = statusConsumer;
+    return this;
+  }
+
+  withLogConsumer(logConsumer : BiConsumer<LogLevel,string>) : OutputConsumerBuilder {
+    this.logConsumer = logConsumer;
+    return this;
+  }
+
+  withSaveConsumer(saveConsumer : Consumer<string>) : OutputConsumerBuilder {
+    this.saveConsumer = saveConsumer;
+    return this;
+  }
+
+  withDefaultConsumer(defaultConsumer : Consumer<OutputMessage>) {
+    this.defaultConsumer = defaultConsumer;
+    return this;
+  }
+
+
+  build() : OutputConsumer {
+    return message => {
+      switch(message.type) {
+        case "Print":
+          this.messageConsumer? this.messageConsumer(message.value) : this.defaultConsumer(message);
+          break;
+        case "Words":
+          this.wordsConsumer? this.wordsConsumer(message.command, message.words) : this.defaultConsumer(message);
+          break;
+        case "Status":
+          this.statusConsumer? this.statusConsumer(message.status) : this.defaultConsumer(message);
+          break;
+        case "SaveState": 
+          this.saveConsumer? this.saveConsumer(JSON.stringify(message.state)) : this.defaultConsumer(message);
+          break;
+        case "Log":
+          this.logConsumer? this.logConsumer(message.level, message.message) : this.defaultConsumer(message);
+          break;
+        default:
+          throw new Error("Unsupported OutputMessage Type: " + message.type);
+      }
+    }
   }
 }

@@ -47,6 +47,7 @@
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
     "chance": "^1.1.9",
+    "dedent-js": "^1.0.1",
     "eslint": "^8.17.0",
     "jest-expect-message": "^1.1.3"
   }

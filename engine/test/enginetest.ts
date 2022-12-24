@@ -1,7 +1,8 @@
-import { Engine } from "../src/engine";
+import { BasicEngine, Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
 import { listOutputConsumer, SaveData } from "./testutils/testutils";
 import { Input } from "../src/main";
+import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
 import _ from "lodash";
 
 let messages : string[];
@@ -9,51 +10,6 @@ let wordsResponse : string[];
 let saveData : SaveData;
 let builder : EngineBuilder;
 let engine : Engine;
-
-
-const THE_ROOM = {
-    id : "theRoom",
-    name : "The Room",
-    desc : "An almost empty room",
-    type : "room",
-    tags : [ "start" ]
-};
-
-const ORDINARY_ITEM = {
-    id : "anItem",
-    name : "an ordinary item",
-    type : "item",
-    location : "theRoom",
-    tags : ["carryable"]
-};
-
-const OTHER_ITEM = {
-    id : "otherItem",
-    name : "another item",
-    type : "item",
-    location : "theRoom",
-    tags : ["carryable"]
-};
-
-const YET_ANOTHER_ITEM = {
-    id : "otherItem2",
-    name : "another another item",
-    type : "item",
-    location : "theRoom",
-    tags : ["carryable"]
-};
-
-const NORTH_ROOM = {
-    id : "northRoom",
-    type : "room",
-    tags : [ "start" ]
-};
-
-const SOUTH_ROOM = {
-    id : "southRoom",
-    type : "room"
-}
-
 
 beforeEach(() => {
     messages = [];
@@ -503,8 +459,41 @@ test("Test load save after getting item", () => {
 
     expect(saveData.data).toEqual(
         [{"type":"Set", "property":["entities", "key", "location"], "newValue":"INVENTORY"}])
-
 });
+
+test("Test reset", () => {
+    // Need to recreate the builder later, so store constructions as a lambda
+    const getBuilder = () => {
+        const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData));
+        builder.withObj(THE_ROOM);
+        builder.withObj({
+            id : "key",
+            type : "item",
+            location : "theRoom",
+            tags : ["carryable"]
+        });
+        return builder;
+    }
+    // Start a game
+    engine = getBuilder().build();
+    engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
+
+    // Get the key
+    executeAndTest(["get", "key"], {});
+    executeAndTest(["look"], { expected : ["An almost empty room"], notExpected : ["key"]});
+
+    // Reset the engine
+    engine.send(Input.reset());
+    getBuilder().addTo(engine as BasicEngine);
+    engine.send(Input.start());
+
+    // The key should be back in place
+    executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
+
+    // Check the save data is empty
+    expect(saveData.data).toEqual([]);
+})
 
 interface ExpectedStrings {
     expected? : string[],

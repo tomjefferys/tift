@@ -59,31 +59,42 @@ interface PluginActionContext {
 
 type PluginAction = (context : PluginActionContext) => void;
 
+const BASE_CONFIG : Config = {};
+const BASE_PROPS = { "entities" : {}, "verbs" : {}};
+const BASE_NS = [["entities"], ["verbs"]];
+const BASE_CONTEXT = { entities : {}, verbs : [] }
+ 
+
 export class BasicEngine implements Engine {
-  private readonly config : Config = {};
-  private readonly env : Env;
+  private config : Config = BASE_CONFIG;
+  private env : Env;
   private context : CommandContext;
   private output : OutputConsumer;
   private startActions : PluginAction[] = [];
   private postExecutionActions : PluginAction[] = [];
   private started = false;
 
-  constructor(entities : Entity[], verbs : Verb[], outputConsumer : OutputConsumer, objs : Obj[]) {
-    this.env = createRootEnv({ "entities" : {}, "verbs" : {}}, [["entities"], ["verbs"]]);
-    this.addContent(entities, verbs, objs);
+  constructor(outputConsumer : OutputConsumer) {
+    this.output = outputConsumer;
+    [this.env, this.context] = this.reset();
+  }
 
+  reset() : [Env, CommandContext] {
+    this.config = _.cloneDeep(BASE_CONFIG);
+    this.env = createRootEnv(_.cloneDeep(BASE_PROPS), _.cloneDeep(BASE_NS));
     const rootProps = this.env.properties;
 
     makeDefaultFunctions(rootProps);
-    makeOutputConsumer(rootProps, outputConsumer);
+    makeOutputConsumer(rootProps, this.output);
     addLibraryFunctions(rootProps);
 
-    this.output = outputConsumer;
+    this.context = _.cloneDeep(BASE_CONTEXT)
 
-    this.context = {
-      entities : {},
-      verbs : []
-    }
+    this.startActions.length = 0;
+    this.postExecutionActions.length = 0;
+    this.started = false;
+
+    return [this.env, this.context];
   }
 
   start(saveData? : string) {
@@ -173,6 +184,9 @@ export class BasicEngine implements Engine {
           break;
         case "Config":
           this.setConfig(message.properties);
+          break;
+        case "Reset":
+          this.reset();
           break;
       }
     } catch (e) {

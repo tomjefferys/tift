@@ -57,9 +57,14 @@ export class EngineBuilder {
         if (!this.outputConsumer) {
             throw new Error("No output counsumer specified")
         }
-        return new BasicEngine(this.entities, this.verbs, this.outputConsumer, this.objs);
+        const engine = new BasicEngine(this.outputConsumer);
+        this.addTo(engine);
+        return engine;
     }
     
+    addTo(engine : BasicEngine) {
+        engine.addContent(this.entities, this.verbs, this.objs);
+    }
 }
 
 export function loadFromYaml(data: string, outputConsumer : OutputConsumer) : Engine & EngineState {

@@ -1,4 +1,4 @@
-export type InputMessage = GetWords | Execute | GetStatus | Load /*| LoadSave*/ | Start | Config;
+export type InputMessage = GetWords | Execute | GetStatus | Load | Start | Config | Reset;
 
 export interface GetWords {
     type : "GetWords",
@@ -19,11 +19,9 @@ export interface Load {
     data : string
 }
 
-// TODO don't reuse the word Load
-//export interface LoadSave {
-//    type : "LoadSave",
-//    data : string
-//}
+export interface Reset {
+    type : "Reset"
+}
 
 export interface Config {
     type : "Config",

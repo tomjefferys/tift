@@ -1,4 +1,5 @@
-import { Consumer, DuplexProxy } from "../../src/util/functions";
+import { Consumer } from "../../src/util/functions";
+import { DuplexProxy } from "../../src/util/duplexproxy";
 
 
 test("Test no-op proxy", () => {
@@ -91,8 +92,8 @@ test("Test with proxy chain", () => {
     const delegate = new Server(response => proxy.respond(response));
     proxy.setRequestListener(str => delegate.doStuff(str));
 
-    const proxy2 = proxy.insertProxy("B", { requestFilter : (str, proxy) => proxy.forwardRequest(str + " " + str)});
-    const proxy3 = proxy2.insertProxy("C", { responseFilter : (nums, proxy) => proxy.forwardResponse(nums.map(n => n + 1))});
+    const proxy2 = proxy.insertProxy("B", { requestFilter : (str, proxy) => proxy.send(str + " " + str)});
+    const proxy3 = proxy2.insertProxy("C", { responseFilter : (nums, proxy) => proxy.respond(nums.map(n => n + 1))});
     
     const client = new Client(str => proxy3.send(str));
     proxy3.setResponseListener(client.getResultListener());
