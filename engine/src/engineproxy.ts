@@ -47,7 +47,10 @@ export function createCommandFilter(name : string, action : Consumer<Forwarder<I
 
         responseFilter : (message, forwarder) => {
             const outputConsumer = new OutputConsumerBuilder()
-                                            .withWordsConsumer((command, words) => forwarder.respond(Output.words(command, [...words, mkIdValue(name, name)])))
+                                            .withWordsConsumer((command, words) => {
+                                                const allWords = command.length == 0 ? [...words, mkIdValue(name, name)] : words;
+                                                forwarder.respond(Output.words(command, allWords));
+                                            })
                                             .withDefaultConsumer(message => forwarder.respond(message))
                                             .build();
             outputConsumer(message);

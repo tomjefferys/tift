@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
 import './App.css';
-import { getEngine, Input } from "tift-engine"
+import { getEngine, Input, createEngineProxy, createCommandFilter } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
 import { IdValue } from "tift-engine/src/shared";
-import { OutputMessage } from "tift-engine/src/messages/output";
+import { OutputConsumer, OutputMessage } from "tift-engine/src/messages/output";
+import { MessageForwarder } from "tift-engine/src/engineproxy";
 import Output from "./components/Output"
 import Controls from './components/Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from './outputentry';
@@ -25,6 +26,20 @@ function App() {
 
   const getWords = (command : IdValue<string>[]) => engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
   const execute = (command : IdValue<string>[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
+
+  const gameRestarter = (forwarder : MessageForwarder) =>  {
+          fetch(process.env.PUBLIC_URL + "/" + GAME_FILE)
+            .then((response) => response.text())
+            .then(data => {
+              console.log("Restarting");
+              forwarder.send(Input.reset());
+              forwarder.send(Input.load(data));
+              forwarder.send(Input.config({"autoLook" : true}));
+              forwarder.send(Input.start());
+              getWords([]);
+              forwarder.send(Input.getStatus());
+            })
+  }
 
   // Load a game file from the `public` folder
   const loadGame = (name : string, engine : Engine, saveData : string | null) => 
@@ -61,7 +76,9 @@ function App() {
       (level, message) => messagesRef.current?.push(logEntry(level, message)),
       saveGame
     );
-    const engine = getEngine(outputConsumer);
+    const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
+                      .insertProxy("restartFilter", createCommandFilter("restart", gameRestarter));
+    engine.setResponseListener(outputConsumer);
 
     engineRef.current = engine;
     const saveData = window.localStorage.getItem(AUTO_SAVE);

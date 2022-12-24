@@ -3,10 +3,20 @@ import { LogLevel, OutputConsumer, OutputMessage } from "./messages/output";
 import { InputMessage } from "./messages/input"
 import { IdValue } from "./shared";
 import { BiConsumer, Consumer } from "./util/functions";
+import * as EngineProxy from "./engineproxy";
+import { Filters } from "./util/duplexproxy";
 
 
 export function getEngine(outputConsumer : OutputConsumer) : Engine {
   return new BasicEngine(outputConsumer);
+}
+
+export function createEngineProxy(engineBuilder : (outputConsumer : OutputConsumer) => Engine) {
+  return EngineProxy.createEngineProxy(engineBuilder);
+}
+
+export function createCommandFilter(name : string, action : Consumer<EngineProxy.MessageForwarder>) : Filters<InputMessage, OutputMessage> {
+  return EngineProxy.createCommandFilter(name, action);
 }
 
 export namespace Input {
