@@ -27,31 +27,17 @@ function App() {
   const getWords = (command : IdValue<string>[]) => engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
   const execute = (command : IdValue<string>[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
-  const gameRestarter = (forwarder : MessageForwarder) =>  {
-          fetch(process.env.PUBLIC_URL + "/" + GAME_FILE)
-            .then((response) => response.text())
-            .then(data => {
-              console.log("Restarting");
-              forwarder.send(Input.reset());
-              forwarder.send(Input.load(data));
-              forwarder.send(Input.config({"autoLook" : true}));
-              forwarder.send(Input.start());
-              getWords([]);
-              forwarder.send(Input.getStatus());
-            })
-  }
-
   // Load a game file from the `public` folder
-  const loadGame = (name : string, engine : Engine, saveData : string | null) => 
+  const loadGame = (name : string, engine : MessageForwarder, saveData : string | null) => 
           fetch(process.env.PUBLIC_URL + "/" + name)
             .then((response) => response.text())
             .then(data => {
               if (engine == null) {
                 throw new Error("Engine has not been initialized");
               }
+              engine.send(Input.reset());
               engine.send(Input.load(data));
               engine.send(Input.config({"autoLook" : true}));
-              console.log("Loading: " + saveData);
               engine.send(Input.start((saveData != null)? saveData : undefined));
               getWords([]);
               engine.send(Input.getStatus());
@@ -64,7 +50,6 @@ function App() {
     }
 
     const saveGame = (saveData : string) => {
-      console.log("Saving: " + saveData);
       window.localStorage.setItem(AUTO_SAVE, saveData);
     }
 
@@ -77,7 +62,7 @@ function App() {
       saveGame
     );
     const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
-                      .insertProxy("restartFilter", createCommandFilter("restart", gameRestarter));
+                      .insertProxy("restartFilter", createCommandFilter("restart", forwarder => loadGame(GAME_FILE, forwarder, null)));
     engine.setResponseListener(outputConsumer);
 
     engineRef.current = engine;
