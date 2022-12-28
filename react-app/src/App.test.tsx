@@ -21,7 +21,7 @@ beforeAll(() => server.listen())
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
-test('renders learn react link', async () => {
+test('renders starting room status', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
