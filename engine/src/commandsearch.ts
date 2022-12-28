@@ -36,7 +36,7 @@ export function getNextWords(partial : string[], objs : ContextEntities, verbs :
           .map(state => _.last(state.getWords()))
           .filter(Boolean)
           .map(word => word as IdValue<string>);
-  return nextWords;
+  return _.uniqBy(nextWords, word => word.id);
 }
 
 export interface SearchContext {

@@ -495,6 +495,16 @@ test("Test reset", () => {
     expect(saveData.data).toEqual([]);
 })
 
+test("Test command deduplication", () => {
+    engine = builder.withObj(THE_ROOM)
+                    .withObj(ORDINARY_ITEM)
+                    .withObj(OTHER_ITEM)
+                    .build();
+
+    engine.send(Input.start());
+    expectWords([], ["go", "look", "wait", "get"]);
+})
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]
