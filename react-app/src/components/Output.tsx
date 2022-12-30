@@ -2,7 +2,9 @@ import StatusBar from "./StatusBar";
 import "./Output.css";
 import React, { useEffect, useRef } from "react";
 import { OutputEntry } from "../outputentry";
+import ChakraUIRenderer from 'chakra-ui-markdown-renderer';
 import ReactMarkdown from "react-markdown";
+import { Box, Container, List, ListItem, Text } from "@chakra-ui/react";
 
 interface OutputProps {
     entries : OutputEntry[];
@@ -19,10 +21,22 @@ interface LogEntryProps {
     message : string
 }
 
-const MessageEntry = ({ value } : EntryProps)  => (<div className="outputMessage"><ReactMarkdown>{value}</ReactMarkdown></div>)
-const CommandEntry = ({ value } : EntryProps) => (<p className="outputCommand">&gt; {value}</p>)
+const MessageEntry = ({ value } : EntryProps)  => (<ReactMarkdown components={ChakraUIRenderer()}>{value}</ReactMarkdown>)
+const CommandEntry = ({ value } : EntryProps) => (<Text color={"green"}>&gt; {value}</Text>)
 const LogEntry = ({ logLevel, message } : LogEntryProps) => 
         (<div className={"log-" + logLevel}> {message}{} </div>)
+
+const renderMessage = (message : OutputEntry) => {
+    switch(message.type) {
+        case "message": 
+            return <MessageEntry value={message.message}/>;
+        case "command":
+            return <CommandEntry value={message.command}/>;
+        case "log":
+            return <LogEntry logLevel={message.level} message={message.message}/>;
+
+    }
+}
 
 const Output = ({ entries, status, command } : OutputProps) => {
 
@@ -36,29 +50,16 @@ const Output = ({ entries, status, command } : OutputProps) => {
 
     return (
         <React.Fragment>
-            <div className="statusBar" ref={statusBarRef}>
-                <StatusBar status={status}/>
-            </div>
-            <div className="textOutWrapper">
-                <div className="textOut">
-                    {entries.map((message : OutputEntry, index : number) => {
-                        switch(message.type) {
-                            case "message": 
-                                return <MessageEntry key={index} value={message.message}/>;
-                            case "command":
-                                return <CommandEntry key={index} value={message.command}/>;
-                            case "log":
-                                return <LogEntry key={index} 
-                                                 logLevel={message.level}
-                                                 message={message.message}/>;
-
-                        }
-                    })}
-                    <CommandEntry value={command}/>
-                </div>
-
+            <StatusBar status={status}/>
+            <Box overflow={"auto"} h="90%" w="100%" overflowY={"scroll"}>
+                <Container textAlign={"left"}>
+                <List>
+                    {entries.map((message : OutputEntry, index : number) => (<ListItem key={index}>{renderMessage(message)}</ListItem>))}
+                    <ListItem><CommandEntry value={command}/></ListItem>
+                </List>
                 <div ref={entriesEndRef}/>
-            </div>
+                </Container>
+            </Box>
         </React.Fragment>
     );
 }

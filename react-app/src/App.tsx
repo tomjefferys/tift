@@ -1,5 +1,4 @@
 import { useRef, useState, useEffect } from 'react';
-import './App.css';
 import { getEngine, Input, createEngineProxy, createCommandFilter } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
 import { IdValue } from "tift-engine/src/shared";
@@ -8,6 +7,8 @@ import { MessageForwarder } from "tift-engine/src/engineproxy";
 import Output from "./components/Output"
 import Controls from './components/Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from './outputentry';
+import { Box, ChakraProvider, Container, Divider } from '@chakra-ui/react'
+import Div100vh from 'react-div-100vh';
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
@@ -93,16 +94,17 @@ function App() {
   }, [command])
 
   return (
-    <div className="App">
-      <div className="mainFrame">
-        <div className="outputArea">
+    <ChakraProvider>
+      <Div100vh>
+        <Box position={"relative"} height="69%">
           <Output entries={messagesRef.current ?? []} status={status} command={command.map(word => word.value).join(" ")}/>
-        </div>
-        <div id="inputArea" className="inputArea">
+        </Box>
+        <Divider/>
+        <Box position={"relative"} height="30%">
           <Controls words={words ?? []} wordSelected={(event,word) => setCommand([...command, word])}/>
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Div100vh>
+    </ChakraProvider>
   );
 }
 
