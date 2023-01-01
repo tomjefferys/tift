@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid } from "@chakra-ui/react";
 import { Word } from "tift-engine/src/messages/output";
 import { WordType } from "tift-engine/out/src/messages/output";
@@ -21,24 +21,35 @@ interface WordButtonsProps {
     wordSelected : WordSelected;
 }
 
-const Controls = ({ words, wordSelected } : ControlProps) => (
-    <Container>
-      <Tabs>
-        <TabList>
-            <Tab>Game</Tab>
-            <Tab>Options</Tab>
-        </TabList>
-        <TabPanels>
-            <TabPanel>
-                <WordButtons wordType="word" allWords={words} wordSelected={wordSelected} />
-            </TabPanel>
-            <TabPanel>
-                <WordButtons wordType="command" allWords={words} wordSelected={wordSelected} />
-            </TabPanel>
-        </TabPanels>
-    </Tabs>
-    </Container>
-);
+const Controls = ({ words, wordSelected } : ControlProps) => {
+
+    const [tabIndex, setTabIndex] = useState(0);
+
+    const handleTabsChange = (index : number) => setTabIndex(index);
+
+    // Reset the tabs, if the words change
+    useEffect(() => {
+        setTabIndex(0);
+    }, [words]);
+
+    return (
+        <Container>
+            <Tabs index={tabIndex} onChange={handleTabsChange}>
+                <TabList>
+                    <Tab>Game</Tab>
+                    <Tab>Options</Tab>
+                </TabList>
+                <TabPanels>
+                    <TabPanel>
+                        <WordButtons wordType="word" allWords={words} wordSelected={wordSelected} />
+                    </TabPanel>
+                    <TabPanel>
+                        <WordButtons wordType="command" allWords={words} wordSelected={wordSelected} />
+                    </TabPanel>
+                </TabPanels>
+            </Tabs>
+        </Container>)
+    };
 
 const WordButtons = ({ wordType, allWords, wordSelected } : WordButtonsProps) => {
     const words = allWords.filter(word => word.type === wordType);
