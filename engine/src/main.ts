@@ -1,7 +1,6 @@
 import { BasicEngine, Engine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage } from "./messages/output";
+import { LogLevel, OutputConsumer, OutputMessage, Word } from "./messages/output";
 import { InputMessage } from "./messages/input"
-import { IdValue } from "./shared";
 import { BiConsumer, Consumer } from "./util/functions";
 import * as EngineProxy from "./engineproxy";
 import { Filters } from "./util/duplexproxy";
@@ -67,7 +66,7 @@ export namespace Input {
 export class OutputConsumerBuilder {
 
   messageConsumer? : Consumer<string>;
-  wordsConsumer? : BiConsumer<string[], IdValue<string>[]>;
+  wordsConsumer? : BiConsumer<string[], Word[]>;
   statusConsumer? : Consumer<string>;
   logConsumer? : BiConsumer<LogLevel,string>;
   saveConsumer? : Consumer<string>;
@@ -78,7 +77,7 @@ export class OutputConsumerBuilder {
     return this;
   }
   
-  withWordsConsumer(wordsConsumer : BiConsumer<string[], IdValue<string>[]>) : OutputConsumerBuilder {
+  withWordsConsumer(wordsConsumer : BiConsumer<string[], Word[]>) : OutputConsumerBuilder {
     this.wordsConsumer = wordsConsumer;
     return this;
   }

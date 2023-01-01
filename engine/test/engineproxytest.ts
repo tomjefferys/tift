@@ -4,7 +4,6 @@ import { Consumer } from "../src/util/functions";
 import { Forwarder } from "../src/util/duplexproxy";
 import { NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
 import * as Output from "../src/messages/output";
-import { mkIdValue } from "../src/shared";
 import { createCommandFilter, createEngineProxy, MessageForwarder } from "../src/engineproxy";
 import { Engine } from "../src/engine";
 import _ from "lodash";
@@ -33,7 +32,7 @@ test("Test proxy with word appender", () => {
 
     const responseFilter = (message : OutputMessage, proxy : Forwarder<unknown,OutputMessage>) => {
         const messageConsumer = new OutputConsumerBuilder()
-                                   .withWordsConsumer((command, wordRespsonse) => proxy.respond(Output.words(command, [...wordRespsonse, mkIdValue("restart", "restart") ])))
+                                   .withWordsConsumer((command, wordRespsonse) => proxy.respond(Output.words(command, [...wordRespsonse, Output.word("restart", "restart", "command") ])))
                                    .build();
         messageConsumer(message);
     }

@@ -11,6 +11,14 @@ export type OutputConsumer = (message : OutputMessage) => void;
 
 export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
 
+export type WordType = "word" | "command";
+
+export interface Word extends IdValue<string> {
+    id : string;
+    value : string;
+    type : WordType;
+}
+
 export interface Print {
     type : "Print",
     value : string
@@ -31,7 +39,7 @@ export interface Look {
 export interface Words {
     type : "Words",
     command : string[],
-    words : IdValue<string>[]
+    words : Word[]
 }
 
 export interface Status {
@@ -50,6 +58,8 @@ export interface SaveState {
     state : Action[]
 }
 
+export const word = (id : string, value : string, type : WordType) => ({id, value, type});
+
 export function print(value : Stringable) : OutputMessage {
     return {
         type : "Print",
@@ -57,7 +67,7 @@ export function print(value : Stringable) : OutputMessage {
     }
 }
 
-export function words(command : string[], words : IdValue<string>[]) : OutputMessage {
+export function words(command : string[], words : Word[]) : OutputMessage {
     return {
         type : "Words",
         command : command,

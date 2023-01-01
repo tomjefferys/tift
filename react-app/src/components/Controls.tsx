@@ -1,15 +1,24 @@
 import React from "react";
-import { IdValue } from "tift-engine/src/shared";
 import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid } from "@chakra-ui/react";
+import { Word } from "tift-engine/src/messages/output";
+import { WordType } from "tift-engine/out/src/messages/output";
+
+type WordSelected = (event : React.MouseEvent<HTMLButtonElement>, word : Word) => void;
 
 interface ControlProps {
-    words : IdValue<string>[];
-    wordSelected : (event : React.MouseEvent<HTMLButtonElement>, word : IdValue<string>) => void;
+    words : Word[];
+    wordSelected : WordSelected;
 }
 
 interface WordProps {
-    word : IdValue<string>;
-    wordSelected : (event : React.MouseEvent<HTMLButtonElement>, word : IdValue<string>) => void;
+    word : Word;
+    wordSelected : WordSelected;
+}
+
+interface WordButtonsProps {
+    wordType : WordType,
+    allWords : Word[],
+    wordSelected : WordSelected;
 }
 
 const Controls = ({ words, wordSelected } : ControlProps) => (
@@ -21,17 +30,25 @@ const Controls = ({ words, wordSelected } : ControlProps) => (
         </TabList>
         <TabPanels>
             <TabPanel>
-                <SimpleGrid columns={4}>
-                    {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
-                </SimpleGrid>
+                <WordButtons wordType="word" allWords={words} wordSelected={wordSelected} />
             </TabPanel>
             <TabPanel>
-                <strong>Options Panel</strong>
+                <WordButtons wordType="command" allWords={words} wordSelected={wordSelected} />
             </TabPanel>
         </TabPanels>
     </Tabs>
     </Container>
 );
+
+const WordButtons = ({ wordType, allWords, wordSelected } : WordButtonsProps) => {
+    const words = allWords.filter(word => word.type === wordType);
+    return (<SimpleGrid columns={4}>
+                {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
+            </SimpleGrid>)
+}
+    
+
+
 
 const WordButton = ({ word, wordSelected } : WordProps) => (
         <Button variant="ghost"

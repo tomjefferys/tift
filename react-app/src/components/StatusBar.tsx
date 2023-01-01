@@ -1,4 +1,4 @@
-import { Box, Center, Heading } from "@chakra-ui/react";
+import { Box, Heading } from "@chakra-ui/react";
 
 interface Status {
     status : string;

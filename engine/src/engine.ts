@@ -212,7 +212,7 @@ export class BasicEngine implements Engine {
 
   getWords(partial : string[]) : void {
     const nextWords = getNextWords(partial, this.context.entities, this.context.verbs);
-    const message = Output.words( partial, nextWords);
+    const message = Output.words( partial, nextWords.map(word => ({...word, type : "word"})));
     this.output(message);
   }
 

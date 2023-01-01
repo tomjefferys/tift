@@ -1,7 +1,6 @@
 import { OutputConsumerBuilder } from "./main";
 import { InputMessage } from "./messages/input";
 import * as Output from "./messages/output";
-import { mkIdValue } from "./shared";
 import { Consumer} from "./util/functions";
 import { DuplexProxy, Filters, Forwarder } from "./util/duplexproxy";
 import * as _ from "lodash";
@@ -48,7 +47,7 @@ export function createCommandFilter(name : string, action : Consumer<Forwarder<I
         responseFilter : (message, forwarder) => {
             const outputConsumer = new OutputConsumerBuilder()
                                             .withWordsConsumer((command, words) => {
-                                                const allWords = command.length == 0 ? [...words, mkIdValue(name, name)] : words;
+                                                const allWords = command.length == 0 ? [...words, Output.word(name, name, "command")] : words;
                                                 forwarder.respond(Output.words(command, allWords));
                                             })
                                             .withDefaultConsumer(message => forwarder.respond(message))

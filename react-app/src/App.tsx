@@ -2,12 +2,12 @@ import { useRef, useState, useEffect } from 'react';
 import { getEngine, Input, createEngineProxy, createCommandFilter } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
 import { IdValue } from "tift-engine/src/shared";
-import { OutputConsumer, OutputMessage } from "tift-engine/src/messages/output";
+import { OutputConsumer, OutputMessage, Word } from "tift-engine/src/messages/output";
 import { MessageForwarder } from "tift-engine/src/engineproxy";
 import Output from "./components/Output"
 import Controls from './components/Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from './outputentry';
-import { Box, ChakraProvider, Container, Divider } from '@chakra-ui/react'
+import { Box, ChakraProvider, Divider } from '@chakra-ui/react'
 import Div100vh from 'react-div-100vh';
 
 const GAME_FILE = "adventure.yaml";
@@ -16,7 +16,7 @@ const AUTO_SAVE = "TIFT_AUTO_SAVE";
 
 function App() {
   const [command, setCommand] = useState<IdValue<string>[]>([]);
-  const [words, setWords] = useState<IdValue<string>[]>([]);
+  const [words, setWords] = useState<Word[]>([]);
   const [status, setStatus] = useState<string>("");
 
   // Store messages as a ref, as the can be updated multiple times between renders
@@ -109,7 +109,7 @@ function App() {
 }
 
 function getOutputConsumer(messageConsumer : (message : string) => void,
-                           wordsConsumer : (words : IdValue<string>[]) => void,
+                           wordsConsumer : (words : Word[]) => void,
                            statusConsumer : (status : string) => void,
                            logConsumer : (level : LogLevel, message : string) => void,
                            saveConsumer : (saveData : string) => void) : (outputMessage : OutputMessage) => void {
