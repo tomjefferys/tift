@@ -70,16 +70,11 @@ test("Test commandproxy", () => {
     expect(output).toEqual(expect.arrayContaining(["go","look","wait","restart"]));
     output.length = 0;
 
-    // Check restart isn't being added when inappropriate
-    proxy.send(Input.getNextWords(["go"]));
-    expect(output).not.toEqual(expect.arrayContaining(["restart"]));
-    output.length = 0;
-
-    proxy.send(Input.getNextWords(["restart"]));
+    proxy.send(Input.getNextWords(["__option(restart)__"]));
     expect(output).toHaveLength(0);
     output.length = 0;
 
-    proxy.send(Input.execute(["restart"]));
+    proxy.send(Input.execute(["__option(restart)__"]));
 
     expect(output).toHaveLength(1);
     expect(output).toEqual(expect.arrayContaining(["Restarting"]));
@@ -134,7 +129,7 @@ test("Test restart using command proxy", () => {
     expect(output[0]).toEqual(expect.stringContaining("The south room"));
     output.length = 0;
 
-    engineProxy.send(Input.execute(["restart"]));
+    engineProxy.send(Input.execute(["__option(restart)__"]));
     engineProxy.send(Input.execute(["look"]));
     expect(output[0]).toEqual(expect.stringContaining("The north room"));
 
