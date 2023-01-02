@@ -11,7 +11,7 @@ export type OutputConsumer = (message : OutputMessage) => void;
 
 export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
 
-export type WordType = "word" | "command";
+export type WordType = "word" | "option" | "control";
 
 export interface Word extends IdValue<string> {
     id : string;

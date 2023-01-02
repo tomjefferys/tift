@@ -1,7 +1,6 @@
-import { useRef, useState, useEffect } from 'react';
-import { getEngine, Input, createEngineProxy, createCommandFilter } from "tift-engine"
+import { useRef, useState, useEffect, SyntheticEvent } from 'react';
+import { getEngine, Input, createEngineProxy, createCommandFilter, createControlFilter } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
-import { IdValue } from "tift-engine/src/shared";
 import { OutputConsumer, OutputMessage, Word } from "tift-engine/src/messages/output";
 import { MessageForwarder } from "tift-engine/src/engineproxy";
 import Output from "./components/Output"
@@ -14,8 +13,10 @@ const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
 const AUTO_SAVE = "TIFT_AUTO_SAVE";
 
+const BACKSPACE : Word = { type : "control", id : "__BACKSPACE__", value : "BACKSPACE" };
+
 function App() {
-  const [command, setCommand] = useState<IdValue<string>[]>([]);
+  const [command, setCommand] = useState<Word[]>([]);
   const [words, setWords] = useState<Word[]>([]);
   const [status, setStatus] = useState<string>("");
 
@@ -25,8 +26,8 @@ function App() {
 
   const engineRef = useRef<Engine | null>(null)
 
-  const getWords = (command : IdValue<string>[]) => engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
-  const execute = (command : IdValue<string>[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
+  const getWords = (command : Word[]) => engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
+  const execute = (command : Word[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
   // Load a game file from the `public` folder
   const loadGame = (name : string, engine : MessageForwarder, saveData : string | null) => 
@@ -76,12 +77,18 @@ function App() {
   // words updated
   useEffect(() => {
     const engine = engineRef.current;
-    if (engine && command.length && !words.length) {
+    const gameWords = words.filter(word => word.type === "word");
+    if (engine && command.length && !gameWords.length) {
       messagesRef.current?.push(commandEntry(command.map(word => word.value).join(" ")))
       execute(command);
       engine.send(Input.getStatus());
       setCommand([]);
       getWords([]);
+    } else if (engine && command.length && gameWords.length) {
+      // Add in backspace if it's not already there
+      if (!words.includes(BACKSPACE)) {
+        setWords([...words, BACKSPACE]);
+      }
     }
   }, [words, command]);
 
@@ -93,6 +100,16 @@ function App() {
     }
   }, [command])
 
+  const wordSelected = (_event : SyntheticEvent, word : Word) => {
+    if (word === BACKSPACE) {
+      setCommand(command.slice(0, -2));
+    } else if (word.type === "option") {
+      setCommand([word]);
+    } else {
+      setCommand([...command, word]);
+    }
+  }
+
   return (
     <ChakraProvider>
       <Div100vh>
@@ -101,7 +118,8 @@ function App() {
         </Box>
         <Divider/>
         <Box position={"relative"} height="30%">
-          <Controls words={words ?? []} wordSelected={(event,word) => setCommand([...command, word])}/>
+          {/*<Controls words={words ?? []} wordSelected={(event,word) => setCommand([...command, word])}/>*/}
+          <Controls words={words ?? []} wordSelected={wordSelected}/>
         </Box>
       </Div100vh>
     </ChakraProvider>

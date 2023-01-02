@@ -15,7 +15,12 @@ export function createEngineProxy(engineBuilder : (outputConsumer : OutputConsum
 }
 
 export function createCommandFilter(name : string, action : Consumer<EngineProxy.MessageForwarder>) : Filters<InputMessage, OutputMessage> {
-  return EngineProxy.createCommandFilter(name, action);
+
+  return EngineProxy.createWordFilter("option", name, action);
+}
+
+export function createControlFilter(name : string, action : Consumer<void>) : Filters<InputMessage, OutputMessage> {
+  return EngineProxy.createWordFilter("control", name, _forwarder => action());
 }
 
 export namespace Input {

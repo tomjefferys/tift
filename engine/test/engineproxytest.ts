@@ -4,7 +4,7 @@ import { Consumer } from "../src/util/functions";
 import { Forwarder } from "../src/util/duplexproxy";
 import { NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
 import * as Output from "../src/messages/output";
-import { createCommandFilter, createEngineProxy, MessageForwarder } from "../src/engineproxy";
+import { createWordFilter, createEngineProxy, MessageForwarder } from "../src/engineproxy";
 import { Engine } from "../src/engine";
 import _ from "lodash";
 import dedent from "dedent-js";
@@ -32,7 +32,7 @@ test("Test proxy with word appender", () => {
 
     const responseFilter = (message : OutputMessage, proxy : Forwarder<unknown,OutputMessage>) => {
         const messageConsumer = new OutputConsumerBuilder()
-                                   .withWordsConsumer((command, wordRespsonse) => proxy.respond(Output.words(command, [...wordRespsonse, Output.word("restart", "restart", "command") ])))
+                                   .withWordsConsumer((command, wordRespsonse) => proxy.respond(Output.words(command, [...wordRespsonse, Output.word("restart", "restart", "option") ])))
                                    .build();
         messageConsumer(message);
     }
@@ -54,7 +54,7 @@ test("Test proxy with word appender", () => {
 
 test("Test commandproxy", () => {
     const proxy = createEngineProxy(getEngineBuilder())
-                    .insertProxy("restart", createCommandFilter("restart", forwarder => {
+                    .insertProxy("restart", createWordFilter("option", "restart", forwarder => {
                             forwarder.respond(Output.print("Restarting"));
                         }
                     ))
@@ -108,7 +108,7 @@ test("Test restart using command proxy", () => {
     }
 
     // Create the restart filter
-    const restartFilter = createCommandFilter("restart", engineInitializer);
+    const restartFilter = createWordFilter("option", "restart", engineInitializer);
 
     // Create the engine, and bind the restart proxy
     const engineProxy = createEngineProxy(output => getEngine(output))

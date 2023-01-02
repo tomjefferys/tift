@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid } from "@chakra-ui/react";
+import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid, IconButton, ComponentWithAs, IconProps } from "@chakra-ui/react";
+import { ArrowBackIcon } from "@chakra-ui/icons";
 import { Word } from "tift-engine/src/messages/output";
 import { WordType } from "tift-engine/out/src/messages/output";
 
@@ -16,9 +17,13 @@ interface WordProps {
 }
 
 interface WordButtonsProps {
-    wordType : WordType,
+    wordTypes : WordType[],
     allWords : Word[],
     wordSelected : WordSelected;
+}
+
+const ICONS : {[key:string]:React.ReactElement} = { 
+    "__BACKSPACE__" : <ArrowBackIcon/>
 }
 
 const Controls = ({ words, wordSelected } : ControlProps) => {
@@ -31,7 +36,6 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
     useEffect(() => {
         setTabIndex(0);
     }, [words]);
-
     return (
         <Container>
             <Tabs index={tabIndex} onChange={handleTabsChange}>
@@ -41,30 +45,31 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
                 </TabList>
                 <TabPanels>
                     <TabPanel>
-                        <WordButtons wordType="word" allWords={words} wordSelected={wordSelected} />
+                        <WordButtons wordTypes={["word","control"]} allWords={words} wordSelected={wordSelected} />
                     </TabPanel>
                     <TabPanel>
-                        <WordButtons wordType="command" allWords={words} wordSelected={wordSelected} />
+                        <WordButtons wordTypes={["option"]} allWords={words} wordSelected={wordSelected} />
                     </TabPanel>
                 </TabPanels>
             </Tabs>
         </Container>)
     };
 
-const WordButtons = ({ wordType, allWords, wordSelected } : WordButtonsProps) => {
-    const words = allWords.filter(word => word.type === wordType);
+const WordButtons = ({ wordTypes, allWords, wordSelected } : WordButtonsProps) => {
+    const words = allWords.filter(word => wordTypes.includes(word.type));
     return (<SimpleGrid columns={4}>
                 {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
             </SimpleGrid>)
 }
-    
 
-
-
-const WordButton = ({ word, wordSelected } : WordProps) => (
-        <Button variant="ghost"
+const WordButton = ({ word, wordSelected } : WordProps) => 
+        (word.type === "control" && ICONS[word.id])
+            ? (<IconButton variant="ghost" 
+                           aria-label="backspace"
+                           onClick={(event) => wordSelected(event,word)}
+                           icon={ICONS[word.id]}/>)
+            : (<Button variant="ghost"
                 value={word.id} 
-                onClick={(event) => wordSelected(event, word)}>{word.value}</Button>
-)
+                onClick={(event) => wordSelected(event, word)}>{word.value}</Button>)
 
 export default Controls;
