@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid, IconButton, ComponentWithAs, IconProps } from "@chakra-ui/react";
+import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid, IconButton } from "@chakra-ui/react";
 import { ArrowBackIcon } from "@chakra-ui/icons";
 import { Word } from "tift-engine/src/messages/output";
 import { WordType } from "tift-engine/out/src/messages/output";

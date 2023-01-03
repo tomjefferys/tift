@@ -1,19 +1,36 @@
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
-import { getEngine, Input, createEngineProxy, createCommandFilter, createControlFilter } from "tift-engine"
+import { getEngine, Input, createEngineProxy, createCommandFilter } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
 import { OutputConsumer, OutputMessage, Word } from "tift-engine/src/messages/output";
 import { MessageForwarder } from "tift-engine/src/engineproxy";
 import Output from "./components/Output"
 import Controls from './components/Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from './outputentry';
-import { Box, ChakraProvider, Divider } from '@chakra-ui/react'
+import { Box, ChakraProvider, Divider, StyleFunctionProps } from '@chakra-ui/react'
 import Div100vh from 'react-div-100vh';
+import { extendTheme } from "@chakra-ui/react";
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
 const AUTO_SAVE = "TIFT_AUTO_SAVE";
 
 const BACKSPACE : Word = { type : "control", id : "__BACKSPACE__", value : "BACKSPACE" };
+
+const theme = extendTheme({
+  components: {
+    Button: {
+      variants: {
+        ghost: (props: StyleFunctionProps) => ({
+          "@media(hover: none)": {
+            _hover: {
+              bg: "white",
+            },
+          },
+        }),
+      },
+    },
+  },
+})
 
 function App() {
   const [command, setCommand] = useState<Word[]>([]);
@@ -111,14 +128,13 @@ function App() {
   }
 
   return (
-    <ChakraProvider>
+    <ChakraProvider theme={theme}>
       <Div100vh>
         <Box position={"relative"} height="69%">
           <Output entries={messagesRef.current ?? []} status={status} command={command.map(word => word.value).join(" ")}/>
         </Box>
         <Divider/>
         <Box position={"relative"} height="30%">
-          {/*<Controls words={words ?? []} wordSelected={(event,word) => setCommand([...command, word])}/>*/}
           <Controls words={words ?? []} wordSelected={wordSelected}/>
         </Box>
       </Div100vh>
