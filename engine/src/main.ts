@@ -1,26 +1,57 @@
 import { BasicEngine, Engine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage, Word } from "./messages/output";
+import { LogLevel, OutputConsumer, OutputMessage, Word, WordType } from "./messages/output";
 import { InputMessage } from "./messages/input"
 import { BiConsumer, Consumer } from "./util/functions";
 import * as EngineProxy from "./engineproxy";
 import { Filters } from "./util/duplexproxy";
+import * as StateMachine from "./util/statemachine";
 
+type StateMachine = StateMachine.StateMachine<InputMessage, EngineProxy.DecoratedForwarder>;
+type StateName = StateMachine.StateName;
+type State = StateMachine.State<InputMessage, EngineProxy.DecoratedForwarder>;
 
+/**
+ * Main method for getting an engine
+ * @param outputConsumer a function to consume messages produced by the engine
+ * @returns a new TIFT engine
+ */
 export function getEngine(outputConsumer : OutputConsumer) : Engine {
   return new BasicEngine(outputConsumer);
 }
 
+
+/**
+ * Creates a proxied engine
+ * Proxy's allow filters and other functionality to be placed between the engine and the client, eg to handle restarts and colour scheme changes
+ * @param engineBuilder a function that creates an engine, when passed an OutputConsumer
+ * @returns 
+ */
 export function createEngineProxy(engineBuilder : (outputConsumer : OutputConsumer) => Engine) {
   return EngineProxy.createEngineProxy(engineBuilder);
 }
 
 export function createCommandFilter(name : string, action : Consumer<EngineProxy.MessageForwarder>) : Filters<InputMessage, OutputMessage> {
-
   return EngineProxy.createWordFilter("option", name, action);
 }
 
 export function createControlFilter(name : string, action : Consumer<void>) : Filters<InputMessage, OutputMessage> {
   return EngineProxy.createWordFilter("control", name, _forwarder => action());
+}
+
+export function createStateMachineFilter(name : string, machine : StateMachine) {
+  return EngineProxy.createStateMachineFilter("option", name, machine);
+}
+
+export function buildStateMachine(initialState : StateName, ...states : [StateName, State][]) : StateMachine {
+  return StateMachine.buildStateMachine<InputMessage, EngineProxy.DecoratedForwarder>(initialState, ...states);
+}
+
+export function handleInput(message : InputMessage) : EngineProxy.InputHandler {
+  return new EngineProxy.InputHandler(message);
+}
+
+export function word(id : string, value : string, type : WordType) : Word {
+  return { id, value, type }
 }
 
 export namespace Input {

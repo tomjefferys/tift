@@ -1,14 +1,15 @@
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
-import { getEngine, Input, createEngineProxy, createCommandFilter } from "tift-engine"
+import { getEngine, Input, createEngineProxy, word, createStateMachineFilter, buildStateMachine, handleInput } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
 import { OutputConsumer, OutputMessage, Word } from "tift-engine/src/messages/output";
-import { MessageForwarder } from "tift-engine/src/engineproxy";
+import { MessageForwarder, DecoratedForwarder } from "tift-engine/src/engineproxy";
 import Output from "./components/Output"
 import Controls from './components/Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from './outputentry';
 import { Box, ChakraProvider, Divider, StyleFunctionProps } from '@chakra-ui/react'
 import Div100vh from 'react-div-100vh';
 import { extendTheme } from "@chakra-ui/react";
+import { InputMessage } from 'tift-engine/src/messages/input';
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
@@ -80,8 +81,11 @@ function App() {
       (level, message) => messagesRef.current?.push(logEntry(level, message)),
       saveGame
     );
+
+    const restartMachine = createRestarter(forwarder => loadGame(GAME_FILE, forwarder, null))
+
     const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
-                      .insertProxy("restartFilter", createCommandFilter("restart", forwarder => loadGame(GAME_FILE, forwarder, null)));
+                      .insertProxy("restartFilter", createStateMachineFilter("restart", restartMachine));
     engine.setResponseListener(outputConsumer);
 
     engineRef.current = engine;
@@ -168,6 +172,34 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         throw new Error("Unsupported OutputMessage Type: " + outputMessage.type);
     }
   }
+}
+
+function createRestarter(restartFn : (forwarder : DecoratedForwarder) => void) {
+    const restartOptions = ["restart", "cancel"].map(value => word(value, value, "option"));
+
+    return buildStateMachine("prompt", ["prompt", {
+        onEnter : (forwarder : DecoratedForwarder) => {
+            forwarder.print("All progress will be lost. Are you sure?");
+            forwarder.words([], restartOptions);
+        },
+        onAction : (input : InputMessage, forwarder : DecoratedForwarder) => {
+            let finished = false;
+            handleInput(input)
+                .onCommand(["restart"], () => {
+                    forwarder.print("restarting");
+                    restartFn(forwarder);
+                    finished = true;
+                })
+                .onCommand(["cancel"], () => {
+                    forwarder.print("cancelled");
+                    finished = true;
+                })
+                .onAnyCommand(command => forwarder.warn("Unexpected command: " + command.join(" ")))
+                .onGetWords(() => forwarder.words([], restartOptions))
+                .onAny(message => forwarder.send(message));
+            return finished ? "__TERMINATE__" : undefined;
+        }
+    }]);
 }
 
 export default App;

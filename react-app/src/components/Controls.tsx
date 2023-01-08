@@ -22,9 +22,18 @@ interface WordButtonsProps {
     wordSelected : WordSelected;
 }
 
+interface PanelDefinition {
+    name : string;
+    wordTypes : WordType[];
+}
+
 const ICONS : {[key:string]:React.ReactElement} = { 
     "__BACKSPACE__" : <ArrowBackIcon/>
 }
+
+const PANELS : PanelDefinition[] = 
+                [{name : "Game",   wordTypes : ["word", "control"]}, 
+                 {name : "Options", wordTypes : ["option"]}];
 
 const Controls = ({ words, wordSelected } : ControlProps) => {
 
@@ -32,31 +41,30 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
 
     const handleTabsChange = (index : number) => setTabIndex(index);
 
-    // Reset the tabs, if the words change
+    // Reset the tabs if the words change
     useEffect(() => {
-        setTabIndex(0);
+        const wordCounts = PANELS.map(panel => filterWords(words, panel.wordTypes).length)
+        const firstPanelWithContent = wordCounts.findIndex(count => count > 0);
+        if (firstPanelWithContent >= 0) {
+            setTabIndex(firstPanelWithContent);
+        }
     }, [words]);
+
     return (
         <Container>
             <Tabs index={tabIndex} onChange={handleTabsChange}>
-                <TabList>
-                    <Tab>Game</Tab>
-                    <Tab>Options</Tab>
-                </TabList>
-                <TabPanels>
+                <TabList>{PANELS.map(panel => (<Tab>{panel.name}</Tab>))}</TabList>
+                <TabPanels>{PANELS.map(panel => (
                     <TabPanel>
-                        <WordButtons wordTypes={["word","control"]} allWords={words} wordSelected={wordSelected} />
-                    </TabPanel>
-                    <TabPanel>
-                        <WordButtons wordTypes={["option"]} allWords={words} wordSelected={wordSelected} />
-                    </TabPanel>
+                        <WordButtons wordTypes={panel.wordTypes} allWords={words} wordSelected={wordSelected} />
+                    </TabPanel>))}
                 </TabPanels>
             </Tabs>
         </Container>)
     };
 
 const WordButtons = ({ wordTypes, allWords, wordSelected } : WordButtonsProps) => {
-    const words = allWords.filter(word => wordTypes.includes(word.type));
+    const words = filterWords(allWords, wordTypes);
     return (<SimpleGrid columns={4}>
                 {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
             </SimpleGrid>)
@@ -71,5 +79,7 @@ const WordButton = ({ word, wordSelected } : WordProps) =>
             : (<Button variant="ghost"
                 value={word.id} 
                 onClick={(event) => wordSelected(event, word)}>{word.value}</Button>)
+
+const filterWords = (words : Word[], types : WordType[]) => words.filter(word => types.includes(word.type));
 
 export default Controls;
