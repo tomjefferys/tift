@@ -1,5 +1,5 @@
 import Tift from './components/Tift';
-import { ChakraProvider, StyleFunctionProps} from '@chakra-ui/react'
+import { ChakraProvider } from '@chakra-ui/react'
 import Div100vh from 'react-div-100vh';
 import { extendTheme, theme as defaultTheme } from "@chakra-ui/react";
 

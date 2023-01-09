@@ -20,7 +20,7 @@ function Tift() {
     const [command, setCommand] = useState<Word[]>([]);
     const [words, setWords] = useState<Word[]>([]);
     const [status, setStatus] = useState<string>("");
-    const { colorMode, toggleColorMode, setColorMode } = useColorMode();
+    const { setColorMode } = useColorMode();
   
     // Store messages as a ref, as the can be updated multiple times between renders
     // and using a state makes it tricky to get the most up to date values
