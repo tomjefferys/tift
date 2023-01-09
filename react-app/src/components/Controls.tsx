@@ -53,9 +53,9 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
     return (
         <Container>
             <Tabs index={tabIndex} onChange={handleTabsChange}>
-                <TabList>{PANELS.map(panel => (<Tab>{panel.name}</Tab>))}</TabList>
+                <TabList>{PANELS.map(panel => (<Tab key={panel.name}>{panel.name}</Tab>))}</TabList>
                 <TabPanels>{PANELS.map(panel => (
-                    <TabPanel>
+                    <TabPanel key={panel.name}>
                         <WordButtons wordTypes={panel.wordTypes} allWords={words} wordSelected={wordSelected} />
                     </TabPanel>))}
                 </TabPanels>
@@ -70,15 +70,26 @@ const WordButtons = ({ wordTypes, allWords, wordSelected } : WordButtonsProps) =
             </SimpleGrid>)
 }
 
+// Disable button hover effect on touchscreens
+const touchScreenNoHover = {
+ "@media(hover: none)": {
+    _hover: { 
+        bg: "hoverbg"
+    }
+  }, 
+}
+
 const WordButton = ({ word, wordSelected } : WordProps) => 
         (word.type === "control" && ICONS[word.id])
             ? (<IconButton variant="ghost" 
                            aria-label="backspace"
                            onClick={(event) => wordSelected(event,word)}
-                           icon={ICONS[word.id]}/>)
+                           icon={ICONS[word.id]}
+                           sx={touchScreenNoHover}/>)
             : (<Button variant="ghost"
                 value={word.id} 
-                onClick={(event) => wordSelected(event, word)}>{word.value}</Button>)
+                onClick={(event) => wordSelected(event, word)}
+                sx={touchScreenNoHover}>{word.value}</Button>)
 
 const filterWords = (words : Word[], types : WordType[]) => words.filter(word => types.includes(word.type));
 

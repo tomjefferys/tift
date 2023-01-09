@@ -6,6 +6,7 @@ import { DuplexProxy, Filters, Forwarder } from "./util/duplexproxy";
 import * as _ from "lodash";
 import { Engine } from "./engine";
 import { StateMachine } from "./util/statemachine";
+import { Optional } from "./util/optional";
 
 type OutputMessage = Output.OutputMessage;
 
@@ -136,19 +137,50 @@ export function createWordFilter(type : WordType, name : string, action : Consum
     }
 }
 
-export function createStateMachineFilter(type : WordType, name : string, machine : StateMachine<InputMessage,DecoratedForwarder> ) : Filters<InputMessage, OutputMessage> {
-    const commandId = "__" + type + "(" + name + ")__";
+export type MachineInfo = [string, StateMachine<InputMessage,DecoratedForwarder>]
+export type MachineMap = {[key:string]:StateMachine<InputMessage,DecoratedForwarder>};
+
+
+/**
+ * Create filter that can execute one or more state machines, depending on which is currently active,
+ * and will pass through all requests is none are active
+ **/
+export function createStateMachineFilter(...machines : MachineInfo[] ) : Filters<InputMessage, OutputMessage> {
+
+    const makeId = (str : string) => "__option(" + str + ")__";
+
+    const machineMap = machines.reduce((accumulator, [name, machine]) => ({ ...accumulator, [makeId(name)] : machine}), {} as MachineMap);
+
+    const commands = machines.map(([name, _machine]) => Output.word("__option(" + name + ")__", name, "option"));
+
+    let activeMachine : Optional<StateMachine<InputMessage,DecoratedForwarder>> = undefined;
 
     return {
         requestFilter : (message, forwarder) => {
             const decoratedFormatter = new DecoratedForwarder(forwarder);
-            if (machine.getStatus() === "RUNNING") {
-                machine.send(message, decoratedFormatter);
-            } else if (message.type === "Execute" && _.last(message.command) === commandId) {
-                machine.start(decoratedFormatter);
-            } else if (message.type === "GetWords" && _.last(message.command) === commandId) {
-                forwarder.respond(Output.words(message.command, []));
-            } else {
+            let handled = false;
+            if (activeMachine?.getStatus() === "RUNNING") {
+                activeMachine.send(message, decoratedFormatter);
+                handled = true;
+            } else if (message.type === "Execute") {
+                const command = commands.find(value => value.id === _.last(message.command));
+                if (command) {
+                    activeMachine = machineMap[command.id];
+                    if (activeMachine) {
+                        activeMachine.start(decoratedFormatter);
+                        handled = true;
+                    } else {
+                        throw new Error("No state machine found with id: " + command.id);
+                    }
+                }
+            } else if (message.type === "GetWords") {
+                const command = commands.find(value => value.id === _.last(message.command));
+                if (command) {
+                    forwarder.respond(Output.words(message.command, []));
+                    handled = true;
+                }
+            } 
+            if (!handled) {
                 forwarder.send(message);
             }
         },
@@ -156,7 +188,7 @@ export function createStateMachineFilter(type : WordType, name : string, machine
         responseFilter : (message, forwarder) => {
             const outputConsumer = new OutputConsumerBuilder()
                                             .withWordsConsumer((command, words) => {
-                                                const allWords = [...words, Output.word(commandId, name, type)];
+                                                const allWords = [...words, ...commands];
                                                 forwarder.respond(Output.words(command, allWords));
                                             })
                                             .withDefaultConsumer(message => forwarder.respond(message))
@@ -164,8 +196,5 @@ export function createStateMachineFilter(type : WordType, name : string, machine
             outputConsumer(message);
         }
     }
-
 }
-
-
 

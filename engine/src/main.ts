@@ -38,8 +38,8 @@ export function createControlFilter(name : string, action : Consumer<void>) : Fi
   return EngineProxy.createWordFilter("control", name, _forwarder => action());
 }
 
-export function createStateMachineFilter(name : string, machine : StateMachine) {
-  return EngineProxy.createStateMachineFilter("option", name, machine);
+export function createStateMachineFilter(...machines : EngineProxy.MachineInfo[]) {
+  return EngineProxy.createStateMachineFilter(...machines);
 }
 
 export function buildStateMachine(initialState : StateName, ...states : [StateName, State][]) : StateMachine {

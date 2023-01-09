@@ -196,7 +196,7 @@ test("test restart using state machine proxy", () => {
     }]);
 
     // Create the restart filter
-    const restartFilter = createStateMachineFilter("option", "restart", machine);
+    const restartFilter = createStateMachineFilter(["restart", machine]);
 
     // Create the engine, and bind the restart proxy
     const engineProxy = createEngineProxy(output => getEngine(output))
