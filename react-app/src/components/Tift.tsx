@@ -13,6 +13,9 @@ import { InputMessage } from 'tift-engine/src/messages/input';
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
 const AUTO_SAVE = "TIFT_AUTO_SAVE";
+const MESSAGES = "TIFT_MESSAGES";
+
+const SCROLL_BACK_ITEMS = 200;
 
 const BACKSPACE : Word = { type : "control", id : "__BACKSPACE__", value : "BACKSPACE" };
 
@@ -60,13 +63,25 @@ function Tift() {
       const saveGame = (saveData : string) => {
         window.localStorage.setItem(AUTO_SAVE, saveData);
       }
+
+      const updateMessages = (messages : OutputEntry[], newMessage : OutputEntry) => {
+        messages.push(newMessage);
+        const deleteCount = messages.length - SCROLL_BACK_ITEMS;
+        if (deleteCount > 0) {
+            messages.splice(0, deleteCount);
+        }
+        window.localStorage.setItem(MESSAGES, JSON.stringify(messages));
+      }
   
-      messagesRef.current = [];
+      // Load messages
+      const savedMessages = window.localStorage.getItem(MESSAGES);
+      messagesRef.current = savedMessages? JSON.parse(savedMessages) : [];
+
       const outputConsumer = getOutputConsumer(
-        message => messagesRef.current?.push(messageEntry(message)),
+        message => updateMessages(messagesRef.current, messageEntry(message)), 
         words => setWords(words),
         status => setStatus(status),
-        (level, message) => messagesRef.current?.push(logEntry(level, message)),
+        (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
         saveGame
       );
   
