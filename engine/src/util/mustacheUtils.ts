@@ -6,7 +6,17 @@ import * as Mustache from "mustache"
 
 export function formatEntityString(env : Env, entity : Obj, entityField : string) {
     const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
-    const entityEnv = entitiesEnv.newChild(entity);
+
+    const specialFunctions = {
+        "choose" : () => (text : string, render : (str : string) => void) => {
+           const choice = _.sample(text.split("||"));
+           return choice? render(choice) : "";
+        }
+    };
+
+    const specialsEnv = entitiesEnv.newChild(specialFunctions);
+
+    const entityEnv = specialsEnv.newChild(entity);
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const handler = {

@@ -65,3 +65,14 @@ test("Test formatEntityString when looking with different entity", () => {
     engine.send(Input.execute(["look"]));
     expect(messages.join(" ").trim()).toEqual("An almost empty room except for a flickering light from here you can see Another Room");
 });
+
+test("Test choose", () => {
+    const env = createRootEnv({ "entities" : { "foo" : "bar", "baz" : "qux"}}, [["entities"]]);
+    const entity = {
+        "foo" : "corge",
+        "desc" : "{{#choose}}{{foo}}||{{baz}}{{/choose}}"
+    };
+
+    const result = formatEntityString(env, entity, "desc");
+    expect(["corge","qux"]).toContain(result);
+});
