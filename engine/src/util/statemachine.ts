@@ -4,8 +4,13 @@ export type StateName = string;
 
 export const TERMINATE : StateName = "__TERMINATE__";
 
-type StateFn<T> = (obj : T) => void;
-type InputFn<M,T> = (input : M, obj : T) => StateName | undefined;
+export interface MachineOps {
+    setState(state : StateName) : void;
+    setStatus(status : Status) : void;
+}
+
+type StateFn<T> = (obj : T, machine : MachineOps) => void;
+type InputFn<M,T> = (input : M, obj : T) => Optional<StateName>;
 
 /** 
  * A state for a state machine
@@ -61,25 +66,27 @@ export function buildStateMachine<TIn,TObj>(initialState : StateName, ...states 
         if (currentState) {
             const state = getState(currentState);
             if (state.onLeave) {
-                state.onLeave(obj);
+                state.onLeave(obj, machine);
             }
         }
+        let nextState = undefined;
         if (target) {
+            nextState = target;
             const state = getState(target);
             if (state.onEnter) {
-                state.onEnter(obj);
+                state.onEnter(obj, machine);
             }
         }
-        currentState = target;
+        currentState = nextState;
     }
 
-    return {
+    const machine = {
         start : (obj : TObj) => {
             if (status === "RUNNING") {
                 throw new Error("State machine is already running");
             }
-            switchStates(initialState, obj);
             status = "RUNNING";
+            switchStates(initialState, obj);
         },
         send : (input : TIn, obj : TObj) => {
             if (status !== "RUNNING") {
@@ -97,9 +104,16 @@ export function buildStateMachine<TIn,TObj>(initialState : StateName, ...states 
                 switchStates(nextState, obj);
             }
         },
-        getStatus : () => status
+        getStatus : () => status,
+        setState : (newState : StateName) => {
+            currentState = newState;
+        },
+        setStatus : (newStatus : Status) => {
+            status = newStatus;
+        }
     }
 
+    return machine;
 }
 
 

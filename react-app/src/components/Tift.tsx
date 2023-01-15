@@ -4,6 +4,7 @@ import { getEngine, Input, createEngineProxy, word, createStateMachineFilter, bu
 import { Engine } from "tift-engine/src/engine";
 import { OutputConsumer, OutputMessage, Word } from "tift-engine/src/messages/output";
 import { MessageForwarder, DecoratedForwarder } from "tift-engine/src/engineproxy";
+import { MachineOps } from "tift-engine/src/util/statemachine";
 import Output from "./Output"
 import Controls from './Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from '../outputentry';
@@ -64,13 +65,17 @@ function Tift() {
         window.localStorage.setItem(AUTO_SAVE, saveData);
       }
 
+      const saveMessages = (messages : OutputEntry[]) => {
+        window.localStorage.setItem(MESSAGES, JSON.stringify(messages));
+      }
+
       const updateMessages = (messages : OutputEntry[], newMessage : OutputEntry) => {
         messages.push(newMessage);
         const deleteCount = messages.length - SCROLL_BACK_ITEMS;
         if (deleteCount > 0) {
             messages.splice(0, deleteCount);
         }
-        window.localStorage.setItem(MESSAGES, JSON.stringify(messages));
+        saveMessages(messages);
       }
   
       // Load messages
@@ -87,11 +92,16 @@ function Tift() {
   
       const restartMachine = createRestarter(forwarder => loadGame(GAME_FILE, forwarder, null));
       const colourSchemePicker = createColourSchemePicker(value => changeColourMode(value));
+      const logClearer = createSimpleOption( "clear", () => {
+        messagesRef.current = [];
+        saveMessages([]);
+      });
   
       const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
                         .insertProxy("optionItems", createStateMachineFilter(
                                                     ["restart", restartMachine],
-                                                    ["colours", colourSchemePicker]));
+                                                    ["colours", colourSchemePicker],
+                                                    ["clear", logClearer]));
       engine.setResponseListener(outputConsumer);
   
       engineRef.current = engine;
@@ -233,6 +243,19 @@ function createColourSchemePicker(schemeChanger : (scheme : string) => void) {
                 .onGetWords(() => forwarder.words([], colourSchemes))
                 .onAny(message => forwarder.send(message));
             return finished ? "__TERMINATE__" : undefined;
+        }
+    }]);
+}
+
+function createSimpleOption(name : string, clearFn : (forewarder : DecoratedForwarder) => void) {
+    return buildStateMachine(name, [name, {
+        onEnter : (forwarder : DecoratedForwarder, machine : MachineOps) => {
+            clearFn(forwarder);
+            machine.setStatus("FINISHED");
+        },
+        onAction : (input : InputMessage, forwarder : DecoratedForwarder) => {
+            forwarder.send(input);
+            return undefined;
         }
     }]);
 }
