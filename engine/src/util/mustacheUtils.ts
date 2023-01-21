@@ -11,6 +11,9 @@ export function formatEntityString(env : Env, entity : Obj, entityField : string
         "choose" : () => (text : string, render : (str : string) => void) => {
            const choice = _.sample(text.split("||"));
            return choice? render(choice) : "";
+        },
+        "sometimes" : () => (text : string, render : (str : string) => void) => {
+            return (_.random(0,1,true) < 0.5)? render(text) : "";
         }
     };
 
