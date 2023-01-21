@@ -340,6 +340,37 @@ test("Test open door", () => {
     executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
 });
 
+test('Test ask verb', () => {
+    builder.withObj({...THE_ROOM})
+           .withObj({
+            id : "barkeep",
+            type : "item",
+            name : "the barkeep",
+            location : "theRoom",
+            verbs : ["ask"]
+           })
+           .withObj({
+            id : "ask",
+            type : "verb",
+            tags : ["transitive"],
+            attributes : ["about"]
+           })
+           .withObj({
+            id : "beerThought",
+            type : "item",
+            location : "theRoom",
+            verbs : ["ask.about"],
+            before : ["ask(barkeep).about(this) => 'I recomend the porter'"]
+           });
+    engine = builder.build();
+    engine.send(Input.start());
+    expectWords([], ["go", "look", "wait", "ask"]);
+    expectWords(["ask"], ["barkeep"]);
+    expectWords(["ask", "barkeep"], ["about"]);
+    expectWords(["ask", "barkeep", "about"], ["beerThought"]);
+    executeAndTest(["ask", "barkeep", "about", "beerThought"], {expected : ["I recomend the porter"]});
+});
+
 test("Test setting 'this' in match action", () => {
     builder.withObj(THE_ROOM)
            .withObj({
@@ -504,6 +535,35 @@ test("Test command deduplication", () => {
     engine.send(Input.start());
     expectWords([], ["go", "look", "wait", "get"]);
 })
+
+test("Test contextual rules", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        myvar : "foo",
+        rules : ["print(this.myvar)"],
+        exits : {
+            south : "southRoom"
+        },
+    })
+    builder.withObj({
+        ...SOUTH_ROOM,
+        name : "The South Room",
+        desc : "The room is light and round",
+        myvar : "bar",
+        rules : ["this.myvar"],
+        exits : {
+            north : "northRoom"
+        }
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar"]});
+    executeAndTest(["go", "south"], { expected : ["bar"], notExpected : ["foo"]})
+    executeAndTest(["wait"], { expected : ["bar"], notExpected : ["foo"]})
+    executeAndTest(["go", "north"], { expected : ["foo"], notExpected : ["bar"]})
+});
 
 interface ExpectedStrings {
     expected? : string[],

@@ -113,6 +113,7 @@ export function makeItem(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj);
     addActions(builder, obj);
+    addRules(builder, obj);
     const tags = obj?.tags ?? [];
     if (tags.includes("carryable")) {
         builder.withVerb("get");
@@ -128,6 +129,7 @@ export function makeRoom(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj);
     addActions(builder, obj);
+    addRules(builder, obj);
     builder.withVerb("go");
     for(const [dir, dest] of Object.entries(obj["exits"] ?? {})) {
         if (typeof dest !== "string") {
@@ -149,6 +151,24 @@ export function makeRule(obj : Obj) : Obj {
     const compiled = expressions.map((expr, index) => parse(expr, obj["id"] + ".run[" + index + "]"));
     obj["__COMPILED__"] = compiled;
     return obj;
+}
+
+/**
+ * Compiles any rules attached to an object, or room.
+ * These are executed every turn whilst the object is
+ * in context
+ * @param obj 
+ */
+function addRules(builder : EntityBuilder, obj : Obj) {
+    const rules = obj["rules"];
+    if (rules) {
+        if (_.isArray(rules)) {
+            rules.map((expr, index) => parse(expr, obj["id"] + "rules[" + index + "]"))
+                 .forEach(rule => builder.withRule(rule));
+        } else {
+            throw new Error(obj.id + ".rules must be an array");
+        }
+    }
 }
 
 function addActions(builder : ActionerBuilder, obj : Obj) {

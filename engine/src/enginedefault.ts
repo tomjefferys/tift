@@ -171,6 +171,10 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     getEntity : env => getEntity(env, env.getStr("id")),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
     writeMessage : env => getOutput(env)(env.get("message")),
+    print : bindParams(["value"], env => {
+        DEFAULT_FUNCTIONS.write(env);
+        return mkResult(null);
+    }),
     openExit : bindParams(["room", "direction", "target"], 
                         env => {
                             addExit(env, env.getStr("room"), env.getStr("direction"), env.get("target"));

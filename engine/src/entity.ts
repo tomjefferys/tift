@@ -3,6 +3,9 @@ import { Obj, getString, getArray } from "./util/objects";
 import { Nameable } from "./nameable";
 import { ActionSource } from "./actionsource";
 import { AfterAction, MainAction, BeforeAction } from "./script/phaseaction";
+import { Env } from "./env";
+
+export type RuleFn = (env : Env) => unknown;
 
 enum PROPS {
   ID = "id",
@@ -13,7 +16,8 @@ enum PROPS {
 export interface Entity extends Nameable, ActionSource {
   id : string,
   verbs : VerbMatcher[],
-  verbModifiers : MultiDict<string>
+  verbModifiers : MultiDict<string>,
+  rules : RuleFn[],
   [props : string]: unknown
 }
 
@@ -50,6 +54,7 @@ export class EntityBuilder {
   before : BeforeAction[] = [];
   actions : MainAction[] = [];
   after : AfterAction[] = [];
+  rules : RuleFn[] = [];
   
   constructor(props : Obj) {
     if (!props) {
@@ -105,6 +110,10 @@ export class EntityBuilder {
     }
     getArray(this.props[PROPS.TAGS]).push(tag);
   }
+  
+  withRule(rule : RuleFn) {
+    this.rules.push(rule);
+  }
 
   build() : Entity {
     return {...this.props,
@@ -113,7 +122,8 @@ export class EntityBuilder {
             verbModifiers : this.verbModifiers,
             before : this.before,
             actions : this.actions,
-            after : this.after };
+            after : this.after,
+            rules : this.rules };
   }
 }
 

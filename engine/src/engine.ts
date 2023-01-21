@@ -1,5 +1,5 @@
 import { isInstant, Verb } from "./verb"
-import { Entity, hasTag } from "./entity"
+import { Entity, hasTag, RuleFn } from "./entity"
 import { createRootEnv, Env } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity, isEntity } from "./enginedefault";
@@ -256,7 +256,12 @@ export class BasicEngine implements Engine {
     const postExecutionContext = this.createPluginActionContext(oldContext, this.context);
     this.postExecutionActions.forEach(action => action(postExecutionContext));
 
-    // Find and execute any rules
+    // Run any contextual rules
+    const allEntities = _.flatten(Object.values(this.context.entities))
+    const allRules = allEntities.flatMap(entity => entity.rules.map(rule => [entity, rule] as [Entity,RuleFn]));
+    allRules.forEach(([entity,rule]) => executeContextualRule(entity, rule, this.env));
+
+    // Find and execute any  global rules
     if (verb && !isInstant(verb)) {
       const rules = this.env.findObjs(obj => obj["type"] === "rule");
       const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
@@ -358,6 +363,15 @@ function executeBestMatchAction(actions : PhaseAction[], env : Env, command : Se
     }
   }
   return handled;
+}
+
+function executeContextualRule(entity : Entity, rule : RuleFn, env : Env) {
+  const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
+  const ruleEnv = env.newChild(entitiesEnv).newChild({"this" : entity});
+  const result = rule(ruleEnv);
+  if(result && _.isString(result)) {
+    env.execute("write", {"value":result});
+  }
 }
 
 function findStartingLocation(env : Env) : string {
