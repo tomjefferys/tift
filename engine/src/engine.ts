@@ -367,7 +367,7 @@ function executeBestMatchAction(actions : PhaseAction[], env : Env, command : Se
 
 function executeContextualRule(entity : Entity, rule : RuleFn, env : Env) {
   const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
-  const ruleEnv = env.newChild(entitiesEnv).newChild({"this" : entity});
+  const ruleEnv = entitiesEnv.newChild({"this" : entity});
   const result = rule(ruleEnv);
   if(result && _.isString(result)) {
     env.execute("write", {"value":result});

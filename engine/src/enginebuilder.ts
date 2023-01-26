@@ -9,6 +9,7 @@ import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";
 import { phaseActionBuilder } from "./script/phaseaction";
+import * as RuleBuilder from "./rulebuilder";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -158,18 +159,19 @@ export function makeRule(obj : Obj) : Obj {
  * These are executed every turn whilst the object is
  * in context
  * @param obj 
+ * 
+ * could be ["rule1", "rule2v"]
+ * or [{"repeat" : ["rule1", "rule2"]}, "rule3"]
+ * or [{"random" : ["rule1", "rule2"]}]
+ * or [{"repeat" : { "random" : "rule1", "rule2"}}]
  */
 function addRules(builder : EntityBuilder, obj : Obj) {
     const rules = obj["rules"];
     if (rules) {
-        if (_.isArray(rules)) {
-            rules.map((expr, index) => parse(expr, obj["id"] + "rules[" + index + "]"))
-                 .forEach(rule => builder.withRule(rule));
-        } else {
-            throw new Error(obj.id + ".rules must be an array");
-        }
+        builder.withRule(RuleBuilder.parseRule(rules, obj["id"] + ".rules"));
     }
 }
+
 
 function addActions(builder : ActionerBuilder, obj : Obj) {
     getActionStrings(obj, "before")

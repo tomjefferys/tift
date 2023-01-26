@@ -565,6 +565,42 @@ test("Test contextual rules", () => {
     executeAndTest(["go", "north"], { expected : ["foo"], notExpected : ["bar"]})
 });
 
+test("Test repeat rule", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        myvar : "foo",
+        rules : { "repeat" : ["'foo'", "'bar'", "'baz'"] } 
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz"]})
+    executeAndTest(["wait"], { expected : ["bar"], notExpected : ["foo", "baz"]})
+    executeAndTest(["wait"], { expected : ["baz"], notExpected : ["foo", "bar"]})
+    executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz"]})
+});
+
+test("Test nested repeat rule", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        myvar : "foo",
+        rules : { "repeat" : ["'foo'", { "repeat" : ["'bar'", "'baz'"] } , "'qux'"] } 
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz", "qux"]})
+    executeAndTest(["wait"], { expected : ["bar"], notExpected : ["foo", "baz", "qux"]})
+    executeAndTest(["wait"], { expected : ["qux"], notExpected : ["foo", "bar", "baz"]})
+    executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz", "qux"]})
+    executeAndTest(["wait"], { expected : ["baz"], notExpected : ["foo", "bar", "qux"]})
+    executeAndTest(["wait"], { expected : ["qux"], notExpected : ["foo", "bar", "baz"]})
+    executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz", "qux"]})
+})
+
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]
