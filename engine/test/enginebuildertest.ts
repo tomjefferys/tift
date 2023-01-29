@@ -207,7 +207,7 @@ test("Build entity - action error", () => {
         fail()
       } catch(e) {
         const error = e as Error;
-        expect(error.message).toContain("soup.before[0]");
+        expect(error.message).toContain("soup.before");
         expect(error.message).toContain("stir(this) => do('stirred'");
       }
 });

@@ -242,6 +242,35 @@ test("Test before and after actions", () => {
     executeAndTest(["look"], { expected : ["hot rock"], notExpected : ["cool rock"]});
 });
 
+test("Test before and after actions specified as object properties", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "hotRock",
+        name : "hot rock",
+        type : "item",
+        location : "theRoom",
+        before : { "get(this)" : "'Ouch!'" },
+        after : { "get(this)" : "'Bingo!'"},
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "coolRock",
+        name : "cool rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "'Bingo!'" },
+        tags : ["carryable"]
+    });
+
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
+    executeAndTest(["get", "hotRock"], { expected : ["Ouch!"], notExpected : ["Bingo!"]});
+    executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
+    executeAndTest(["get", "coolRock"], { expected : ["Bingo!"], notExpected : ["Ouch!"]});
+    executeAndTest(["look"], { expected : ["hot rock"], notExpected : ["cool rock"]});
+});
+
 test("Test before precedence", () => {
     builder.withObj({
         ...THE_ROOM,

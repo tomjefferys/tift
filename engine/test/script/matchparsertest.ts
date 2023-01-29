@@ -1,6 +1,6 @@
 import jsep from 'jsep'
 import { setUpEnv } from "../testutils/testutils"
-import { evalutateMatchExpression } from "../../src/script/matchParser"
+import { evaluateMatchExpression } from "../../src/script/matchParser"
 import { evaluate } from "../../src/script/parser"
 import { EAT, LOOK, APPLE, STIR, SOUP, SPOON, GO, PUSH, BOX } from "../testutils/testentities"
 import { Env } from '../../src/env'
@@ -103,7 +103,7 @@ test("Test transitive verb without modifier, modifier supplied", () => {
 
 function doMatch(command : Command, match : string, onMatch = DEFALT_ONMATCH) {
     const expression = jsep(match);
-    const matcher = evalutateMatchExpression(expression);
+    const matcher = evaluateMatchExpression(expression);
     const onMatchThunk = evaluate(jsep(onMatch));
     const result = matcher(command, "")
     if (result.isMatch) {

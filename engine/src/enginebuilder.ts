@@ -8,8 +8,9 @@ import { Obj } from "./util/objects"
 import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";
-import { phaseActionBuilder } from "./script/phaseaction";
+import { Phase, PhaseAction, PhaseActionBuilder, phaseActionBuilder, PhaseActionType } from "./script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
+import { createTestScheduler } from "jest";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -29,22 +30,26 @@ export class EngineBuilder {
     }
      
     withObj(obj : Obj) : EngineBuilder {
-        switch(obj["type"]) {
-            case "room":
-                this.entities.push(makeRoom(obj));
-                break;
-            case "object":
-            case "item":
-                this.entities.push(makeItem(obj));
-                break;
-            case "verb":
-                this.verbs.push(makeVerb(obj));
-                break;
-            case "rule":
-                this.objs.push(makeRule(obj));
-                break;
-            default:
-                throw new Error("Unknown object type");
+        try {
+            switch(obj["type"]) {
+                case "room":
+                    this.entities.push(makeRoom(obj));
+                    break;
+                case "object":
+                case "item":
+                    this.entities.push(makeItem(obj));
+                    break;
+                case "verb":
+                    this.verbs.push(makeVerb(obj));
+                    break;
+                case "rule":
+                    this.objs.push(makeRule(obj));
+                    break;
+                default:
+                    throw new Error("Unknown object type");
+            }
+        } catch (e) {
+            throw new Error("Error building '" + obj["id"] + "'\n" + (e as Error).message);
         }
         return this;
     }
@@ -174,45 +179,44 @@ function addRules(builder : EntityBuilder, obj : Obj) {
 
 
 function addActions(builder : ActionerBuilder, obj : Obj) {
-    getActionStrings(obj, "before")
-        .map((action, index) => phaseActionBuilder(obj.id + ".before[" + index + "]")
-                                        .withPhase("before")
-                                        .withExpression(action))
+    getActionStrings(obj, "before", "before")
         .forEach(beforeAction => builder.withBefore(beforeAction));
 
-    getActionStrings(obj, "actions")
-        .map((action, index) => phaseActionBuilder(obj.id + ".actions[" + index + "]")
-                                        .withPhase("main")
-                                        .withExpression(action))
+    getActionStrings(obj, "actions", "main")
         .forEach(mainAction => builder.withAction(mainAction));
 
-    getActionStrings(obj, "after")
-        .map((action, index) => phaseActionBuilder(obj.id + ".after[" + index + "]")
-                                        .withPhase("after")
-                                        .withExpression(action))
+    getActionStrings(obj, "after", "after")
         .forEach(mainAction => builder.withAfter(mainAction));
-    
 }
 
-function getActionStrings(obj : Obj, field : string) : string[] {
+function getActionStrings<T extends Phase>(obj : Obj, field : string, phase : T) : PhaseActionType<T>[] {
     const actionData = obj[field];
-    const actions : string[] = [];
+    let phaseActions : PhaseAction[] = [];
+    const fieldPath = obj.id + "." + field;
+    const fieldActionPath = (index : number) => fieldPath + "[" + index + "]";
+    const actionIsString = (value : unknown, index : number) : value is string =>  {
+        if (!_.isString(value)) {
+            throw new Error("Non string found whilst parsing: " + fieldPath + "[" + index + "]" + "\n" + JSON.stringify(value));
+        }
+        return true;
+    }
+    const buildPhaseAction = (index : number) => phaseActionBuilder(fieldActionPath(index)).withPhase(phase);
+
     if (actionData) {
         if (_.isString(actionData)) {
-            actions.push(actionData);
+            phaseActions = [buildPhaseAction(0).withExpression(actionData)];
         } else if (_.isArray(actionData)) {
-            for(const action of actionData) {
-                if (_.isString(action)) {
-                    actions.push(action);
-                } else {
-                    throw new Error("Non string found whilst parsing before actions: " + action);
-                }
-            }
+            phaseActions = actionData.filter(actionIsString)
+                                     .map((actionExpr, index) => buildPhaseAction(index).withExpression(actionExpr));
+        } else if (_.isPlainObject(actionData)) {
+            phaseActions = Object.entries(actionData)
+                                 .filter(([_key,value], index) => actionIsString(value, index))
+                                 .map(([key,value], index) =>  buildPhaseAction(index).withMatcherAndCommand(key,value as string));
         } else {
-            throw new Error("Before is an unsupported type: " + actionData);
+            throw new Error("'" + fieldPath + "' is an unsupported type:\n" + JSON.stringify(actionData));
         }
     }
-    return actions;
+    return phaseActions as PhaseActionType<T>[];
 }
 
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {

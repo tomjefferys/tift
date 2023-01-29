@@ -6,7 +6,7 @@ import { Command } from "../command";
 import { Matcher } from "../commandmatcher";
 import { Env } from "../env";
 import { Optional } from "../util/optional";
-import { evalutateMatchExpression } from "./matchParser";
+import { evaluateMatchExpression } from "./matchParser";
 import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
 import { Obj } from "../util/objects"
@@ -37,7 +37,7 @@ export interface PhaseActionInfo {
     expression? : string
 }
 
-type ObjectType<T> =
+export type PhaseActionType<T> =
     T extends "before" ? BeforeAction :
     T extends "main" ? MainAction :
     T extends "after" ? AfterAction : 
@@ -56,7 +56,7 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
         this.objPath = objPath;
     }
 
-    withPhase<T extends Phase>(phase : T) : this & Pick<ObjectType<T>, 'type'> {
+    withPhase<T extends Phase>(phase : T) : this & Pick<PhaseActionType<T>, 'type'> {
         return Object.assign(this, { type : phase});
     }
 
@@ -64,6 +64,12 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
         const expression = parseToTree(str, this.objPath);
         const [matcher, onMatch] = getMatcherCommand(expression, {phase : this.type, expression : str});
         return this.withMatcherOnMatch(matcher, onMatch);
+    }
+
+    withMatcherAndCommand(matcherExpr : string, commandExpr : string) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
+        const matcher = evaluateMatchExpression(parseToTree(matcherExpr, this.objPath));
+        const command = evaluate(parseToTree(commandExpr, this.objPath));
+        return this.withMatcherOnMatch(matcher, command);
     }
 
     withMatcherOnMatch(matcher : Matcher, onMatch : Thunk) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
@@ -106,7 +112,7 @@ export function getBestMatchAction(actions : PhaseAction[], command : Command, o
 
 function getMatcherCommand(expression : Expression, info : PhaseActionInfo) : [Matcher, Thunk] {
     const [matchExpr, commandExpr] =  getActionPhaseExpression(expression, info);
-    return [evalutateMatchExpression(matchExpr), evaluate(commandExpr)];
+    return [evaluateMatchExpression(matchExpr), evaluate(commandExpr)];
 }
 
 function getActionPhaseExpression(expression : Expression, info : PhaseActionInfo) : [Expression, Expression] {

@@ -19,7 +19,7 @@ interface CompoundMatch {
     member? : CompoundMatch
 }
 
-export function evalutateMatchExpression(matchExpr : Expression) : Matcher {
+export function evaluateMatchExpression(matchExpr : Expression) : Matcher {
     let compoundMatch : CompoundMatch;
     switch(matchExpr.type) {
         case "CallExpression":
