@@ -3,6 +3,7 @@ import { Env, isFound } from "../env"
 import { Obj } from "./objects"
 import * as _ from "lodash"
 import * as Mustache from "mustache"
+import { LOOK_COUNT } from "../enginedefault";
 
 export function formatEntityString(env : Env, entity : Obj, entityField : string) {
     const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
@@ -14,6 +15,14 @@ export function formatEntityString(env : Env, entity : Obj, entityField : string
         },
         "sometimes" : () => (text : string, render : (str : string) => void) => {
             return (_.random(0,1,true) < 0.5)? render(text) : "";
+        },
+        "firstTime" : () => {
+            let lookCount = entity[LOOK_COUNT];
+            if (lookCount === undefined) {
+                lookCount = 0;
+                entity[LOOK_COUNT] = lookCount;
+            }
+            return lookCount === 0;
         }
     };
 

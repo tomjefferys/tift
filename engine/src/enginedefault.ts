@@ -11,6 +11,8 @@ import { formatEntityString } from "./util/mustacheUtils";
 import * as MultiDict from "./util/multidict";
 import { bindParams } from "./script/parser";
 import { Obj } from "./util/objects"
+import _ from "lodash";
+import { Optional } from "./util/optional";
 
 const NS_ENTITIES = "entities";
 
@@ -38,6 +40,8 @@ You can see:
  - {{.}}
 {{/items}}`;
 
+export const LOOK_COUNT = "__LOOK_COUNT__";
+
 export const LOOK_FN = (env : Env) => {
     const location = getLocationEntity(env);
     const desc = (location["desc"] && formatEntityString(env, location, "desc")) 
@@ -54,6 +58,12 @@ export const LOOK_FN = (env : Env) => {
 
     const output = Mustache.render(LOOK_TEMPLATE, view);
 
+    // Update look count if it exists. It should only have been created if needed by one of the mustache functions
+    // FIXME related code is split between here and mustacheUtils. Should try to move it to one place.
+    const lookCount : Optional<number> = location[LOOK_COUNT];
+    if (lookCount !== undefined) {
+        location[LOOK_COUNT] = lookCount + 1;
+    }
     write(env, output);
 
     return mkResult(true);

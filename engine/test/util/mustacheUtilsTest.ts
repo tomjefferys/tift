@@ -3,6 +3,7 @@ import { createRootEnv } from "../../src/env";
 import { defaultOutputConsumer } from "../testutils/testutils";
 import { EngineBuilder } from "../../src/enginebuilder";
 import { Input } from "../../src/main";
+import _ from "lodash";
 
 test("Test formatEntityString", () => {
     const env = createRootEnv({ "entities" : { "foo" : "bar", "baz" : "qux"}}, [["entities"]]);
@@ -76,3 +77,67 @@ test("Test choose", () => {
     const result = formatEntityString(env, entity, "desc");
     expect(["corge","qux"]).toContain(result);
 });
+
+test("Test firstTime", () => {
+    const room1 = {
+        id : "theRoom1",
+        name : "The Room",
+        desc : "{{#firstTime}}The floor creaks as you enter the almost empty room{{/firstTime}}{{^firstTime}}An almost empty room{{/firstTime}}, there is a black cat here.",
+        type : "room",
+        tags : [ "start" ]
+    };
+
+    const [consumer, messages, _words, saveData] = defaultOutputConsumer();
+    const engine = new EngineBuilder()
+                            .withOutput(consumer)
+                            .withObj(room1)
+                            .build();
+    engine.send(Input.start());
+    expect(saveData.data).toStrictEqual([]);
+
+    engine.send(Input.execute(["look"]));
+    expect(messages.join(" ").trim()).toEqual("The floor creaks as you enter the almost empty room, there is a black cat here.");
+    expect(_.get(saveData, 'data[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data[0].newValue')).toStrictEqual(1);
+    messages.length = 0;
+
+    engine.send(Input.execute(["look"]));
+    expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
+    expect(_.get(saveData, 'data[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data[0].newValue')).toStrictEqual(2);
+    messages.length = 0;
+
+    engine.send(Input.execute(["look"]));
+    expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
+    expect(_.get(saveData, 'data[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data[0].newValue')).toStrictEqual(3);
+});
+
+test("Test not needlessy updating state", () => {
+    const room1 = {
+        id : "theRoom1",
+        name : "The Room",
+        desc : "An almost empty room, there is a black cat here.",
+        type : "room",
+        tags : [ "start" ]
+    };
+
+    const [consumer, messages, _words, saveData] = defaultOutputConsumer();
+    const engine = new EngineBuilder()
+                            .withOutput(consumer)
+                            .withObj(room1)
+                            .build();
+    engine.send(Input.start());
+    expect(saveData.data).toStrictEqual([]);
+
+    engine.send(Input.execute(["look"]));
+    expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
+    expect(saveData.data).toStrictEqual([]);
+    messages.length = 0;
+
+    engine.send(Input.execute(["look"]));
+    expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
+    expect(saveData.data).toStrictEqual([]);
+    messages.length = 0;
+})
+
