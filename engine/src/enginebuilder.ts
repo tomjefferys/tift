@@ -8,9 +8,8 @@ import { Obj } from "./util/objects"
 import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { parse } from "./script/parser";
-import { Phase, PhaseAction, PhaseActionBuilder, phaseActionBuilder, PhaseActionType } from "./script/phaseaction";
+import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "./script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
-import { createTestScheduler } from "jest";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
