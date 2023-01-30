@@ -7,7 +7,6 @@ import { getObjs } from "./yamlparser";
 import { Obj } from "./util/objects"
 import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
-import { parse } from "./script/parser";
 import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "./script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
 
@@ -150,11 +149,9 @@ export function makeRoom(obj : Obj) : Entity {
 export function makeRule(obj : Obj) : Obj {
     const runValue = obj["run"];
     if (!_.has(obj,"run")) {
-        throw new Error("Rule " + obj["id"] + " has no 'run' property")
+        throw new Error(`Rule [${obj["id"]}] has no 'run' property`);
     }
-    const expressions = _.isArray(runValue) ? runValue : [runValue];
-    const compiled = expressions.map((expr, index) => parse(expr, obj["id"] + ".run[" + index + "]"));
-    obj["__COMPILED__"] = compiled;
+    obj["__COMPILED__"] = RuleBuilder.parseRule(runValue, `${obj.id}.run`);
     return obj;
 }
 

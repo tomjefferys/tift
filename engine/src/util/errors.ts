@@ -20,6 +20,6 @@ function rethrowError(type : string, expression : string, cause : unknown, path?
     throw new Error(type + ": " + (path? path + "\n" : "") + expression + "\n" + causeMessage);
 }
 
-function getCauseMessage(e : unknown) : string {
+export function getCauseMessage(e : unknown) : string {
     return e instanceof Error? e.message : String(e);
 }

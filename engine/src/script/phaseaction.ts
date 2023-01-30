@@ -10,6 +10,7 @@ import { evaluateMatchExpression } from "./matchParser";
 import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
 import { Obj } from "../util/objects"
+import { getCauseMessage } from "../util/errors";
 
 export type Phase = "before" | "main" | "after";
 
@@ -80,8 +81,7 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
                         const resolverEnv = env.newChild(result.captures).newChild({"this" : obj});
                         return result.isMatch? onMatch.resolve(resolverEnv) : mkResult(undefined, {});
                     } catch (e) {
-                        const message = e instanceof Error ? e.message : e;
-                        throw new Error("executing " + (this.objPath? this.objPath + "\n" : "") + message);
+                        throw new Error(`Error executing '${(this.objPath? this.objPath : "")}'\n${getCauseMessage(e)}`);
                     }
                 },
                 score : (command : Command, objId : string) => matcher(command, objId).score,

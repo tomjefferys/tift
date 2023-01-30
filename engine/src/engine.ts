@@ -256,13 +256,13 @@ export class BasicEngine implements Engine {
     const postExecutionContext = this.createPluginActionContext(oldContext, this.context);
     this.postExecutionActions.forEach(action => action(postExecutionContext));
 
-    // Run any contextual rules
-    const allEntities = _.flatten(Object.values(this.context.entities))
-    const allRules = allEntities.flatMap(entity => entity.rules.map(rule => [entity, rule] as [Entity,RuleFn]));
-    allRules.forEach(([entity,rule]) => executeContextualRule(entity, rule, this.env));
-
-    // Find and execute any  global rules
     if (verb && !isInstant(verb)) {
+      // Run any contextual rules
+      const allEntities = _.flatten(Object.values(this.context.entities))
+      const allRules = allEntities.flatMap(entity => entity.rules.map(rule => [entity, rule] as [Entity,RuleFn]));
+      allRules.forEach(([entity,rule]) => executeContextualRule(entity, rule, this.env));
+
+      // Find and execute any global rules
       const rules = this.env.findObjs(obj => obj["type"] === "rule");
       const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
       expressions.forEach(expr => expr(this.env));

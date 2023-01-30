@@ -1,6 +1,5 @@
 import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule, makeItem } from "../src/enginebuilder";
 import { setUpEnv } from "./testutils/testutils"
-import { EnvFn } from "../src/env"
 import * as fs from "fs";
 import _ from "lodash";
 
@@ -149,7 +148,7 @@ test("Build rule", () => {
 
     const rule = makeRule(obj);
     const [env, messages] = setUpEnv();
-    rule["__COMPILED__"].forEach((expr : EnvFn) => expr(env))
+    rule["__COMPILED__"](env);
     expect(messages).toStrictEqual(["hello", "world"]);
 });
 
@@ -162,7 +161,7 @@ test("Build rule - single expr", () => {
 
     const rule = makeRule(obj);
     const [env, messages] = setUpEnv();
-    rule["__COMPILED__"].forEach((expr : EnvFn) => expr(env))
+    rule["__COMPILED__"](env);
     expect(messages).toStrictEqual(["hello world"]);
 });
 
@@ -187,7 +186,7 @@ test("Build rule - error", () => {
       fail();
     } catch (e) {
       const error = e as Error;
-      expect(error.message).toContain("rule1.run[0]");
+      expect(error.message).toContain("rule1.run");
       expect(error.message).toContain("write('hello world)");
     }
 });

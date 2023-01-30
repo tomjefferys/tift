@@ -2,7 +2,7 @@ import { BasicEngine, Engine } from "../src/engine";
 import { EngineBuilder } from "../src/enginebuilder";
 import { listOutputConsumer, SaveData } from "./testutils/testutils";
 import { Input } from "../src/main";
-import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
+import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN } from "./testutils/testobjects";
 import _ from "lodash";
 
 let messages : string[];
@@ -628,6 +628,50 @@ test("Test nested repeat rule", () => {
     executeAndTest(["wait"], { expected : ["qux"], notExpected : ["foo", "bar", "baz"]})
     executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz", "qux"]})
 })
+
+test("Test moveTo", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        myvar : "foo",
+        exits : {
+            south : "southRoom"
+        },
+    })
+    builder.withObj({
+        ...SOUTH_ROOM,
+        name : "The South Room",
+        desc : "The room is light and round",
+        myvar : "bar",
+        exits : {
+            north : "northRoom"
+        }
+    })
+    builder.withObj({
+        ...GOBLIN,
+        location : "northRoom"
+    });
+    builder.withObj({
+        id: "moveGoblin",
+        type: "rule",
+        run: {
+            "repeat" : ["do(print('The goblin goes south'), move('goblin').to('southRoom'))",
+                        "do(print('The goblin goes north'), move('goblin').to('northRoom'))"]
+        }
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["Goblin"]});
+    executeAndTest(["wait"], { expected : ["The goblin goes south"]});
+    executeAndTest(["look"], { notExpected : ["Goblin"]});
+    executeAndTest(["wait"], { expected : ["The goblin goes north"]});
+    executeAndTest(["look"], { expected : ["Goblin"]});
+    executeAndTest(["wait"], { expected : ["The goblin goes south"]});
+    executeAndTest(["look"], { notExpected : ["Goblin"]});
+    executeAndTest(["wait"], { expected : ["The goblin goes north"]});
+    executeAndTest(["look"], { expected : ["Goblin"]});
+});
 
 
 interface ExpectedStrings {

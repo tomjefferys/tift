@@ -1,4 +1,4 @@
-import { AnyArray, EnvFn, Env } from "./env";
+import { AnyArray, EnvFn, Env, isFound } from "./env";
 import { OutputConsumer, print } from "./messages/output";
 import { VerbBuilder } from "./verb"
 import { captureModifier, captureObject, matchBuilder, matchVerb } from "./commandmatcher";
@@ -13,8 +13,10 @@ import { bindParams } from "./script/parser";
 import { Obj } from "./util/objects"
 import _ from "lodash";
 import { Optional } from "./util/optional";
+import { getCauseMessage } from "./util/errors";
 
 const NS_ENTITIES = "entities";
+const LOCATION = "location";
 
 export const PLAYER = "__PLAYER__";
 export const OUTPUT = Symbol("__OUTPUT__");
@@ -74,13 +76,13 @@ export function isEntity(obj : Obj) : boolean {
     return Boolean(obj.type);
 }
 
-const LOOK = phaseActionBuilder()
+const LOOK = phaseActionBuilder("look")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("look")).build(),
             mkThunk(LOOK_FN));
 
-const WAIT = phaseActionBuilder()
+const WAIT = phaseActionBuilder("wait")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("wait")).build(),
@@ -90,7 +92,7 @@ const WAIT = phaseActionBuilder()
     }));
         
 
-const GO = phaseActionBuilder()
+const GO = phaseActionBuilder("go")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("go")).withModifier(captureModifier("direction")).build(),
@@ -104,7 +106,7 @@ const GO = phaseActionBuilder()
             })
         );
 
-const GET = phaseActionBuilder()
+const GET = phaseActionBuilder("get")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
@@ -114,7 +116,7 @@ const GET = phaseActionBuilder()
                 return mkResult(true);
             }));
 
-const DROP = phaseActionBuilder()
+const DROP = phaseActionBuilder("drop")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
@@ -125,7 +127,7 @@ const DROP = phaseActionBuilder()
                 return mkResult(true);
             }));
 
-const EXAMINE = phaseActionBuilder()
+const EXAMINE = phaseActionBuilder("examine")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("examine")).withObject(captureObject("item")).build(),
@@ -170,13 +172,24 @@ export const DEFAULT_VERBS = [
                   .build()
 ];
 
+const moveFn = bindParams(["id"], env => {
+    const id = env.getStr("id");
+    const DEST = "destination";
+    return mkResult({
+        to : bindParams([DEST], env => {
+            doMove(env, id, env.getStr(DEST));
+            return mkResult(null);
+        })
+    });
+});
+
 const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     setLocation : env => {
-        const dest = env.getStr("dest");
-        env.set(makePath([PLAYER, "location"]), dest);
+        doMove(env, PLAYER, env.getStr("dest"));
     },
     
     moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),
+    move : moveFn,
     getLocation : env => getLocation(env),
     getEntity : env => getEntity(env, env.getStr("id")),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
@@ -197,6 +210,17 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
                         } )
 }
 
+function doMove(env : Env, entityId : string, destinationId : string) {
+    try {
+        // FIXME shouldn't the player just be another entity?
+        const entity = entityId == PLAYER? env.get(PLAYER) : getEntity(env, entityId);
+        const destination = getEntity(env, destinationId);
+        entity[LOCATION] = destination.id;
+    } catch(e) {
+        throw new Error(`Could not move entity [${entityId}] to [${destinationId}]\n${getCauseMessage(e)}`);
+    }
+}
+
 export function write(env : Env, message : string) {
     env.execute("write", {"value": message});
 }
@@ -206,7 +230,11 @@ export function getLocation(env : Env) {
 }
 
 export function getEntity(env : Env, id : string) {
-    return env.get(makePath([NS_ENTITIES, id]));
+    const entity = env.get(makePath([NS_ENTITIES, id]));
+    if (!isFound(entity)) {
+        throw new Error(`Could not find entity [${id}]`);
+    }
+    return entity;
 }
 
 export function getLocationEntity(env : Env) {
