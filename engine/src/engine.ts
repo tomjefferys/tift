@@ -259,13 +259,13 @@ export class BasicEngine implements Engine {
     if (verb && !isInstant(verb)) {
       // Run any contextual rules
       const allEntities = _.flatten(Object.values(this.context.entities))
-      const allRules = allEntities.flatMap(entity => entity.rules.map(rule => [entity, rule] as [Entity,RuleFn]));
-      allRules.forEach(([entity,rule]) => executeContextualRule(entity, rule, this.env));
+      const contextualRules = allEntities.flatMap(entity => entity.rules.map(rule => [entity, rule] as [Entity,RuleFn]));
+      contextualRules.forEach(([entity,rule]) => executeRule(entity, rule, this.env));
 
       // Find and execute any global rules
-      const rules = this.env.findObjs(obj => obj["type"] === "rule");
-      const expressions = rules.flatMap(rules => rules["__COMPILED__"]);
-      expressions.forEach(expr => expr(this.env));
+      const globalRules = this.env.findObjs(obj => obj["type"] === "rule");
+      globalRules.filter(rule => this.isRuleInScope(rule))
+                 .forEach(rule => executeRule(rule, rule["__COMPILED__"], this.env));
     }
 
     // Send the current save state
@@ -332,6 +332,22 @@ export class BasicEngine implements Engine {
     }
     return [childEnv, outputProxy];
   }
+
+  /**
+   * Check if a rule is in scope.
+   * If a rule is declared with an 'entities', check if at least one of those
+   * entities is in the current context, else return true;
+   * @param rule 
+   * @returns true if the rule is in scope or has no defined scope
+   */
+  isRuleInScope(rule : Obj) {
+    const ruleEntities = rule["scope"];
+    return _.isArray(ruleEntities)
+              ? multidict.values(this.context.entities)
+                        .map(entity => entity.id)
+                        .some(entity => ruleEntities.includes(entity))
+              : true; 
+  }
 }
 
 const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
@@ -365,9 +381,9 @@ function executeBestMatchAction(actions : PhaseAction[], env : Env, command : Se
   return handled;
 }
 
-function executeContextualRule(entity : Entity, rule : RuleFn, env : Env) {
+function executeRule(scope : Obj, rule : RuleFn, env : Env) {
   const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
-  const ruleEnv = entitiesEnv.newChild({"this" : entity});
+  const ruleEnv = entitiesEnv.newChild({"this" : scope});
   const result = rule(ruleEnv);
   if(result && _.isString(result)) {
     env.execute("write", {"value":result});

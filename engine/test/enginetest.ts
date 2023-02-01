@@ -673,6 +673,43 @@ test("Test moveTo", () => {
     executeAndTest(["look"], { expected : ["Goblin"]});
 });
 
+test("Test scoped rules", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        myvar : "foo",
+        exits : {
+            south : "southRoom"
+        },
+    });
+    builder.withObj({
+        ...SOUTH_ROOM,
+        name : "The South Room",
+        desc : "The room is light and round",
+        myvar : "bar",
+        exits : {
+            north : "northRoom"
+        }
+    });
+    builder.withObj({
+        id:"scopedGhost",
+        type:"rule",
+        scope: ["southRoom"],
+        run: "'wooo-oo'"
+    })
+    builder.withObj({
+        id:"globalMonster",
+        type:"rule",
+        run: "'grr'"
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["grr"], notExpected : ["wooo-oo"]});
+    executeAndTest(["go", "south"], { expected : ["grr", "wooo-oo"]});
+    executeAndTest(["wait"], { expected : ["grr", "wooo-oo"]});
+    executeAndTest(["go", "north"], { expected : ["grr"], notExpected : ["wooo-oo"]});
+})
 
 interface ExpectedStrings {
     expected? : string[],
