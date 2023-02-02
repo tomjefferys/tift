@@ -4,8 +4,10 @@ import { Obj } from "./objects"
 import * as _ from "lodash"
 import * as Mustache from "mustache"
 import { LOOK_COUNT } from "../enginedefault";
+import { result } from "lodash";
+import { getCauseMessage } from "./errors";
 
-export function formatEntityString(env : Env, entity : Obj, entityField : string) {
+export function formatEntityString(env : Env, entity : Obj, entityField : string) : string {
     const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
 
     const specialFunctions = {
@@ -43,5 +45,10 @@ export function formatEntityString(env : Env, entity : Obj, entityField : string
     const proxy = new Proxy(entity, handler);
 
     const template = _.get(entity, entityField);
-    return Mustache.render(template, proxy);
+
+    try {
+        return Mustache.render(template, proxy);
+    } catch(e) {
+        throw new Error(`Error formatting ${entity.id}.${entityField}\n"${template.trim()}"\n${getCauseMessage(e)}`);
+    }
 }
