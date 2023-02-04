@@ -46,4 +46,5 @@ export const GOBLIN = {
     id : "goblin", 
     name : "Goblin",
     type : "item",
+    tags : ["NPC"]
 }

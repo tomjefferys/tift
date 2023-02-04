@@ -711,6 +711,53 @@ test("Test scoped rules", () => {
     executeAndTest(["go", "north"], { expected : ["grr"], notExpected : ["wooo-oo"]});
 })
 
+test("Test hiding/revealing object", () => {
+    builder.withObj({...NORTH_ROOM })
+           .withObj({
+                id : "diamond",
+                type : "item",
+                location : "northRoom",
+                tags : ["carryable", "hidden"]
+            })
+            .withObj({
+                id : "can",
+                type : "item",
+                location : "northRoom",
+                tags : ["carryable"]
+            })
+            .withObj({
+                id : "rubbish",
+                desc: "A pile of stinking rubbish",
+                type : "item",
+                location : "northRoom",
+                after : {
+                    "examine(this)" : "if(hasTag('diamond','hidden')).then(do(reveal('diamond'), 'You find a diamond'))",
+                }
+            });
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["can"], notExpected : ["diamond", "rubbish"]});
+    expectWords(["get"], ["can"]);
+
+    executeAndTest(["examine", "rubbish"], { expected : ["You find a diamond"]} );
+    executeAndTest(["look"], { expected : ["can", "diamond"], notExpected : ["rubbish"]});
+    executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
+
+    expect(saveData.data.length).toBe(2);
+    expect(saveData.data[0]).toStrictEqual({"type":"Del","property":["entities","diamond","tags","1"]});
+    expect(saveData.data[1]).toStrictEqual({"type":"Set","property":["entities","diamond","tags","length"],"newValue":1})
+
+    expectWords(["get"], ["can", "diamond"]);
+    executeAndTest(["get", "diamond"], {});
+    executeAndTest(["look"], { expected : ["can"], notExpected : ["rubbish", "diamond"]});
+    executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
+
+    expect(saveData.data.length).toBe(3);
+    expect(saveData.data[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"INVENTORY"});
+
+});
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]

@@ -50,7 +50,10 @@ export const LOOK_FN = (env : Env) => {
                         ?? location["name"]
                         ?? location["id"];
     // Desc should have any moustache expressions expanded
-    const items = env.findObjs(obj => obj.location === location.id && isEntity(obj));
+    const items = env.findObjs(obj => obj.location === location.id)
+                     .filter(isEntity)
+                     .filter(isEntityVisible)
+                     .filter(obj => isEntityCarrayable(obj) || isEntityNPC(obj));
 
     const view = {
         "desc" : desc,
@@ -75,6 +78,46 @@ export function isEntity(obj : Obj) : boolean {
     // TODO find a better way of doing this
     return Boolean(obj.type);
 }
+
+export function isEntityVisible(obj : Obj) : boolean {
+    return !entityHasTag(obj, "hidden");
+}
+
+function isEntityCarrayable(obj : Obj) : boolean {
+    return entityHasTag(obj, "carryable");
+}
+
+function isEntityNPC(obj : Obj) : boolean {
+    return entityHasTag(obj, "NPC");
+}
+
+function entityHasTag(obj : Obj, tag : string) : boolean {
+    const tags = obj.tags;
+    return _.isArray(tags) && tags.includes(tag);
+}
+
+function setEntityTag(obj : Obj, tag : string) : void {
+    if (!entityHasTag(obj, tag)) {
+        if (_.isUndefined(obj.tags)) {
+            obj.tags = [tag];
+        } else if (_.isArray(obj.tags)) {
+            obj.tags.push(tag);
+        } else {
+            throw new Error(`${obj.id} has tags field with is not an array: ${JSON.stringify(obj.tags)}`);
+        }
+    }
+}
+
+function delEntityTag(obj : Obj, tag : string) : void {
+    if (entityHasTag(obj, tag)) {
+        const index = obj.tags.indexOf(tag);
+        if (index != -1) {
+            obj.tags.splice(index, 1);
+        }
+    }
+}
+
+
 
 const LOOK = phaseActionBuilder("look")
         .withPhase("main")
@@ -207,7 +250,31 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
                         env => {
                             closeExit(env, env.getStr("room"), env.getStr("direction"));
                             return mkResult(null);
-                        } )
+                        } ),
+    hasTag : bindParams(["entityId", "tag"],
+                        env => {
+                            const entity = getEntity(env, env.getStr("entityId"));
+                            const result = entityHasTag(entity, env.getStr("tag"));
+                            return mkResult(result);
+                        }),
+    setTag : bindParams(["entityId", "tag"], 
+                         env => {
+                            const entity = getEntity(env, env.getStr("entityId"));
+                            setEntityTag(entity, env.getStr("tag"));
+                            return mkResult(null);
+                         }),
+    delTag : bindParams(["entityId", "tag"], 
+                        env => {
+                            const entity = getEntity(env, env.getStr("entityId"));
+                            delEntityTag(entity, env.getStr("tag"));
+                            return mkResult(null);
+                        }),
+    reveal : bindParams(["entityId"],
+                        env =>{
+                            const entity = getEntity(env, env.getStr("entityId"));
+                            delEntityTag(entity, "hidden");
+                            return mkResult(null);
+                        })
 }
 
 function doMove(env : Env, entityId : string, destinationId : string) {
@@ -274,3 +341,4 @@ function closeExit(env : Env, roomId : string, direction : string) {
     delete room.exits[direction];
     MultiDict.remove(room.verbModifiers, "direction", direction);
 }
+
