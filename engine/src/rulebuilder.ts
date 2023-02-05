@@ -1,16 +1,18 @@
-import { RuleFn } from "./entity";
 import { Env, isFound } from "./env";
-import { parse } from "./script/parser";
+import { parseToThunk } from "./script/parser";
 import { Optional } from "./util/optional";
 import _ from "lodash";
+import { EnvFn, mkResult, mkThunk, Thunk } from "./script/thunk";
 
 const accessors = ["all", "repeat", "random"] as const;
 type RuleAccessor = typeof accessors[number];
 
-export function parseRule(rule : unknown, path : string) : RuleFn {
-    let ruleFn : Optional<RuleFn> = undefined;
+// TODO make this return a Thunk, then it could be used by the phase action parser
+// which would allow the usage of these with before/after actions
+export function parseRule(rule : unknown, path? : string) : Thunk {
+    let ruleFn : Optional<Thunk> = undefined;
     if (_.isString(rule)) {
-        ruleFn = parse(rule, path);
+        ruleFn = parseToThunk(rule, path);
     } else if (_.isPlainObject(rule)) {
         const keys = _.keys(rule);
         if (keys.length === 1) {
@@ -35,14 +37,12 @@ export function parseRule(rule : unknown, path : string) : RuleFn {
     return ruleFn;
 }
 
-function makeRuleListFunction(accessor : RuleAccessor, childFns : RuleFn[], path : string ) : RuleFn {
-    let ruleFn : RuleFn;
+function makeRuleListFunction(accessor : RuleAccessor, childFns : Thunk[], path? : string ) : Thunk {
+    let ruleFn : EnvFn;
     switch(accessor) {
         case "all":
             ruleFn = env => {
-                let result;
-                childFns.forEach(fn => result = fn(env));
-                return result;
+                return childFns.reduce((_acc, fn) => fn.resolve(env), mkResult(null));
             }
             break;
         case "repeat": {
@@ -52,7 +52,7 @@ function makeRuleListFunction(accessor : RuleAccessor, childFns : RuleFn[], path
                     if (!isFound(index)) {
                         index = 0;
                     }
-                    const result = childFns[index++](env);
+                    const result = childFns[index++].resolve(env);
                     if (index >= childFns.length) {
                         index = 0;
                     }
@@ -64,18 +64,19 @@ function makeRuleListFunction(accessor : RuleAccessor, childFns : RuleFn[], path
         case "random":
             ruleFn = env => {
                 const index = _.random(childFns.length - 1);
-                childFns[index](env);
+                const result = childFns[index].resolve(env);
+                return result;
             }
             break;
     }
-    return ruleFn;
+    return mkThunk(ruleFn);
 }
 
 function isAccessor(str : string) : str is RuleAccessor {
     return accessors.includes(str as RuleAccessor);
 }
 
-function parseRuleList(ruleList : unknown, path : string) : RuleFn[] {
+function parseRuleList(ruleList : unknown, path? : string) : Thunk[] {
     const rules = _.isArray(ruleList)? ruleList : [ruleList];
     return rules.map((rule, index) => parseRule(rule, path + "[" + index + "]"));
 }

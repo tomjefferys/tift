@@ -81,9 +81,13 @@ export function parseToTree(expression : string, objPath? : string) {
     }
 }
 
-export function parse(expression : string, objPath? : string) : (env : Env) => unknown {
+export function parseToThunk(expression : string, objPath? : string) : Thunk {
     const parseTree = parseToTree(expression, objPath);
-    const compiledExpression = evaluate(parseTree);
+    return evaluate(parseTree);
+}
+
+export function parse(expression : string, objPath? : string) : (env : Env) => unknown {
+    const compiledExpression = parseToThunk(expression, objPath);
     return env => compiledExpression.resolve(env).value;
 }
 

@@ -755,7 +755,77 @@ test("Test hiding/revealing object", () => {
 
     expect(saveData.data.length).toBe(3);
     expect(saveData.data[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"INVENTORY"});
+});
 
+test("Test action with repeat", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+               id : "rubbish",
+               desc : "A pile of stinking rubbish",
+               type : "item",
+               location : "northRoom",
+               after : {
+                   "examine(this)" : {
+                       repeat : ["'You see some mouldy bread'", "'You see an old tin can'", "'You see a banana peel'"]
+                   }
+               }
+           });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":1}]);
+
+    executeAndTest(["examine", "rubbish"], { expected : ["tin can"], notExpected : ["mouldy bread", "banana peel"]});
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":2}]);
+
+    executeAndTest(["examine", "rubbish"], { expected : ["banana peel"], notExpected : ["tin can", "moudly bread"]});
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":0}]);
+
+    executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":1}]);
+
+    executeAndTest(["examine", "rubbish"], { expected : ["tin can"], notExpected : ["mouldy bread", "banana peel"]});
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":2}]);
+
+    executeAndTest(["examine", "rubbish"], { expected : ["banana peel"], notExpected : ["tin can", "moudly bread"]});
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":0}]);
+
+});
+
+test("Test action with nested repeats", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+               id : "rubbish",
+               desc : "A pile of stinking rubbish",
+               type : "item",
+               location : "northRoom",
+               after : {
+                   "examine(this)" : {
+                       repeat : ["'foo'", { repeat : ["'bar'", "'baz'"] } ]
+                   }
+               }
+           });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
+    expect(saveData.data).toStrictEqual([
+        {"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":1}]
+    );
+
+    executeAndTest(["examine", "rubbish"], { expected : ["bar"], notExpected : ["foo", "baz"]});
+    expect(saveData.data).toStrictEqual([
+        {"type":"Set","property":["entities","rubbish","after","0","repeat"], "newValue":{}},
+        {"type":"Set","property":["entities","rubbish","after","0","repeat","1"],"newValue":{}},
+        {"type":"Set","property":["entities","rubbish","after","0","repeat","1","index"],"newValue":1},
+        {"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":0}]
+    );
+
+    executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
+    executeAndTest(["examine", "rubbish"], { expected : ["baz"], notExpected : ["bar", "foo"]});
+    executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
+    executeAndTest(["examine", "rubbish"], { expected : ["bar"], notExpected : ["foo", "baz"]});
+    executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
+    executeAndTest(["examine", "rubbish"], { expected : ["baz"], notExpected : ["bar", "foo"]});
 });
 
 interface ExpectedStrings {

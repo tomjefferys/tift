@@ -11,6 +11,7 @@ import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
 import { Obj } from "../util/objects"
 import { getCauseMessage } from "../util/errors";
+import * as RuleBuilder from "../rulebuilder";
 
 export type Phase = "before" | "main" | "after";
 
@@ -67,9 +68,9 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
         return this.withMatcherOnMatch(matcher, onMatch);
     }
 
-    withMatcherAndCommand(matcherExpr : string, commandExpr : string) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
+    withMatcherAndCommand(matcherExpr : string, commandExpr : unknown) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
         const matcher = evaluateMatchExpression(parseToTree(matcherExpr, this.objPath));
-        const command = evaluate(parseToTree(commandExpr, this.objPath));
+        const command = RuleBuilder.parseRule(commandExpr, this.objPath);
         return this.withMatcherOnMatch(matcher, command);
     }
 
@@ -78,7 +79,8 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
                 perform : (env : Env, obj : Obj,  command : Command) => {
                     try {
                         const result = matcher(command, obj.id);
-                        const resolverEnv = env.newChild(result.captures).newChild({"this" : obj});
+                        const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
+                        const resolverEnv = entitiesEnv.newChild(result.captures).newChild({"this" : obj});
                         return result.isMatch? onMatch.resolve(resolverEnv) : mkResult(undefined, {});
                     } catch (e) {
                         throw new Error(`Error executing '${(this.objPath? this.objPath : "")}'\n${getCauseMessage(e)}`);

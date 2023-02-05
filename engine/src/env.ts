@@ -396,13 +396,16 @@ function setToObj(obj : Obj, name : Path, value : any) {
         return;
     }
     const child = obj[head.getValue()] ?? {};
-    if (!obj[head.getValue()]) {
-        obj[head.getValue()] = child;
-    }
     if (!isObject(child)) {
         throw new Error(head.toString() + " is not an object");
     } 
-    setToObj(child, tail, value);
+    const key = head.getValue();
+    if (!obj[key]) {
+        obj[key] = child;
+    }
+    // Get the newly set value, to ensure it's proxied
+    const proxiedChild = obj[key];
+    setToObj(proxiedChild, tail, value);
 }
 
 /**

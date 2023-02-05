@@ -9,6 +9,7 @@ import { OutputConsumer } from "./messages/output";
 import _ from "lodash";
 import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "./script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
+import { Env } from "./env";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -151,7 +152,8 @@ export function makeRule(obj : Obj) : Obj {
     if (!_.has(obj,"run")) {
         throw new Error(`Rule [${obj["id"]}] has no 'run' property`);
     }
-    obj["__COMPILED__"] = RuleBuilder.parseRule(runValue, `${obj.id}.run`);
+    const thunk = RuleBuilder.parseRule(runValue, `${obj.id}.run`);
+    obj["__COMPILED__"] = (env : Env) => thunk.resolve(env).getValue();
     return obj;
 }
 
@@ -169,7 +171,8 @@ export function makeRule(obj : Obj) : Obj {
 function addRules(builder : EntityBuilder, obj : Obj) {
     const rules = obj["rules"];
     if (rules) {
-        builder.withRule(RuleBuilder.parseRule(rules, obj["id"] + ".rules"));
+        const thunk = RuleBuilder.parseRule(rules, obj["id"] + ".rules");
+        builder.withRule(env => thunk.resolve(env).getValue());
     }
 }
 
@@ -206,8 +209,7 @@ function getActionStrings<T extends Phase>(obj : Obj, field : string, phase : T)
                                      .map((actionExpr, index) => buildPhaseAction(index).withExpression(actionExpr));
         } else if (_.isPlainObject(actionData)) {
             phaseActions = Object.entries(actionData)
-                                 .filter(([_key,value], index) => actionIsString(value, index))
-                                 .map(([key,value], index) =>  buildPhaseAction(index).withMatcherAndCommand(key,value as string));
+                                 .map(([key,value], index) =>  buildPhaseAction(index).withMatcherAndCommand(key,value));
         } else {
             throw new Error("'" + fieldPath + "' is an unsupported type:\n" + JSON.stringify(actionData));
         }
