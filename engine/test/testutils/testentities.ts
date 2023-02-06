@@ -4,6 +4,7 @@ import { EntityBuilder } from "../../src/entity";
 
 export const STIR = new VerbBuilder({"id":"stir"})
                      .withTrait("transitive")
+                     .withTrait("indirectOptional")
                      .withAttribute("with")
                      .build();
 
@@ -59,4 +60,17 @@ export const DROP = new VerbBuilder({"id":"drop"})
                   .withTrait("transitive")
                   .withContext("inventory")
                   .withContext("holding")
+                  .build();
+
+export const ASK = new VerbBuilder({"id":"ask"})
+                  .withTrait("transitive")
+                  .withAttribute("about")
+                  .build();
+
+export const BARKEEP = new EntityBuilder({"id" : "barkeep"})
+                  .withVerb("ask")
+                  .build();
+
+export const BEER = new EntityBuilder({"id" : "beer"})
+                  .withAttributedVerb("ask", "about")
                   .build();

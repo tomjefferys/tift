@@ -5,7 +5,7 @@ import { AfterAction, BeforeAction, MainAction } from "./script/phaseaction";
 
 export type VerbContext = string;
 
-export type VerbTrait = "transitive" | "intransitive" | "modifiable" | "instant";
+export type VerbTrait = "transitive" | "intransitive" | "modifiable" | "instant" | "indirectOptional";
 
 export interface Verb extends Nameable, ActionSource {
   id : string,
@@ -33,6 +33,19 @@ export function isInstant(verb : Verb) {
 
 export function isModifiable(verb : Verb) : boolean {
   return verb.modifiers.length !== 0;
+}
+
+/**
+ * Checks if a verb has the indirectOptional trait
+ * This is for a transitive verb that can function without a preoposition and 
+ *  and indirect object
+ */
+export function isIndirectOptional(verb : Verb) {
+  return verb.traits.includes("indirectOptional");
+}
+
+export function isAttributed(verb : Verb) : boolean {
+  return verb.attributes.length !== 0;
 }
 
 export class VerbBuilder {

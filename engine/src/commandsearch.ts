@@ -27,6 +27,7 @@ const INITIAL_STATE : Command = start();
 export function getAllCommands(objs: ContextEntities, verbs: Verb[]) : IdValue<string>[][] {
   const context = buildSearchContext(objs, verbs);
   return searchAll(context)
+          .filter(state => state.isValid())
           .map(state => state.getWords());
 }
 
@@ -205,7 +206,7 @@ const WORD_PATTERNS = Tree.fromArrays([
 
 const doSearch = (context : SearchContext,
                   searchNode = WORD_PATTERNS,
-                  state = INITIAL_STATE) => {
+                  state = INITIAL_STATE) : SearchResult[] => {
   const results : SearchResult[] = [];
   Tree.forEachChild(searchNode, node => {
     const searchFn = Tree.getValue(node);
@@ -219,7 +220,7 @@ const searchAll = (context : SearchContext,
                    state = INITIAL_STATE) : Command[] => {
   const results = doSearch(context, searchNode, state);
   const states : Command[] = [];
-  if (Tree.isTerminal(searchNode)) {
+  if (Tree.isTerminal(searchNode) && state.isValid()) {
     states.push(state);
   }
   if (results.length) {
@@ -251,8 +252,25 @@ export const searchNext = (partial : string[],
                     .filter(([state, _]) => Arrays.prefixEquals(partial, state.getWords().map(idValue => idValue.id)))
                     .flatMap(([state, node]) => 
                                   (state.size() > partial.length) 
-                                        ? [state] 
+                                        ? isValid(context, node, state)? [state] : []
                                         : searchNext(partial, context, node, state));
+
+/**
+ * Test if a particular state can lead to a valid sentence
+ * eg, if an attributed verb such as ask, has an appropriate indirect object available
+ *     ask barman about ...
+ * @param context 
+ * @param searchNode 
+ * @param state 
+ * @returns 
+ */
+const isValid = (context : SearchContext,
+                 searchNode = WORD_PATTERNS,
+    state = INITIAL_STATE) : boolean => 
+      state.isValid()
+          ? true
+          : doSearch(context, searchNode, state)
+              .some(([sentenceNode, searchNode]) => isValid(context, searchNode, sentenceNode))
 
 /**
  * Find an exact match for the provided command

@@ -3,8 +3,10 @@ import { ActionSource, emptyActionSource } from "./actionsource";
 import { Entity } from "./entity";
 import { getName } from "./nameable";
 import { IdValue, mkIdValue } from "./shared";
-import { Verb } from "./verb"
+import { matchAll, not, Predicate } from "./util/functions";
+import * as Verb from "./verb"
 
+type Verb = Verb.Verb;
 
 // Part of Speech
 type Part =  Start | MainVerb | DirectObject | IndirectObject | Preposition | Modifier | Preposition
@@ -22,6 +24,11 @@ type PoSObjectType<T> =
 
 export type Command = SentenceNode;
 
+
+/**
+ * Represents a sentance/command
+ * Points to the last part of the sentence, with each part linking to the previous part
+ */
 export interface SentenceNode {
     part : Part,
     previous? : SentenceNode,
@@ -46,6 +53,10 @@ export interface SentenceNode {
     getActions() : ActionSource;
 
     toString() : string;
+
+    // Return if this is a valid and complete sentence
+    // eg transitive verbs have objects, attributes are followed by an indirect object etc
+    isValid() : boolean;
 
 }
 
@@ -123,6 +134,11 @@ function getWords(node : SentenceNode) : IdValue<string>[] {
     return words;
 }
 
+/**
+ * Get the actions that are provided by the verbs and entitys in the provided sentence
+ * @param node 
+ * @returns 
+ */
 function getActions(node : SentenceNode) : ActionSource {
     const actionSource = (node.previous && node.previous?.part.type !== "start")? getActions(node.previous) : emptyActionSource();
 
@@ -194,31 +210,50 @@ export function castModifiable<T extends SentenceNode>(node : T) : T & Modifiabl
     return node as T & Modifiable;
 }
 
+/**
+ * Add a `verb` function to a node.
+ * @param node 
+ * @returns 
+ */
 function verbable<T extends SentenceNode>(node : T) : T & Verbable {
     const newNode = {
         ...node,
-        verb : (verb : Verb) => directable(modifiable(prepositionable(makeNode({ type : "verb", verb : verb}, node))))
+        verb : (verb : Verb) => directable(modifiable(prepositionable(makeNode({ type : "verb", verb }, node))))
     }
     return newNode;
 }
 
+/**
+ * Add an `object` function to a node, which adds a direct object to the sentence
+ * @param node 
+ * @returns 
+ */
 function directable<T extends SentenceNode>(node : T) : T & Directable {
     const newNode = {
         ...node,
-        object : (entity : Entity) => prepositionable(modifiable(makeNode({ type : "directObject", entity : entity}, node)))
+        object : (entity : Entity) => prepositionable(modifiable(makeNode({ type : "directObject", entity }, node)))
     }
     return newNode;
 }
 
+/**
+ * Add an `object` function to a node, which adds a indirect object to the sentence
+ * @param node 
+ * @returns 
+ */
 function indirectable<T extends SentenceNode>(node : T) : T & Indirectable {
     const newNode = {
         ...node,
-        object : (entity : Entity) => prepositionable(modifiable(makeNode({ type : "indirectObject", entity : entity}, node)))
+        object : (entity : Entity) => prepositionable(modifiable(makeNode({ type : "indirectObject", entity }, node)))
     }
     return newNode;
 }
 
-
+/**
+ * Add a `preposition` function to a node 
+ * @param node 
+ * @returns 
+ */
 function prepositionable<T extends SentenceNode>(node : T) : T & Prepositionable {
     const newNode = {
         ...node,
@@ -227,10 +262,15 @@ function prepositionable<T extends SentenceNode>(node : T) : T & Prepositionable
     return newNode
 }
 
+/**
+ * Add a `modifier` function to a node. The function takes a modifier type and value
+ * @param node 
+ * @returns 
+ */
 function modifiable<T extends SentenceNode>(node : T) : T & Modifiable {
     const newNode = {
         ...node,
-        modifier : (modType : string, modValue : string) => prepositionable(modifiable(makeNode({ type : "modifier", modType : modType, value : modValue }, node)))
+        modifier : (modType : string, modValue : string) => prepositionable(modifiable(makeNode({ type : "modifier", modType, value : modValue }, node)))
     }
     return newNode;
 }
@@ -264,8 +304,41 @@ function makeNode(part : Part, prev? : SentenceNode) : SentenceNode {
 
         getWords : () => getWords(node),
 
-        getActions : () => getActions(node)
+        getActions : () => getActions(node),
+
+        isValid : () => checkValidity(node)
 
     }
     return node;
+}
+
+
+function accept(pos : PoSType) : Predicate<SentenceNode> {
+    return node => !_.isUndefined(node.getPoS(pos));
+}
+
+function reject(pos : PoSType) : Predicate<SentenceNode> {
+    return node => _.isUndefined(node.getPoS(pos));
+}
+
+/**
+ * A Sentence validator, first left hand side will match on a verb, then the right hand side can be used to validate a sentence.
+ */
+type SentenceValidator = [Predicate<Verb>[], Predicate<SentenceNode>[]];
+
+const VALIDATORS : SentenceValidator[] = [
+    [[Verb.isIntransitive],                                                [accept("verb"), reject("directObject"), reject("indirectObject")]],
+    [[Verb.isTransitive, not(Verb.isAttributed)],                          [accept("verb"), accept("directObject"), reject("preposition")]],
+    [[Verb.isTransitive, Verb.isAttributed, not(Verb.isIndirectOptional)], [accept("verb"), accept("directObject"), accept("preposition"), accept("indirectObject")]],
+    [[Verb.isTransitive, Verb.isAttributed, Verb.isIndirectOptional],      [accept("verb"), accept("directObject"), reject("preposition")]],
+    [[Verb.isTransitive, Verb.isAttributed, Verb.isIndirectOptional],      [accept("verb"), accept("directObject"), accept("preposition"), accept("indirectObject")]]
+];
+
+function checkValidity(node : SentenceNode) {
+    const verb = node.getPoS("verb")?.verb;
+    return (verb)
+            ? VALIDATORS.filter(([verbMatcher, _sentenceMatcher]) => matchAll(...verbMatcher)(verb))
+                     .map(([_verbMatcher, sentenceMatcher]) => sentenceMatcher)
+                     .some((sentenceMatcher) => matchAll(...sentenceMatcher)(node))
+            : false;
 }

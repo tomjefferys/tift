@@ -1,68 +1,11 @@
 import {getAllCommands, ContextEntities, searchNext, searchExact, SearchContext } from "../src/commandsearch";
 import {Command} from "../src/command"
-import {Entity, EntityBuilder} from "../src/entity";
-import {Verb, VerbBuilder} from "../src/verb";
+import { Entity } from "../src/entity";
+import { Verb } from "../src/verb";
 import * as _ from "lodash"
 import { VerbMap } from "../src/types";
-
-const STIR = new VerbBuilder({"id":"stir"})
-                     .withTrait("transitive")
-                     .withAttribute("with")
-                     .build();
-
-const EAT = new VerbBuilder({"id":"eat"})
-                     .withTrait("transitive")
-                     .build();
-
-const SOUP = new EntityBuilder({"id" : "soup"})
-                    .withVerb("stir")
-                    .build();
-  
-const APPLE = new EntityBuilder({"id" : "apple"})
-                     .withVerb("eat")
-                     .withVerb("get")
-                     .withVerb("drop")
-                     .build();
-
-const SPOON = new EntityBuilder({"id" : "spoon"})
-                     .withAttributedVerb("stir","with")
-                     .build();
-
-const GO = new VerbBuilder({"id":"go"})
-                  .withTrait("intransitive")
-                  .withModifier("direction")
-                  .build();
-
-const CAVE = new EntityBuilder({"id" : "cave"})
-                  .withVerb("go")
-                  .withVerb("look")
-                  .withVerbModifier("direction","north")
-                  .withVerbModifier("direction","east")
-                  .build();
-
-const PUSH = new VerbBuilder({"id":"push"})
-                    .withTrait("transitive")
-                    .withModifier("direction")
-                    .build();
-
-const BOX = new EntityBuilder({"id" : "box"})
-                    .withVerb("push")
-                    .build();
-
-const LOOK = new VerbBuilder({"id":"look"})
-                  .withTrait("intransitive")
-                  .build();
-
-const GET = new VerbBuilder({"id":"get"})
-                  .withTrait("transitive")
-                  .withContext("environment")
-                  .build();
-
-const DROP = new VerbBuilder({"id":"drop"})
-                  .withTrait("transitive")
-                  .withContext("inventory")
-                  .withContext("holding")
-                  .build();
+import { EAT, APPLE, STIR, SOUP, SPOON, LOOK, ASK,
+         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP } from "./testutils/testentities"
 
 test("Test empty input", () => {
   const options = getAllCommandIds([], []);
@@ -159,6 +102,22 @@ test("Test partial search", () => {
 
   next = searchNext(["push", "box"], context);
   expect(getCommandWords(next)).toEqual(expect.arrayContaining([["push", "box", "north"], ["push", "box", "east"]]));
+});
+
+test("Test partial search with missing indirect object", () => {
+  const noBeerContext : SearchContext = {
+    objs : {"default" : [BARKEEP]},
+    verbs : createVerbMap([ASK])
+  }
+
+  let next = searchNext([], noBeerContext);
+  expect(getCommandWords(next)).toHaveLength(0);
+
+  next = searchNext(["ask"], noBeerContext);
+  expect(getCommandWords(next)).toHaveLength(0);
+
+  next = searchNext(["ask", "barkeep"], noBeerContext);
+  expect(getCommandWords(next)).toHaveLength(0);
 });
 
 test("Test exact search", () => {

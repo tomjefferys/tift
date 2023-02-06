@@ -1,5 +1,5 @@
 import { start } from "../src/command"
-import { EAT, APPLE, STIR, SOUP, SPOON } from "./testutils/testentities"
+import { EAT, APPLE, STIR, SOUP, SPOON, LOOK, ASK, BARKEEP, BEER } from "./testutils/testentities"
 
 test("Test verb object", () => {
     const eatApple = start().verb(EAT).object(APPLE);
@@ -31,4 +31,16 @@ test("Test verb object prepos indirect object", () => {
 
     expect(stirSoupWithSpoon.getWords().map(idValue => idValue.id)).toStrictEqual(["stir", "soup", "with", "spoon"]);
     expect(stirSoupWithSpoon.size()).toBe(4);
+})
+
+test("Test command validity", () => {
+    expect(start().verb(LOOK).isValid()).toBeTruthy();
+    expect(start().verb(EAT).isValid()).toBeFalsy();
+    expect(start().verb(EAT).object(APPLE)).toBeTruthy();
+    expect(start().verb(STIR).object(SOUP).isValid()).toBeTruthy();
+    expect(start().verb(STIR).object(SOUP).preposition("with").isValid()).toBeFalsy();
+    expect(start().verb(STIR).object(SOUP).preposition("with").object(SPOON).isValid()).toBeTruthy();
+    expect(start().verb(ASK).object(BARKEEP).isValid()).toBeFalsy();
+    expect(start().verb(ASK).object(BARKEEP).preposition("about").isValid()).toBeFalsy();
+    expect(start().verb(ASK).object(BARKEEP).preposition("about").object(BEER).isValid()).toBeTruthy();
 })
