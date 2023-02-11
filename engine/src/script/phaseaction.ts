@@ -70,7 +70,7 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
 
     withMatcherAndCommand(matcherExpr : string, commandExpr : unknown) : this & Pick<PhaseAction, 'perform' | 'score' | 'isMatch'> {
         const matcher = evaluateMatchExpression(parseToTree(matcherExpr, this.objPath));
-        const command = RuleBuilder.parseRule(commandExpr, this.objPath);
+        const command = RuleBuilder.evaluateRule(commandExpr, this.objPath);
         return this.withMatcherOnMatch(matcher, command);
     }
 

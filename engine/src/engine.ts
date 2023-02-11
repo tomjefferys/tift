@@ -222,6 +222,7 @@ export class BasicEngine implements Engine {
     if (!matchedCommand) {
       throw new Error("Could not match command: " + JSON.stringify(command));
     }
+    //  console.log(JSON.stringify(this.env.get("entities.rubbish")));
 
     // Get ordered list of in scope entities
     const inScopeEnitites = this.sortEntities(matchedCommand);
@@ -257,6 +258,7 @@ export class BasicEngine implements Engine {
     this.postExecutionActions.forEach(action => action(postExecutionContext));
 
     if (verb && !isInstant(verb)) {
+
       // Run any contextual rules
       const allEntities = _.flatten(Object.values(this.context.entities))
       const contextualRules = allEntities.flatMap(entity => entity.rules.map(rule => [entity, rule] as [Entity,RuleFn]));
@@ -266,7 +268,9 @@ export class BasicEngine implements Engine {
       const globalRules = this.env.findObjs(obj => obj["type"] === "rule");
       globalRules.filter(rule => this.isRuleInScope(rule))
                  .forEach(rule => executeRule(rule, rule["__COMPILED__"], this.env));
+
     }
+     // console.log(JSON.stringify(this.env.get("entities.rubbish")));
 
     // Send the current save state
     this.save(); // TODO use a proxy to detect if anything has changed? (Use a counter, and increment it for every state change)

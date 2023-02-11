@@ -152,7 +152,7 @@ export function makeRule(obj : Obj) : Obj {
     if (!_.has(obj,"run")) {
         throw new Error(`Rule [${obj["id"]}] has no 'run' property`);
     }
-    const thunk = RuleBuilder.parseRule(runValue, `${obj.id}.run`);
+    const thunk = RuleBuilder.evaluateRule(runValue, `${obj.id}.run`);
     obj["__COMPILED__"] = (env : Env) => thunk.resolve(env).getValue();
     return obj;
 }
@@ -171,7 +171,7 @@ export function makeRule(obj : Obj) : Obj {
 function addRules(builder : EntityBuilder, obj : Obj) {
     const rules = obj["rules"];
     if (rules) {
-        const thunk = RuleBuilder.parseRule(rules, obj["id"] + ".rules");
+        const thunk = RuleBuilder.evaluateRule(rules, obj["id"] + ".rules");
         builder.withRule(env => thunk.resolve(env).getValue());
     }
 }

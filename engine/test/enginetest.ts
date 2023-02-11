@@ -773,22 +773,23 @@ test("Test action with repeat", () => {
     engine = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":1}]);
+
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["tin can"], notExpected : ["mouldy bread", "banana peel"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":2}]);
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":2}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["banana peel"], notExpected : ["tin can", "moudly bread"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":0}]);
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":1}]);
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["tin can"], notExpected : ["mouldy bread", "banana peel"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":2}]);
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":2}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["banana peel"], notExpected : ["tin can", "moudly bread"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":0}]);
+    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]);
 
 });
 
@@ -809,15 +810,13 @@ test("Test action with nested repeats", () => {
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
     expect(saveData.data).toStrictEqual([
-        {"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":1}]
+        {"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]
     );
 
     executeAndTest(["examine", "rubbish"], { expected : ["bar"], notExpected : ["foo", "baz"]});
     expect(saveData.data).toStrictEqual([
-        {"type":"Set","property":["entities","rubbish","after","0","repeat"], "newValue":{}},
-        {"type":"Set","property":["entities","rubbish","after","0","repeat","1"],"newValue":{}},
-        {"type":"Set","property":["entities","rubbish","after","0","repeat","1","index"],"newValue":1},
-        {"type":"Set","property":["entities","rubbish","after","0","index"],"newValue":0}]
+        {"type":"Set","property":["entities","rubbish","after","0","repeat","1","repeat","index"],"newValue":1},
+        {"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]
     );
 
     executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
