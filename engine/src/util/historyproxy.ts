@@ -15,7 +15,8 @@ export type Action = Set | Del;
 export interface Set {
     type : "Set",
     property : PropType[],
-    newValue : any
+    newValue : any,
+    replace? : boolean
 }
 
 export interface Del {
@@ -29,7 +30,6 @@ export interface Del {
  */
 export class ProxyManager {
     private history : Action[];
-    fullHistory : Action[] = [];
 
     private recordHistory : boolean;
 
@@ -51,7 +51,6 @@ export class ProxyManager {
      */
     clearHistory() : void {
         this.history.length = 0;
-        this.fullHistory.length = 0;
     }
 
     /**
@@ -86,7 +85,10 @@ export class ProxyManager {
      * @param newAction 
      */
     private recordAction(newAction : Action) {
-        this.history = [...this.history.filter(action => !isPrefixOf(newAction.property, action.property)), newAction];
+        const isSettingEmptyObject = (action : Action) => action.type === "Set" && !action.replace && objects.isEmptyObject(action.newValue);
+        this.history = [...this.history.filter(action => !isPrefixOf(newAction.property, action.property))
+                                       .filter(action => !(isSettingEmptyObject(action)
+                                                            && isPrefixOf(action.property, newAction.property))), newAction];
     }
 
     private createHandler(prefix : PropType[]) : object {
@@ -103,9 +105,10 @@ export class ProxyManager {
             set : (target : object, property : PropType, newValue : any) => {
                 if (this.recordHistory) {
                     const path = [...prefix, property];
-                    const action : Action = {type : "Set", property : path, newValue : _.isObject(newValue)? _.cloneDeep(newValue) : newValue};
+                    const oldValue = Reflect.get(target, property);
+                    const replace = (!_.isUndefined(oldValue) && objects.getType(oldValue) !== objects.getType(newValue))? { replace : true } : {};
+                    const action : Action = {type : "Set", property : path, newValue : _.isObject(newValue)? _.cloneDeep(newValue) : newValue, ...replace};
                     this.recordAction(action);
-                    this.fullHistory.push(action);
                 }
                 return Reflect.set(target, property, newValue);
             },

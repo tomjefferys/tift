@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 export type PropType = string | symbol;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -110,6 +112,15 @@ export function ifExists<T>(value : T, fn : (value:T) => void) {
   }
 }
 
+export function isEmptyObject(value : unknown) : boolean {
+  return _.isObject(value) && !_.isArray(value) && _.isEmpty(value);
+}
+
+export function getType(value : unknown) : string {
+  return Object.prototype.toString.call(value);
+}
+
 function splitPath(path : PropType[]) : [PropType, PropType[]] {
     return [path[0], path.slice(1)];
 }
+

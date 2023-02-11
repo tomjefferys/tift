@@ -62,7 +62,72 @@ test("Test array setting", () => {
     const proxy = manager.createProxy(target);
     proxy.foo.push("qux");
     expect(manager.getHistory()).toEqual([set(["foo", "2"], "qux"), set(["foo", "length"], 3)]);
+});
+
+test("Test deeply nested new object", () => {
+    const manager = new ProxyManager(true);
+    const original : Obj = {
+        foo : {}
+    }
+    const proxy = manager.createProxy(original);
+    proxy.foo.bar = {};
+    proxy.foo.bar.baz = {};
+    proxy.foo.bar.baz.qux = "xyzzy";
+
+    expect(proxy.foo.bar.baz.qux).toEqual("xyzzy");
+    expect(original.foo.bar.baz.qux).toEqual("xyzzy");
+
+    const history = manager.getHistory();
+
+    // Intermediate setting of empty objects should not be stored
+    expect(history).toStrictEqual([{"type":"Set","property":["foo","bar","baz","qux"],"newValue":"xyzzy"}]);
+
+    const [newObj, _newManager] = replayHistory({foo : {}}, manager.getHistory());
+    expect(newObj.foo.bar.baz.qux).toEqual("xyzzy");
+});
+
+test("Test replace string with object", () => {
+    const manager = new ProxyManager(true);
+    const original : Obj = { foo : "bar" }
+    const proxy = manager.createProxy(original);
+    proxy.foo = {};
+    proxy.foo.bar = "xyzzy";
+
+    expect(proxy.foo.bar).toEqual("xyzzy");
+    expect(original.foo.bar).toEqual("xyzzy");
+
+    const history = manager.getHistory();
+
+    // Intermediate setting of empty objects should not be stored
+    expect(history).toStrictEqual([
+        {"type":"Set","property":["foo"],"newValue":{},"replace":true},
+        {"type":"Set","property":["foo","bar"],"newValue":"xyzzy"}]);
+
+    const [newObj, _newManager] = replayHistory({foo : "bar"}, manager.getHistory());
+    expect(newObj.foo.bar).toEqual("xyzzy");
+
 })
+
+test("Test store empty object at leaf node", () => {
+    const manager = new ProxyManager(true);
+    const original : Obj = {
+        foo : {}
+    }
+    const proxy = manager.createProxy(original);
+    proxy.foo.bar = {};
+    proxy.foo.bar.baz = {};
+
+    expect(proxy.foo.bar.baz).toEqual({});
+    expect(original.foo.bar.baz).toEqual({});
+
+    const history = manager.getHistory();
+
+    // Intermediate setting of empty objects should not be stored
+    expect(history).toStrictEqual([{"type":"Set","property":["foo","bar","baz"],"newValue":{}}]);
+
+    const [newObj, _newManager] = replayHistory({foo : {}}, manager.getHistory());
+    expect(newObj.foo.bar.baz).toEqual({});
+});
 
 test("Test replay history", () => {
     const manager = new ProxyManager(true);
@@ -110,7 +175,7 @@ test("Test history compression", () => {
     expect(manager.getHistory()).toEqual([set(["corge"], "three"), set(["foo", "bar"], "qux"), set(["foo", "baz"], "quux")]);
 
     proxy.foo = "xyzzy";
-    expect(manager.getHistory()).toEqual([set(["corge"], "three"), set(["foo"], "xyzzy")]);
+    expect(manager.getHistory()).toEqual([set(["corge"], "three"), set(["foo"], "xyzzy", true)]);
 });
 
 test("Test random objects", () => {
@@ -135,15 +200,20 @@ test("Test random objects", () => {
         expect(proxy).not.toStrictEqual(originalClone);
 
         // Replay the history on the original clone
-        const [newObj, _newManager] = replayHistory(originalClone, manager.getHistory());
+        try {
+            const [newObj, _newManager] = replayHistory(originalClone, manager.getHistory());
 
-        // Check the are the same
-        expect(newObj, "Seed = [" + seed + "]").toStrictEqual(proxy);
+            // Check the are the same
+            expect(newObj, `Seed = [${seed}]`).toStrictEqual(proxy);
+        } catch (e) {
+            expect(false, `${e} Seed = [${seed}]`).toBeTruthy();
+        }
     }
 });
 
-function set(property : PropType[], newValue : any) { 
-    return { type : "Set", property, newValue };
+function set(property : PropType[], newValue : any, isReplace = false) { 
+    const replace = isReplace? { replace : true } : {};
+    return { type : "Set", property, newValue, ...replace };
 }
 
 function del(property : PropType[]) {
