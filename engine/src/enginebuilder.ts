@@ -148,7 +148,6 @@ export function makeRoom(obj : Obj) : Entity {
 }
 
 export function makeRule(obj : Obj) : Obj {
-    const runValue = obj["run"];
     const thunk = RuleBuilder.evaluateRule(obj, `${obj.id}`);
     obj["__COMPILED__"] = (env : Env) => thunk.resolve(env).getValue();
     return obj;
