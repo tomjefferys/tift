@@ -9,6 +9,7 @@ import Output from "./Output"
 import Controls from './Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from '../outputentry';
 import { Box, Divider, useColorMode } from '@chakra-ui/react'
+
 import { InputMessage } from 'tift-engine/src/messages/input';
 
 const GAME_FILE = "adventure.yaml";
@@ -29,9 +30,13 @@ function Tift() {
     // Store messages as a ref, as the can be updated multiple times between renders
     // and using a state makes it tricky to get the most up to date values
     const messagesRef = useRef<OutputEntry[]>([]);
+
+    // Store the latest words from the engine as a ref, separate from
+    // the word state, as we want to avoid the word state updating unnecessarilly
+    const latestWordsRef = useRef<Word[]>([]);
   
     const engineRef = useRef<Engine | null>(null)
-  
+
     const getWords = (command : Word[]) => engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
     const execute = (command : Word[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
   
@@ -48,6 +53,7 @@ function Tift() {
                 engine.send(Input.config({"autoLook" : true}));
                 engine.send(Input.start((saveData != null)? saveData : undefined));
                 getWords([]);
+                setWords(latestWordsRef.current);
                 engine.send(Input.getStatus());
               })
   
@@ -84,7 +90,7 @@ function Tift() {
 
       const outputConsumer = getOutputConsumer(
         message => updateMessages(messagesRef.current, messageEntry(message)), 
-        words => setWords(words),
+        words => latestWordsRef.current = words,
         status => setStatus(status),
         (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
         saveGame
@@ -113,6 +119,8 @@ function Tift() {
   
     // words updated
     useEffect(() => {
+      getWords(command);
+      const words = latestWordsRef.current;
       const engine = engineRef.current;
       const gameWords = words.filter(word => word.type === "word");
       if (engine && command.length && !gameWords.length) {
@@ -124,18 +132,11 @@ function Tift() {
       } else if (engine && command.length && gameWords.length) {
         // Add in backspace if it's not already there
         if (!words.includes(BACKSPACE)) {
-          setWords([...words, BACKSPACE]);
+          latestWordsRef.current = [...words, BACKSPACE];
         }
       }
-    }, [words, command]);
-  
-    // command updated
-    useEffect(() => {
-      const engine = engineRef.current;
-      if (engine) {
-        getWords(command);
-      }
-    }, [command])
+      setWords(latestWordsRef.current);
+    }, [command]);
   
     const wordSelected = (_event : SyntheticEvent, word : Word) => {
       if (word === BACKSPACE) {
