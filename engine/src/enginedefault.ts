@@ -253,25 +253,25 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
                         } ),
     hasTag : bindParams(["entityId", "tag"],
                         env => {
-                            const entity = getEntity(env, env.getStr("entityId"));
+                            const entity = getEntity(env, env.get("entityId"));
                             const result = entityHasTag(entity, env.getStr("tag"));
                             return mkResult(result);
                         }),
     setTag : bindParams(["entityId", "tag"], 
                          env => {
-                            const entity = getEntity(env, env.getStr("entityId"));
+                            const entity = getEntity(env, env.get("entityId"));
                             setEntityTag(entity, env.getStr("tag"));
                             return mkResult(null);
                          }),
     delTag : bindParams(["entityId", "tag"], 
                         env => {
-                            const entity = getEntity(env, env.getStr("entityId"));
+                            const entity = getEntity(env, env.get("entityId"));
                             delEntityTag(entity, env.getStr("tag"));
                             return mkResult(null);
                         }),
     reveal : bindParams(["entityId"],
                         env =>{
-                            const entity = getEntity(env, env.getStr("entityId"));
+                            const entity = getEntity(env, env.get("entityId"));
                             delEntityTag(entity, "hidden");
                             return mkResult(null);
                         })
@@ -296,10 +296,12 @@ export function getLocation(env : Env) {
     return getPlayer(env).location;
 }
 
-export function getEntity(env : Env, id : string) {
-    const entity = env.get(makePath([NS_ENTITIES, id]));
+export function getEntity(env : Env, entityParam : unknown) {
+    const entity = _.isString(entityParam) 
+                        ? env.get(makePath([NS_ENTITIES, entityParam]))
+                        : entityParam;
     if (!isFound(entity)) {
-        throw new Error(`Could not find entity [${id}]`);
+        throw new Error(`Could not find entity [${entityParam}]`);
     }
     return entity;
 }
