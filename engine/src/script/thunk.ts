@@ -34,7 +34,11 @@ export function mkThunk(envFn : EnvFn, expression? : Expression, type : ThunkTyp
         try {
             return envFn(env);
         } catch(e) {
-            rethrowExecutionError(exprToString(expression), e);
+            if (expression) {
+                rethrowExecutionError(exprToString(expression), e);
+            } else {
+                throw e;
+            }
         }
     }
     return {

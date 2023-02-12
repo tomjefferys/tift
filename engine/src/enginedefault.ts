@@ -13,7 +13,7 @@ import { bindParams } from "./script/parser";
 import { Obj } from "./util/objects"
 import _ from "lodash";
 import { Optional } from "./util/optional";
-import { getCauseMessage } from "./util/errors";
+import * as Errors from "./util/errors";
 
 const NS_ENTITIES = "entities";
 const LOCATION = "location";
@@ -216,11 +216,11 @@ export const DEFAULT_VERBS = [
 ];
 
 const moveFn = bindParams(["id"], env => {
-    const id = env.getStr("id");
+    const id = env.get("id");
     const DEST = "destination";
     return mkResult({
         to : bindParams([DEST], env => {
-            doMove(env, id, env.getStr(DEST));
+            doMove(env, id, env.get(DEST));
             return mkResult(null);
         })
     });
@@ -228,7 +228,7 @@ const moveFn = bindParams(["id"], env => {
 
 const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     setLocation : env => {
-        doMove(env, PLAYER, env.getStr("dest"));
+        doMove(env, PLAYER, env.get("dest"));
     },
     
     moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),
@@ -277,14 +277,14 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
                         })
 }
 
-function doMove(env : Env, entityId : string, destinationId : string) {
+function doMove(env : Env, entityId : string | object, destinationId : string | object) {
     try {
         // FIXME shouldn't the player just be another entity?
-        const entity = entityId == PLAYER? env.get(PLAYER) : getEntity(env, entityId);
+        const entity = entityId === PLAYER? env.get(PLAYER) : getEntity(env, entityId);
         const destination = getEntity(env, destinationId);
         entity[LOCATION] = destination.id;
     } catch(e) {
-        throw new Error(`Could not move entity [${entityId}] to [${destinationId}]\n${getCauseMessage(e)}`);
+        throw new Error(`Could not move entity [${Errors.toStr(entityId)}] to [${Errors.toStr(destinationId)}]\n${Errors.getCauseMessage(e)}`);
     }
 }
 
@@ -301,7 +301,7 @@ export function getEntity(env : Env, entityParam : unknown) {
                         ? env.get(makePath([NS_ENTITIES, entityParam]))
                         : entityParam;
     if (!isFound(entity)) {
-        throw new Error(`Could not find entity [${entityParam}]`);
+        throw new Error(`Could not find entity [${Errors.toStr(entityParam)}]`);
     }
     return entity;
 }

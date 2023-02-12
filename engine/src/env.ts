@@ -205,7 +205,11 @@ export class Env {
      */
     getStr(name : string) : string {
         const path = parsePath(name);
-        return this.get(path).toString();
+        const value = this.get(path);
+        if (!_.isString(value)) {
+            throw new Error(`${name} is not a string`)
+        }
+        return value;
     }
 
     getArr(name : string) : AnyArray {
@@ -463,6 +467,10 @@ function nameSpace(ns : NameSpace) : {[NAMESPACE] : NameSpace} {
 
 export function isFound(value : unknown) : boolean {
     return !(_.isObject(value) && _.has(value, NOT_FOUND));
+}
+
+export function isNotFound(value : unknown) : value is {[NOT_FOUND] : string } {
+    return _.isObject(value) && _.has(value, NOT_FOUND);
 }
 
 function notFound(path : Path) : { [NOT_FOUND] : Path } {
