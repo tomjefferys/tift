@@ -149,10 +149,7 @@ export function makeRoom(obj : Obj) : Entity {
 
 export function makeRule(obj : Obj) : Obj {
     const runValue = obj["run"];
-    if (!_.has(obj,"run")) {
-        throw new Error(`Rule [${obj["id"]}] has no 'run' property`);
-    }
-    const thunk = RuleBuilder.evaluateRule(runValue, `${obj.id}.run`);
+    const thunk = RuleBuilder.evaluateRule(obj, `${obj.id}`);
     obj["__COMPILED__"] = (env : Env) => thunk.resolve(env).getValue();
     return obj;
 }

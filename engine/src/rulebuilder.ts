@@ -44,15 +44,16 @@ export const evaluateRule : RuleEvaluator = (rule, path) => {
 function evaluateComponentRule(rule : object, path? : string) : Thunk {
     const rules : {[key in RuleMethodType]?:Thunk} = {};
     for(const [key,value] of Object.entries(rule)) {
-        if (!_.has(components, key)) {
-            throw new Error(`${key} is not a vaild rule method, should be one of: ${Object.keys(components)}`);
+        const componentBuilder = components[key];
+        if (componentBuilder) {
+            const [type, builder] = componentBuilder;
+            if (_.has(rules, type)) {
+                throw new Error(`Duplicate ${type} declared for ${path}`);
+            }
+            rules[type] = builder(value, path + "." + key);
         }
-        const [type, builder] = components[key];
-        if (_.has(rules, type)) {
-            throw new Error(`Duplicate ${type} declared for ${path}`);
-        }
-        rules[type] = builder(value, path + "." + key);
     }
+    // TODO warn if no action
 
     const envFn = (env : Env) => {
         const action = (rules["condition"]?.resolve(env).getValue() ?? true)

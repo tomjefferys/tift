@@ -206,7 +206,7 @@ test("Test simple rules", () => {
     builder.withObj({
         id : "rule1",
         type : "rule",
-        run : ["print('hello world')"]
+        do : ["print('hello world')"]
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -655,10 +655,8 @@ test("Test moveTo", () => {
     builder.withObj({
         id: "moveGoblin",
         type: "rule",
-        run: {
-            "repeat" : ["do(print('The goblin goes south'), move('goblin').to('southRoom'))",
+        repeat: ["do(print('The goblin goes south'), move('goblin').to('southRoom'))",
                         "do(print('The goblin goes north'), move('goblin').to('northRoom'))"]
-        }
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -696,12 +694,12 @@ test("Test scoped rules", () => {
         id:"scopedGhost",
         type:"rule",
         scope: ["southRoom"],
-        run: "'wooo-oo'"
+        do: "'wooo-oo'"
     })
     builder.withObj({
         id:"globalMonster",
         type:"rule",
-        run: "'grr'"
+        do: "'grr'"
     })
     engine = builder.build();
     engine.send(Input.start());

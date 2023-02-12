@@ -143,7 +143,7 @@ test("Build rule", () => {
     const obj = {
       "id": "rule1",
       "type": "rule",
-      "run": ["write('hello')", "write('world')"]
+      "do": ["write('hello')", "write('world')"]
     }
 
     const rule = makeRule(obj);
@@ -156,7 +156,7 @@ test("Build rule - single expr", () => {
     const obj = {
       "id": "rule1",
       "type": "rule",
-      "run": "write('hello world')"
+      "do": "write('hello world')"
     }
 
     const rule = makeRule(obj);
@@ -165,20 +165,11 @@ test("Build rule - single expr", () => {
     expect(messages).toStrictEqual(["hello world"]);
 });
 
-test("Build rule - no expressions", () => {
-    const obj = {
-      "id": "rule1",
-      "type": "rule",
-    }
-
-    expect(() => makeRule(obj)).toThrowError();
-});
-
 test("Build rule - error", () => {
     const obj = {
       "id": "rule1",
       "type": "rule",
-      "run": "write('hello world)"
+      "do": "write('hello world)"
     }
 
     try {
@@ -186,7 +177,7 @@ test("Build rule - error", () => {
       fail();
     } catch (e) {
       const error = e as Error;
-      expect(error.message).toContain("rule1.run");
+      expect(error.message).toContain("rule1.do");
       expect(error.message).toContain("write('hello world)");
     }
 });
