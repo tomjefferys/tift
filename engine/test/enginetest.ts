@@ -825,6 +825,36 @@ test("Test action with nested repeats", () => {
     executeAndTest(["examine", "rubbish"], { expected : ["baz"], notExpected : ["bar", "foo"]});
 });
 
+test("Test property setting in before phase", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                id : "armchair",
+                desc : "A threadbare armchair.  {{#sat_on}}sitting{{/sat_on}} {{^sat_on}}standing{{/sat_on}}",
+                type : "item",
+                location : "northRoom",
+                verbs : ["sit"],
+                sat_on : false,
+                before : {
+                    "sit(this)" : {
+                        "when" : "!this.sat_on",
+                        "do" : ["print('You sit down')", "this.sat_on=true"],
+                        "otherwise" : "'You are already sitting'"
+                    } 
+                }
+           })
+           .withObj({
+                id : "sit",
+                type : "verb",
+                tags : ["transitive"]
+           });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "standing"], notExpected : ["sitting"]});
+    executeAndTest(["sit", "armchair"], { expected : ["You sit down"] });
+    executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "sitting"], notExpected : ["standing"]});
+    executeAndTest(["sit", "armchair"], { expected : ["You are already sitting"] });
+})
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]

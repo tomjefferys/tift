@@ -79,9 +79,13 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
                 perform : (env : Env, obj : Obj,  command : Command) => {
                     try {
                         const result = matcher(command, obj.id);
-                        const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
-                        const resolverEnv = entitiesEnv.newChild(result.captures).newChild({"this" : obj});
-                        return result.isMatch? onMatch.resolve(resolverEnv) : mkResult(undefined, {});
+                        if (result.isMatch) {
+                            const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
+                            const resolverEnv = entitiesEnv.newChild(result.captures).newChild({"this" : obj});
+                            return onMatch.resolve(resolverEnv);
+                        } else {
+                            return mkResult(undefined, {});
+                        }
                     } catch (e) {
                         throw new Error(`Error executing '${(this.objPath? this.objPath : "")}'\n${getCauseMessage(e)}`);
                     }

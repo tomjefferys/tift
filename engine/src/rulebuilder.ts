@@ -56,10 +56,11 @@ function evaluateComponentRule(rule : object, path? : string) : Thunk {
     // TODO warn if no action
 
     const envFn = (env : Env) => {
-        const action = (rules["condition"]?.resolve(env).getValue() ?? true)
+        const scope = env.newChild();
+        const action = (rules["condition"]?.resolve(scope).getValue() ?? true)
                             ? rules["action"]
                             : rules["otherwise"]
-        return mkResult(action?.resolve(env).getValue());
+        return mkResult(action?.resolve(scope).getValue());
     }
     return mkThunk(envFn);
 }
@@ -76,7 +77,7 @@ function evaluateRuleList(ruleList : unknown, path? : string) : Thunk[] {
 const evaluator : RuleEvaluator = (rule, path) => {
     const expr = evaluateRule(rule, path);
     const envFn = (env : Env) => {
-        return expr.resolve(env);
+        return expr.resolve(env.newChild());
     }
     return mkThunk(envFn);
 }
@@ -96,7 +97,8 @@ const buildUnless : RuleEvaluator = (rule, path) => {
 const buildAll : RuleEvaluator = (rules, path) => {
     const thunks = evaluateRuleList(rules, path);
     const envFn = (env : Env) => {
-        return thunks.reduce((_acc, fn) => fn.resolve(env), mkResult(null));
+        const scope = env.newChild();
+        return thunks.reduce((_acc, fn) => fn.resolve(scope), mkResult(null));
     }
     return mkThunk(envFn);
 }
@@ -113,7 +115,7 @@ const buildRepeat : RuleEvaluator = (rules, path) => {
         if (!isFound(index)) {
             index = 0;
         }
-        const result = thunks[index++].resolve(env);
+        const result = thunks[index++].resolve(env.newChild());
         if (index >= thunks.length) {
             index = 0;
         }
@@ -130,7 +132,7 @@ const buildRandom : RuleEvaluator = (rules, path) => {
     const thunks = evaluateRuleList(rules, path);
     const ruleFn = (env : Env) => {
         const index = _.random(thunks.length - 1);
-        const result = thunks[index].resolve(env);
+        const result = thunks[index].resolve(env.newChild());
         return result;
     }
     return mkThunk(ruleFn);

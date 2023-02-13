@@ -29,20 +29,21 @@ test("Test nested list", () => {
 })
 
 test("Test repeat", () => {
-    const thunk = RuleBuilder.evaluateRule({ "repeat" : ["write('foo')", "write('bar')", "write('baz')"] });
-    thunk.resolve(env);
+    const thunk = RuleBuilder.evaluateRule({ "repeat" : ["write('foo')", "write('bar')", "write('baz')"] }, "myRule");
+    const scope = env.newChild({ myRule : {}});
+    thunk.resolve(scope);
     expect(messages).toStrictEqual(["foo"]);
     messages.length = 0;
 
-    thunk.resolve(env);
+    thunk.resolve(scope);
     expect(messages).toStrictEqual(["bar"]);
     messages.length = 0;
     
-    thunk.resolve(env);
+    thunk.resolve(scope);
     expect(messages).toStrictEqual(["baz"]);
     messages.length = 0;
 
-    thunk.resolve(env);
+    thunk.resolve(scope);
     expect(messages).toStrictEqual(["foo"]);
     messages.length = 0;
 });
