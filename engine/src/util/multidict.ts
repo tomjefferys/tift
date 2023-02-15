@@ -43,6 +43,24 @@ export function remove<T>(dict : MultiDict<T>, key : KeyType, value : T) {
   }
 }
 
+export function filter<T>(dict : MultiDict<T>, predicate : (key : string, value : T) => boolean) : MultiDict<T> {
+  const newDict : MultiDict<T> = {};
+  entries(dict).forEach(([key, value]) => {
+    if(predicate(key, value)) {
+      add(newDict, key, value);
+    }
+  })
+  return newDict;
+}
+
+export function map<T>(dict : MultiDict<T>, mapper : (key : string, value : T) => T) : MultiDict<T> {
+  const newDict : MultiDict<T> = {};
+  entries(dict).forEach(([key, value]) => {
+    add(newDict, key, mapper(key, value));
+  })
+  return newDict;
+}
+
 function entryToEntries<T>(entry : [KeyType, T[]]) : [KeyType, T][] {
   const [key, values] = entry;
   return values.map(value => [key, value])

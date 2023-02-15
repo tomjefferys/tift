@@ -54,3 +54,25 @@ test("Test get values", () => {
   expect(values).toHaveLength(4);
   expect(values).toEqual(expect.arrayContaining([ "value1", "value2", "foo", "bar"]));
 })
+
+test("Test filter", () => {
+  const dict1 : MultiDict<number> = {};
+  multidict.addAll(dict1, "key1", [1, 2, 3, 4]);
+  multidict.addAll(dict1, "key2", [8, 7, 6, 5]);
+  multidict.addAll(dict1, "key3", []);
+  const dict2 = multidict.filter(dict1, (key, value) => value % 2 ==0);
+  expect(multidict.get(dict2, "key1")).toEqual([2,4]);
+  expect(multidict.get(dict2, "key2")).toEqual([8,6]);
+  expect(multidict.get(dict2, "key3")).toEqual([]);
+})
+
+test("Test map", () => {
+  const dict1 : MultiDict<number> = {};
+  multidict.addAll(dict1, "key1", [1, 2, 3, 4]);
+  multidict.addAll(dict1, "key2", [8, 7, 6, 5]);
+  multidict.addAll(dict1, "key3", []);
+  const dict2 = multidict.map(dict1, (key, value) => value + 1);
+  expect(multidict.get(dict2, "key1")).toEqual([2, 3, 4, 5]);
+  expect(multidict.get(dict2, "key2")).toEqual([9, 8, 7, 6]);
+  expect(multidict.get(dict2, "key3")).toEqual([]);
+})
