@@ -241,6 +241,9 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
         DEFAULT_FUNCTIONS.write(env);
         return mkResult(null);
     }),
+    not : bindParams(["value"], env => {
+        return mkResult(!env.get("value"));
+    }),
     openExit : bindParams(["room", "direction", "target"], 
                         env => {
                             addExit(env, env.getStr("room"), env.getStr("direction"), env.get("target"));

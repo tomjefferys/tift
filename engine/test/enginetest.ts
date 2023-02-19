@@ -861,11 +861,11 @@ test("Test conditional verbs", () => {
                 desc : "A threadbare armchair.  {{#sat_on}}sitting{{/sat_on}} {{^sat_on}}standing{{/sat_on}}",
                 type : "item",
                 location : "northRoom",
-                verbs : [{ "sit" : "!sat_on"}, { "stand" : "sat_on"}],
+                verbs : [{ "sit" : "not(sat_on)"}, { "stand" : "sat_on"}],
                 sat_on : false,
                 before : {
                     "sit(this)" : {
-                        "when" : "!this.sat_on",
+                        "when" : "not(this.sat_on)",
                         "do" : ["print('You sit down')", "this.sat_on=true"],
                         "otherwise" : "'You are already sitting'"
                     },
