@@ -865,13 +865,13 @@ test("Test conditional verbs", () => {
                 sat_on : false,
                 before : {
                     "sit(this)" : {
-                        "when" : "not(this.sat_on)",
-                        "do" : ["print('You sit down')", "this.sat_on=true"],
+                        "when" : "not(sat_on)",
+                        "do" : ["print('You sit down')", "sat_on=true"],
                         "otherwise" : "'You are already sitting'"
                     },
                     "stand" : {
-                        "when" : "this.sat_on",
-                        "do" : ["print('You stand up')", "this.sat_on=false"],
+                        "when" : "sat_on",
+                        "do" : ["print('You stand up')", "sat_on=false"],
                         "otherwise" : "'You are already standing'"
                     }
                 }
