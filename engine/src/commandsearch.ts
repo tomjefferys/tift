@@ -8,6 +8,7 @@ import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
 import * as Arrays from "./util/arrays"
 import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable } from "./command"
+import { Env } from "./env"
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -24,15 +25,15 @@ export type ContextEntities = MultiDict<Entity>;
 
 const INITIAL_STATE : Command = start();
 
-export function getAllCommands(objs: ContextEntities, verbs: Verb[]) : IdValue<string>[][] {
-  const context = buildSearchContext(objs, verbs);
+export function getAllCommands(objs: ContextEntities, verbs: Verb[], env : Env) : IdValue<string>[][] {
+  const context = buildSearchContext(objs, verbs, env);
   return searchAll(context)
           .filter(state => state.isValid())
           .map(state => state.getWords());
 }
 
-export function getNextWords(partial : string[], objs : ContextEntities, verbs : Verb[]) : IdValue<string>[] {
-  const context = buildSearchContext(objs, verbs);
+export function getNextWords(partial : string[], objs : ContextEntities, verbs : Verb[], env : Env) : IdValue<string>[] {
+  const context = buildSearchContext(objs, verbs, env);
   const nextWords = searchNext(partial, context)
           .map(state => _.last(state.getWords()))
           .filter(Boolean)
@@ -43,29 +44,40 @@ export function getNextWords(partial : string[], objs : ContextEntities, verbs :
 export interface SearchContext {
   objs:  ContextEntities,
   verbs: VerbMap,
+  env : Env
 }
 
-export function buildSearchContext(objs : ContextEntities, verbs : Verb[]) : SearchContext {
+export function buildSearchContext(objs : ContextEntities,
+                                   verbs : Verb[],
+                                   env : Env) : SearchContext {
   return {
-    objs: objs,
+    objs,
     verbs: verbs.reduce((map,verb) => {
              map[verb.id] = verb;
              return map;
-          }, {} as VerbMap)
+          }, {} as VerbMap),
+    env
   };
 }
 
+function isVerbEnabled(context : SearchContext, entity : Entity, verbMatcher : VerbMatcher) : boolean {
+  let enabled = true;
+  if (verbMatcher.condition) {
+    const entitiesEnv = context.env.newChild(context.env.createNamespaceReferences(["entities"]));
+    const entityEnv = entitiesEnv.newChild(entity);
+    enabled = Boolean(verbMatcher.condition.resolve(entityEnv).getValue());
+  }
+
+  return enabled;
+}
 
 /**
  * Return all direct object in the context matching a single verb
  */
 function getDirectObjects(context : SearchContext, verb : Verb) : Entity[] {
   const entities = filterEntities(context.objs, verb.contexts);
-  return entities
-               .filter(obj => 
-                  obj.verbs.some((verbMatcher) => 
-                    verbMatcher.verb === verb.id && !verbMatcher.attribute));
-}
+  return entities.filter(entity => entity.verbs.filter(verbMatcher => isVerbEnabled(context, entity, verbMatcher))
+                                               .some((verbMatcher) => verbMatcher.verb === verb.id && !verbMatcher.attribute)); }
 
 function filterEntities(entities : ContextEntities, verbContexts : VerbContext[]) {
   return verbContexts.length
@@ -101,12 +113,13 @@ function testAttributeMatches(
 }
 
 /**
- * Return all verb attibutes available in a context matching a single verb
+ * Return all verb attributes available in a context matching a single verb
  */
 function getVerbAttributes(context : SearchContext, verb : Verb) : string[] {
   const objs = getIndirectObjects(context, verb);
-  return objs.flatMap(obj => 
-                obj.verbs.filter(verbMatcher => verbMatcher.verb === verb.id))
+  return objs.flatMap(entity => 
+                entity.verbs.filter(verbMatcher => verbMatcher.verb === verb.id)
+                            .filter(verbMatcher => isVerbEnabled(context, entity, verbMatcher)))
              .filter(verbMatcher => verbMatcher.attribute)
              .map(verbMatcher => verbMatcher.attribute as string);
 }
@@ -141,7 +154,7 @@ const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
   return (context, state) => {
     const states : Command[] = [];
     for(const [verbContext, entities] of Object.entries(context.objs)) {
-      getVerbs(entities, context.verbs, verbContext)
+      getVerbs(context, entities, context.verbs, verbContext)
         .filter(filter)
         .map(v => castVerbable(state).verb(v))
         .forEach(state => states.push(state));
@@ -157,12 +170,13 @@ const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
  * @param context the verb-context to limit the search to
  * @returns a list of matching verbs
  */
-const getVerbs = (entities : Entity[], verbs : VerbMap, context : VerbContext) : Verb[] => 
-    entities.flatMap(entity => entity?.verbs ?? [])
-            .filter(matcher => !matcher.attribute)
-            .map(matcher => verbs[matcher.verb])
+const getVerbs = (context : SearchContext, entities : Entity[], verbs : VerbMap, verbContext : VerbContext) : Verb[] => 
+    entities.flatMap(entity => (entity.verbs.map(verb => [entity, verb]) ?? []) as [Entity, VerbMatcher][])
+            .filter(([_entity, matcher]) => !matcher.attribute)
+            .filter(([entity, matcher]) => isVerbEnabled(context, entity, matcher))
+            .map(([_entity, matcher]) => verbs[matcher.verb])
             .filter(Boolean)
-            .filter(verb => verb.contexts.length == 0 || verb.contexts.includes(context));
+            .filter(verb => verb.contexts.length == 0 || verb.contexts.includes(verbContext));
 
 const directObjectSearch : SearchFn = (context, state) => {
   const verb = state.getPoS("verb")?.verb;

@@ -2,10 +2,11 @@ import {getAllCommands, ContextEntities, searchNext, searchExact, SearchContext 
 import {Command} from "../src/command"
 import { Entity } from "../src/entity";
 import { Verb } from "../src/verb";
+import { createRootEnv } from "../src/env";
 import * as _ from "lodash"
 import { VerbMap } from "../src/types";
 import { EAT, APPLE, STIR, SOUP, SPOON, LOOK, ASK,
-         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP } from "./testutils/testentities"
+         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP, CHAIR, STAND, SIT } from "./testutils/testentities"
 
 test("Test empty input", () => {
   const options = getAllCommandIds([], []);
@@ -91,7 +92,8 @@ test("Test inventory context", () => {
 test("Test partial search", () => {
   const context : SearchContext = {
     objs : {"default" : [BOX, CAVE]},
-    verbs : createVerbMap([PUSH, GO])
+    verbs : createVerbMap([PUSH, GO]),
+    env : createRootEnv({})
   }
 
   let next = searchNext([], context);
@@ -107,7 +109,8 @@ test("Test partial search", () => {
 test("Test partial search with missing indirect object", () => {
   const noBeerContext : SearchContext = {
     objs : {"default" : [BARKEEP]},
-    verbs : createVerbMap([ASK])
+    verbs : createVerbMap([ASK]),
+    env : createRootEnv({})
   }
 
   let next = searchNext([], noBeerContext);
@@ -123,7 +126,8 @@ test("Test partial search with missing indirect object", () => {
 test("Test exact search", () => {
   const context : SearchContext = {
     objs : {"default" : [BOX, CAVE]},
-    verbs : createVerbMap([PUSH])
+    verbs : createVerbMap([PUSH]),
+    env : createRootEnv({})
   }
 
   let exact = searchExact([], context);
@@ -141,12 +145,33 @@ test("Test exact search", () => {
   expect(getCommandWords([exact as Command])).toEqual(expect.arrayContaining([["push", "box", "north"]]));
 })
 
+test("Test conditional verbs", () => {
+  const chair = {...CHAIR};
+  const context : SearchContext = {
+    objs : {"default" : [chair]},
+    verbs : createVerbMap([SIT, STAND]),
+    env : createRootEnv({})
+  }
+
+  let next = searchNext([], context);
+  let commands = getCommandWords(next);
+  expect(commands).toHaveLength(1);
+  expect(commands[0]).toEqual(["sit"]);
+
+  chair.sat_on = true;
+
+  next = searchNext([], context);
+  commands = getCommandWords(next);
+  expect(commands).toHaveLength(1);
+  expect(commands[0]).toEqual(["stand"]);
+});
+
 const createVerbMap = (verbs : Verb[]) : VerbMap => verbs.reduce((obj, verb) => ({...obj, [verb.id] : verb}), {});
 
 const getCommandWords = (states : Command[]) : string[][] => states.map(state => state.getWords().map(wordId => wordId.id));
 
 function getAllCommandIds(entities : ContextEntities | Entity[], verbs : Verb[]) {
   const contextEntities = _.isArray(entities)? {"default": entities} : entities;
-  const commands = getAllCommands(contextEntities, verbs);
+  const commands = getAllCommands(contextEntities, verbs, createRootEnv({}));
   return commands.map(command => command.map(idWords => idWords.id))
 }

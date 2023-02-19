@@ -1,5 +1,6 @@
 import { VerbBuilder } from "../../src/verb";
 import { EntityBuilder } from "../../src/entity";
+import { parseToThunk } from "../../src/script/parser";
 
 
 export const STIR = new VerbBuilder({"id":"stir"})
@@ -73,4 +74,17 @@ export const BARKEEP = new EntityBuilder({"id" : "barkeep"})
 
 export const BEER = new EntityBuilder({"id" : "beer"})
                   .withAttributedVerb("ask", "about")
+                  .build();
+
+export const SIT = new VerbBuilder({"id" : "sit"}) 
+                  .withTrait("transitive")
+                  .build();
+
+export const STAND = new VerbBuilder({"id" : "stand"})
+                  .withTrait("intransitive")
+                  .build();
+
+export const CHAIR = new EntityBuilder({"id" : "chair", "sat_on" : false})
+                  .withVerbMatcher({verb : "sit", condition : parseToThunk("!sat_on") })
+                  .withVerbMatcher({verb : "stand", condition : parseToThunk("sat_on") })
                   .build();

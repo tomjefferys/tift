@@ -4,6 +4,7 @@ import { Nameable } from "./nameable";
 import { ActionSource } from "./actionsource";
 import { AfterAction, MainAction, BeforeAction } from "./script/phaseaction";
 import { Env } from "./env";
+import { Thunk } from "./script/thunk";
 
 export type RuleFn = (env : Env) => unknown;
 
@@ -37,13 +38,11 @@ export function hasTag(entity : Obj, tag : string) : boolean {
 export interface VerbMatcher {
   readonly verb : string;
   readonly attribute? : string;
+  readonly condition? : Thunk;
 }
 
-function buildVerbMatcher(verb : string, attribute? : string) : VerbMatcher {
-  return {
-    verb: verb,
-    attribute: attribute,
-  };
+export function buildVerbMatcher(verb : string, attribute? : string, condition? : Thunk) : VerbMatcher {
+  return { verb, attribute, condition };
 }
 
 export class EntityBuilder {
@@ -74,6 +73,11 @@ export class EntityBuilder {
 
   withAttributedVerb(verb : string, attribute : string) {
     this.verbs.push(buildVerbMatcher(verb, attribute));
+    return this;
+  }
+
+  withVerbMatcher(verbMatcher : VerbMatcher) {
+    this.verbs.push(verbMatcher);
     return this;
   }
 

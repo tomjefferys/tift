@@ -211,13 +211,13 @@ export class BasicEngine implements Engine {
   } 
 
   getWords(partial : string[]) : void {
-    const nextWords = getNextWords(partial, this.context.entities, this.context.verbs);
+    const nextWords = getNextWords(partial, this.context.entities, this.context.verbs, this.env);
     const message = Output.words( partial, nextWords.map(word => ({...word, type : "word"})));
     this.output(message);
   }
 
   execute(command: string[]): void {
-    const searchContext = buildSearchContext(this.context.entities, this.context.verbs);
+    const searchContext = buildSearchContext(this.context.entities, this.context.verbs, this.env);
     const matchedCommand = searchExact(command, searchContext);
     if (!matchedCommand) {
       throw new Error("Could not match command: " + JSON.stringify(command));

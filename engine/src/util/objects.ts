@@ -93,7 +93,7 @@ export function getObj(value : unknown) : Obj {
   return value as Obj;
 }
 
-export function forEach(value : unknown, fn : (value:unknown) => void) {
+export function forEach(value : unknown, fn : (value : unknown, index : number) => void) {
   if (value && Array.isArray(value)) {
     value.forEach(fn);
   }

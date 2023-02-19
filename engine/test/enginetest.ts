@@ -3,7 +3,6 @@ import { EngineBuilder } from "../src/enginebuilder";
 import { listOutputConsumer, SaveData } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN } from "./testutils/testobjects";
-import _ from "lodash";
 
 let messages : string[];
 let wordsResponse : string[];
@@ -854,6 +853,59 @@ test("Test property setting in before phase", () => {
     executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "sitting"], notExpected : ["standing"]});
     executeAndTest(["sit", "armchair"], { expected : ["You are already sitting"] });
 })
+
+test("Test conditional verbs", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                id : "armchair",
+                desc : "A threadbare armchair.  {{#sat_on}}sitting{{/sat_on}} {{^sat_on}}standing{{/sat_on}}",
+                type : "item",
+                location : "northRoom",
+                verbs : [{ "sit" : "!sat_on"}, { "stand" : "sat_on"}],
+                sat_on : false,
+                before : {
+                    "sit(this)" : {
+                        "when" : "!this.sat_on",
+                        "do" : ["print('You sit down')", "this.sat_on=true"],
+                        "otherwise" : "'You are already sitting'"
+                    },
+                    "stand" : {
+                        "when" : "this.sat_on",
+                        "do" : ["print('You stand up')", "this.sat_on=false"],
+                        "otherwise" : "'You are already standing'"
+                    }
+                }
+           })
+           .withObj({
+                id : "sit",
+                type : "verb",
+                tags : ["transitive"]
+           })
+           .withObj({
+                id : "stand",
+                type : "verb",
+                tags : ["intransitive"]
+           });
+    engine = builder.build();
+    engine.send(Input.start());
+
+    let words = getWordIds(engine, []);
+    expect(words.includes("sit")).toBeTruthy();
+    expect(words.includes("stand")).toBeFalsy();
+
+    executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "standing"], notExpected : ["sitting"]});
+    executeAndTest(["sit", "armchair"], { expected : ["You sit down"] });
+    executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "sitting"], notExpected : ["standing"]});
+
+    words = getWordIds(engine, []);
+    expect(words.includes("sit")).toBeFalsy();
+    expect(words.includes("stand")).toBeTruthy();
+
+    executeAndTest(["stand"], { expected : ["You stand up"] });
+    executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "standing"], notExpected : ["sitting"]});
+
+});
+
 
 interface ExpectedStrings {
     expected? : string[],

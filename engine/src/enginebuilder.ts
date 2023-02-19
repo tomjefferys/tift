@@ -1,6 +1,6 @@
 import { Verb, VerbBuilder } from "./verb";
 import { Entity, EntityBuilder } from "./entity";
-import { getString, forEach, forEachEntry, ifExists } from "./util/objects";
+import { getString, forEach, forEachEntry, ifExists, getObj } from "./util/objects";
 import { BasicEngine, Engine, EngineState } from "./engine";
 import { DEFAULT_VERBS } from "./enginedefault";
 import { getObjs } from "./yamlparser";
@@ -214,12 +214,21 @@ function getActionStrings<T extends Phase>(obj : Obj, field : string, phase : T)
 }
 
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
-    forEach(obj["verbs"], verb => {
-        const components = getString(verb).split(".", 2);
-        if (components.length == 2) {
-            builder.withAttributedVerb(components[0], components[1])
+
+    forEach(obj["verbs"], (verbEntry, index) => {
+        const path = `${obj.id}.verbs[${index}]`;
+        if (_.isString(verbEntry)) {
+            const [verb, attribute] = getString(verbEntry).split(".", 2);
+            builder.withVerbMatcher({verb, attribute, condition : undefined});
+        } else if (_.isPlainObject(verbEntry)) {
+            Object.entries(getObj(verbEntry))
+                  .forEach(([key,value]) => {
+                    const condition = RuleBuilder.evaluateRule(value, `${path}.${key}`);
+                    const [verb,attribute] = getString(key).split(".", 2);
+                    builder.withVerbMatcher({verb, attribute, condition});
+                  });
         } else {
-            builder.withVerb(components[0]);
+            throw new Error(`${path} is not expected type. Must be string or object`);
         }
     });
     forEachEntry(obj["modifiers"], (type, mods) => {
