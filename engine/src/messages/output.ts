@@ -1,11 +1,12 @@
 import { IdValue } from "../shared";
 import { Action } from "../util/historyproxy";
+import { ControlType } from "./controltype";
 
 interface Stringable {
     toString : () => string
 }
 
-export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log
+export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control
 
 export type OutputConsumer = (message : OutputMessage) => void;
 
@@ -45,6 +46,14 @@ export interface Words {
 export interface Status {
     type : "Status",
     status : string
+}
+
+/**
+ * A control message, to indicate the client should take some action
+ */
+export interface Control {
+    type : "Control",
+    value : ControlType
 }
 
 export interface Log {
@@ -88,6 +97,10 @@ export function saveState(state : Action[]) : OutputMessage {
 
 export function log(level : LogLevel, message : string) : OutputMessage {
     return { type : "Log", level, message };
+}
+
+export function control(value : ControlType) : OutputMessage {
+    return { type : "Control", value };
 }
 
 export function SetVar(name : string, value : Stringable) : SetVar {

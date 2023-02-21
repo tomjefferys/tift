@@ -5,6 +5,7 @@ import { BiConsumer, Consumer } from "./util/functions";
 import * as EngineProxy from "./engineproxy";
 import { Filters } from "./util/duplexproxy";
 import * as StateMachine from "./util/statemachine";
+import { ControlType } from "./messages/controltype";
 
 type StateMachine = StateMachine.StateMachine<InputMessage, EngineProxy.DecoratedForwarder>;
 type StateName = StateMachine.StateName;
@@ -106,6 +107,7 @@ export class OutputConsumerBuilder {
   statusConsumer? : Consumer<string>;
   logConsumer? : BiConsumer<LogLevel,string>;
   saveConsumer? : Consumer<string>;
+  controlConsumer? : Consumer<ControlType>;
   defaultConsumer : Consumer<OutputMessage> = _message => { /* do nothing */ };
 
   withMessageConsumer(messageConsumer : Consumer<string>) : OutputConsumerBuilder {
@@ -130,6 +132,11 @@ export class OutputConsumerBuilder {
 
   withSaveConsumer(saveConsumer : Consumer<string>) : OutputConsumerBuilder {
     this.saveConsumer = saveConsumer;
+    return this;
+  }
+  
+  withControlConsumer(controlConsumer : Consumer<ControlType>) : OutputConsumerBuilder {
+    this.controlConsumer = controlConsumer;
     return this;
   }
 
@@ -157,8 +164,11 @@ export class OutputConsumerBuilder {
         case "Log":
           this.logConsumer? this.logConsumer(message.level, message.message) : this.defaultConsumer(message);
           break;
+        case "Control":
+          this.controlConsumer? this.controlConsumer(message.value) : this.defaultConsumer(message);
+          break;
         default:
-          throw new Error("Unsupported OutputMessage Type: " + message.type);
+          throw new Error("Unsupported OutputMessage Type2: " + message.type);
       }
     }
   }

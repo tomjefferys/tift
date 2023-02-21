@@ -1,5 +1,5 @@
 import { AnyArray, EnvFn, Env, isFound } from "./env";
-import { OutputConsumer, print } from "./messages/output";
+import { control, OutputConsumer, print } from "./messages/output";
 import { VerbBuilder } from "./verb"
 import { captureModifier, captureObject, matchBuilder, matchVerb } from "./commandmatcher";
 import { mkResult, mkThunk } from "./script/thunk";
@@ -237,6 +237,10 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
     getEntity : env => getEntity(env, env.getStr("id")),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
     writeMessage : env => getOutput(env)(env.get("message")),
+    pause : bindParams(["duration"], env => {
+        DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message" : control({ type : "pause", durationMillis : env.get("duration"), interruptable : true})}));
+        return mkResult(null);
+    }),
     print : bindParams(["value"], env => {
         DEFAULT_FUNCTIONS.write(env);
         return mkResult(null);

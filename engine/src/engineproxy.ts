@@ -1,5 +1,5 @@
 import { OutputConsumerBuilder } from "./main";
-import { Execute, InputMessage } from "./messages/input";
+import { Execute, GetWords, InputMessage } from "./messages/input";
 import * as Output from "./messages/output";
 import { Consumer} from "./util/functions";
 import { DuplexProxy, Filters, Forwarder } from "./util/duplexproxy";
@@ -77,8 +77,8 @@ export class InputHandler {
         return this.on(() => this.message.type === "Execute", () => fn((this.message as Execute).command));
     }
 
-    onGetWords(fn : () => void) {
-        return this.on(() => this.message.type === "GetWords", fn);
+    onGetWords(fn : (words : string[]) => void) {
+        return this.on(() => this.message.type === "GetWords", () => fn((this.message as GetWords).command));
     }
 
     onAny(fn : (message : InputMessage) => void) {

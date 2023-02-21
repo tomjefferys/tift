@@ -3,6 +3,7 @@ import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, word, createStateMachineFilter, buildStateMachine, handleInput } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
 import { OutputConsumer, OutputMessage, Word } from "tift-engine/src/messages/output";
+import { ControlType } from "tift-engine/src/messages/controltype";
 import { MessageForwarder, DecoratedForwarder } from "tift-engine/src/engineproxy";
 import { MachineOps } from "tift-engine/src/util/statemachine";
 import Output from "./Output"
@@ -11,6 +12,7 @@ import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from '../
 import { Box, Divider, useColorMode } from '@chakra-ui/react'
 
 import { InputMessage } from 'tift-engine/src/messages/input';
+import * as Pauser from './pauser';
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
@@ -88,26 +90,35 @@ function Tift() {
       const savedMessages = window.localStorage.getItem(MESSAGES);
       messagesRef.current = savedMessages? JSON.parse(savedMessages) : [];
 
-      const outputConsumer = getOutputConsumer(
-        message => updateMessages(messagesRef.current, messageEntry(message)), 
-        words => latestWordsRef.current = words,
-        status => setStatus(status),
-        (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
-        saveGame
-      );
-  
+      // Set up Proxies
       const restartMachine = createRestarter(forwarder => loadGame(GAME_FILE, forwarder, null));
       const colourSchemePicker = createColourSchemePicker(value => changeColourMode(value));
       const logClearer = createSimpleOption( "clear", () => {
         messagesRef.current = [];
         saveMessages([]);
       });
-  
+      const pauser = Pauser.createPauseFilter(
+              words => latestWordsRef.current = words,
+              words => {getWords(words); setWords(latestWordsRef.current)});
+
+      // Create the engine and attach proxies
       const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
                         .insertProxy("optionItems", createStateMachineFilter(
                                                     ["restart", restartMachine],
                                                     ["colours", colourSchemePicker],
-                                                    ["clear", logClearer]));
+                                                    ["clear", logClearer]))
+                        .insertProxy("pauser", pauser);
+
+      // Create the output consuimer
+      const outputConsumer = getOutputConsumer(
+        message => updateMessages(messagesRef.current, messageEntry(message)), 
+        words => latestWordsRef.current = words,
+        status => setStatus(status),
+        (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
+        saveGame,
+        createControlHandler(pauser)
+      );
+
       engine.setResponseListener(outputConsumer);
   
       engineRef.current = engine;
@@ -117,7 +128,7 @@ function Tift() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
   
-    // words updated
+    // When command updated
     useEffect(() => {
       getWords(command);
       const words = latestWordsRef.current;
@@ -164,7 +175,8 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
                            wordsConsumer : (words : Word[]) => void,
                            statusConsumer : (status : string) => void,
                            logConsumer : (level : LogLevel, message : string) => void,
-                           saveConsumer : (saveData : string) => void) : (outputMessage : OutputMessage) => void {
+                           saveConsumer : (saveData : string) => void,
+                           controlConsumer : (control : ControlType) => void ) : (outputMessage : OutputMessage) => void {
   return (outputMessage) => {
     switch(outputMessage.type) {
       case "Print":
@@ -181,6 +193,9 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         break;
       case "Log":
         logConsumer(outputMessage.level, outputMessage.message);
+        break;
+      case "Control":
+        controlConsumer(outputMessage.value);
         break;
       default:
         throw new Error("Unsupported OutputMessage Type: " + outputMessage.type);
@@ -259,6 +274,15 @@ function createSimpleOption(name : string, clearFn : (forewarder : DecoratedForw
             return undefined;
         }
     }]);
+}
+
+function createControlHandler(pauser : Pauser.Pauser) : (control : ControlType) => void {
+  return control => {
+    console.log(control.type);
+    if (control.type === "pause") {
+      pauser.pause(control.durationMillis);
+    }
+  }
 }
 
 export default Tift;
