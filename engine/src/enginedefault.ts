@@ -49,12 +49,13 @@ export const LOOK_FN = (env : Env) => {
     const desc = (location["desc"] && formatEntityString(env, location, "desc")) 
                         ?? location["name"]
                         ?? location["id"];
-    // Desc should have any moustache expressions expanded
-    const items = env.findObjs(obj => obj.location === location.id)
+
+    const items = findEntites(env, location)
                      .filter(isEntity)
                      .filter(isEntityVisible)
                      .filter(obj => isEntityCarrayable(obj) || isEntityNPC(obj));
 
+    // Desc should have any moustache expressions expanded
     const view = {
         "desc" : desc,
         "hasItems" : Boolean(items.length),
@@ -303,7 +304,7 @@ export function getLocation(env : Env) {
     return getPlayer(env).location;
 }
 
-export function getEntity(env : Env, entityParam : unknown) {
+export function getEntity(env : Env, entityParam : unknown) : Obj {
     const entity = _.isString(entityParam) 
                         ? env.get(makePath([NS_ENTITIES, entityParam]))
                         : entityParam;
@@ -313,7 +314,7 @@ export function getEntity(env : Env, entityParam : unknown) {
     return entity;
 }
 
-export function getLocationEntity(env : Env) {
+export function getLocationEntity(env : Env) : Obj {
     const locationId = env.execute("getLocation", {});
     return getEntity(env, locationId as string);
 }
@@ -338,6 +339,14 @@ export function makeDefaultFunctions(obj : Obj) {
 export function makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
     obj[OUTPUT] = outputConsumer;
 }
+
+/**
+ * Recursively find objects at a location and their child objs
+ * @param location 
+ */
+export const findEntites : (env : Env, location : Obj) => Obj[] = 
+    (env,location) => env.findObjs(obj => obj?.location === location.id && isEntity(obj) && isEntityVisible(obj))
+                         .flatMap(obj => [obj, ...findEntites(env, obj)]);
 
 function addExit(env : Env, roomId : string, direction : string, target : string) {
     const room = getEntity(env, roomId);

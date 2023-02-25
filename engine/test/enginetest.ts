@@ -713,13 +713,13 @@ test("Test hiding/revealing object", () => {
            .withObj({
                 id : "diamond",
                 type : "item",
-                location : "northRoom",
+                location : "rubbish",
                 tags : ["carryable", "hidden"]
             })
             .withObj({
                 id : "can",
                 type : "item",
-                location : "northRoom",
+                location : "rubbish",
                 tags : ["carryable"]
             })
             .withObj({

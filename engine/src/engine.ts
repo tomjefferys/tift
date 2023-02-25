@@ -2,7 +2,7 @@ import { isInstant, Verb } from "./verb"
 import { Entity, hasTag, RuleFn } from "./entity"
 import { createRootEnv, Env } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity, isEntity, isEntityVisible } from "./enginedefault";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity, isEntity, findEntites } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "./messages/output";
 import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
@@ -149,8 +149,8 @@ export class BasicEngine implements Engine {
     }
 
     // Get any other entities that are here
-    this.env.findObjs(obj => obj?.location === locationEntity?.id && isEntity(obj) && isEntityVisible(obj)) 
-            .forEach(entity => multidict.add(contextEntities, "environment", entity));
+    findEntites(this.env, locationEntity)
+        .forEach(entity => multidict.add(contextEntities, "environment", entity));
 
     // Get inventory entities
     this.env.findObjs(obj => obj?.location === "INVENTORY" && isEntity(obj))
