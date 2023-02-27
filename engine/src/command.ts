@@ -114,6 +114,9 @@ function getWords(node : SentenceNode) : IdValue<string>[] {
     let word = undefined;
     const part = node.part;
     switch(part.type) {
+        case "start": 
+            word = mkIdValue("start", "");
+            break;
         case "verb":
             word = mkIdValue(part.verb.id, getName(part.verb));
             break;
@@ -125,8 +128,6 @@ function getWords(node : SentenceNode) : IdValue<string>[] {
         case "modifier":
             word = mkIdValue(part.value, part.value);
             break;
-        default:
-            throw new Error("Invalid PoS type" + part.type);
     }
 
     const words = (node.previous && node.previous.part.type !== "start")? getWords(node.previous) : [];
