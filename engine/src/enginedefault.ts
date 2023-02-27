@@ -1,7 +1,7 @@
 import { AnyArray, EnvFn, Env, isFound } from "./env";
 import { control, OutputConsumer, print } from "./messages/output";
 import { VerbBuilder } from "./verb"
-import { captureModifier, captureObject, matchBuilder, matchVerb } from "./commandmatcher";
+import { captureModifier, captureObject, captureIndirectObject, matchAttribute, matchBuilder, attributeMatchBuilder, matchVerb } from "./commandmatcher";
 import { mkResult, mkThunk } from "./script/thunk";
 import { phaseActionBuilder } from "./script/phaseaction";
 import { makePath } from "./path";
@@ -39,8 +39,10 @@ const LOOK_TEMPLATE =
 You can see:
 {{/hasItems}}
 {{#items}}
- - {{.}}
+ - {{> item}}
 {{/items}}`;
+
+const LOOK_ITEM_TEMPLATE = `{{name}}{{#location}} ( in {{.}} ){{/location}}`;
 
 export const LOOK_COUNT = "__LOOK_COUNT__";
 
@@ -55,14 +57,22 @@ export const LOOK_FN = (env : Env) => {
                      .filter(isEntityVisible)
                      .filter(obj => isEntityCarrayable(obj) || isEntityNPC(obj));
 
+    const getItemDescription = (item : Obj) => {
+        const itemLocation = item[LOCATION];
+        const locationObj = (itemLocation !== location.id) 
+                ? { location : getName(getEntity(env, itemLocation) as Nameable)}
+                : {};
+        return { name : getName(item as Nameable), ...locationObj };
+    }
+
     // Desc should have any moustache expressions expanded
     const view = {
         "desc" : desc,
         "hasItems" : Boolean(items.length),
-        "items" : items.map(item => getName(item as Nameable)) 
+        "items" : items.map(getItemDescription)
     }
 
-    const output = Mustache.render(LOOK_TEMPLATE, view);
+    const output = Mustache.render(LOOK_TEMPLATE, view, { item : LOOK_ITEM_TEMPLATE });
 
     // Update look count if it exists. It should only have been created if needed by one of the mustache functions
     // FIXME related code is split between here and mustacheUtils. Should try to move it to one place.
@@ -171,6 +181,36 @@ const DROP = phaseActionBuilder("drop")
                 return mkResult(true);
             }));
 
+const PUT_IN = phaseActionBuilder("put")
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("put"))
+                          .withObject(captureObject("item"))
+                          .withAttribute(attributeMatchBuilder().withAttribute(matchAttribute("in"))
+                                                                .withObject(captureIndirectObject("container")))
+                          .build(),
+            mkThunk(env => {
+                const item = env.get("item");
+                const container = env.get("container");
+                item[LOCATION] = container.id;
+                return mkResult(true);
+            }));
+
+const PUT_ON = phaseActionBuilder("put")
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("put"))
+                          .withObject(captureObject("item"))
+                          .withAttribute(attributeMatchBuilder().withAttribute(matchAttribute("on"))
+                                                                .withObject(captureIndirectObject("container")))
+                          .build(),
+            mkThunk(env => {
+                const item = env.get("item");
+                const container = env.get("container");
+                item[LOCATION] = container.id;
+                return mkResult(true);
+            }));
+
 const EXAMINE = phaseActionBuilder("examine")
         .withPhase("main")
         .withMatcherOnMatch(
@@ -208,6 +248,16 @@ export const DEFAULT_VERBS = [
                   .withAction(DROP)
                   .withContext("inventory")
                   .withContext("holding")
+                  .build(),
+      new VerbBuilder({"id":"put"})
+                  .withTrait("transitive")
+                  .withAction(PUT_IN)
+                  .withAction(PUT_ON)
+                  .withAttribute("in")
+                  .withAttribute("on")
+                  .withContext("inventory")
+                  .withContext("holding")
+                  .withContext("environment", "indirect")
                   .build(),
       new VerbBuilder({"id":"examine"})
                   .withTrait("transitive")

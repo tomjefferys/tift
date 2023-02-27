@@ -123,6 +123,7 @@ export function makeItem(obj : Obj) : Entity {
     if (tags.includes("carryable")) {
         builder.withVerb("get");
         builder.withVerb("drop");
+        builder.withVerb("put");
     }
     if (_.has(obj, "desc")) {
         builder.withVerb("examine");

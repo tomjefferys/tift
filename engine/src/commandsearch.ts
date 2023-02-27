@@ -9,6 +9,7 @@ import * as Tree from "./util/tree"
 import * as Arrays from "./util/arrays"
 import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable } from "./command"
 import { Env } from "./env"
+import * as Logger from "./util/logger"
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -24,6 +25,8 @@ type SearchResult = [Command, SearchNode];
 export type ContextEntities = MultiDict<Entity>;
 
 const INITIAL_STATE : Command = start();
+
+const logger = Logger.getLogger("commandsearch");
 
 export function getAllCommands(objs: ContextEntities, verbs: Verb[], env : Env) : IdValue<string>[][] {
   const context = buildSearchContext(objs, verbs, env);
@@ -75,11 +78,13 @@ function isVerbEnabled(context : SearchContext, entity : Entity, verbMatcher : V
  * Return all direct object in the context matching a single verb
  */
 function getDirectObjects(context : SearchContext, verb : Verb) : Entity[] {
-  const entities = filterEntities(context.objs, verb.contexts);
+  const directContexts = verb.contexts.filter(([type, _context]) => type === "direct")
+                                        .map(([_type, context]) => context);
+  const entities = filterEntities(context.objs, directContexts);
   return entities.filter(entity => entity.verbs.filter(verbMatcher => isVerbEnabled(context, entity, verbMatcher))
                                                .some((verbMatcher) => verbMatcher.verb === verb.id && !verbMatcher.attribute)); }
 
-function filterEntities(entities : ContextEntities, verbContexts : VerbContext[]) {
+function filterEntities(entities : ContextEntities, verbContexts : string[]) {
   return verbContexts.length
             ? verbContexts.flatMap(context => entities[context] ?? [])
             : Object.values(entities).flatMap(entity => entity);
@@ -91,7 +96,9 @@ function filterEntities(entities : ContextEntities, verbContexts : VerbContext[]
 function getIndirectObjects(context : SearchContext,
                             verb : Verb,
                             attribute? : string) : Entity[] {
-  const entities = filterEntities(context.objs, verb.contexts);
+  const indirectContexts = verb.contexts.filter(([type, _context]) => type === "indirect")
+                                        .map(([_type, context]) => context);
+  const entities = filterEntities(context.objs, indirectContexts);
   return entities
                .filter(obj =>
                   obj.verbs.some(matcher =>
@@ -140,7 +147,8 @@ const getVerbModifiers = (context : SearchContext, verb : Verb) =>
       , {});
 
 const getModifierValues = (context : SearchContext, modifier : string, verbContexts : VerbContext[]) : string[] => {
-    const entities = filterEntities(context.objs, verbContexts);
+    const allContexts = verbContexts.map(([_type, context]) => context);
+    const entities = filterEntities(context.objs, allContexts);
       return entities
               .flatMap(obj => obj.verbModifiers ? multidict.get(obj.verbModifiers, modifier) : []);
 }
@@ -159,6 +167,7 @@ const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
         .map(v => castVerbable(state).verb(v))
         .forEach(state => states.push(state));
     }
+    logger.trace(() => `verb search ${state} = [${states.join(",")}]`);
     return states;
   }
 }
@@ -170,13 +179,14 @@ const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
  * @param context the verb-context to limit the search to
  * @returns a list of matching verbs
  */
-const getVerbs = (context : SearchContext, entities : Entity[], verbs : VerbMap, verbContext : VerbContext) : Verb[] => 
+const getVerbs = (context : SearchContext, entities : Entity[], verbs : VerbMap, verbContext : string) : Verb[] => 
     entities.flatMap(entity => (entity.verbs.map(verb => [entity, verb]) ?? []) as [Entity, VerbMatcher][])
             .filter(([_entity, matcher]) => !matcher.attribute)
             .filter(([entity, matcher]) => isVerbEnabled(context, entity, matcher))
             .map(([_entity, matcher]) => verbs[matcher.verb])
             .filter(Boolean)
-            .filter(verb => verb.contexts.length == 0 || verb.contexts.includes(verbContext));
+            .filter(verb => verb.contexts.length == 0
+                    || verb.contexts.some(([_type, context]) => context === verbContext));
 
 const directObjectSearch : SearchFn = (context, state) => {
   const verb = state.getPoS("verb")?.verb;
@@ -226,6 +236,7 @@ const doSearch = (context : SearchContext,
     const searchFn = Tree.getValue(node);
     searchFn(context, state).forEach(result => results.push([result, node]));
   });
+  logger.debug(() => `doSearch(${state}) = [${results.map(([sentance,_search]) => "[" + sentance + "]").join(",")}]`)
   return results;
 }
 
@@ -280,11 +291,14 @@ export const searchNext = (partial : string[],
  */
 const isValid = (context : SearchContext,
                  searchNode = WORD_PATTERNS,
-    state = INITIAL_STATE) : boolean => 
-      state.isValid()
+    state = INITIAL_STATE) : boolean => {
+      const valid = state.isValid()
           ? true
           : doSearch(context, searchNode, state)
               .some(([sentenceNode, searchNode]) => isValid(context, searchNode, sentenceNode))
+      logger.trace(() => `isValid(${state.toString()}) = ${valid}`);
+      return valid;
+    }
 
 /**
  * Find an exact match for the provided command

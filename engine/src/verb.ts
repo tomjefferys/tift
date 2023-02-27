@@ -3,7 +3,13 @@ import { Nameable } from "./nameable";
 import { ActionSource } from "./actionsource";
 import { AfterAction, BeforeAction, MainAction } from "./script/phaseaction";
 
-export type VerbContext = string;
+// For verbs with two objects, they objects could be from two different contexts
+// eg put ball ('inventory') in box ('environment')
+export type ContextType = "direct" | "indirect";
+
+// The verb context describes where an object needs to be for the verb to be useful
+// eg in inventory, or in the environment
+export type VerbContext = [ContextType, string];
 
 export type VerbTrait = "transitive" | "intransitive" | "modifiable" | "instant" | "indirectOptional";
 
@@ -106,8 +112,8 @@ export class VerbBuilder {
     return this;
   }
 
-  withContext(context : VerbContext) : VerbBuilder {
-    this.contexts.push(context);
+  withContext(context : string, type : ContextType = "direct") : VerbBuilder {
+    this.contexts.push([type, context]);
     return this;
   }
 

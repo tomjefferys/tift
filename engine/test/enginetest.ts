@@ -734,11 +734,11 @@ test("Test hiding/revealing object", () => {
     engine = builder.build();
     engine.send(Input.start());
 
-    executeAndTest(["look"], { expected : ["can"], notExpected : ["diamond", "rubbish"]});
+    executeAndTest(["look"], { expected : ["can", "in rubbish"], notExpected : ["diamond"]});
     expectWords(["get"], ["can"]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["You find a diamond"]} );
-    executeAndTest(["look"], { expected : ["can", "diamond"], notExpected : ["rubbish"]});
+    executeAndTest(["look"], { expected : ["can", "diamond", "in rubbish"]});
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
 
     expect(saveData.data.length).toBe(2);
@@ -747,7 +747,7 @@ test("Test hiding/revealing object", () => {
 
     expectWords(["get"], ["can", "diamond"]);
     executeAndTest(["get", "diamond"], {});
-    executeAndTest(["look"], { expected : ["can"], notExpected : ["rubbish", "diamond"]});
+    executeAndTest(["look"], { expected : ["can", "in rubbish"], notExpected : ["diamond"]});
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
 
     expect(saveData.data.length).toBe(3);
@@ -905,6 +905,33 @@ test("Test conditional verbs", () => {
     executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "standing"], notExpected : ["sitting"]});
 
 });
+
+test("Test put item in container", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                id : "box",
+                desc : "A large wooden box",
+                location : "northRoom",
+                type : "item",
+                verbs : ["put.in"]
+           })
+           .withObj({
+                id : "ball",
+                desc : "A small ball",
+                location : "northRoom",
+                type : "item",
+                tags : ["carryable"]
+           });
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["put", "ball", "in", "box"], {});
+    executeAndTest(["look"], { expected : ["ball", "in box"] });
+           
+})
 
 
 interface ExpectedStrings {

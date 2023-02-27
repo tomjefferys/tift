@@ -115,7 +115,7 @@ test("Test entity with verb modifiers", () => {
 test("Test YAML loading", () => {
   const data = fs.readFileSync("test/resources/test.yaml", "utf8");
   const engine = loadFromYaml(data, _msg => undefined);
-  expect(Object.values(engine.getVerbs())).toHaveLength(7);
+  expect(Object.values(engine.getVerbs())).toHaveLength(8);
   expect(Object.values(engine.getEntities())).toHaveLength(3);
 })
 
