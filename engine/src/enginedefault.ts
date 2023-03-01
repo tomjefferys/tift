@@ -18,6 +18,10 @@ import * as Errors from "./util/errors";
 const NS_ENTITIES = "entities";
 const LOCATION = "location";
 
+// Special locations
+const LOCATION_INVENTORY = "INVENTORY";
+const LOCATION_WEARING = "WEARING";
+
 export const PLAYER = "__PLAYER__";
 export const OUTPUT = Symbol("__OUTPUT__");
 
@@ -166,7 +170,7 @@ const GET = phaseActionBuilder("get")
             matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                item.location = "INVENTORY";
+                item.location = LOCATION_INVENTORY;
                 return mkResult(true);
             }));
 
@@ -222,6 +226,26 @@ const EXAMINE = phaseActionBuilder("examine")
                 return mkResult(true);
             }));
 
+const WEAR = phaseActionBuilder("wear")
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("wear")).withObject(captureObject("wearable")).build(),
+            mkThunk(env => {
+                const item = env.get("wearable");
+                item[LOCATION] = LOCATION_WEARING;
+                return mkResult(true);
+            }));
+
+const TAKE_OFF = phaseActionBuilder("remove")
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("remove")).withObject(captureObject("wearable")).build(),
+            mkThunk(env => {
+                const item = env.get("wearable");
+                item[LOCATION] = LOCATION_INVENTORY;
+                return mkResult(true);
+            }));
+
 // TODO we should load this from a data file
 export const DEFAULT_VERBS = [
       new VerbBuilder({"id":"go"})
@@ -263,6 +287,16 @@ export const DEFAULT_VERBS = [
                   .withTrait("transitive")
                   .withTrait("instant")
                   .withAction(EXAMINE)
+                  .build(),
+      new VerbBuilder({"id":"wear"})
+                  .withTrait("transitive")
+                  .withAction(WEAR)
+                  .withContext("inventory")
+                  .build(),
+      new VerbBuilder({"id":"remove"})
+                  .withTrait("transitive")
+                  .withAction(TAKE_OFF)
+                  .withContext("wearing")
                   .build()
 ];
 

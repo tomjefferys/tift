@@ -125,6 +125,10 @@ export function makeItem(obj : Obj) : Entity {
         builder.withVerb("drop");
         builder.withVerb("put");
     }
+    if (tags.includes("wearable")) {
+        builder.withVerb("wear");
+        builder.withVerb("remove");
+    }
     if (_.has(obj, "desc")) {
         builder.withVerb("examine");
     }

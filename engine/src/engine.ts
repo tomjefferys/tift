@@ -156,6 +156,10 @@ export class BasicEngine implements Engine {
     this.env.findObjs(obj => obj?.location === "INVENTORY" && isEntity(obj))
             .forEach(entity => multidict.add(contextEntities, "inventory", entity));
 
+    // Get worn entities
+    this.env.findObjs(obj => obj?.location === "WEARING" && isEntity(obj))
+            .forEach(entity => multidict.add(contextEntities, "wearing", entity));
+
     const verbs  = this.env.findObjs(obj => obj?.type === "verb") as Verb[];
   
     return {
