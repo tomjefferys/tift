@@ -4,6 +4,8 @@ import { Env, createRootEnv, EnvFn } from "../../src/env"
 import { print } from "../../src/messages/output"
 import { Action } from "../../src/util/historyproxy";
 
+export const STANDARD_VERBS = ["go", "look", "inventory", "wait"];
+
 export type SaveData = { data : Action[] };
 
 export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData ) : OutputConsumer {

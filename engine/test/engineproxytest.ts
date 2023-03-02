@@ -10,6 +10,7 @@ import _ from "lodash";
 import dedent from "dedent-js";
 import { buildStateMachine, TERMINATE } from "../src/util/statemachine";
 import { InputMessage } from "../src/messages/input";
+import { STANDARD_VERBS } from "./testutils/testutils";
 
 type OutputMessage = Output.OutputMessage;
 type OutputConsumer = Output.OutputConsumer;
@@ -24,8 +25,8 @@ test("Test basic no-op engine proxy" , () => {
     proxy.send(Input.start());
     proxy.send(Input.getNextWords([]));
 
-    expect(words).toHaveLength(3);
-    expect(words).toEqual(expect.arrayContaining(["go","look","wait"]));
+    expect(words).toHaveLength(STANDARD_VERBS.length);
+    expect(words).toEqual(expect.arrayContaining([...STANDARD_VERBS]));
 });
 
 test("Test proxy with word appender", () => {
@@ -49,8 +50,8 @@ test("Test proxy with word appender", () => {
     proxy.send(Input.start());
     proxy.send(Input.getNextWords([]));
 
-    expect(words).toHaveLength(4);
-    expect(words).toEqual(expect.arrayContaining(["go","look","wait","restart"]));
+    expect(words).toHaveLength(STANDARD_VERBS.length + 1);
+    expect(words).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
 
 });
 
@@ -68,8 +69,8 @@ test("Test commandproxy", () => {
     proxy.send(Input.start());
     proxy.send(Input.getNextWords([]));
 
-    expect(output).toHaveLength(4);
-    expect(output).toEqual(expect.arrayContaining(["go","look","wait","restart"]));
+    expect(output).toHaveLength(STANDARD_VERBS.length + 1);
+    expect(output).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
     output.length = 0;
 
     proxy.send(Input.getNextWords(["__option(restart)__"]));
@@ -123,7 +124,7 @@ test("Test restart using command proxy", () => {
     output.length = 0;
 
     engineProxy.send(Input.getNextWords([]));
-    expect(output).toEqual(expect.arrayContaining(["go", "look", "wait", "restart"]));
+    expect(output).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
     output.length = 0;
 
     engineProxy.send(Input.execute(["go", "south"]))
@@ -136,7 +137,7 @@ test("Test restart using command proxy", () => {
     expect(output[0]).toEqual(expect.stringContaining("The north room"));
 
     engineProxy.send(Input.getNextWords([]));
-    expect(output).toEqual(expect.arrayContaining(["go", "look", "wait", "restart"]));
+    expect(output).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
     output.length = 0;
 })
 
@@ -214,7 +215,7 @@ test("test restart using state machine proxy", () => {
     output.length = 0;
 
     engineProxy.send(Input.getNextWords([]));
-    expect(output).toEqual(expect.arrayContaining(["go", "look", "wait", "restart"]));
+    expect(output).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
     output.length = 0;
 
     engineProxy.send(Input.execute(["go", "south"]))

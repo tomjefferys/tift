@@ -115,7 +115,7 @@ test("Test entity with verb modifiers", () => {
 test("Test YAML loading", () => {
   const data = fs.readFileSync("test/resources/test.yaml", "utf8");
   const engine = loadFromYaml(data, _msg => undefined);
-  expect(Object.values(engine.getVerbs())).toHaveLength(10);
+  expect(Object.values(engine.getVerbs())).toHaveLength(11);
   expect(Object.values(engine.getEntities())).toHaveLength(3);
 })
 
@@ -132,10 +132,9 @@ test("Build room", () => {
     const room = makeRoom(obj);
 
     expect(room.id).toEqual("cave");
-    expect(room.verbs).toHaveLength(3);
+    expect(room.verbs).toHaveLength(2);
     expect(room.verbs).toContainEqual({"verb":"go"});
     expect(room.verbs).toContainEqual({"verb":"look"});
-    expect(room.verbs).toContainEqual({"verb":"wait"});
     expect(room.verbModifiers).toStrictEqual({"direction":["north", "east"]});
 })
 

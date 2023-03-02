@@ -2,7 +2,7 @@ import { isInstant, Verb } from "./verb"
 import { Entity, hasTag, RuleFn } from "./entity"
 import { createRootEnv, Env } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, PLAYER, LOOK_FN, write, getLocationEntity, isEntity, findEntites } from "./enginedefault";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, LOOK_FN, write, getLocationEntity, isEntity, findEntites } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "./messages/output";
 import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
@@ -15,7 +15,6 @@ import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
 import { InputMessage, Load } from "./messages/input";
 import { EngineBuilder } from "./enginebuilder";
-import { makePath } from "./path";
 import { Config } from "./config"
 import * as Conf from "./config"
 import { bold } from "./markdown"
@@ -23,6 +22,9 @@ import { Optional } from "./util/optional";
 import { logError } from "./util/errors";
 import { Action } from "./util/historyproxy";
 import { Obj } from "./util/objects"
+import * as Logger from "./util/logger";
+
+const logger = Logger.getLogger("engine");
 
 enum TAG {
   START = "start"
@@ -161,6 +163,8 @@ export class BasicEngine implements Engine {
             .forEach(entity => multidict.add(contextEntities, "wearing", entity));
 
     const verbs  = this.env.findObjs(obj => obj?.type === "verb") as Verb[];
+
+    logger.debug(() => multidict.values(contextEntities).map(entity => entity.id).join(","));
   
     return {
       entities: contextEntities,
@@ -361,10 +365,10 @@ const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
     const player = getPlayer(context.env);
     write(context.env, bold(getName(newLocation)));
 
-    if (!player.visitedLocations.includes(newLocation.id)) {
-      const locations = player.visitedLocations;
-      locations.push(newLocation.id);
-      context.env.set(makePath([PLAYER, "visitedLocations"]), locations);
+    const visititedLocations = player["visitedLocations"] as string[];
+
+    if (!visititedLocations.includes(newLocation.id)) {
+      visititedLocations.push(newLocation.id);
       LOOK_FN(context.env);
     }
   } 

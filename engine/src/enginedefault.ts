@@ -1,4 +1,4 @@
-import { AnyArray, EnvFn, Env, isFound } from "./env";
+import { EnvFn, Env, isFound } from "./env";
 import { control, OutputConsumer, print } from "./messages/output";
 import { VerbBuilder } from "./verb"
 import { captureModifier, captureObject, captureIndirectObject, matchAttribute, matchBuilder, attributeMatchBuilder, matchVerb } from "./commandmatcher";
@@ -14,6 +14,7 @@ import { Obj } from "./util/objects"
 import _ from "lodash";
 import { Optional } from "./util/optional";
 import * as Errors from "./util/errors";
+import { Entity, EntityBuilder } from "./entity";
 
 const NS_ENTITIES = "entities";
 const LOCATION = "location";
@@ -28,12 +29,11 @@ export const OUTPUT = Symbol("__OUTPUT__");
 export interface Player {
     location : string, 
     score : number,
-    inventory : AnyArray,
     setLocation : EnvFn,
     visitedLocations : string[]
 }
 
-export const getPlayer : ((env:Env) => Player) = env => env.get(PLAYER) as Player;
+export const getPlayer : ((env:Env) => Entity) = env => getEntity(env, PLAYER) as Entity;
 export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
 const LOOK_TEMPLATE = 
@@ -139,6 +139,20 @@ const LOOK = phaseActionBuilder("look")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("look")).build(),
             mkThunk(LOOK_FN));
+
+const INVENTORY = phaseActionBuilder("inventory")
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("inventory")).build(),    
+            mkThunk(env => {
+                    env.findObjs(obj => obj?.location === "INVENTORY" && isEntity(obj))
+                       .forEach(entity => write(env, getName(entity as Nameable)));
+    
+                    env.findObjs(obj => obj?.location === "WEARING" && isEntity(obj))
+                       .forEach(entity => write(env, ` ${getName(entity as Nameable)} (wearing)` ));
+                    return mkResult(true);
+                })
+        )
 
 const WAIT = phaseActionBuilder("wait")
         .withPhase("main")
@@ -257,6 +271,11 @@ export const DEFAULT_VERBS = [
                   .withTrait("intransitive")
                   .withTrait("instant")
                   .withAction(LOOK)
+                  .build(),
+      new VerbBuilder({"id":"inventory"})
+                  .withTrait("intransitive")
+                  .withTrait("instant")
+                  .withAction(INVENTORY)
                   .build(),
       new VerbBuilder({"id":"wait"})
                   .withTrait("intransitive")
@@ -384,8 +403,8 @@ export function write(env : Env, message : string) {
     env.execute("write", {"value": message});
 }
 
-export function getLocation(env : Env) {
-    return getPlayer(env).location;
+export function getLocation(env : Env) : string {
+    return getPlayer(env)[LOCATION] as string;
 }
 
 export function getEntity(env : Env, entityParam : unknown) : Obj {
@@ -404,14 +423,16 @@ export function getLocationEntity(env : Env) : Obj {
 }
 
 export function makePlayer(obj : Obj, start : string) {
-    const player : Player = {
+    const player = new EntityBuilder({
+        id : "__PLAYER__",
+        type : "player",
         location : start,
         score : 0,
-        inventory : [],
-        setLocation : env => player.location = env.getStr("dest"),
         visitedLocations : []
-    };
-    obj[PLAYER] = player;
+    }).withVerb("inventory")
+      .withVerb("wait")
+      .build();
+    obj["entities"][PLAYER] = player;
 }
 
 export function makeDefaultFunctions(obj : Obj) {
