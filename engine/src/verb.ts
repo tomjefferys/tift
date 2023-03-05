@@ -2,6 +2,7 @@ import { Obj, getString } from "./util/objects";
 import { Nameable } from "./nameable";
 import { ActionSource } from "./actionsource";
 import { AfterAction, BeforeAction, MainAction } from "./script/phaseaction";
+import _ from "lodash";
 
 // For verbs with two objects, they objects could be from two different contexts
 // eg put ball ('inventory') in box ('environment')
@@ -72,6 +73,9 @@ export class VerbBuilder {
     }
     if (!props["id"]) {
       throw new Error("An Entity must have an id property")
+    }
+    if (props["tags"] && !_.isArray(props["tags"])) {
+      throw new Error(`${props["id"]}.tags is not an array`);
     }
     this.props = props;
     this.id = getString(props["id"]);

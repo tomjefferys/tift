@@ -129,6 +129,9 @@ export function makeItem(obj : Obj) : Entity {
         builder.withVerb("wear");
         builder.withVerb("remove");
     }
+    if (tags.includes("pushable")) {
+        builder.withVerb("push");
+    }
     if (_.has(obj, "desc")) {
         builder.withVerb("examine");
     }

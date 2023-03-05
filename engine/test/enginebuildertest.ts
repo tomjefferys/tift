@@ -2,6 +2,7 @@ import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule, makeItem } from
 import { setUpEnv } from "./testutils/testutils"
 import * as fs from "fs";
 import _ from "lodash";
+import { DEFAULT_VERBS } from "../src/enginedefault";
 
 
 test("Test make verb from empty object", () => {
@@ -115,7 +116,7 @@ test("Test entity with verb modifiers", () => {
 test("Test YAML loading", () => {
   const data = fs.readFileSync("test/resources/test.yaml", "utf8");
   const engine = loadFromYaml(data, _msg => undefined);
-  expect(Object.values(engine.getVerbs())).toHaveLength(11);
+  expect(Object.values(engine.getVerbs())).toHaveLength(DEFAULT_VERBS.length + 1);
   expect(Object.values(engine.getEntities())).toHaveLength(3);
 })
 

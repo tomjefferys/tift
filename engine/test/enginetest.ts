@@ -931,7 +931,47 @@ test("Test put item in container", () => {
     executeAndTest(["look"], { notExpected : ["ball", "in box"] });
     executeAndTest(["put", "ball", "in", "box"], {});
     executeAndTest(["look"], { expected : ["ball", "in box"] });
-           
+})
+
+test("Test push item", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        exits : {
+            south : "southRoom"
+        },
+    })
+    builder.withObj({
+        ...SOUTH_ROOM,
+        exits : {
+            north : "northRoom"
+        }
+    })
+    builder.withObj({
+        id : "box",
+        type : "item",
+        location : "northRoom",
+        tags : ["pushable"]
+    });
+    engine = builder.build();
+    engine.send(Input.start()); 
+
+    executeAndTest(["look"], { expected : ["box"]});
+    let words = getWordIds(engine, []);
+    expect(words).toContain("push");
+
+    words = getWordIds(engine, ["push"]);
+    expect(words).toContain("box");
+
+    words = getWordIds(engine, ["push", "box"]);
+    expect(words).toContain("south");
+
+    executeAndTest(["push", "box", "south"], { expected : ["Pushed", "box", "south"]});
+
+    executeAndTest(["look"], { notExpected : ["box"]});
+
+    executeAndTest(["go", "south"], {});
+
+    executeAndTest(["look"], { expected : ["box"]});
 })
 
 

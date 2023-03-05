@@ -5,6 +5,7 @@ import { ActionSource } from "./actionsource";
 import { AfterAction, MainAction, BeforeAction } from "./script/phaseaction";
 import { Env } from "./env";
 import { Thunk } from "./script/thunk";
+import _ from "lodash"
 
 export type RuleFn = (env : Env) => unknown;
 
@@ -61,6 +62,9 @@ export class EntityBuilder {
     }
     if (!props["id"]) {
       throw new Error("An Entity must have an id property")
+    }
+    if (props["tags"] && !_.isArray(props["tags"])) {
+      throw new Error(`${props["id"]}.tags is not an array`);
     }
     this.props = props;
     this.id = getString(props["id"]);

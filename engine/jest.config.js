@@ -5,5 +5,5 @@ module.exports = {
   testMatch: ["**/out/test/**/*.js"],
   modulePathIgnorePatterns: ["testutils"],
   setupFilesAfterEnv: ["jest-expect-message"],
-  transformIgnorePatterns: ["/out/src/.+\\.js"]
+  transformIgnorePatterns: ["/out/src/.+\\.js", "/out/test/.+\\.js"]
 };

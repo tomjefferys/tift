@@ -59,7 +59,7 @@ export const LOOK_FN = (env : Env) => {
     const items = findEntites(env, location)
                      .filter(isEntity)
                      .filter(isEntityVisible)
-                     .filter(obj => isEntityCarrayable(obj) || isEntityNPC(obj));
+                     .filter(obj => isEntityMovable(obj) || isEntityNPC(obj));
 
     const getItemDescription = (item : Obj) => {
         const itemLocation = item[LOCATION];
@@ -98,8 +98,9 @@ export function isEntityVisible(obj : Obj) : boolean {
     return !entityHasTag(obj, "hidden");
 }
 
-function isEntityCarrayable(obj : Obj) : boolean {
-    return entityHasTag(obj, "carryable");
+function isEntityMovable(obj : Obj) : boolean {
+    const movableTags = ["carryable", "pushable"];
+    return movableTags.some(tag => entityHasTag(obj, tag));
 }
 
 function isEntityNPC(obj : Obj) : boolean {
@@ -260,6 +261,23 @@ const TAKE_OFF = phaseActionBuilder("remove")
                 return mkResult(true);
             }));
 
+const PUSH = phaseActionBuilder("push")
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("push")).withObject(captureObject("pushable")).withModifier(captureModifier("direction")).build(),
+            mkThunk(env => {
+                const item =  env.get("pushable");
+                const direction = env.get("direction");
+                const location = getEntity(env, item[LOCATION]);
+                const exits = location["exits"] ?? {};
+                const destination = exits[direction];
+                if (destination) {
+                    item[LOCATION] = destination;
+                    write(env, `Pushed ${getName(item as Nameable)} ${direction}`);
+                }
+                return mkResult(true);
+            }));
+
 // TODO we should load this from a data file
 export const DEFAULT_VERBS = [
       new VerbBuilder({"id":"go"})
@@ -316,6 +334,13 @@ export const DEFAULT_VERBS = [
                   .withTrait("transitive")
                   .withAction(TAKE_OFF)
                   .withContext("wearing")
+                  .build(),
+      new VerbBuilder({"id":"push"})
+                  .withTrait("transitive")
+                  .withAction(PUSH)
+                  .withContext("environment")
+                  .withContext("location")
+                  .withModifier("direction")
                   .build()
 ];
 
