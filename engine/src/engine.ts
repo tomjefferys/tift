@@ -78,6 +78,7 @@ export class BasicEngine implements Engine {
 
   constructor(outputConsumer : OutputConsumer) {
     this.output = outputConsumer;
+    Logger.setConsumer(getOutputLogger(this.output));
     [this.env, this.context] = this.reset();
   }
 
@@ -173,6 +174,7 @@ export class BasicEngine implements Engine {
   }
 
   send(message : InputMessage) : void {
+    const startTime = Date.now();
     try { 
       switch(message.type) {
         case "GetWords":
@@ -200,6 +202,7 @@ export class BasicEngine implements Engine {
     } catch (e) {
       logError(this.output, e);
     }
+    logger.debug(() => `${JSON.stringify(message)}: ${Date.now() - startTime}ms`);
   }
 
   loadData(message : Load) {
@@ -411,4 +414,8 @@ function findStartingLocation(env : Env) : string {
 
 function getLocationFromContext(context : CommandContext) : Optional<Entity> {
   return _.head(multidict.get(context.entities, "location"));
+}
+
+function getOutputLogger(output : OutputConsumer) : Logger.LogConsumer {
+    return ({logger, level, message}) => {output(Output.log(level, `${level}, ${logger}: ${message}`))};
 }

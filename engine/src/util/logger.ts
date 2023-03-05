@@ -4,24 +4,24 @@
  */
 type MessageSrc  = () => string;
 type LogFn = (messageSrc : MessageSrc) => void;
-const LEVELS = ["ERROR", "WARN", "INFO", "DEBUG", "TRACE"] as const;
+const LEVELS = ["error", "warn", "info", "debug", "trace"] as const;
 export type Level = 0 | 1 | 2 | 3 | 4;
 export type LevelName = typeof LEVELS[Level];
 
-type LogConsumer = (logEntry : LogEntry) => void;
+export type LogConsumer = (logEntry : LogEntry) => void;
 
-export const ERROR = LEVELS.indexOf("ERROR") as Level;
-export const WARN = LEVELS.indexOf("WARN") as Level;
-export const INFO = LEVELS.indexOf("INFO") as Level;
-export const DEBUG = LEVELS.indexOf("DEBUG") as Level;
-export const TRACE = LEVELS.indexOf("TRACE") as Level;
+export const ERROR = LEVELS.indexOf("error") as Level;
+export const WARN = LEVELS.indexOf("warn") as Level;
+export const INFO = LEVELS.indexOf("info") as Level;
+export const DEBUG = LEVELS.indexOf("debug") as Level;
+export const TRACE = LEVELS.indexOf("trace") as Level;
 
 export interface ConfigEntry  {
     logger : string, 
     level : LevelName,
 }
 
-interface LogEntry {
+export interface LogEntry {
     logger : string,
     level : LevelName,
     message : string
@@ -66,11 +66,11 @@ export function getLogger(name : string, logLevel? : Level) : Logger {
 function createLogger(name : string, level : number) : Logger {
     const logger = (level : LevelName) => logFn(name, level);
     return {
-        error : (level >= ERROR)? logger("ERROR") : NO_OP_LOG,
-        warn :  (level >= WARN)?  logger("WARN")  : NO_OP_LOG,
-        info :  (level >= INFO)?  logger("INFO")  : NO_OP_LOG,
-        debug : (level >= DEBUG)? logger("DEBUG") : NO_OP_LOG,
-        trace : (level >= TRACE)? logger("TRACE") : NO_OP_LOG,
+        error : (level >= ERROR)? logger("error") : NO_OP_LOG,
+        warn :  (level >= WARN)?  logger("warn")  : NO_OP_LOG,
+        info :  (level >= INFO)?  logger("info")  : NO_OP_LOG,
+        debug : (level >= DEBUG)? logger("debug") : NO_OP_LOG,
+        trace : (level >= TRACE)? logger("trace") : NO_OP_LOG,
     }
 }
 

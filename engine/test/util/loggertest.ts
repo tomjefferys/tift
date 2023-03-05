@@ -27,21 +27,21 @@ test("test log levels", () => {
     bazLogger.debug(() => { throw new Error("Must not debug") });
     bazLogger.trace(() => { throw new Error("Must not trace") });
 
-    expect(messages).toContain("ERROR foo error");
-    expect(messages).toContain("WARN foo warn");
-    expect(messages).toContain("INFO foo info");
-    expect(messages).not.toContain("DEBUG foo debug");
-    expect(messages).not.toContain("TRACE foo trace");
+    expect(messages).toContain("error foo error");
+    expect(messages).toContain("warn foo warn");
+    expect(messages).toContain("info foo info");
+    expect(messages).not.toContain("debug foo debug");
+    expect(messages).not.toContain("trace foo trace");
 
-    expect(messages).toContain("ERROR bar error");
-    expect(messages).toContain("WARN bar warn");
-    expect(messages).toContain("INFO bar info");
-    expect(messages).toContain("DEBUG bar debug");
-    expect(messages).toContain("TRACE bar trace");
+    expect(messages).toContain("error bar error");
+    expect(messages).toContain("warn bar warn");
+    expect(messages).toContain("info bar info");
+    expect(messages).toContain("debug bar debug");
+    expect(messages).toContain("trace bar trace");
 
-    expect(messages).toContain("ERROR baz error");
-    expect(messages).toContain("WARN baz warn");
-    expect(messages).not.toContain("INFO baz info");
-    expect(messages).not.toContain("DEBUG baz debug");
-    expect(messages).not.toContain("TRACE baz trace");
+    expect(messages).toContain("error baz error");
+    expect(messages).toContain("warn baz warn");
+    expect(messages).not.toContain("info baz info");
+    expect(messages).not.toContain("debug baz debug");
+    expect(messages).not.toContain("trace baz trace");
 })
