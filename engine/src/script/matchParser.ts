@@ -2,7 +2,8 @@ import { CallExpression, Expression, Identifier, MemberExpression } from "jsep"
 import { matchBuilder, matchVerb, matchObject, captureObject, 
             matchAttribute, matchIndirectObject, captureIndirectObject,
             Matcher, ALWAYS_FAIL, attributeMatchBuilder,
-            matchAnyModifier} from "../commandmatcher";
+            matchAnyModifier,
+            captureModifier} from "../commandmatcher";
 import { isTransitive } from "../verb";
 
 export const COMMAND = Symbol("__COMMAND__");
@@ -171,4 +172,6 @@ const  getIndirectObjectMatcher : (matchData : UnitMatch) => Matcher =
                                 : matchIndirectObject(matchData.name);
 
 const getModifierMatcher : (match : UnitMatch) => Matcher = 
-            matchData => matchAnyModifier(matchData.name);
+            matchData => matchData.isCapture
+                            ? captureModifier(matchData.name)
+                            : matchAnyModifier(matchData.name);

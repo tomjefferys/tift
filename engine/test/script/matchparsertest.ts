@@ -74,6 +74,13 @@ test("Test intransitive verb with modifier", () => {
     expect(messages).toContain(MATCH_STRING);
 }); 
 
+test("Test intransitive verb with modifier capture", () => {
+    const command = start().verb(GO).modifier("direction", "north");
+    doMatch(command, "go($direction)", "do(write('matched!'), write(direction))");
+    expect(messages).toContain(MATCH_STRING);
+    expect(messages).toContain("north");
+});
+
 test("Test intransitive verb with wrong modifier", () => {
     const command = start().verb(GO).modifier("direction", "south");
     doMatch(command, "go(north)");
