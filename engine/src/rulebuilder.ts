@@ -104,6 +104,19 @@ const buildAll : RuleEvaluator = (rules, path) => {
 }
 
 /**
+ * Builds an evaluator which loop through a list of rules, stopping as soon as
+ * one of them returns true 
+ */
+const buildSwitch : RuleEvaluator = (rules, path) => {
+    const thunks = evaluateRuleList(rules, path);
+    const envFn = (env : Env) => {
+        const scope = env.newChild();
+        return mkResult(thunks.reduce((acc, fn) => (acc)? acc : fn.resolve(scope).getValue(), false as unknown));
+    }
+    return mkThunk(envFn);
+}
+
+/**
  * Builds an evaluator that executes each item in turn.
  * Adds an 'index' variable to the path, to store the current index
  */
@@ -146,6 +159,7 @@ const components : {[key:string]:[RuleMethodType, RuleEvaluator]} = {
     unless :    ["condition", buildUnless],
     all :       ["action",    buildAll],
     do :        ["action",    buildAll],
+    switch :    ["action",    buildSwitch],
     repeat :    ["action",    buildRepeat],
     random :    ["action",    buildRandom],
     otherwise : ["otherwise", evaluator]
