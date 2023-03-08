@@ -19,6 +19,9 @@ import { Entity, EntityBuilder } from "./entity";
 const NS_ENTITIES = "entities";
 const LOCATION = "location";
 
+const DARK = "dark";
+const LIGHTSOURCE = "lightSource";
+
 // Special locations
 const LOCATION_INVENTORY = "INVENTORY";
 const LOCATION_WEARING = "WEARING";
@@ -37,14 +40,20 @@ export const getPlayer : ((env:Env) => Entity) = env => getEntity(env, PLAYER) a
 export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) as OutputConsumer;
 
 const LOOK_TEMPLATE = 
-`{{desc}}
+`{{#isDark}}
+  It is dark, you cannot see a thing.
+{{/isDark}}
+
+{{^isDark}}
+{{desc}}
 
 {{#hasItems}}
 You can see:
 {{/hasItems}}
 {{#items}}
- - {{> item}}
-{{/items}}`;
+- {{> item}}
+{{/items}}
+{{/isDark}}`;
 
 const LOOK_ITEM_TEMPLATE = `{{name}}{{#location}} ( in {{.}} ){{/location}}`;
 
@@ -52,6 +61,7 @@ export const LOOK_COUNT = "__LOOK_COUNT__";
 
 export const LOOK_FN = (env : Env) => {
     const location = getLocationEntity(env);
+
     const desc = (location["desc"] && formatEntityString(env, location, "desc")) 
                         ?? location["name"]
                         ?? location["id"];
@@ -60,6 +70,8 @@ export const LOOK_FN = (env : Env) => {
                      .filter(isEntity)
                      .filter(isEntityVisible)
                      .filter(obj => isEntityMovable(obj) || isEntityNPC(obj));
+                    
+    const isDark = entityHasTag(location, DARK) && !isLightSourceAtLocation(env, location);
 
     const getItemDescription = (item : Obj) => {
         const itemLocation = item[LOCATION];
@@ -73,7 +85,8 @@ export const LOOK_FN = (env : Env) => {
     const view = {
         "desc" : desc,
         "hasItems" : Boolean(items.length),
-        "items" : items.map(getItemDescription)
+        "items" : items.map(getItemDescription),
+        "isDark" : isDark
     }
 
     const output = Mustache.render(LOOK_TEMPLATE, view, { item : LOOK_ITEM_TEMPLATE });
@@ -474,9 +487,17 @@ export function makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
  * Recursively find objects at a location and their child objs
  * @param location 
  */
-export const findEntites : (env : Env, location : Obj) => Obj[] = 
-    (env,location) => env.findObjs(obj => obj?.location === location.id && isEntity(obj) && isEntityVisible(obj))
-                         .flatMap(obj => [obj, ...findEntites(env, obj)]);
+export function findEntites(env : Env, location : Obj) : Obj[] {
+    const canSee = !entityHasTag(location, DARK) || isLightSourceAtLocation(env, location);
+    return canSee ? env.findObjs(obj => obj?.location === location.id && isEntity(obj) && isEntityVisible(obj))
+                         .flatMap(obj => [obj, ...findEntites(env, obj)])
+                  : [];
+}
+
+function isLightSourceAtLocation(env : Env, location : Obj) : boolean {
+    return env.findObjs(obj => (obj.location === location.id || obj.location === "INVENTORY") && isEntity(obj))
+       .some(entity => entityHasTag(entity, LIGHTSOURCE));
+}
 
 function addExit(env : Env, roomId : string, direction : string, target : string) {
     const room = getEntity(env, roomId);

@@ -974,6 +974,63 @@ test("Test push item", () => {
     executeAndTest(["look"], { expected : ["box"]});
 })
 
+test("Test dark room", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start", "dark"]
+    }).withObj({
+        id : "ball",
+        type : "item",
+        location : "northRoom",
+        tags : ["carryable"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["dark"], notExpected : ["ball"]});
+});
+
+test("Test dark room with lightsource", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start", "dark"]
+    }).withObj({
+        id : "ball",
+        type : "item",
+        location : "northRoom",
+        tags : ["carryable"]
+    }).withObj({
+        id : "torch",
+        type : "item",
+        location : "northRoom",
+        tags : ["carryable", "lightSource"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["ball", "torch"], notExpected : ["dark"]});
+});
+
+test("Test dark room with lightsource in inventory", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start", "dark"]
+    }).withObj({
+        id : "ball",
+        type : "item",
+        location : "northRoom",
+        tags : ["carryable"]
+    }).withObj({
+        id : "torch",
+        type : "item",
+        location : "INVENTORY",
+        tags : ["carryable", "lightSource"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["dark", "torch"]});
+})
 
 interface ExpectedStrings {
     expected? : string[],
