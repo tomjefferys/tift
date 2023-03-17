@@ -110,6 +110,7 @@ export class EntityBuilder {
 
   withProp(name : string, value : string) {
     this.props[name] = value; 
+    return this;
   }
 
   withTag(tag : string) {
@@ -117,6 +118,7 @@ export class EntityBuilder {
       this.props[PROPS.TAGS] = [];
     }
     getArray(this.props[PROPS.TAGS]).push(tag);
+    return this;
   }
   
   withRule(rule : RuleFn) {

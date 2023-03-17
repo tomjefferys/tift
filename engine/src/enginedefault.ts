@@ -22,11 +22,10 @@ const LOCATION = "location";
 const DARK = "dark";
 const LIGHTSOURCE = "lightSource";
 
-// Special locations
-const LOCATION_INVENTORY = "INVENTORY";
-const LOCATION_WEARING = "WEARING";
-
 export const PLAYER = "__PLAYER__";
+const INVENTORY = "__INVENTORY__";
+const WEARING = "__WEARING__";
+
 export const OUTPUT = Symbol("__OUTPUT__");
 
 export interface Player {
@@ -69,7 +68,8 @@ export const LOOK_FN = (env : Env) => {
     const items = findEntites(env, location)
                      .filter(isEntity)
                      .filter(isEntityVisible)
-                     .filter(obj => isEntityMovable(obj) || isEntityNPC(obj));
+                     .filter(obj => isEntityMovable(obj) || isEntityNPC(obj))
+                     .filter(obj => !isAtLocation(env, PLAYER, obj));
                     
     const isDark = entityHasTag(location, DARK) && !isLightSourceAtLocation(env, location);
 
@@ -154,15 +154,15 @@ const LOOK = phaseActionBuilder("look")
             matchBuilder().withVerb(matchVerb("look")).build(),
             mkThunk(LOOK_FN));
 
-const INVENTORY = phaseActionBuilder("inventory")
+const INVENTORY_ACTION = phaseActionBuilder("inventory")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("inventory")).build(),    
             mkThunk(env => {
-                    env.findObjs(obj => obj?.location === "INVENTORY" && isEntity(obj))
+                    env.findObjs(obj => obj?.location === INVENTORY && isEntity(obj))
                        .forEach(entity => write(env, getName(entity as Nameable)));
     
-                    env.findObjs(obj => obj?.location === "WEARING" && isEntity(obj))
+                    env.findObjs(obj => obj?.location === WEARING && isEntity(obj))
                        .forEach(entity => write(env, ` ${getName(entity as Nameable)} (wearing)` ));
                     return mkResult(true);
                 })
@@ -198,7 +198,7 @@ const GET = phaseActionBuilder("get")
             matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                item.location = LOCATION_INVENTORY;
+                item.location = INVENTORY;
                 return mkResult(true);
             }));
 
@@ -260,7 +260,7 @@ const WEAR = phaseActionBuilder("wear")
             matchBuilder().withVerb(matchVerb("wear")).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                item[LOCATION] = LOCATION_WEARING;
+                item[LOCATION] = WEARING;
                 return mkResult(true);
             }));
 
@@ -270,7 +270,7 @@ const TAKE_OFF = phaseActionBuilder("remove")
             matchBuilder().withVerb(matchVerb("remove")).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                item[LOCATION] = LOCATION_INVENTORY;
+                item[LOCATION] = INVENTORY;
                 return mkResult(true);
             }));
 
@@ -306,7 +306,7 @@ export const DEFAULT_VERBS = [
       new VerbBuilder({"id":"inventory"})
                   .withTrait("intransitive")
                   .withTrait("instant")
-                  .withAction(INVENTORY)
+                  .withAction(INVENTORY_ACTION)
                   .build(),
       new VerbBuilder({"id":"wait"})
                   .withTrait("intransitive")
@@ -462,15 +462,36 @@ export function getLocationEntity(env : Env) : Obj {
 
 export function makePlayer(obj : Obj, start : string) {
     const player = new EntityBuilder({
-        id : "__PLAYER__",
+        id : PLAYER,
         type : "player",
         location : start,
         score : 0,
         visitedLocations : []
     }).withVerb("inventory")
       .withVerb("wait")
+      .withTag("container")
       .build();
     obj["entities"][PLAYER] = player;
+
+    // Set up the inventory
+    const inventory = new EntityBuilder({
+        id : INVENTORY,
+        type : "special",
+        location : PLAYER
+    }).withTag("container")
+      .build();
+
+    obj["entities"][INVENTORY] = inventory;
+
+    // Set up the "wearing" inventory (where items go if the are being worn)
+    const wearing = new EntityBuilder({
+        id : WEARING,
+        type : "special",
+        location : PLAYER
+    }).withTag("container")
+      .build();
+
+    obj["entities"][WEARING] = wearing;
 }
 
 export function makeDefaultFunctions(obj : Obj) {
@@ -490,13 +511,22 @@ export function makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
 export function findEntites(env : Env, location : Obj) : Obj[] {
     const canSee = !entityHasTag(location, DARK) || isLightSourceAtLocation(env, location);
     return canSee ? env.findObjs(obj => obj?.location === location.id && isEntity(obj) && isEntityVisible(obj))
-                         .flatMap(obj => [obj, ...findEntites(env, obj)])
+                         .flatMap(obj => [obj, ...findEntites(env, obj)])  // TODO this should check for 'container' tag
                   : [];
 }
 
+export function isAtLocation(env : Env, location : string, obj : Obj) : boolean {
+    let result = (obj.location === location);
+    if (!result && obj.location) {
+        const objLocation = getEntity(env, obj.location);
+        result = isAtLocation(env, location, objLocation);
+    }
+    return result;
+}
+
 function isLightSourceAtLocation(env : Env, location : Obj) : boolean {
-    return env.findObjs(obj => (obj.location === location.id || obj.location === "INVENTORY") && isEntity(obj))
-       .some(entity => entityHasTag(entity, LIGHTSOURCE));
+    return env.findObjs(obj => isEntity(obj) && entityHasTag(obj, LIGHTSOURCE))
+            .some(entity => isAtLocation(env, location.id, entity));
 }
 
 function addExit(env : Env, roomId : string, direction : string, target : string) {

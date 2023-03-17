@@ -518,7 +518,7 @@ test("Test load save after getting item", () => {
     executeAndTest(["look"], { expected : ["An almost empty room"], notExpected :["key"]});
 
     expect(saveData.data).toEqual(
-        [{"type":"Set", "property":["entities", "key", "location"], "newValue":"INVENTORY"}])
+        [{"type":"Set", "property":["entities", "key", "location"], "newValue":"__INVENTORY__"}])
 });
 
 test("Test reset", () => {
@@ -752,7 +752,7 @@ test("Test hiding/revealing object", () => {
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
 
     expect(saveData.data.length).toBe(3);
-    expect(saveData.data[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"INVENTORY"});
+    expect(saveData.data[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"__INVENTORY__"});
 });
 
 test("Test action with repeat", () => {
@@ -1023,7 +1023,7 @@ test("Test dark room with lightsource in inventory", () => {
     }).withObj({
         id : "torch",
         type : "item",
-        location : "INVENTORY",
+        location : "__INVENTORY__",
         tags : ["carryable", "lightSource"]
     })
     engine = builder.build();

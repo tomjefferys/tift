@@ -2,7 +2,7 @@ import { isInstant, Verb } from "./verb"
 import { Entity, hasTag, RuleFn } from "./entity"
 import { createRootEnv, Env } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, LOOK_FN, write, getLocationEntity, isEntity, findEntites } from "./enginedefault";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, LOOK_FN, write, getLocationEntity, isEntity, findEntites, isAtLocation, PLAYER } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "./messages/output";
 import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
@@ -153,14 +153,15 @@ export class BasicEngine implements Engine {
 
     // Get any other entities that are here
     findEntites(this.env, locationEntity)
+        .filter(entity => !isAtLocation(this.env, PLAYER, entity))
         .forEach(entity => multidict.add(contextEntities, "environment", entity));
 
     // Get inventory entities
-    this.env.findObjs(obj => obj?.location === "INVENTORY" && isEntity(obj))
+    this.env.findObjs(obj => obj?.location === "__INVENTORY__" && isEntity(obj))
             .forEach(entity => multidict.add(contextEntities, "inventory", entity));
 
     // Get worn entities
-    this.env.findObjs(obj => obj?.location === "WEARING" && isEntity(obj))
+    this.env.findObjs(obj => obj?.location === "__WEARING__" && isEntity(obj))
             .forEach(entity => multidict.add(contextEntities, "wearing", entity));
 
     const verbs  = this.env.findObjs(obj => obj?.type === "verb") as Verb[];
