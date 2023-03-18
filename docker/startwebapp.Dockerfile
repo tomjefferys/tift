@@ -9,6 +9,10 @@ RUN npm install -g typescript
 
 RUN git clone https://github.com/tomjefferys/tift.git
 
+WORKDIR /tift/types
+RUN npm install
+RUN tsc
+
 WORKDIR /tift/engine
 RUN npm install
 RUN tsc

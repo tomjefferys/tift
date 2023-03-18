@@ -1,7 +1,7 @@
 import { handleInput, word } from "tift-engine";
-import { InputMessage } from "tift-engine/src/messages/input";
-import { OutputMessage, Word } from "tift-engine/src/messages/output";
-import { Filters, Forwarder } from "tift-engine/src/util/duplexproxy";
+import { InputMessage } from "tift-types/src/messages/input";
+import { OutputMessage, Word } from "tift-types/src/messages/output";
+import { Filters, Forwarder } from "tift-types/src/util/duplexproxy";
 
 /**
  * A filter that can pause the game for a fixed duration.

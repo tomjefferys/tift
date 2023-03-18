@@ -2,7 +2,7 @@ import { getEngine, Input } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
 import * as _ from "lodash"
 import { IdValue } from "tift-engine/src/shared";
-import { OutputMessage } from "tift-engine/src/messages/output";
+import { OutputMessage } from "tift-types/src/messages/output";
 //import * as Input from "tift-engine/src/messages/input";
 
 type WordCache = [string[], IdValue<string>[]];

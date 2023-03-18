@@ -3,7 +3,7 @@ import { Entity, hasTag, RuleFn } from "./entity"
 import { createRootEnv, Env } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, LOOK_FN, write, getLocationEntity, isEntity, findEntites, isAtLocation, PLAYER } from "./enginedefault";
-import { OutputConsumer, OutputMessage } from "./messages/output";
+import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
 import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
@@ -13,7 +13,7 @@ import { addLibraryFunctions } from "./script/library";
 import { getName, Nameable } from "./nameable";
 import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
-import { InputMessage, Load } from "./messages/input";
+import { InputMessage, Load } from "tift-types/src/messages/input";
 import { EngineBuilder } from "./enginebuilder";
 import { Config } from "./config"
 import * as Conf from "./config"

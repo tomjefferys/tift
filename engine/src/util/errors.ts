@@ -1,4 +1,4 @@
-import { OutputConsumer } from "../messages/output";
+import { OutputConsumer } from "tift-types/src/messages/output";
 import * as Output from "../messages/output";
 import _ from "lodash";
 import { isNotFound, NOT_FOUND } from "../env";

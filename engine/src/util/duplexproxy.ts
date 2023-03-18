@@ -1,30 +1,9 @@
-import { Consumer, BiConsumer } from "./functions";
+import { Consumer } from "tift-types/src/util/functions";
+import { Forwarder, RequestFilter, ResponseFilter, Filters, DuplexProxy } from "tift-types/src/util/duplexproxy"
 
 
-/**
- * Something that can forward on a request or response
- */
-export interface Forwarder<S,T> {
-    send(request : S) : void;
-    respond(response : T) : void;
-}
-
-/**
- * A request filter.  This is a consumer, that can intercept and manipulate requests
- */
-export type RequestFilter<S,T> = BiConsumer<S, Forwarder<S,T>>;
-
-/**
- * A response filter.  This is a consumer, that can intercept and manipulate responses
- */
-export type ResponseFilter<S,T> = BiConsumer<T, Forwarder<S,T>>;
-
-/**
- * A pair of filters, used when consturcting a DuplexProxy
- */
-export interface Filters<S,T> {
-    requestFilter? : RequestFilter<S,T>;
-    responseFilter? : ResponseFilter<S,T>;
+export function createDuplexProxy<S,T>(name : string, filters : Filters<S,T>) : DuplexProxy<S,T> {
+    return new DuplexProxyImpl(name, filters);
 }
 
 /**
@@ -35,7 +14,7 @@ export interface Filters<S,T> {
  * Listeners need to be set to listen to to the requests and responses
  * 
  */
-export class DuplexProxy<S,T> implements Forwarder<S,T> {
+class DuplexProxyImpl<S,T> implements DuplexProxy<S,T> {
     private name : string;
 
     private requestListener? : Consumer<S>;
@@ -85,7 +64,7 @@ export class DuplexProxy<S,T> implements Forwarder<S,T> {
     }
 
     insertProxy(name : string, filters : Filters<S,T>) : DuplexProxy<S,T> {
-        const newProxy = new DuplexProxy<S,T>(name, filters);
+        const newProxy = new DuplexProxyImpl<S,T>(name, filters);
 
         newProxy.requestListener = request => this.send(request); //this.requestListener;
         this.responseListener = response => newProxy.respond(response);

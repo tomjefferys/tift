@@ -1,16 +1,14 @@
 import { OutputConsumerBuilder } from "./main";
-import { Execute, GetWords, InputMessage } from "./messages/input";
+import { Execute, GetWords, InputMessage } from "tift-types/src/messages/input";
 import * as Output from "./messages/output";
-import { Consumer} from "./util/functions";
-import { DuplexProxy, Filters, Forwarder } from "./util/duplexproxy";
+import { OutputMessage, WordType, Word } from "tift-types/src/messages/output"
+import { Consumer} from "tift-types/src/util/functions";
+import { DuplexProxy, Filters, Forwarder } from "tift-types/src/util/duplexproxy";
+import { createDuplexProxy } from "./util/duplexproxy";
 import * as _ from "lodash";
 import { Engine } from "./engine";
 import { StateMachine } from "./util/statemachine";
 import { Optional } from "./util/optional";
-
-type OutputMessage = Output.OutputMessage;
-
-type WordType = Output.WordType;
 
 export type MessageForwarder = Forwarder<InputMessage, OutputMessage>;
 
@@ -30,7 +28,7 @@ export class DecoratedForwarder implements MessageForwarder {
         this.delegate.send(request);
     }
 
-    respond(response : Output.OutputMessage) : void {
+    respond(response : OutputMessage) : void {
         this.delegate.respond(response);
     }
     
@@ -46,7 +44,7 @@ export class DecoratedForwarder implements MessageForwarder {
         this.delegate.respond(Output.log("warn", error));
     }
 
-    words(command : string[], words : Output.Word[]) {
+    words(command : string[], words : Word[]) {
         this.delegate.respond(Output.words(command, words));
     }
 
@@ -97,7 +95,7 @@ export function handleInput(message : InputMessage) : InputHandler {
  * @returns 
  */
 export function createEngineProxy(engineBuilder : (outputConsumer : Consumer<OutputMessage>) => Engine) : EngineProxy {
-    const proxy = new DuplexProxy<InputMessage, OutputMessage>(ENGINE_PROXY_NAME, {});
+    const proxy = createDuplexProxy<InputMessage, OutputMessage>(ENGINE_PROXY_NAME, {});
     const engine = engineBuilder(output => proxy.respond(output));
     proxy.setRequestListener(input => engine.send(input));
     return proxy;

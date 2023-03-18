@@ -1,0 +1,68 @@
+import { ControlType } from "./controltype";
+import { IdValue } from "../shared";
+import { Action } from "../util/historyproxy";
+
+interface Stringable {
+    toString : () => string
+}
+
+export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control
+
+export type OutputConsumer = (message : OutputMessage) => void;
+
+export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
+
+export type WordType = "word" | "option" | "control";
+
+export interface Word extends IdValue<string> {
+    id : string;
+    value : string;
+    type : WordType;
+}
+
+export interface Print {
+    type : "Print",
+    value : string
+}
+
+export interface SetVar {
+    type : "Set",
+    name : string,
+    value : string
+}
+
+export interface Look {
+    type : "Look",
+    room : string,
+    objects : string[]
+}
+
+export interface Words {
+    type : "Words",
+    command : string[],
+    words : Word[]
+}
+
+export interface Status {
+    type : "Status",
+    status : string
+}
+
+/**
+ * A control message, to indicate the client should take some action
+ */
+export interface Control {
+    type : "Control",
+    value : ControlType
+}
+
+export interface Log {
+    type : "Log", 
+    level : LogLevel,
+    message : string
+}
+
+export interface SaveState {
+    type : "SaveState",
+    state : Action[]
+}

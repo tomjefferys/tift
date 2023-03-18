@@ -3,7 +3,8 @@ import { ActionSource, emptyActionSource } from "./actionsource";
 import { Entity } from "./entity";
 import { getName } from "./nameable";
 import { IdValue, mkIdValue } from "./shared";
-import { matchAll, not, Predicate } from "./util/functions";
+import { matchAll, not } from "./util/functions";
+import { Predicate } from "tift-types/src/util/functions";
 import * as Verb from "./verb"
 
 type Verb = Verb.Verb;

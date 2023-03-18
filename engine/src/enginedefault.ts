@@ -1,5 +1,6 @@
 import { EnvFn, Env, isFound } from "./env";
-import { control, OutputConsumer, print } from "./messages/output";
+import { control, print } from "./messages/output";
+import { OutputConsumer } from "tift-types/src/messages/output";
 import { VerbBuilder } from "./verb"
 import { captureModifier, captureObject, captureIndirectObject, matchAttribute, matchBuilder, attributeMatchBuilder, matchVerb } from "./commandmatcher";
 import { mkResult, mkThunk } from "./script/thunk";

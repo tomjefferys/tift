@@ -1,10 +1,10 @@
-import { Consumer } from "../../src/util/functions";
-import { DuplexProxy } from "../../src/util/duplexproxy";
+import { Consumer } from "tift-types/src/util/functions";
+import { createDuplexProxy } from "../../src/util/duplexproxy";
 
 
 test("Test no-op proxy", () => {
     // Create the proxy
-    const proxy = new DuplexProxy<string,number>("test", {});
+    const proxy = createDuplexProxy<string,number>("test", {});
 
     // Creatre the delegate, call to the proxy output
     const delegate = (str : string) => proxy.respond(str.length);
@@ -28,7 +28,7 @@ test("Test no-op proxy", () => {
 
 test("Test intercepting proxy", () => {
     // Create the proxy
-    const proxy = new DuplexProxy<string,number>("test",{
+    const proxy = createDuplexProxy<string,number>("test",{
         requestFilter : (str, proxy) => proxy.respond(str.length + 1)
     });
 
@@ -88,7 +88,7 @@ class Client {
 }
 
 test("Test with proxy chain", () => {
-    const proxy = new DuplexProxy<string, number[]>("A", {});
+    const proxy = createDuplexProxy<string, number[]>("A", {});
     const delegate = new Server(response => proxy.respond(response));
     proxy.setRequestListener(str => delegate.doStuff(str));
 

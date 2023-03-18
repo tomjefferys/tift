@@ -1,4 +1,4 @@
-import { OutputConsumer } from "../../src/messages/output";
+import { OutputConsumer } from "tift-types/src/messages/output";
 import { bindParams } from "../../src/script/parser"
 import { Env, createRootEnv, EnvFn } from "../../src/env"
 import { print } from "../../src/messages/output"

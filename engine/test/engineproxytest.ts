@@ -1,19 +1,17 @@
 import { EngineBuilder } from "../src/enginebuilder";
 import { getEngine, Input, OutputConsumerBuilder } from "../src/main";
-import { Consumer } from "../src/util/functions";
-import { Forwarder } from "../src/util/duplexproxy";
+import { Consumer } from "tift-types/src/util/functions";
+import { Forwarder } from "tift-types/src/util/duplexproxy";
 import { NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
 import * as Output from "../src/messages/output";
+import { OutputMessage, OutputConsumer } from "tift-types/src/messages/output";
 import { createWordFilter, createEngineProxy, MessageForwarder, createStateMachineFilter, DecoratedForwarder, handleInput } from "../src/engineproxy";
 import { Engine } from "../src/engine";
 import _ from "lodash";
 import dedent from "dedent-js";
 import { buildStateMachine, TERMINATE } from "../src/util/statemachine";
-import { InputMessage } from "../src/messages/input";
+import { InputMessage } from "tift-types/src/messages/input";
 import { STANDARD_VERBS } from "./testutils/testutils";
-
-type OutputMessage = Output.OutputMessage;
-type OutputConsumer = Output.OutputConsumer;
 
 test("Test basic no-op engine proxy" , () => {
     const proxy = createEngineProxy(getEngineBuilder());

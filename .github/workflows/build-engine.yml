@@ -15,6 +15,12 @@ jobs:
         run: npm install -g typescript
       - name: install jest
         run: npm install -g jest
+      - name: install type dependencies
+        run: npm install
+        working-directory: ./types
+      - name: compile types
+        run: tsc
+        working-directory: ./types
       - name: install dependencies
         run: npm install
       - name: compile

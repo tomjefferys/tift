@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid, IconButton } from "@chakra-ui/react";
 import { ArrowBackIcon } from "@chakra-ui/icons";
-import { Word } from "tift-engine/src/messages/output";
-import { WordType } from "tift-engine/out/src/messages/output";
+import { Word } from "tift-types/src/messages/output";
+import { WordType } from "tift-types/src/messages/output";
 
 type WordSelected = (event : React.MouseEvent<HTMLButtonElement>, word : Word) => void;
 

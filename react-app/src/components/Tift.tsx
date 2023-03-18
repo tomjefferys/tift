@@ -2,8 +2,8 @@ import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, word, createStateMachineFilter, buildStateMachine, handleInput } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
-import { OutputConsumer, OutputMessage, Word } from "tift-engine/src/messages/output";
-import { ControlType } from "tift-engine/src/messages/controltype";
+import { OutputConsumer, OutputMessage, Word } from "tift-types/src/messages/output";
+import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder, DecoratedForwarder } from "tift-engine/src/engineproxy";
 import { MachineOps } from "tift-engine/src/util/statemachine";
 import Output from "./Output"
@@ -11,7 +11,7 @@ import Controls from './Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from '../outputentry';
 import { Box, Divider, useColorMode } from '@chakra-ui/react'
 
-import { InputMessage } from 'tift-engine/src/messages/input';
+import { InputMessage } from 'tift-types/src/messages/input';
 import * as Pauser from './pauser';
 
 const GAME_FILE = "adventure.yaml";

@@ -1,11 +1,11 @@
 import { BasicEngine, Engine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage, Word, WordType } from "./messages/output";
-import { InputMessage } from "./messages/input"
-import { BiConsumer, Consumer } from "./util/functions";
+import { LogLevel, OutputConsumer, OutputMessage, Word, WordType } from "tift-types/src/messages/output";
+import { InputMessage } from "tift-types/src/messages/input"
+import { BiConsumer, Consumer } from "tift-types/src/util/functions";
 import * as EngineProxy from "./engineproxy";
-import { Filters } from "./util/duplexproxy";
+import { Filters } from "tift-types/src/util/duplexproxy";
 import * as StateMachine from "./util/statemachine";
-import { ControlType } from "./messages/controltype";
+import { ControlType } from "tift-types/out/messages/controltype";
 
 type StateMachine = StateMachine.StateMachine<InputMessage, EngineProxy.DecoratedForwarder>;
 type StateName = StateMachine.StateName;
