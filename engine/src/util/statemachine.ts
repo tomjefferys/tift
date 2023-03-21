@@ -1,4 +1,4 @@
-import { Optional } from "./optional";
+import { Optional } from "tift-types/src/util/optional";
 
 export type StateName = string;
 

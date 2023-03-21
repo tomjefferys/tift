@@ -9,7 +9,7 @@ import { OutputConsumer } from "tift-types/src/messages/output";
 import _ from "lodash";
 import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "./script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
-import { Env } from "./env";
+import { Env } from "tift-types/src/env";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 

@@ -2,10 +2,6 @@ import { ControlType } from "./controltype";
 import { IdValue } from "../shared";
 import { Action } from "../util/historyproxy";
 
-interface Stringable {
-    toString : () => string
-}
-
 export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control
 
 export type OutputConsumer = (message : OutputMessage) => void;

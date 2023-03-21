@@ -8,7 +8,7 @@ import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
 import * as Arrays from "./util/arrays"
 import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable } from "./command"
-import { Env } from "./env"
+import { Env } from "tift-types/src/env"
 import * as Logger from "./util/logger"
 
 // verb                                -- intranitive verb

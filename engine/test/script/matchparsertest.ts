@@ -3,7 +3,7 @@ import { setUpEnv } from "../testutils/testutils"
 import { evaluateMatchExpression } from "../../src/script/matchParser"
 import { evaluate } from "../../src/script/parser"
 import { EAT, LOOK, APPLE, STIR, SOUP, SPOON, GO, PUSH, BOX } from "../testutils/testentities"
-import { Env } from '../../src/env'
+import { Env } from 'tift-types/src/env'
 import { Command, start } from '../../src/command'
 import _ from 'lodash'
 

@@ -4,6 +4,7 @@
 import _ from "lodash";
 import { isPrefixOf } from "./arrays";
 import * as objects from "./objects";
+import * as Type from "tift-types/src/util/historyproxy";
 
 const IS_PROXY = Symbol("isProxy");
 
@@ -28,7 +29,7 @@ export interface Del {
  * Proxy manager. Creates proxys, and track changes to them
  * Automatically proxies child objects on get
  */
-export class ProxyManager {
+export class ProxyManager implements Type.ProxyManager {
     private history : Action[];
 
     private recordHistory : boolean;

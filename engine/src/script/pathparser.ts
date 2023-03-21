@@ -1,6 +1,7 @@
 import { Compound, Expression, Identifier, Literal, MemberExpression } from "jsep";
 import _ from "lodash";
-import { index, Path, property } from "../path";
+import { Path } from "tift-types/src/path"
+import { index, property } from "../path";
 import { exprToString } from "./expressionutils";
 import { parseToTree } from "./parser";
 

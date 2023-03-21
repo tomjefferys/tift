@@ -1,6 +1,7 @@
 // Array utility methods
 
-import { hasValue, Optional } from "./optional";
+import { Optional } from "tift-types/src/util/optional";
+import { hasValue } from "./optional";
 
 /**
  * Checks if two arrays have matching prefixes

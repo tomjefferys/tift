@@ -1,4 +1,5 @@
-import { EnvFn, Env, isFound } from "./env";
+import { isFound } from "./env";
+import { EnvFn, Env } from "tift-types/src/env";
 import { control, print } from "./messages/output";
 import { OutputConsumer } from "tift-types/src/messages/output";
 import { VerbBuilder } from "./verb"
@@ -13,7 +14,7 @@ import * as MultiDict from "./util/multidict";
 import { bindParams } from "./script/parser";
 import { Obj } from "./util/objects"
 import _ from "lodash";
-import { Optional } from "./util/optional";
+import { Optional } from "tift-types/src/util/optional";
 import * as Errors from "./util/errors";
 import { Entity, EntityBuilder } from "./entity";
 

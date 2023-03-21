@@ -3,7 +3,7 @@ import { Obj, getString, getArray } from "./util/objects";
 import { Nameable } from "./nameable";
 import { ActionSource } from "./actionsource";
 import { AfterAction, MainAction, BeforeAction } from "./script/phaseaction";
-import { Env } from "./env";
+import { Env } from "tift-types/src/env";
 import { Thunk } from "./script/thunk";
 import _ from "lodash"
 

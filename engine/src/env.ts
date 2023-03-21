@@ -6,11 +6,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import _ from "lodash"
-import { Path, PathElement, pathElementEquals, fromValueList, makePath, toValueList } from "./path";
+import { pathElementEquals, fromValueList, makePath, toValueList } from "./path";
+import { Path, PathElement } from "tift-types/src/path"
 import { parsePath } from "./script/pathparser";
 import { Action, ProxyManager } from "./util/historyproxy";
-import { Optional } from "./util/optional";
-import { Obj, isObject } from "./util/objects"
+import { Optional } from "tift-types/src/util/optional";
+import { Obj, isObject } from "./util/objects";
+import { AnyArray, EnvFn, ReturnType } from "tift-types/src/env";
+import * as Type from "tift-types/src/env";
 
 export const REFERENCE = Symbol("__reference__");
 export const NAMESPACE = Symbol("__namespace__");
@@ -18,17 +21,11 @@ export const NOT_FOUND = Symbol("__notfound__");
 
 export type ReadOnly = "readonly" | "writable";
 
-export type AnyArray = unknown[];
-
-export type EnvFn = (env:Env) => ReturnType;
-
-export type ReturnType = boolean | number | string | EnvFn | Obj | AnyArray | void;
-
 export type NameSpace = string[];
 
 // An execution envionment for a function.  Contains all local variables, and access to 
 // variables in parent environments
-export class Env {
+export class Env implements Type.Env {
     readonly parent? : Env;
     readonly properties : Obj;
     readonly namespaces : NameSpace[];
@@ -39,6 +36,10 @@ export class Env {
         this.parent = parent;
         this.properties = this.proxyManager.createProxy(properties);
         this.namespaces = namespaces;
+    }
+
+    getParent() : Type.Env | undefined {
+        return this.parent as Type.Env;
     }
 
     /**
@@ -290,7 +291,7 @@ export class Env {
     /**
      * @returns a new child environment of the current environment
      */
-    newChild(obj : Obj = {}) : Env {
+    newChild(obj : Obj = {}) : Type.Env {
         return new Env(obj, [], this); 
     }
 
@@ -457,7 +458,7 @@ function isReference(value : unknown) : boolean {
 /** 
  * Create a new root environment, based on the supplied object
  */
-export function createRootEnv(obj : Obj, namespaces : NameSpace[] = []) : Env {
+export function createRootEnv(obj : Obj, namespaces : NameSpace[] = []) : Type.Env {
     return new Env(obj, [[], ...namespaces]);
 }
 

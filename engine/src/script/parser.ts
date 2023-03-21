@@ -1,12 +1,12 @@
 import jsep, {Expression, CallExpression, Identifier, Literal, BinaryExpression, MemberExpression, ArrayExpression, IPlugin, UnaryExpression, ThisExpression, Compound} from 'jsep';
 import { Result, EnvFn, Thunk, ThunkType, mkThunk, mkResult } from "./thunk"
 
-import { Env } from '../env'
+import { Env } from 'tift-types/src/env'
 import * as _ from 'lodash'
 import { parsePathExpr } from './pathparser';
 import { isPath } from '../path';
 import  jsepAssignment, { AssignmentExpression } from '@jsep-plugin/assignment';
-import { Optional } from '../util/optional';
+import { Optional } from 'tift-types/src/util/optional';
 import { rethrowCompileError } from '../util/errors';
 
 // Configure Jsep
@@ -340,12 +340,13 @@ export function bindParams(params : string[], fn : EnvFn, closureEnv : Optional<
 
 function makeDef() : EnvFn {
     const defFn = (env : Env) => {
-        if (!env.parent) {
+        const parent = env.getParent();
+        if (!parent) {
             throw new Error("Can't set: no parent environment");
         }
         const name = env.get("name")(env).getValue();
         const value = env.get("value")(env).getValue();
-        env.parent.def(name, value);
+        parent.def(name, value);
         return mkResult(value);
     }
     return bindParams(["name", "value"], defFn);
@@ -361,14 +362,15 @@ function makeSet() : EnvFn {
 }
 
 function set(env : Env, nameFn : EnvFn, valueFn : EnvFn) : Result {
-    if (!env.parent) {
+    const parentEnv = env.getParent();
+    if (!parentEnv) {
         throw new Error("Can't set: no parent environment");
     }
 
     const name = nameFn(env).getValue();
     const value = valueFn(env).getValue();
     if (_.isString(name) || _.isSymbol(name) || isPath(name)) {
-        env.parent.set(name, value);
+        parentEnv.set(name, value);
     } else {
         throw new Error("Can't set, " + name + " is an invalid setter path");
     }

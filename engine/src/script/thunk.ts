@@ -1,4 +1,4 @@
-import { Env } from "../env"
+import { Env } from "tift-types/src/env"
 import { Expression } from "jsep";
 import * as _ from "lodash";
 import { exprToString } from "./expressionutils";

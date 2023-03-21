@@ -1,16 +1,6 @@
 import _ from "lodash";
 
-export type ElementType = "property" | "index"
-
-export type NameType = string | symbol;
-export type PathElementType = NameType | number;
-
-export interface PathElement {
-    type : ElementType;
-    getValue : () => PathElementType,
-    toString : () => string
-}
-
+import { NameType, PathElement, PathElementType, Path } from "tift-types/src/path"
 
 export interface Property extends PathElement {
     type : "property",
@@ -21,8 +11,6 @@ export interface Index extends PathElement {
     type : "index",
     index : number
 }
-
-export type Path = PathElement[];
 
 export function isPath(obj : unknown) : obj is Path {
     let isValidPath = _.isArray(obj);

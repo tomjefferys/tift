@@ -1,4 +1,4 @@
-import { Env } from "../src/env";
+import { Env } from "tift-types/src/env";
 import { setUpEnv } from "./testutils/testutils";
 import * as RuleBuilder from "../src/rulebuilder";
 let env : Env;

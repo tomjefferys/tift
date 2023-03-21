@@ -4,8 +4,8 @@ import { BinaryExpression, Expression } from "jsep";
 import _ from "lodash";
 import { Command } from "../command";
 import { Matcher } from "../commandmatcher";
-import { Env } from "../env";
-import { Optional } from "../util/optional";
+import { Env } from "tift-types/src/env";
+import { Optional } from "tift-types/src/util/optional";
 import { evaluateMatchExpression } from "./matchParser";
 import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
@@ -81,7 +81,7 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
                         const result = matcher(command, obj.id);
                         if (result.isMatch) {
                             const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
-                            const resolverEnv = entitiesEnv.newChild(result.captures)
+                            const resolverEnv = entitiesEnv.newChild(result.captures ?? {})
                                                            .newChild({"this" : obj})
                                                            .newChild(obj);
                             return onMatch.resolve(resolverEnv);

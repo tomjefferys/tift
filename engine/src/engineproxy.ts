@@ -8,7 +8,7 @@ import { createDuplexProxy } from "./util/duplexproxy";
 import * as _ from "lodash";
 import { Engine } from "./engine";
 import { StateMachine } from "./util/statemachine";
-import { Optional } from "./util/optional";
+import { Optional } from "tift-types/src/util/optional";
 
 export type MessageForwarder = Forwarder<InputMessage, OutputMessage>;
 

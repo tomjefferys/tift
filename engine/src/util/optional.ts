@@ -1,8 +1,7 @@
-
-export type Optional<T> = T | undefined;
+import { Optional } from "tift-types/src/util/optional"
 
 export function hasValue<T>(opt : Optional<T>) : opt is T {
-    return opt !== undefined;
+    return opt !== null && opt !== undefined;
 }
 
 export function ifPresent<T>(opt : Optional<T>, fn : (value : T) => void) {

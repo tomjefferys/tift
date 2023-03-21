@@ -1,6 +1,7 @@
-import { Env, isFound } from "./env";
+import { isFound } from "./env";
+import { Env } from "tift-types/src/env";
 import { parseToThunk } from "./script/parser";
-import { Optional } from "./util/optional";
+import { Optional } from "tift-types/src/util/optional";
 import _ from "lodash";
 import { mkResult, mkThunk, Thunk } from "./script/thunk";
 

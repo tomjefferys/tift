@@ -1,6 +1,7 @@
 import { isInstant, Verb } from "./verb"
 import { Entity, hasTag, RuleFn } from "./entity"
-import { createRootEnv, Env } from "./env"
+import { Env } from "tift-types/src/env"
+import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, LOOK_FN, write, getLocationEntity, isEntity, findEntites, isAtLocation, PLAYER } from "./enginedefault";
 import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
@@ -18,7 +19,7 @@ import { EngineBuilder } from "./enginebuilder";
 import { Config } from "./config"
 import * as Conf from "./config"
 import { bold } from "./markdown"
-import { Optional } from "./util/optional";
+import { Optional } from "tift-types/src/util/optional";
 import { logError } from "./util/errors";
 import { Action } from "./util/historyproxy";
 import { Obj } from "./util/objects"

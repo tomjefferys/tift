@@ -1,4 +1,5 @@
 import { Command, PoSType } from "./command";
+import { Obj } from "tift-types/src/util/objects"
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -25,7 +26,7 @@ export type Matcher = (command : Command, objId : string) => MatchResult;
 export interface MatchResult {
     isMatch : boolean,
     score : number,
-    captures? : {[key:string]:unknown}
+    captures? : Obj
 }
 
 const FAILED_MATCH : MatchResult = { isMatch : false, ...SCORE_NO_MATCH };

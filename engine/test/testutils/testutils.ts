@@ -1,6 +1,7 @@
 import { OutputConsumer } from "tift-types/src/messages/output";
 import { bindParams } from "../../src/script/parser"
-import { Env, createRootEnv, EnvFn } from "../../src/env"
+import { createRootEnv } from "../../src/env";
+import { Env, EnvFn } from "tift-types/src/env";
 import { print } from "../../src/messages/output"
 import { Action } from "../../src/util/historyproxy";
 

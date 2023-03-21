@@ -1,6 +1,7 @@
 import _ from "lodash";
-import { createRootEnv, isFound, NameSpace } from "../src/env";
-import { Path, toValueList } from "../src/path";
+import { Env, createRootEnv, isFound, NameSpace } from "../src/env";
+import { Path } from "tift-types/src/path"
+import { toValueList } from "../src/path";
 import { Obj } from "../src/util/objects"
 
 test("test empty env", () => {
@@ -89,8 +90,8 @@ test("Test namespaces", () => {
         }
     }
 
-    const root = createRootEnv(obj, [["foo"], ["grault", "garply"]]);
-    const child = root.newChild();
+    const root = createRootEnv(obj, [["foo"], ["grault", "garply"]]) as Env;
+    const child = root.newChild() as Env;
     expect(root.getNamespaces()).toStrictEqual([[], ["foo"], ["grault", "garply"]]);
     expect(child.getNamespaces()).toStrictEqual([[], ["foo"], ["grault", "garply"]]);
 
@@ -229,7 +230,7 @@ test("Limit search to namespace", () => {
 test("Test reference to value", () => {
     const root = createRootEnv({
         "foo" : { "bar" : "baz"},
-    });
+    }) as Env;
 
     const child = root.newChild({"bar" : root.reference("foo.bar")});
     const result = child.get("bar");
@@ -249,7 +250,7 @@ test("Test reference to value", () => {
 test("Test reference to object", () => {
     const root = createRootEnv({
         "foo" : { "bar" : { "baz" : "qux" }}
-    });
+    }) as Env;
 
     const child = root.newChild({"bar" : root.reference("foo.bar")});
     const result = child.get("bar.baz");
@@ -259,7 +260,7 @@ test("Test reference to object", () => {
 test("Test reference to object (set)", () => {
     const root = createRootEnv({
         "foo" : { "bar" : { "baz" : "qux" }}
-    });
+    }) as Env;
 
     const child = root.newChild({"bar" : root.reference("foo.bar")});
     expect(child.get("bar.baz")).toEqual("qux");
@@ -272,7 +273,7 @@ test("Test reference to object (set)", () => {
 test("Test reference to namespace", () => {
     const root = createRootEnv({
         "namespace1" : { "foo" : "bar" }
-    }, [["namespace1"]]);
+    }, [["namespace1"]]) as Env;
 
     const child = root.newChild({ "ref" : root.reference("namespace1")});
     expect(child.get("ref.foo")).toEqual("bar");
@@ -289,9 +290,9 @@ test("Test references: different scope levels", () => {
         }
     }, [["entities"], ["verbs"]]);
 
-    const child1 = root.newChild();
-    const child2 = child1.newChild(child1.createNamespaceReferences(["entities"]));
-    const child3 = child2.newChild({ "this" : child2.reference("entities.foo")});
+    const child1 = root.newChild() as Env;
+    const child2 = child1.newChild(child1.createNamespaceReferences(["entities"])) as Env;
+    const child3 = child2.newChild({ "this" : child2.reference("entities.foo")}) as Env;
 
     expect(child3.get("this.bar")).toEqual("baz");
     expect(child3.get("foo.bar")).toEqual("baz");
@@ -312,9 +313,9 @@ test("Test references: different scope levels: test setting", () => {
         }
     }, [["entities"], ["verbs"]]);
 
-    const child1 = root.newChild();
-    const child2 = child1.newChild(child1.createNamespaceReferences(["entities"]));
-    const child3 = child2.newChild({ "this" : child2.reference("entities.foo")});
+    const child1 = root.newChild() as Env;
+    const child2 = child1.newChild(child1.createNamespaceReferences(["entities"])) as Env;
+    const child3 = child2.newChild({ "this" : child2.reference("entities.foo")}) as Env;
 
     child3.set("this.bar", "xyzzy");
     child3.set("qux.bar",  "corge");
@@ -347,9 +348,9 @@ test("Test references to references", () => {
         }
     }, [["entities"], ["verbs"]]);
 
-    const child1 = root.newChild();
-    const child2 = child1.newChild({ "corge" : child1.reference("entities.foo") });
-    const child3 = child2.newChild({ "xyzzy" : child2.reference("corge") });
+    const child1 = root.newChild() as Env;
+    const child2 = child1.newChild({ "corge" : child1.reference("entities.foo") }) as Env;
+    const child3 = child2.newChild({ "xyzzy" : child2.reference("corge") }) as Env;
 
     expect(child3.get("xyzzy.bar")).toEqual("baz");
 

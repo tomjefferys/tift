@@ -1,5 +1,6 @@
 // Helper code for handling mustache templates
-import { Env, isFound } from "../env"
+import { isFound } from "../env"
+import { Env } from "tift-types/src/env"
 import { Obj } from "./objects"
 import * as _ from "lodash"
 import * as Mustache from "mustache"
