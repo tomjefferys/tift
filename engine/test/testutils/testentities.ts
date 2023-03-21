@@ -1,5 +1,5 @@
-import { VerbBuilder } from "../../src/verb";
-import { EntityBuilder } from "../../src/entity";
+import { VerbBuilder } from "../../src/builder/verbbuilder";
+import { EntityBuilder } from "../../src/builder/entitybuilder";
 import { parseToThunk } from "../../src/script/parser";
 
 

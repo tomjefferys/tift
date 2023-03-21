@@ -1,5 +1,5 @@
 import { BasicEngine, Engine } from "../src/engine";
-import { EngineBuilder } from "../src/enginebuilder";
+import { EngineBuilder } from "../src/builder/enginebuilder";
 import { listOutputConsumer, SaveData } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN } from "./testutils/testobjects";

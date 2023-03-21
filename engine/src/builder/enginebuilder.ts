@@ -1,13 +1,15 @@
-import { Verb, VerbBuilder } from "./verb";
-import { Entity, EntityBuilder } from "./entity";
-import { getString, forEach, forEachEntry, ifExists, getObj } from "./util/objects";
-import { BasicEngine, Engine, EngineState } from "./engine";
+import { Verb } from "../verb";
+import { VerbBuilder } from "./verbbuilder";
+import { EntityBuilder } from "./entitybuilder";
+import { Entity } from "../entity";
+import { getString, forEach, forEachEntry, ifExists, getObj } from "../util/objects";
+import { BasicEngine, Engine, EngineState } from "../engine";
 import { DEFAULT_VERBS } from "./enginedefault";
-import { getObjs } from "./yamlparser";
-import { Obj } from "./util/objects"
+import { getObjs } from "../yamlparser";
+import { Obj } from "../util/objects"
 import { OutputConsumer } from "tift-types/src/messages/output";
 import _ from "lodash";
-import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "./script/phaseaction";
+import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "../script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
 import { Env } from "tift-types/src/env";
 

@@ -3,19 +3,19 @@ import { Entity, hasTag, RuleFn } from "./entity"
 import { Env } from "tift-types/src/env"
 import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, LOOK_FN, write, getLocationEntity, isEntity, findEntites, isAtLocation, PLAYER } from "./enginedefault";
+import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, LOOK_FN, write, getLocationEntity, isEntity, findEntites, isAtLocation, PLAYER } from "./builder/enginedefault";
 import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
 import * as Output from "./messages/output";
 import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
 import * as _ from "lodash";
 import * as arrays from "./util/arrays";
-import { addLibraryFunctions } from "./script/library";
+import { addLibraryFunctions } from "./builder/library";
 import { getName, Nameable } from "./nameable";
 import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
 import { InputMessage, Load } from "tift-types/src/messages/input";
-import { EngineBuilder } from "./enginebuilder";
+import { EngineBuilder } from "./builder/enginebuilder";
 import { Config } from "./config"
 import * as Conf from "./config"
 import { bold } from "./markdown"

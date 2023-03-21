@@ -1,8 +1,8 @@
-import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule, makeItem } from "../src/enginebuilder";
+import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule, makeItem } from "../src/builder/enginebuilder";
 import { setUpEnv } from "./testutils/testutils"
 import * as fs from "fs";
 import _ from "lodash";
-import { DEFAULT_VERBS } from "../src/enginedefault";
+import { DEFAULT_VERBS } from "../src/builder/enginedefault";
 
 
 test("Test make verb from empty object", () => {

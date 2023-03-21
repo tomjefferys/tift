@@ -11,7 +11,7 @@ import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
 import { Obj } from "../util/objects"
 import { getCauseMessage } from "../util/errors";
-import * as RuleBuilder from "../rulebuilder";
+import * as RuleBuilder from "../builder/rulebuilder";
 
 export type Phase = "before" | "main" | "after";
 

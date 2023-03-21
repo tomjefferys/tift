@@ -1,8 +1,8 @@
-import { bindParams } from "./parser"
-import { EnvFn, mkResult } from "./thunk"
+import { bindParams } from "../script/parser"
+import { EnvFn, mkResult } from "../script/thunk"
 import { print } from "../messages/output"
 import { Obj } from "../util/objects";
-import { OUTPUT } from "../enginedefault";
+import { OUTPUT } from "./enginedefault";
 
 export function addLibraryFunctions(obj : Obj) {
     obj["print"] = PRINT;

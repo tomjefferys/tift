@@ -4,7 +4,7 @@ import { Env } from "tift-types/src/env"
 import { Obj } from "./objects"
 import * as _ from "lodash"
 import * as Mustache from "mustache"
-import { LOOK_COUNT } from "../enginedefault";
+import { LOOK_COUNT } from "../builder/enginedefault";
 import { getCauseMessage } from "./errors";
 
 export function formatEntityString(env : Env, entity : Obj, entityField : string) : string {

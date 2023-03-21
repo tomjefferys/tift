@@ -1,9 +1,9 @@
-import { isFound } from "./env";
+import { isFound } from "../env";
 import { Env } from "tift-types/src/env";
-import { parseToThunk } from "./script/parser";
+import { parseToThunk } from "../script/parser";
 import { Optional } from "tift-types/src/util/optional";
 import _ from "lodash";
-import { mkResult, mkThunk, Thunk } from "./script/thunk";
+import { mkResult, mkThunk, Thunk } from "../script/thunk";
 
 const INDEX_NAME = ".index";
 

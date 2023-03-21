@@ -1,4 +1,4 @@
-import { EngineBuilder } from "../src/enginebuilder";
+import { EngineBuilder } from "../src/builder/enginebuilder";
 import { getEngine, Input, OutputConsumerBuilder } from "../src/main";
 import { Consumer } from "tift-types/src/util/functions";
 import { Forwarder } from "tift-types/src/util/duplexproxy";

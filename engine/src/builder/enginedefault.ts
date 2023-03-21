@@ -1,22 +1,23 @@
-import { isFound } from "./env";
+import { isFound } from "../env";
 import { EnvFn, Env } from "tift-types/src/env";
-import { control, print } from "./messages/output";
+import { control, print } from "../messages/output";
 import { OutputConsumer } from "tift-types/src/messages/output";
-import { VerbBuilder } from "./verb"
-import { captureModifier, captureObject, captureIndirectObject, matchAttribute, matchBuilder, attributeMatchBuilder, matchVerb } from "./commandmatcher";
-import { mkResult, mkThunk } from "./script/thunk";
-import { phaseActionBuilder } from "./script/phaseaction";
-import { makePath } from "./path";
+import { VerbBuilder } from "./verbbuilder"
+import { captureModifier, captureObject, captureIndirectObject, matchAttribute, matchBuilder, attributeMatchBuilder, matchVerb } from "../commandmatcher";
+import { mkResult, mkThunk } from "../script/thunk";
+import { phaseActionBuilder } from "../script/phaseaction";
+import { makePath } from "../path";
 import * as Mustache from "mustache"
-import { getName, Nameable } from "./nameable";
-import { formatEntityString } from "./util/mustacheUtils";
-import * as MultiDict from "./util/multidict";
-import { bindParams } from "./script/parser";
-import { Obj } from "./util/objects"
+import { getName, Nameable } from "../nameable";
+import { formatEntityString } from "../util/mustacheUtils";
+import * as MultiDict from "../util/multidict";
+import { bindParams } from "../script/parser";
+import { Obj } from "../util/objects"
 import _ from "lodash";
 import { Optional } from "tift-types/src/util/optional";
-import * as Errors from "./util/errors";
-import { Entity, EntityBuilder } from "./entity";
+import * as Errors from "../util/errors";
+import { Entity } from "../entity";
+import { EntityBuilder } from "./entitybuilder";
 
 const NS_ENTITIES = "entities";
 const LOCATION = "location";

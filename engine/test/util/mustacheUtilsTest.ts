@@ -1,7 +1,7 @@
 import { formatEntityString } from "../../src/util/mustacheUtils";
 import { createRootEnv } from "../../src/env";
 import { defaultOutputConsumer } from "../testutils/testutils";
-import { EngineBuilder } from "../../src/enginebuilder";
+import { EngineBuilder } from "../../src/builder/enginebuilder";
 import { Input } from "../../src/main";
 import _ from "lodash";
 
