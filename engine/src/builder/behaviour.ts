@@ -98,7 +98,7 @@ class DefaultBehaviour implements Behaviour {
 
     makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
         return makeOutputConsumer(obj, outputConsumer);
-    };
+    }
         
     private findStartingLocation(env : Env) : string {
         const startingLocs = env.findObjs(obj => obj["type"] === ROOM && Entity.hasTag(obj, START));

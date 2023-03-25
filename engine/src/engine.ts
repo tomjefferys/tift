@@ -24,10 +24,6 @@ import { AUTOLOOK } from "./builder/plugins/autolook"
 
 const logger = Logger.getLogger("engine");
 
-enum TAG {
-  START = "start"
-}
-
 export interface Engine {
   send(message : InputMessage) : void;
 }

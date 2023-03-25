@@ -4,7 +4,7 @@ import { EntityBuilder } from "./entitybuilder";
 import { Entity } from "../entity";
 import { getString, forEach, forEachEntry, ifExists, getObj } from "../util/objects";
 import { BasicEngine, Engine, EngineState } from "../engine";
-import { DEFAULT_VERBS } from "./enginedefault";
+import { DEFAULT_VERBS } from "./defaultverbs";
 import { getObjs } from "../yamlparser";
 import { Obj } from "../util/objects"
 import { OutputConsumer } from "tift-types/src/messages/output";
