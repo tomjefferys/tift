@@ -1,8 +1,10 @@
 import { phaseActionBuilder } from "../script/phaseaction";
 import { captureModifier, captureObject, captureIndirectObject, matchAttribute, matchBuilder, attributeMatchBuilder, matchVerb } from "../commandmatcher";
 import { mkResult, mkThunk } from "../script/thunk";
-import { getLocationEntity, findEntites, isEntity, isEntityVisible, isAtLocation, isEntityMovable, isEntityNPC, entityHasTag, 
-         DARK, isLightSourceAtLocation, PLAYER, LOCATION, getEntity, write, INVENTORY, WEARING, getLocation } from "./enginedefault";
+import { getLocationEntity, LOCATION, write, getLocation } from "./enginedefault";
+import * as Entities from "./entities";
+import * as Locations from "./locations";
+import * as Player from "./player";
 import { Env } from "tift-types/src/env";
 import { formatEntityString } from "../util/mustacheUtils";
 import { VerbBuilder } from "./verbbuilder";
@@ -38,18 +40,18 @@ export const LOOK_FN = (env : Env) => {
                         ?? location["name"]
                         ?? location["id"];
 
-    const items = findEntites(env, location)
-                     .filter(isEntity)
-                     .filter(isEntityVisible)
-                     .filter(obj => isEntityMovable(obj) || isEntityNPC(obj))
-                     .filter(obj => !isAtLocation(env, PLAYER, obj));
+    const items = Locations.findEntites(env, location)
+                           .filter(Entities.isEntity)
+                           .filter(Entities.isEntityVisible)
+                           .filter(obj => Entities.isEntityMovable(obj) || Entities.isEntityNPC(obj))
+                           .filter(obj => !Locations.isAtLocation(env, Player.PLAYER, obj));
                     
-    const isDark = entityHasTag(location, DARK) && !isLightSourceAtLocation(env, location);
+    const isDark = Entities.entityHasTag(location, Locations.DARK) && !Locations.isLightSourceAtLocation(env, location);
 
     const getItemDescription = (item : Obj) => {
         const itemLocation = item[LOCATION];
         const locationObj = (itemLocation !== location.id) 
-                ? { location : getName(getEntity(env, itemLocation) as Nameable)}
+                ? { location : getName(Entities.getEntity(env, itemLocation) as Nameable)}
                 : {};
         return { name : getName(item as Nameable), ...locationObj };
     }
@@ -85,10 +87,10 @@ const INVENTORY_ACTION = phaseActionBuilder("inventory")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("inventory")).build(),    
             mkThunk(env => {
-                    env.findObjs(obj => obj?.location === INVENTORY && isEntity(obj))
+                    env.findObjs(obj => obj?.location === Player.INVENTORY && Entities.isEntity(obj))
                        .forEach(entity => write(env, getName(entity as Nameable)));
     
-                    env.findObjs(obj => obj?.location === WEARING && isEntity(obj))
+                    env.findObjs(obj => obj?.location === Player.WEARING && Entities.isEntity(obj))
                        .forEach(entity => write(env, ` ${getName(entity as Nameable)} (wearing)` ));
                     return mkResult(true);
                 })
@@ -124,7 +126,7 @@ const GET = phaseActionBuilder("get")
             matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                item.location = INVENTORY;
+                item.location = Player.INVENTORY;
                 return mkResult(true);
             }));
 
@@ -186,7 +188,7 @@ const WEAR = phaseActionBuilder("wear")
             matchBuilder().withVerb(matchVerb("wear")).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                item[LOCATION] = WEARING;
+                item[LOCATION] = Player.WEARING;
                 return mkResult(true);
             }));
 
@@ -196,7 +198,7 @@ const TAKE_OFF = phaseActionBuilder("remove")
             matchBuilder().withVerb(matchVerb("remove")).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                item[LOCATION] = INVENTORY;
+                item[LOCATION] = Player.INVENTORY;
                 return mkResult(true);
             }));
 
@@ -207,7 +209,7 @@ const PUSH = phaseActionBuilder("push")
             mkThunk(env => {
                 const item =  env.get("pushable");
                 const direction = env.get("direction");
-                const location = getEntity(env, item[LOCATION]);
+                const location = Entities.getEntity(env, item[LOCATION]);
                 const exits = location["exits"] ?? {};
                 const destination = exits[direction];
                 if (destination) {

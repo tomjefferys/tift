@@ -2,7 +2,9 @@ import { PluginAction, PluginActionContext, CommandContext } from "../../engine"
 import { Optional } from "tift-types/src/util/optional";
 import { Entity } from "../../entity";
 import * as MultiDict from "../../util/multidict";
-import { getPlayer, LOOK_FN, write } from "../enginedefault";
+import { write } from "../enginedefault";
+import * as Player from "../player";
+import { LOOK_FN } from "../defaultverbs";
 import { bold } from "../../markdown";
 import { getName } from "../../nameable";
 import _ from "lodash";
@@ -15,7 +17,7 @@ export const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
   const oldLocation = (context.start) ? getLocationFromContext(context.start) : undefined;
   const newLocation = getLocationFromContext(context.end);
   if (newLocation && oldLocation?.id !== newLocation.id) {
-    const player = getPlayer(context.env);
+    const player = Player.getPlayer(context.env);
     write(context.env, bold(getName(newLocation)));
 
     const visititedLocations = player["visitedLocations"] as string[];

@@ -1,7 +1,10 @@
 import { Env } from "tift-types/src/env";
 import { Obj } from "tift-types/src/util/objects";
 import { OutputConsumer } from "tift-types/src/messages/output";
-import { makeDefaultFunctions, makeOutputConsumer, makePlayer, getPlayer, getLocationEntity, findEntites, isAtLocation, PLAYER, isEntity, getOutput } from "./enginedefault";
+import { makeDefaultFunctions, makeOutputConsumer, getOutput, getLocationEntity } from "./enginedefault";
+import * as Player from "./player";
+import * as Entities from "./entities";
+import * as Locations from "./locations";
 import { addLibraryFunctions } from "./library";
 import * as Entity from "../entity";
 import * as Verb from "../verb";
@@ -46,7 +49,7 @@ class DefaultBehaviour implements Behaviour {
     start(env : Env) {
         const rootProps = env.properties;
         const start = this.findStartingLocation(env);
-        makePlayer(rootProps, start);
+        Player.makePlayer(rootProps, start);
     }
 
     getContext(env : Env) : CommandContext {
@@ -61,16 +64,16 @@ class DefaultBehaviour implements Behaviour {
         }
 
         // Get any other entities that are here
-        findEntites(env, locationEntity)
-            .filter(entity => !isAtLocation(env, PLAYER, entity))
+        Locations.findEntites(env, locationEntity)
+            .filter(entity => !Locations.isAtLocation(env, Player.PLAYER, entity))
             .forEach(entity => MultiDict.add(contextEntities, "environment", entity));
 
         // Get inventory entities
-        env.findObjs(obj => obj?.location === "__INVENTORY__" && isEntity(obj))
+        env.findObjs(obj => obj?.location === "__INVENTORY__" && Entities.isEntity(obj))
                 .forEach(entity => MultiDict.add(contextEntities, "inventory", entity));
 
         // Get worn entities
-        env.findObjs(obj => obj?.location === "__WEARING__" && isEntity(obj))
+        env.findObjs(obj => obj?.location === "__WEARING__" && Entities.isEntity(obj))
                 .forEach(entity => MultiDict.add(contextEntities, "wearing", entity));
 
         const verbs  = env.findObjs(obj => obj?.type === "verb") as Verb[];
@@ -84,7 +87,7 @@ class DefaultBehaviour implements Behaviour {
     }
 
     getStatus(env : Env): string {
-        const playerLocation = getPlayer(env).location
+        const playerLocation = Player.getPlayer(env).location
         const locations = env.findObjs(obj => obj?.id === playerLocation) as Nameable[];
         if (!locations.length) {
         throw new Error("Could not find player location");
