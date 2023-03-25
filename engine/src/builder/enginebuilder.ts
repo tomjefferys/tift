@@ -12,6 +12,7 @@ import _ from "lodash";
 import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "../script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
 import { Env } from "tift-types/src/env";
+import { getDefaultGameBehaviour } from "./behaviour";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -64,7 +65,7 @@ export class EngineBuilder {
         if (!this.outputConsumer) {
             throw new Error("No output counsumer specified")
         }
-        const engine = new BasicEngine(this.outputConsumer);
+        const engine = new BasicEngine(getDefaultGameBehaviour(), this.outputConsumer);
         this.addTo(engine);
         return engine;
     }

@@ -1,38 +1,31 @@
 import { isInstant, Verb } from "./verb"
-import { Entity, hasTag, RuleFn } from "./entity"
+import { Entity, RuleFn } from "./entity"
 import { Env } from "tift-types/src/env"
 import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { makePlayer, makeDefaultFunctions, getPlayer, makeOutputConsumer, getOutput, LOOK_FN, write, getLocationEntity, isEntity, findEntites, isAtLocation, PLAYER } from "./builder/enginedefault";
 import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
 import * as Output from "./messages/output";
-import { MultiDict } from "./util/multidict";
 import * as multidict from "./util/multidict";
 import * as _ from "lodash";
 import * as arrays from "./util/arrays";
-import { addLibraryFunctions } from "./builder/library";
-import { getName, Nameable } from "./nameable";
 import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
 import { InputMessage, Load } from "tift-types/src/messages/input";
 import { EngineBuilder } from "./builder/enginebuilder";
 import { Config } from "./config"
 import * as Conf from "./config"
-import { bold } from "./markdown"
 import { Optional } from "tift-types/src/util/optional";
 import { logError } from "./util/errors";
 import { Action } from "./util/historyproxy";
 import { Obj } from "./util/objects"
 import * as Logger from "./util/logger";
+import { Behaviour } from "./builder/behaviour"
+import { AUTOLOOK } from "./builder/plugins/autolook"
 
 const logger = Logger.getLogger("engine");
 
 enum TAG {
   START = "start"
-}
-
-enum TYPE {
-  ROOM = "room"
 }
 
 export interface Engine {
@@ -44,7 +37,7 @@ export interface EngineState {
   getVerbs : () => Verb[];
 }
 
-interface CommandContext {
+export interface CommandContext {
   entities : ContextEntities;
   verbs : Verb[];
 }
@@ -54,13 +47,13 @@ interface OutputProxy {
   hasContent : () => boolean;
 }
 
-interface PluginActionContext {
+export interface PluginActionContext {
   start? : CommandContext,
   end : CommandContext,
   env : Env,
 }
 
-type PluginAction = (context : PluginActionContext) => void;
+export type PluginAction = (context : PluginActionContext) => void;
 
 const BASE_CONFIG : Config = {};
 const BASE_PROPS = { "entities" : {}, "verbs" : {}};
@@ -76,8 +69,10 @@ export class BasicEngine implements Engine {
   private startActions : PluginAction[] = [];
   private postExecutionActions : PluginAction[] = [];
   private started = false;
+  private gameData : Behaviour;
 
-  constructor(outputConsumer : OutputConsumer) {
+  constructor(gameData : Behaviour, outputConsumer : OutputConsumer) {
+    this.gameData = gameData;
     this.output = outputConsumer;
     Logger.setConsumer(getOutputLogger(this.output));
     [this.env, this.context] = this.reset();
@@ -86,11 +81,8 @@ export class BasicEngine implements Engine {
   reset() : [Env, CommandContext] {
     this.config = _.cloneDeep(BASE_CONFIG);
     this.env = createRootEnv(_.cloneDeep(BASE_PROPS), _.cloneDeep(BASE_NS));
-    const rootProps = this.env.properties;
 
-    makeDefaultFunctions(rootProps);
-    makeOutputConsumer(rootProps, this.output);
-    addLibraryFunctions(rootProps);
+    this.gameData.reset(this.env, this.output);
 
     this.context = _.cloneDeep(BASE_CONTEXT)
 
@@ -106,9 +98,8 @@ export class BasicEngine implements Engine {
       throw new Error("Engine is already started");
     }
     this.setupPluginActions();
-    const rootProps = this.env.properties;
-    const start = findStartingLocation(this.env);
-    makePlayer(rootProps, start);
+
+    this.gameData.start(this.env);
 
     this.env.proxyManager.clearHistory();
     this.env.proxyManager.startRecording();
@@ -143,36 +134,7 @@ export class BasicEngine implements Engine {
   }
 
   getContext() : CommandContext {
-    const contextEntities : MultiDict<Entity> = {};
-
-    // Entity for the current location
-    const locationEntity = getLocationEntity(this.env);
-
-    if (locationEntity) {
-      multidict.add(contextEntities, "location", locationEntity);
-    }
-
-    // Get any other entities that are here
-    findEntites(this.env, locationEntity)
-        .filter(entity => !isAtLocation(this.env, PLAYER, entity))
-        .forEach(entity => multidict.add(contextEntities, "environment", entity));
-
-    // Get inventory entities
-    this.env.findObjs(obj => obj?.location === "__INVENTORY__" && isEntity(obj))
-            .forEach(entity => multidict.add(contextEntities, "inventory", entity));
-
-    // Get worn entities
-    this.env.findObjs(obj => obj?.location === "__WEARING__" && isEntity(obj))
-            .forEach(entity => multidict.add(contextEntities, "wearing", entity));
-
-    const verbs  = this.env.findObjs(obj => obj?.type === "verb") as Verb[];
-
-    logger.debug(() => multidict.values(contextEntities).map(entity => entity.id).join(","));
-  
-    return {
-      entities: contextEntities,
-      verbs: verbs
-    }
+    return this.gameData.getContext(this.env);
   }
 
   send(message : InputMessage) : void {
@@ -314,14 +276,8 @@ export class BasicEngine implements Engine {
     }
   }
 
- 
   getStatus() : void {
-    const playerLocation = getPlayer(this.env).location
-    const locations = this.env.findObjs(obj => obj?.id === playerLocation) as Nameable[];
-    if (!locations.length) {
-      throw new Error("Could not find player location");
-    }
-    const status = getName(locations[0]);
+    const status = this.gameData.getStatus(this.env);
     this.output(Output.status(status));
   }
 
@@ -336,9 +292,9 @@ export class BasicEngine implements Engine {
   createOutputProxy() : [Env, OutputProxy] {
     const messages : OutputMessage[] = [];
     const childEnvObj = {};
-    makeOutputConsumer(childEnvObj, message => messages.push(message));
+    this.gameData.makeOutputConsumer(childEnvObj, message => messages.push(message));
     const childEnv = this.env.newChild(childEnvObj);
-    const principalOutput = getOutput(this.env);
+    const principalOutput = this.gameData.getOutput(this.env);
     const outputProxy = {
       flush : () => messages.forEach(message => principalOutput(message)),
       hasContent : () => messages.length > 0
@@ -363,22 +319,6 @@ export class BasicEngine implements Engine {
   }
 }
 
-const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
-  const oldLocation = (context.start) ? getLocationFromContext(context.start) : undefined;
-  const newLocation = getLocationFromContext(context.end);
-  if (newLocation && oldLocation?.id !== newLocation.id) {
-    const player = getPlayer(context.env);
-    write(context.env, bold(getName(newLocation)));
-
-    const visititedLocations = player["visitedLocations"] as string[];
-
-    if (!visititedLocations.includes(newLocation.id)) {
-      visititedLocations.push(newLocation.id);
-      LOOK_FN(context.env);
-    }
-  } 
-}
-
 function executeBestMatchAction(actions : PhaseAction[], env : Env, command : SentenceNode, agent : Obj ) {
   const action = getBestMatchAction(actions, command, agent.id); // FIXME getBestMatchAction, and action.perform have params in different orders
   let handled = false;
@@ -401,17 +341,6 @@ function executeRule(scope : Obj, rule : RuleFn, env : Env) {
   if(result && _.isString(result)) {
     env.execute("write", {"value":result});
   }
-}
-
-function findStartingLocation(env : Env) : string {
-  const startingLocs = env.findObjs(obj => obj["type"] === TYPE.ROOM && hasTag(obj, TAG.START));
-  if (startingLocs.length == 0) {
-    throw new Error("No starting location defined");
-  }
-  if (startingLocs.length > 1) {
-    throw new Error("Multiple starting locations found");
-  }
-  return startingLocs[0].id;
 }
 
 function getLocationFromContext(context : CommandContext) : Optional<Entity> {

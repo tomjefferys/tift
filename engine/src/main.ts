@@ -6,6 +6,7 @@ import * as EngineProxy from "./engineproxy";
 import { Filters } from "tift-types/src/util/duplexproxy";
 import * as StateMachine from "./util/statemachine";
 import { ControlType } from "tift-types/out/messages/controltype";
+import { getDefaultGameBehaviour } from "./builder/behaviour";
 
 type StateMachine = StateMachine.StateMachine<InputMessage, EngineProxy.DecoratedForwarder>;
 type StateName = StateMachine.StateName;
@@ -17,7 +18,7 @@ type State = StateMachine.State<InputMessage, EngineProxy.DecoratedForwarder>;
  * @returns a new TIFT engine
  */
 export function getEngine(outputConsumer : OutputConsumer) : Engine {
-  return new BasicEngine(outputConsumer);
+  return new BasicEngine(getDefaultGameBehaviour(), outputConsumer);
 }
 
 
