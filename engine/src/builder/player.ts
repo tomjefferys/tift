@@ -3,6 +3,7 @@ import { Obj } from "tift-types/src/util/objects";
 import { Env } from "tift-types/src/env";
 import { Entity } from "../entity";
 import * as Entities from "./entities";
+import * as Locations from "./locations";
 
 export const PLAYER = "__PLAYER__";
 export const INVENTORY = "__INVENTORY__";
@@ -44,3 +45,8 @@ export function makePlayer(obj : Obj, start : string) {
 }
 
 export const getPlayer : ((env:Env) => Entity) = env => Entities.getEntity(env, PLAYER) as Entity;
+
+export function getLocation(env : Env) : string {
+    const player = getPlayer(env);
+    return Locations.getLocation(player);
+}

@@ -1,7 +1,8 @@
 import { Env } from "tift-types/src/env";
 import { Obj } from "tift-types/src/util/objects";
 import { OutputConsumer } from "tift-types/src/messages/output";
-import { makeDefaultFunctions, makeOutputConsumer, getOutput, getLocationEntity } from "./enginedefault";
+import { makeDefaultFunctions, getLocationEntity } from "./enginedefault";
+import * as Output from "./output";
 import * as Player from "./player";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
@@ -42,7 +43,7 @@ class DefaultBehaviour implements Behaviour {
     reset(env : Env, output : OutputConsumer) {
         const rootProps = env.properties;
         makeDefaultFunctions(rootProps);
-        makeOutputConsumer(rootProps, output);
+        Output.makeOutputConsumer(rootProps, output);
         addLibraryFunctions(rootProps);
     }
 
@@ -96,11 +97,11 @@ class DefaultBehaviour implements Behaviour {
     }
 
     getOutput(env : Env) : OutputConsumer {
-        return getOutput(env);
+        return Output.getOutput(env);
     }
 
     makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
-        return makeOutputConsumer(obj, outputConsumer);
+        return Output.makeOutputConsumer(obj, outputConsumer);
     }
         
     private findStartingLocation(env : Env) : string {

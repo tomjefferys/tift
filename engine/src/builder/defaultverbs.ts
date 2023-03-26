@@ -1,7 +1,7 @@
 import { phaseActionBuilder } from "../script/phaseaction";
 import { captureModifier, captureObject, captureIndirectObject, matchAttribute, matchBuilder, attributeMatchBuilder, matchVerb } from "../commandmatcher";
 import { mkResult, mkThunk } from "../script/thunk";
-import { getLocationEntity, LOCATION, write, getLocation } from "./enginedefault";
+import { getLocationEntity, write } from "./enginedefault";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Player from "./player";
@@ -49,7 +49,7 @@ export const LOOK_FN = (env : Env) => {
     const isDark = Entities.entityHasTag(location, Locations.DARK) && !Locations.isLightSourceAtLocation(env, location);
 
     const getItemDescription = (item : Obj) => {
-        const itemLocation = item[LOCATION];
+        const itemLocation = Locations.getLocation(item);
         const locationObj = (itemLocation !== location.id) 
                 ? { location : getName(Entities.getEntity(env, itemLocation) as Nameable)}
                 : {};
@@ -126,7 +126,7 @@ const GET = phaseActionBuilder("get")
             matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                item.location = Player.INVENTORY;
+                Locations.setLocation(env, item, Player.INVENTORY);
                 return mkResult(true);
             }));
 
@@ -136,8 +136,8 @@ const DROP = phaseActionBuilder("drop")
             matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
             mkThunk(env => {
                 const item = env.get("item");
-                const location = getLocation(env);
-                item.location = location;
+                const location = Player.getLocation(env);
+                Locations.setLocation(env, item, location);
                 return mkResult(true);
             }));
 
@@ -152,7 +152,7 @@ const PUT_IN = phaseActionBuilder("put")
             mkThunk(env => {
                 const item = env.get("item");
                 const container = env.get("container");
-                item[LOCATION] = container.id;
+                Locations.setLocation(env, item, container);
                 return mkResult(true);
             }));
 
@@ -167,7 +167,7 @@ const PUT_ON = phaseActionBuilder("put")
             mkThunk(env => {
                 const item = env.get("item");
                 const container = env.get("container");
-                item[LOCATION] = container.id;
+                Locations.setLocation(env, item, container);
                 return mkResult(true);
             }));
 
@@ -188,7 +188,7 @@ const WEAR = phaseActionBuilder("wear")
             matchBuilder().withVerb(matchVerb("wear")).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                item[LOCATION] = Player.WEARING;
+                Locations.setLocation(env, item, Player.WEARING);
                 return mkResult(true);
             }));
 
@@ -198,7 +198,7 @@ const TAKE_OFF = phaseActionBuilder("remove")
             matchBuilder().withVerb(matchVerb("remove")).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                item[LOCATION] = Player.INVENTORY;
+                Locations.setLocation(env, item, Player.INVENTORY);
                 return mkResult(true);
             }));
 
@@ -209,11 +209,11 @@ const PUSH = phaseActionBuilder("push")
             mkThunk(env => {
                 const item =  env.get("pushable");
                 const direction = env.get("direction");
-                const location = Entities.getEntity(env, item[LOCATION]);
+                const location = Entities.getEntity(env, Locations.getLocation(item));
                 const exits = location["exits"] ?? {};
                 const destination = exits[direction];
                 if (destination) {
-                    item[LOCATION] = destination;
+                    Locations.setLocation(env, item, destination);
                     write(env, `Pushed ${getName(item as Nameable)} ${direction}`);
                 }
                 return mkResult(true);
