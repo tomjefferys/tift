@@ -1,4 +1,4 @@
-import { EnvFn, Env } from "tift-types/src/env";
+import { EnvFn } from "tift-types/src/env";
 import { control, print } from "../messages/output";
 import { getOutput } from "./output";
 import { mkResult } from "../script/thunk";
@@ -75,16 +75,12 @@ const DEFAULT_FUNCTIONS : {[key:string]:EnvFn} = {
                             const entity = Entities.getEntity(env, env.get("entityId"));
                             Entities.delEntityTag(entity, "hidden");
                             return mkResult(null);
+                        }),
+    random : bindParams(["low","high"], env => {
+                            const low = env.get("low");
+                            const high = env.get("high");
+                            return mkResult(Math.floor((Math.random() * (high - low + 1)) + low));
                         })
-}
-
-export function write(env : Env, message : string) {
-    env.execute("write", {"value": message});
-}
-
-export function getLocationEntity(env : Env) : Obj {
-    const locationId = env.execute("getLocation", {});
-    return Entities.getEntity(env, locationId as string);
 }
 
 export function makeDefaultFunctions(obj : Obj) {

@@ -1,12 +1,11 @@
 import { Env } from "tift-types/src/env";
 import { Obj } from "tift-types/src/util/objects";
 import { OutputConsumer } from "tift-types/src/messages/output";
-import { makeDefaultFunctions, getLocationEntity } from "./enginedefault";
+import { makeDefaultFunctions } from "./enginedefault";
 import * as Output from "./output";
 import * as Player from "./player";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
-import { addLibraryFunctions } from "./library";
 import * as Entity from "../entity";
 import * as Verb from "../verb";
 import { Nameable, getName } from "../nameable";
@@ -44,7 +43,6 @@ class DefaultBehaviour implements Behaviour {
         const rootProps = env.properties;
         makeDefaultFunctions(rootProps);
         Output.makeOutputConsumer(rootProps, output);
-        addLibraryFunctions(rootProps);
     }
 
     start(env : Env) {
@@ -58,7 +56,7 @@ class DefaultBehaviour implements Behaviour {
         const contextEntities : EntityDict = {};
 
         // Entity for the current location
-        const locationEntity = getLocationEntity(env);
+        const locationEntity = Player.getLocationEntity(env);
 
         if (locationEntity) {
             MultiDict.add(contextEntities, "location", locationEntity);

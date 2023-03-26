@@ -1,7 +1,6 @@
 import { phaseActionBuilder } from "../script/phaseaction";
 import { captureModifier, captureObject, captureIndirectObject, matchAttribute, matchBuilder, attributeMatchBuilder, matchVerb } from "../commandmatcher";
 import { mkResult, mkThunk } from "../script/thunk";
-import { getLocationEntity, write } from "./enginedefault";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Player from "./player";
@@ -12,6 +11,7 @@ import { Obj } from "tift-types/src/util/objects";
 import { getName, Nameable } from "../nameable";
 import * as Mustache from "mustache"
 import { Optional } from "tift-types/src/util/optional";
+import * as Output from "./output";
 
 const LOOK_TEMPLATE = 
 `{{#isDark}}
@@ -34,7 +34,7 @@ const LOOK_ITEM_TEMPLATE = `{{name}}{{#location}} ( in {{.}} ){{/location}}`;
 export const LOOK_COUNT = "__LOOK_COUNT__";
 
 export const LOOK_FN = (env : Env) => {
-    const location = getLocationEntity(env);
+    const location = Player.getLocationEntity(env);
 
     const desc = (location["desc"] && formatEntityString(env, location, "desc")) 
                         ?? location["name"]
@@ -72,7 +72,7 @@ export const LOOK_FN = (env : Env) => {
     if (lookCount !== undefined) {
         location[LOOK_COUNT] = lookCount + 1;
     }
-    write(env, output);
+    Output.write(env, output);
 
     return mkResult(true);
 }
@@ -88,10 +88,10 @@ const INVENTORY_ACTION = phaseActionBuilder("inventory")
             matchBuilder().withVerb(matchVerb("inventory")).build(),    
             mkThunk(env => {
                     env.findObjs(obj => obj?.location === Player.INVENTORY && Entities.isEntity(obj))
-                       .forEach(entity => write(env, getName(entity as Nameable)));
+                       .forEach(entity => Output.write(env, getName(entity as Nameable)));
     
                     env.findObjs(obj => obj?.location === Player.WEARING && Entities.isEntity(obj))
-                       .forEach(entity => write(env, ` ${getName(entity as Nameable)} (wearing)` ));
+                       .forEach(entity => Output.write(env, ` ${getName(entity as Nameable)} (wearing)` ));
                     return mkResult(true);
                 })
         )
@@ -101,7 +101,7 @@ const WAIT = phaseActionBuilder("wait")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("wait")).build(),
             mkThunk(env => {
-                write(env,  "Time passes");
+                Output.write(env,  "Time passes");
                 return mkResult(true);
     }));
         
@@ -111,7 +111,7 @@ const GO = phaseActionBuilder("go")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("go")).withModifier(captureModifier("direction")).build(),
             mkThunk(env => {
-                const location = getLocationEntity(env);
+                const location = Player.getLocationEntity(env);
                 const destination = location?.exits[env.get("direction")];
                 if (destination) {
                     env.execute("moveTo", {"dest" : destination});
@@ -178,7 +178,7 @@ const EXAMINE = phaseActionBuilder("examine")
             mkThunk(env => {
                 const item = env.get("item");
                 const output = formatEntityString(env, item, "desc");
-                write(env, output);
+                Output.write(env, output);
                 return mkResult(true);
             }));
 
@@ -214,7 +214,7 @@ const PUSH = phaseActionBuilder("push")
                 const destination = exits[direction];
                 if (destination) {
                     Locations.setLocation(env, item, destination);
-                    write(env, `Pushed ${getName(item as Nameable)} ${direction}`);
+                    Output.write(env, `Pushed ${getName(item as Nameable)} ${direction}`);
                 }
                 return mkResult(true);
             }));

@@ -50,3 +50,8 @@ export function getLocation(env : Env) : string {
     const player = getPlayer(env);
     return Locations.getLocation(player);
 }
+
+export function getLocationEntity(env : Env) : Obj {
+    const locationId = getLocation(env);
+    return Entities.getEntity(env, locationId);
+}

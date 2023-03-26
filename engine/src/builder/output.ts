@@ -9,3 +9,7 @@ export const getOutput : ((env:Env) => OutputConsumer) = env => env.get(OUTPUT) 
 export function makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
     obj[OUTPUT] = outputConsumer;
 }
+
+export function write(env : Env, message : string) {
+    env.execute("write", {"value": message});
+}
