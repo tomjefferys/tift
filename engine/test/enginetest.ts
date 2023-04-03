@@ -1032,6 +1032,30 @@ test("Test dark room with lightsource in inventory", () => {
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["dark", "torch"]});
 })
 
+test("Test math functions", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "mathFns",
+        type : "rule",
+        do : ["a=1", "b=2", "c = 3", "print(Math.min(b,a,c))"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["Time passes", "1"], notExpected : ["failed"] });
+});
+
+test("Test string functions", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "mathFns",
+        type : "rule",
+        do : ["do(text = 'hello world', print(String.substr(text, 1, 4))), print(String.length(text))"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["Time passes", "ello", "11"], notExpected : ["failed"] });
+});
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]
