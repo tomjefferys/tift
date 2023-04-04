@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import _ from "lodash";
-import { isPrefixOf } from "./arrays";
+import * as Arrays from "./arrays";
 import * as objects from "./objects";
 import * as Type from "tift-types/src/util/historyproxy";
 
@@ -30,13 +30,30 @@ export interface Del {
  * Automatically proxies child objects on get
  */
 export class ProxyManager implements Type.ProxyManager {
-    private history : Action[];
+
+    // The base history, this cannot be undone
+    private baseHistory : Action[];
+
+    // keep track of actions associated with and undo/redo step
+    // There may be multiple actions per step
+    private undoHistory : Action[][];
+
+    // Accumulate actions in here first, before sending them to the undohistory
+    private accumlator : Action[];
 
     private recordHistory : boolean;
 
-    constructor(recordHistory = false, history : Action[] = []) {
-        this.history = history;
+    private readonly undoLevels : number;
+
+    private undoIndex : number;
+
+    constructor(recordHistory = false, history : Action[] = [], undoLevels = 0) {
+        this.baseHistory = history;
         this.recordHistory = recordHistory;
+        this.undoLevels = undoLevels;
+        this.undoIndex = 0;
+        this.undoHistory = [];
+        this.accumlator = [];
     }
 
     createProxy<T extends object>(obj : T, prefix : PropType[] = []) : T {
@@ -44,14 +61,14 @@ export class ProxyManager implements Type.ProxyManager {
     }
 
     getHistory() : Action[] {
-        return [...this.history];
+        return [...this.baseHistory];
     }
 
     /**
      * Clear the proxy history
      */
     clearHistory() : void {
-        this.history.length = 0;
+        this.baseHistory.length = 0;
     }
 
     /**
@@ -81,15 +98,83 @@ export class ProxyManager implements Type.ProxyManager {
     }
 
     /**
+     * Push the latest accumultated history onto the undo queue
+     * and add old entries to the base history
+     */
+    push() {
+        this.resetUndoLevel();
+        this.undoHistory.push([...this.accumlator]);
+        this.accumlator.length = 0;
+        while(this.undoHistory.length > this.undoLevels) {
+            const stage = this.undoHistory.shift();
+            if (stage) {
+                stage.forEach(action => this.addAction(this.baseHistory, action));
+            }
+        }
+    }
+
+    isUndoable() : boolean {
+        return (this.undoHistory.length + this.undoIndex) > 0;
+    }
+
+    isRedoable() : boolean {
+        return this.undoIndex !== 0;
+    }
+
+    undo(obj : Obj) {
+        if (this.isUndoable()) {
+            this.undoIndex--;
+        }
+        this.replayToUndoPosition(obj);
+    }
+
+    redo(obj : Obj) {
+        if (this.isRedoable()) {
+            this.undoIndex++;
+        }
+        this.replayToUndoPosition(obj);
+    }
+
+    /**
+     * Reset the undo level to the current position, removing any newer history
+     */
+    private resetUndoLevel() : void {
+        if (this.undoIndex < 0) {
+            this.undoHistory.splice(this.undoIndex);
+        }
+        this.undoIndex = 0;
+    }
+
+    private replayToUndoPosition(obj : Obj) {
+        const isRecording = this.recordHistory;
+        try {
+            this.recordHistory = false;
+            this.replayHistory(obj, this.baseHistory);
+            this.undoHistory.slice(0, this.undoHistory.length + this.undoIndex)
+                            .forEach(actions => this.replayHistory(obj, actions));
+        } finally {
+            this.recordHistory = isRecording;
+        }
+    }
+
+    /**
      * Record an action, overwriting any previous actions relating to this property
      * The process of overwriting enables the history to be kept as short as possible
      * @param newAction 
      */
     private recordAction(newAction : Action) {
+        const target = (this.undoLevels === 0)? this.baseHistory : this.accumlator;
+        this.addAction(target, newAction);
+    }
+
+    private addAction(history : Action[], newAction : Action) {
         const isSettingEmptyObject = (action : Action) => action.type === "Set" && !action.replace && objects.isEmptyObject(action.newValue);
-        this.history = [...this.history.filter(action => !isPrefixOf(newAction.property, action.property))
-                                       .filter(action => !(isSettingEmptyObject(action)
-                                                            && isPrefixOf(action.property, newAction.property))), newAction];
+
+        Arrays.remove(history, action => 
+            Arrays.isPrefixOf(newAction.property, action.property) ||
+            (isSettingEmptyObject(action) && Arrays.isPrefixOf(action.property, newAction.property))
+        );
+        history.push(newAction);
     }
 
     private createHandler(prefix : PropType[]) : object {

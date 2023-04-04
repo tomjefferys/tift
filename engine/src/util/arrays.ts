@@ -54,3 +54,28 @@ export function pushIfUnique<T>(arr : T[], item : T, isEqual : (item1 : T, item2
         arr.push(item);
     }
 }
+
+/**
+ * Perform and in-place filter.  Keeping any values that match the predicate
+ * @param arr an array
+ * @param predicate a function do decide which values should be kept
+ */
+export function keep<T>(arr : T[], predicate : (value : T) => boolean ) {
+    let i = 0, j = 0;
+    while(i < arr.length) {
+        const value = arr[i++];
+        if (predicate(value)) {
+            arr[j++] = value;
+        }
+    }
+    arr.length = j;
+}
+
+/**
+ * Remove all items from an array that match a predicate
+ * @param arr the array
+ * @param predicate a function to decide which values should be removed 
+ */
+export function remove<T>(arr : T[], predicate : (value : T) => boolean) {
+    keep(arr, value => !predicate(value));
+}

@@ -20,3 +20,41 @@ test("Test isPrefixOf", () => {
     expect(Arrays.isPrefixOf(["one", "two"], ["one", "two"])).toBe(true);
     expect(Arrays.isPrefixOf(["one", "two"], ["one", "two", "three"])).toBe(true);
 });
+
+test("Test filterInPlace", () => {
+    const isOdd = (n : number) => Boolean(n % 2);
+    let arr : number[] = [];
+    Arrays.keep(arr, isOdd);
+    expect(arr).toStrictEqual([]);
+
+    arr = [1,2,3,4];
+    Arrays.keep(arr, isOdd);
+    expect(arr).toStrictEqual([1,3]);
+
+    arr = [1,3,5,7];
+    Arrays.keep(arr, isOdd);
+    expect(arr).toStrictEqual([1,3,5,7]);
+
+    arr = [2,4,6,8];
+    Arrays.keep(arr, isOdd);
+    expect(arr).toStrictEqual([]);
+})
+
+test("Test removeAll", () => {
+    const isOdd = (n : number) => Boolean(n % 2);
+    let arr : number[] = [];
+    Arrays.remove(arr, isOdd);
+    expect(arr).toStrictEqual([]);
+
+    arr = [1,2,3,4];
+    Arrays.remove(arr, isOdd);
+    expect(arr).toStrictEqual([2,4]);
+
+    arr = [1,3,5,7];
+    Arrays.remove(arr, isOdd);
+    expect(arr).toStrictEqual([]);
+
+    arr = [2,4,6,8];
+    Arrays.remove(arr, isOdd);
+    expect(arr).toStrictEqual([2,4,6,8]);
+})
