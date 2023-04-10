@@ -239,6 +239,9 @@ export class BasicEngine implements Engine {
                  .forEach(rule => executeRule(rule, rule["__COMPILED__"], this.env));
     }
 
+    // push the history
+    this.env.proxyManager.pushHistory();
+
     // Send the current save state
     this.save(); // TODO use a proxy to detect if anything has changed? (Use a counter, and increment it for every state change)
   }

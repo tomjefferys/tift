@@ -17,12 +17,17 @@ export interface Set {
     type : "Set",
     property : PropType[],
     newValue : any,
-    replace? : boolean
+    replace? : boolean,
 }
 
 export interface Del {
     type : "Del",
-    property : PropType[]
+    property : PropType[],
+}
+
+interface UndoEntry {
+    undo : Action,
+    redo : Action
 }
 
 /**
@@ -36,23 +41,23 @@ export class ProxyManager implements Type.ProxyManager {
 
     // keep track of actions associated with and undo/redo step
     // There may be multiple actions per step
-    private undoHistory : Action[][];
+    private undoStack : UndoEntry[][];
+
+    private redoStack : UndoEntry[][];
 
     // Accumulate actions in here first, before sending them to the undohistory
-    private accumlator : Action[];
+    private accumlator : UndoEntry[];
 
     private recordHistory : boolean;
 
     private readonly undoLevels : number;
 
-    private undoIndex : number;
-
     constructor(recordHistory = false, history : Action[] = [], undoLevels = 0) {
         this.baseHistory = history;
         this.recordHistory = recordHistory;
         this.undoLevels = undoLevels;
-        this.undoIndex = 0;
-        this.undoHistory = [];
+        this.undoStack = [];
+        this.redoStack = [];
         this.accumlator = [];
     }
 
@@ -86,72 +91,67 @@ export class ProxyManager implements Type.ProxyManager {
     }
 
     replayHistory(obj : Obj, history : Action[]) {
-        history.forEach(action => {
-            switch(action.type) {
-                case "Set": 
-                    objects.set(obj, action.property, action.newValue);
-                    break;
-                case "Del":
-                    objects.unset(obj, action.property);
-            }
-        });
+        history.forEach(action => replayAction(obj, action));
     }
 
     /**
      * Push the latest accumultated history onto the undo queue
      * and add old entries to the base history
      */
-    push() {
-        this.resetUndoLevel();
-        this.undoHistory.push([...this.accumlator]);
+    pushHistory() {
+        // Clear the redo stack
+        this.redoStack.length = 0;
+        this.undoStack.push([...this.accumlator]);
         this.accumlator.length = 0;
-        while(this.undoHistory.length > this.undoLevels) {
-            const stage = this.undoHistory.shift();
+        while(this.undoStack.length > this.undoLevels) {
+            const stage = this.undoStack.shift();
             if (stage) {
-                stage.forEach(action => this.addAction(this.baseHistory, action));
+                stage.forEach(action => this.addAction(action.redo));
             }
         }
     }
 
     isUndoable() : boolean {
-        return (this.undoHistory.length + this.undoIndex) > 0;
+        return this.undoStack.length >= 1;
     }
 
     isRedoable() : boolean {
-        return this.undoIndex !== 0;
+        return this.redoStack.length >= 1;
     }
 
     undo(obj : Obj) {
-        if (this.isUndoable()) {
-            this.undoIndex--;
-        }
-        this.replayToUndoPosition(obj);
-    }
-
-    redo(obj : Obj) {
-        if (this.isRedoable()) {
-            this.undoIndex++;
-        }
-        this.replayToUndoPosition(obj);
-    }
-
-    /**
-     * Reset the undo level to the current position, removing any newer history
-     */
-    private resetUndoLevel() : void {
-        if (this.undoIndex < 0) {
-            this.undoHistory.splice(this.undoIndex);
-        }
-        this.undoIndex = 0;
-    }
-
-    private replayToUndoPosition(obj : Obj) {
         const isRecording = this.recordHistory;
         try {
             this.recordHistory = false;
-            this.replayHistory(obj, this.baseHistory);
-            this.undoHistory.slice(0, this.undoHistory.length + this.undoIndex)
-                            .forEach(actions => this.replayHistory(obj, actions));
+            const history = this.undoStack.pop();
+            if (!history) {
+                return;
+            }
+
+            // Loop through the entries backwards, applying the undo actions
+            for(let i = history.length - 1; i >=0; i--) {
+                replayAction(obj, history[i].undo);
+            }
+
+            this.redoStack.push(history)
+        } finally {
+            this.recordHistory = isRecording;
+        }
+    }
+
+    redo(obj : Obj) {
+        const history = this.redoStack.pop();
+        const isRecording = this.recordHistory;
+        try {
+            this.recordHistory = false;
+            if (!history) {
+                return;
+            }
+
+            // Loop through the entries, reapplying them
+            history.forEach(entry => replayAction(obj, entry.redo));
+
+            this.undoStack.push(history);
         } finally {
             this.recordHistory = isRecording;
         }
@@ -162,19 +162,24 @@ export class ProxyManager implements Type.ProxyManager {
      * The process of overwriting enables the history to be kept as short as possible
      * @param newAction 
      */
-    private recordAction(newAction : Action) {
-        const target = (this.undoLevels === 0)? this.baseHistory : this.accumlator;
-        this.addAction(target, newAction);
+    private recordAction(newAction : Action, previousValue : any) {
+        const undoAction = previousValue? createSet(newAction.property, previousValue, true)
+                                        : createDel(newAction.property);
+        this.accumlator.push({ redo : newAction, undo : undoAction});
     }
 
-    private addAction(history : Action[], newAction : Action) {
+    /**
+     * Add an action to the base history, compressing it first by removing any now irrelevent entries
+     * @param newAction 
+     */
+    private addAction(newAction : Action) {
         const isSettingEmptyObject = (action : Action) => action.type === "Set" && !action.replace && objects.isEmptyObject(action.newValue);
 
-        Arrays.remove(history, action => 
+        Arrays.remove(this.baseHistory, action => 
             Arrays.isPrefixOf(newAction.property, action.property) ||
             (isSettingEmptyObject(action) && Arrays.isPrefixOf(action.property, newAction.property))
         );
-        history.push(newAction);
+        this.baseHistory.push(newAction);
     }
 
     private createHandler(prefix : PropType[]) : object {
@@ -192,20 +197,34 @@ export class ProxyManager implements Type.ProxyManager {
                 if (this.recordHistory) {
                     const path = [...prefix, property];
                     const oldValue = Reflect.get(target, property);
-                    const replace = (!_.isUndefined(oldValue) && objects.getType(oldValue) !== objects.getType(newValue))? { replace : true } : {};
-                    const action : Action = {type : "Set", property : path, newValue : _.isObject(newValue)? _.cloneDeep(newValue) : newValue, ...replace};
-                    this.recordAction(action);
+                    const isReplace = !_.isUndefined(oldValue) && objects.getType(oldValue) !== objects.getType(newValue);
+                    //const replace = (!_.isUndefined(oldValue) && objects.getType(oldValue) !== objects.getType(newValue))? { replace : true } : {};
+                    const clonedNewValue = _.isObject(newValue)? _.cloneDeep(newValue) : newValue;
+                    const action = createSet(path, clonedNewValue, isReplace)
+                    //const action : Action = { type : "Set", property : path, newValue : _.isObject(newValue)? _.cloneDeep(newValue) : newValue, ...replace};
+                    this.recordAction(action, oldValue);
                 }
                 return Reflect.set(target, property, newValue);
             },
             deleteProperty : (target : object, property : PropType) => {
                 if (this.recordHistory) {
-                    this.recordAction({type : "Del", property : [...prefix, property]})
+                    const oldValue = Reflect.get(target, property);
+                    const action = createDel([...prefix, property])
+                    this.recordAction(action, oldValue);
                 }
                 return Reflect.deleteProperty(target, property);
             }
         }
     }
+}
+
+function createSet(property : PropType[], newValue : any, isReplace : boolean) : Action {
+    const replace = isReplace? { replace : true } : {};
+    return { type : "Set", property, newValue, ...replace};
+}
+
+function createDel(property : PropType[]) : Action {
+    return { type : "Del", property }
 }
 
 /**
@@ -229,15 +248,17 @@ const shouldCreateProxy = (target : any, property : PropType, value : any) =>
  */
 //export function replayHistory<T extends object>(obj : T, history : Action[]) : [T, ProxyManager] {
 export function replayHistory(obj : Obj, history : Action[]) : [Obj, ProxyManager] {
-    history.forEach(action => {
-        switch(action.type) {
-            case "Set": 
-                objects.set(obj, action.property, action.newValue);
-                break;
-            case "Del":
-                objects.unset(obj, action.property);
-        }
-    })
+    history.forEach(action => replayAction(obj, action));
     const proxyManager = new ProxyManager(false, history);
     return [proxyManager.createProxy(obj), proxyManager];
+}
+
+function replayAction(obj : Obj, action : Action) : void {
+    switch(action.type) {
+        case "Set": 
+            objects.set(obj, action.property, action.newValue);
+            break;
+        case "Del":
+            objects.unset(obj, action.property);
+    }
 }
