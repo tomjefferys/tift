@@ -9,7 +9,7 @@ import _ from "lodash"
 import { pathElementEquals, fromValueList, makePath, toValueList } from "./path";
 import { Path, PathElement } from "tift-types/src/path"
 import { parsePath } from "./script/pathparser";
-import { Action, ProxyManager } from "./util/historyproxy";
+import { Action, createProxy, ProxyManager } from "./util/historyproxy";
 import { Optional } from "tift-types/src/util/optional";
 import { Obj, isObject } from "./util/objects";
 import { AnyArray, EnvFn, ReturnType } from "tift-types/src/env";
@@ -32,9 +32,8 @@ export class Env implements Type.Env {
     readonly proxyManager : ProxyManager;
 
     constructor(properties : Obj, namespaces : NameSpace[] = [], parent? : Env) {
-        this.proxyManager = new ProxyManager();
+        [this.properties, this.proxyManager] = createProxy(properties);
         this.parent = parent;
-        this.properties = this.proxyManager.createProxy(properties);
         this.namespaces = namespaces;
     }
 

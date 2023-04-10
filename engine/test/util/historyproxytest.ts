@@ -1,4 +1,4 @@
-import { ProxyManager, replayHistory } from "../../src/util/historyproxy";
+import { createProxy, replayHistory } from "../../src/util/historyproxy";
 import { Chance } from "chance"
 import { RandomObjectGenerator } from "../testutils/randomobjectgenerator";
 import _ from "lodash"
@@ -10,12 +10,11 @@ import { Obj, PropType } from "../../src/util/objects";
 const MASTER_CHANCE = new Chance();
 
 test("Test set primitives", () => {
-    const manager = new ProxyManager(true); 
     const target : {[key:string] : any} = {
         foo : "bar"
     };
 
-    const proxy = manager.createProxy(target);
+    const [proxy, manager] = createProxy(target, true); 
 
     proxy.foo = "qux";
     proxy.corge = "xyzzy";
@@ -28,13 +27,13 @@ test("Test set primitives", () => {
 });
 
 test("Test delete primitive", () => {
-    const manager = new ProxyManager(true);
     const target : Obj = {
         foo : "bar",
         baz : "qux"
     }
 
-    const proxy = manager.createProxy(target);
+
+    const [proxy, manager] = createProxy(target, true);
 
     delete proxy.foo;
 
@@ -46,13 +45,12 @@ test("Test delete primitive", () => {
 });
 
 test("Test object property", () => {
-    const manager = new ProxyManager(true);
     const target : Obj = {
         foo : { "bar" : "baz" },
         corge : "xyzzy"
     }
 
-    const proxy = manager.createProxy(target);
+    const [proxy, manager] = createProxy(target, true);
     proxy.foo.bar = "grault";
 
     manager.pushHistory();
@@ -63,11 +61,10 @@ test("Test object property", () => {
 });
 
 test("Test array setting", () => {
-    const manager = new ProxyManager(true);
     const target : Obj = {
         foo : [ "bar", "baz"]
     }
-    const proxy = manager.createProxy(target);
+    const [proxy, manager] = createProxy(target, true);
     proxy.foo.push("qux");
 
     manager.pushHistory();
@@ -76,11 +73,10 @@ test("Test array setting", () => {
 });
 
 test("Test deeply nested new object", () => {
-    const manager = new ProxyManager(true);
     const original : Obj = {
         foo : {}
     }
-    const proxy = manager.createProxy(original);
+    const [proxy, manager] = createProxy(original, true);
     proxy.foo.bar = {};
     proxy.foo.bar.baz = {};
     proxy.foo.bar.baz.qux = "xyzzy";
@@ -100,9 +96,8 @@ test("Test deeply nested new object", () => {
 });
 
 test("Test replace string with object", () => {
-    const manager = new ProxyManager(true);
     const original : Obj = { foo : "bar" }
-    const proxy = manager.createProxy(original);
+    const [proxy, manager] = createProxy(original, true);
     proxy.foo = {};
     proxy.foo.bar = "xyzzy";
 
@@ -124,11 +119,10 @@ test("Test replace string with object", () => {
 })
 
 test("Test store empty object at leaf node", () => {
-    const manager = new ProxyManager(true);
     const original : Obj = {
         foo : {}
     }
-    const proxy = manager.createProxy(original);
+    const [proxy, manager] = createProxy(original, true);
     proxy.foo.bar = {};
     proxy.foo.bar.baz = {};
 
@@ -147,9 +141,8 @@ test("Test store empty object at leaf node", () => {
 });
 
 test("Test replay history", () => {
-    const manager = new ProxyManager(true);
     const original : Obj = {};
-    const proxy = manager.createProxy(original);
+    const [proxy, manager] = createProxy(original, true);
     proxy.foo = "bar";
     proxy.baz = {};
 
@@ -171,17 +164,15 @@ test("Test replay history", () => {
 });
 
 test("Test undo/redo: no history", () => {
-    const manager = new ProxyManager(true, [], 10);
     const original : Obj = {};
-    const _proxy = manager.createProxy(original);
+    const [_proxy, manager] = createProxy(original, true, [], 10);
     expect(manager.isUndoable()).toBeFalsy();
     expect(manager.isRedoable()).toBeFalsy();
 });
 
 test("Test undo/redo", () => {
-    const manager = new ProxyManager(true, [], 10);
     const original : Obj = {};
-    const proxy = manager.createProxy(original);
+    const [proxy, manager] = createProxy(original, true, [], 10);
     proxy.foo = "bar"
     manager.pushHistory();
     proxy.baz = {"qux": "xyzzy"}
@@ -201,54 +192,54 @@ test("Test undo/redo", () => {
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeFalsy();
     
-    manager.undo(proxy);
+    manager.undo();
 
     expect(proxy).toStrictEqual(expectedHistory[2]);
     expect(original).toStrictEqual(expectedHistory[2]);
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeTruthy();
 
-    manager.undo(proxy);
+    manager.undo();
 
     expect(proxy).toStrictEqual(expectedHistory[1]);
     expect(original).toStrictEqual(expectedHistory[1]);
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeTruthy();
 
-    manager.undo(proxy);
+    manager.undo();
 
     expect(proxy).toStrictEqual(expectedHistory[0]);
     expect(original).toStrictEqual(expectedHistory[0]);
     expect(manager.isUndoable()).toBeFalsy();
     expect(manager.isRedoable()).toBeTruthy();
 
-    manager.undo(proxy);
+    manager.undo();
 
     expect(proxy).toStrictEqual(expectedHistory[0]);
     expect(original).toStrictEqual(expectedHistory[0]);
 
-    manager.redo(proxy);
+    manager.redo();
 
     expect(proxy).toStrictEqual(expectedHistory[1]);
     expect(original).toStrictEqual(expectedHistory[1]);
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeTruthy();
 
-    manager.redo(proxy);
+    manager.redo();
 
     expect(proxy).toStrictEqual(expectedHistory[2]);
     expect(original).toStrictEqual(expectedHistory[2]);
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeTruthy();
 
-    manager.redo(proxy);
+    manager.redo();
 
     expect(proxy).toStrictEqual(expectedHistory[3]);
     expect(original).toStrictEqual(expectedHistory[3]);
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeFalsy();
 
-    manager.redo(proxy);
+    manager.redo();
 
     expect(proxy).toStrictEqual(expectedHistory[3]);
     expect(original).toStrictEqual(expectedHistory[3]);
@@ -256,9 +247,8 @@ test("Test undo/redo", () => {
 });
 
 test("Test undo/redo: single undo level", () => {
-    const manager = new ProxyManager(true, [], 1);
     const original : Obj = {};
-    const proxy = manager.createProxy(original);
+    const [proxy, manager] = createProxy(original, true, [], 1);
     proxy.foo = "bar"
     manager.pushHistory();
     proxy.baz = {"qux": "xyzzy"}
@@ -278,7 +268,7 @@ test("Test undo/redo: single undo level", () => {
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeFalsy();
     
-    manager.undo(proxy);
+    manager.undo();
 
     expect(proxy).toStrictEqual(expectedHistory[2]);
     expect(original).toStrictEqual(expectedHistory[2]);
@@ -286,21 +276,21 @@ test("Test undo/redo: single undo level", () => {
     expect(manager.isRedoable()).toBeTruthy();
 
     // Shouldn't be able to undo any further
-    manager.undo(proxy);
+    manager.undo();
 
     expect(proxy).toStrictEqual(expectedHistory[2]);
     expect(original).toStrictEqual(expectedHistory[2]);
     expect(manager.isUndoable()).toBeFalsy();
     expect(manager.isRedoable()).toBeTruthy();
 
-    manager.redo(proxy);
+    manager.redo();
 
     expect(proxy).toStrictEqual(expectedHistory[3]);
     expect(original).toStrictEqual(expectedHistory[3]);
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeFalsy();
 
-    manager.redo(proxy);
+    manager.redo();
 
     expect(proxy).toStrictEqual(expectedHistory[3]);
     expect(original).toStrictEqual(expectedHistory[3]);
@@ -310,9 +300,8 @@ test("Test undo/redo: single undo level", () => {
 });
 
 test("Test undo then change", () => {
-    const manager = new ProxyManager(true, [], 10);
     const original : Obj = {};
-    const proxy = manager.createProxy(original);
+    const [proxy, manager] = createProxy(original, true, [], 10);
     proxy.foo = "bar"
     manager.pushHistory();
     proxy.baz = {"qux": "xyzzy"}
@@ -332,7 +321,7 @@ test("Test undo then change", () => {
     expect(manager.isUndoable()).toBeTruthy();
     expect(manager.isRedoable()).toBeFalsy();
 
-    manager.undo(proxy);
+    manager.undo();
 
     expect(proxy).toStrictEqual(expectedHistory[2]);
     
@@ -349,13 +338,12 @@ test("Test undo then change", () => {
 });
 
 test("Test history compression", () => {
-    const manager = new ProxyManager(true);
     const original : Obj = {
         foo : { "bar" : "baz" },
         corge : "xyzzy"
     }
 
-    const proxy = manager.createProxy(original);
+    const [proxy, manager] = createProxy(original, true);
     proxy.corge = "one";
     manager.pushHistory();
     expect(manager.getHistory()).toEqual([set(["corge"], "one")]);
@@ -395,8 +383,7 @@ test("Test random objects", () => {
         const originalClone = _.cloneDeep(original);
 
         // Run some random updates
-        const manager = new ProxyManager(true);
-        const proxy = manager.createProxy(original);
+        const [proxy, manager] = createProxy(original, true);
         generator.update(proxy, 10);
 
         manager.pushHistory();

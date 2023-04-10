@@ -36,6 +36,8 @@ interface UndoEntry {
  */
 export class ProxyManager implements Type.ProxyManager {
 
+    private baseProxy : Obj;
+
     // The base history, this cannot be undone
     private baseHistory : Action[];
 
@@ -52,7 +54,8 @@ export class ProxyManager implements Type.ProxyManager {
 
     private readonly undoLevels : number;
 
-    constructor(recordHistory = false, history : Action[] = [], undoLevels = 0) {
+    constructor(baseObject = {}, recordHistory = false, history : Action[] = [], undoLevels = 0) {
+        this.baseProxy = this.createProxy(baseObject);
         this.baseHistory = history;
         this.recordHistory = recordHistory;
         this.undoLevels = undoLevels;
@@ -61,7 +64,11 @@ export class ProxyManager implements Type.ProxyManager {
         this.accumlator = [];
     }
 
-    createProxy<T extends object>(obj : T, prefix : PropType[] = []) : T {
+    getProxy() : Obj {
+        return this.baseProxy;
+    }
+
+    private createProxy<T extends object>(obj : T, prefix : PropType[] = []) : T {
         return new Proxy(obj, this.createHandler(prefix));
     }
 
@@ -119,7 +126,7 @@ export class ProxyManager implements Type.ProxyManager {
         return this.redoStack.length >= 1;
     }
 
-    undo(obj : Obj) {
+    undo() {
         const isRecording = this.recordHistory;
         try {
             this.recordHistory = false;
@@ -130,7 +137,7 @@ export class ProxyManager implements Type.ProxyManager {
 
             // Loop through the entries backwards, applying the undo actions
             for(let i = history.length - 1; i >=0; i--) {
-                replayAction(obj, history[i].undo);
+                replayAction(this.baseProxy, history[i].undo);
             }
 
             this.redoStack.push(history)
@@ -139,7 +146,7 @@ export class ProxyManager implements Type.ProxyManager {
         }
     }
 
-    redo(obj : Obj) {
+    redo() {
         const history = this.redoStack.pop();
         const isRecording = this.recordHistory;
         try {
@@ -149,7 +156,7 @@ export class ProxyManager implements Type.ProxyManager {
             }
 
             // Loop through the entries, reapplying them
-            history.forEach(entry => replayAction(obj, entry.redo));
+            history.forEach(entry => replayAction(this.baseProxy, entry.redo));
 
             this.undoStack.push(history);
         } finally {
@@ -198,10 +205,8 @@ export class ProxyManager implements Type.ProxyManager {
                     const path = [...prefix, property];
                     const oldValue = Reflect.get(target, property);
                     const isReplace = !_.isUndefined(oldValue) && objects.getType(oldValue) !== objects.getType(newValue);
-                    //const replace = (!_.isUndefined(oldValue) && objects.getType(oldValue) !== objects.getType(newValue))? { replace : true } : {};
                     const clonedNewValue = _.isObject(newValue)? _.cloneDeep(newValue) : newValue;
                     const action = createSet(path, clonedNewValue, isReplace)
-                    //const action : Action = { type : "Set", property : path, newValue : _.isObject(newValue)? _.cloneDeep(newValue) : newValue, ...replace};
                     this.recordAction(action, oldValue);
                 }
                 return Reflect.set(target, property, newValue);
@@ -216,6 +221,11 @@ export class ProxyManager implements Type.ProxyManager {
             }
         }
     }
+}
+
+export function createProxy(original : Obj = {}, recordHistory = false, history : Action[] = [], undoLevels = 0) : [Obj, ProxyManager] {
+    const manager = new ProxyManager(original, recordHistory, history, undoLevels);
+    return [manager.getProxy(), manager];
 }
 
 function createSet(property : PropType[], newValue : any, isReplace : boolean) : Action {
@@ -246,11 +256,10 @@ const shouldCreateProxy = (target : any, property : PropType, value : any) =>
  * @param history 
  * @returns the new object, and it's ProxyManager
  */
-//export function replayHistory<T extends object>(obj : T, history : Action[]) : [T, ProxyManager] {
 export function replayHistory(obj : Obj, history : Action[]) : [Obj, ProxyManager] {
     history.forEach(action => replayAction(obj, action));
-    const proxyManager = new ProxyManager(false, history);
-    return [proxyManager.createProxy(obj), proxyManager];
+    const proxyManager = new ProxyManager(obj, false, history);
+    return [proxyManager.getProxy(), proxyManager];
 }
 
 function replayAction(obj : Obj, action : Action) : void {
