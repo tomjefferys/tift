@@ -50,9 +50,9 @@ function Tift() {
                 if (engine == null) {
                   throw new Error("Engine has not been initialized");
                 }
+                engine.send(Input.config({"autoLook" : true, "undoLevels" : 0}));
                 engine.send(Input.reset());
                 engine.send(Input.load(data));
-                engine.send(Input.config({"autoLook" : true}));
                 engine.send(Input.start((saveData != null)? saveData : undefined));
                 getWords([]);
                 setWords(latestWordsRef.current);
