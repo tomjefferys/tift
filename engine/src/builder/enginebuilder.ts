@@ -13,6 +13,7 @@ import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "../scri
 import * as RuleBuilder from "./rulebuilder";
 import { Env } from "tift-types/src/env";
 import { getDefaultGameBehaviour } from "./behaviour";
+import { Config, ConfigValueType } from "../config";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -21,6 +22,7 @@ export class EngineBuilder {
     verbs : Verb[] = [];
     entities : Entity[] = [];
     objs : Obj[] = [];
+    config : Config = {};
 
     constructor() {
         DEFAULT_VERBS.forEach(verb => this.verbs.push(verb));
@@ -56,6 +58,16 @@ export class EngineBuilder {
         return this;
     }
 
+    withConfigEntry(name : string, value : ConfigValueType) : EngineBuilder {
+        this.config[name] = value;
+        return this;
+    }
+
+    withConfig(config : Config) : EngineBuilder {
+        Object.assign(this.config, config);
+        return this;
+    }
+
     fromYaml(data : string) {
         const objs = getObjs(data);
         objs.forEach(obj => this.withObj(obj));
@@ -65,7 +77,7 @@ export class EngineBuilder {
         if (!this.outputConsumer) {
             throw new Error("No output counsumer specified")
         }
-        const engine = new BasicEngine(getDefaultGameBehaviour(), this.outputConsumer);
+        const engine = new BasicEngine(getDefaultGameBehaviour(), this.outputConsumer, this.config);
         this.addTo(engine);
         return engine;
     }

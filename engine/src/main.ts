@@ -95,6 +95,14 @@ export namespace Input {
   export function reset() :InputMessage {
     return { type : "Reset" };
   }
+
+  export function undo() : InputMessage {
+    return { type : "Undo" };
+  }
+
+  export function redo() : InputMessage {
+    return { type : "Redo" };
+  }
 }
 
 /**

@@ -2,9 +2,12 @@ import * as _ from "lodash"
 
 export const AUTO_LOOK = "autoLook";
 
-export type ConfigValueType = boolean | number | string;
+export type ConfigValueType = boolean | number | string | undefined;
 
-export type Config = {[key : string] : ConfigValueType }
+export interface Config {
+    undoLevels? : number,
+    [key : string] : ConfigValueType
+ }
 
 export function getOrDefault(config : Config, key : string, defaultValue? : ConfigValueType) {
     return _.get(config, key, defaultValue);

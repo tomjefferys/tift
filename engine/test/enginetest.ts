@@ -7,6 +7,7 @@ import { STANDARD_VERBS } from "./testutils/testutils";
 
 let messages : string[];
 let wordsResponse : string[];
+let statuses : string[]
 let saveData : SaveData;
 let builder : EngineBuilder;
 let engine : Engine;
@@ -14,8 +15,9 @@ let engine : Engine;
 beforeEach(() => {
     messages = [];
     wordsResponse = [];
+    statuses = [];
     saveData = { data : [] };
-    builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData));
+    builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses));
 });
 
 test("Test single room, no exits", () => {
@@ -474,8 +476,16 @@ test("Test load save data", () => {
             north : "northRoom"
         }
     })
+
+    const config = {
+        "autoLook" : true,
+        undoLevels : 0 
+    };
+
+    builder.withConfig(config);
+
     engine = builder.build();
-    engine.send(Input.config({"autoLook" : true }));
+    
     engine.send(Input.start());
 
     expect(messages.join()).toContain("The room is dark and square");
@@ -485,7 +495,6 @@ test("Test load save data", () => {
     const saveStr = JSON.stringify(saveData.data);
 
     engine = builder.build();
-    engine.send(Input.config({"autoLook" : true }));
     engine.send(Input.start(saveStr));
 
     const allMessages = messages.join();
@@ -503,6 +512,9 @@ test("Test load save after getting item", () => {
         location : "theRoom",
         tags : ["carryable"]
     });
+    builder.withConfig({ undoLevels : 0 });
+
+
     // Start a game
     engine = builder.build();
     engine.send(Input.start());
@@ -524,7 +536,7 @@ test("Test load save after getting item", () => {
 test("Test reset", () => {
     // Need to recreate the builder later, so store constructions as a lambda
     const getBuilder = () => {
-        const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData));
+        const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses));
         builder.withObj(THE_ROOM);
         builder.withObj({
             id : "key",
@@ -532,6 +544,7 @@ test("Test reset", () => {
             location : "theRoom",
             tags : ["carryable"]
         });
+        builder.withConfigEntry("undoLevels", 0);
         return builder;
     }
     // Start a game
@@ -731,7 +744,8 @@ test("Test hiding/revealing object", () => {
                 after : {
                     "examine(this)" : "if(hasTag('diamond','hidden')).then(do(reveal('diamond'), 'You find a diamond'))",
                 }
-            });
+            })
+           .withConfigEntry("undoLevels", 0);
     engine = builder.build();
     engine.send(Input.start());
 
@@ -767,7 +781,8 @@ test("Test action with repeat", () => {
                        repeat : ["'You see some mouldy bread'", "'You see an old tin can'", "'You see a banana peel'"]
                    }
                }
-           });
+           })
+          .withConfigEntry("undoLevels", 0);
     engine = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
@@ -803,7 +818,8 @@ test("Test action with nested repeats", () => {
                        repeat : ["'foo'", { repeat : ["'bar'", "'baz'"] } ]
                    }
                }
-           });
+           })
+          .withConfigEntry("undoLevels", 0);
     engine = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
@@ -931,6 +947,45 @@ test("Test put item in container", () => {
     executeAndTest(["look"], { notExpected : ["ball", "in box"] });
     executeAndTest(["put", "ball", "in", "box"], {});
     executeAndTest(["look"], { expected : ["ball", "in box"] });
+})
+
+test("Test undo", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                id : "box",
+                desc : "A large wooden box",
+                location : "northRoom",
+                type : "item",
+                verbs : ["put.in"]
+           })
+           .withObj({
+                id : "ball",
+                desc : "A small ball",
+                location : "northRoom",
+                type : "item",
+                tags : ["carryable"]
+           });
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["put", "ball", "in", "box"], {});
+    executeAndTest(["look"], { expected : ["ball", "in box"] });
+
+    // Try undoing
+    engine.send(Input.undo());
+    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    engine.send(Input.undo());
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+
+    // Try redoing
+    engine.send(Input.redo());
+    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    engine.send(Input.redo());
+    executeAndTest(["look"], { expected : ["ball", "in box"] });
+
 })
 
 test("Test push item", () => {

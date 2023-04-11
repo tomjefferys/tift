@@ -1,4 +1,4 @@
-export type InputMessage = GetWords | Execute | GetStatus | Load | Start | Config | Reset;
+export type InputMessage = GetWords | Execute | GetStatus | Load | Start | Config | Reset | Undo | Redo;
 
 export interface GetWords {
     type : "GetWords",
@@ -21,6 +21,14 @@ export interface Load {
 
 export interface Reset {
     type : "Reset"
+}
+
+export interface Undo {
+    type : "Undo"
+}
+
+export interface Redo {
+    type : "Redo"
 }
 
 export interface Config {

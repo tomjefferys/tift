@@ -52,7 +52,7 @@ export class ProxyManager implements Type.ProxyManager {
 
     private recordHistory : boolean;
 
-    private readonly undoLevels : number;
+    private undoLevels : number;
 
     constructor(baseObject = {}, recordHistory = false, history : Action[] = [], undoLevels = 0) {
         this.baseProxy = this.createProxy(baseObject);
@@ -62,6 +62,13 @@ export class ProxyManager implements Type.ProxyManager {
         this.undoStack = [];
         this.redoStack = [];
         this.accumlator = [];
+    }
+
+    setUndoLevels(undoLevels : number) : void {
+        if (undoLevels < this.undoStack.length) {
+            throw new Error(`Undo stack is already length: ${this.undoStack.length} can't set it to smaller value: ${undoLevels}`);
+        }
+        this.undoLevels = undoLevels;
     }
 
     getProxy() : Obj {
@@ -97,8 +104,8 @@ export class ProxyManager implements Type.ProxyManager {
         this.recordHistory = false;
     }
 
-    replayHistory(obj : Obj, history : Action[]) {
-        history.forEach(action => replayAction(obj, action));
+    replayHistory(history : Action[]) {
+        history.forEach(action => replayAction(this.baseProxy, action));
     }
 
     /**
@@ -106,14 +113,16 @@ export class ProxyManager implements Type.ProxyManager {
      * and add old entries to the base history
      */
     pushHistory() {
-        // Clear the redo stack
-        this.redoStack.length = 0;
-        this.undoStack.push([...this.accumlator]);
-        this.accumlator.length = 0;
-        while(this.undoStack.length > this.undoLevels) {
-            const stage = this.undoStack.shift();
-            if (stage) {
-                stage.forEach(action => this.addAction(action.redo));
+        if (this.accumlator.length) {
+            // Clear the redo stack
+            this.redoStack.length = 0;
+            this.undoStack.push([...this.accumlator]);
+            this.accumlator.length = 0;
+            while(this.undoStack.length > this.undoLevels) {
+                const stage = this.undoStack.shift();
+                if (stage) {
+                    stage.forEach(action => this.addAction(action.redo));
+                }
             }
         }
     }

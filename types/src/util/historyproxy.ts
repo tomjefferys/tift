@@ -37,6 +37,28 @@ export interface ProxyManager {
      */
     stopRecording() : void;
 
-    replayHistory(obj : Obj, history : Action[]) : void;
+    replayHistory(history : Action[]) : void;
+
+    /**
+     * Undo the last move
+     * @param obj an oject to replay the history into
+     */
+    undo() : void;
+
+    /**
+     * Redo a previously undone move
+     * @param obj an oject to replay the history into
+     */
+    redo() : void;
+
+    /**
+     * Push the latest accumulated actions into the undo queue
+     */
+    pushHistory(): void;
+
+    /**
+     * Set the maximum undo level
+     */
+    setUndoLevels(undoLevels : number) : void;
 }
     

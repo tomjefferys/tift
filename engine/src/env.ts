@@ -227,7 +227,7 @@ export class Env implements Type.Env {
     }
 
     replayHistory(history : Action[]) {
-        this.proxyManager.replayHistory(this.properties, history);
+        this.proxyManager.replayHistory(history);
     }
 
     /**

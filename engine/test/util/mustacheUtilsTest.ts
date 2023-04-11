@@ -91,6 +91,7 @@ test("Test firstTime", () => {
     const engine = new EngineBuilder()
                             .withOutput(consumer)
                             .withObj(room1)
+                            .withConfigEntry("undoLevels", 0)
                             .build();
     engine.send(Input.start());
     expect(saveData.data).toStrictEqual([]);

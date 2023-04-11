@@ -22,6 +22,8 @@ import * as Logger from "./util/logger";
 import { Behaviour } from "./builder/behaviour"
 import { AUTOLOOK } from "./builder/plugins/autolook"
 
+const DEFAULT_UNDO_LEVELS = 10;
+
 const logger = Logger.getLogger("engine");
 
 export interface Engine {
@@ -51,14 +53,16 @@ export interface PluginActionContext {
 
 export type PluginAction = (context : PluginActionContext) => void;
 
-const BASE_CONFIG : Config = {};
+const BASE_CONFIG : Config = {
+  undoLevels : DEFAULT_UNDO_LEVELS 
+};
 const BASE_PROPS = { "entities" : {}, "verbs" : {}};
 const BASE_NS = [["entities"], ["verbs"]];
 const BASE_CONTEXT = { entities : {}, verbs : [] }
  
 
 export class BasicEngine implements Engine {
-  private config : Config = BASE_CONFIG;
+  private config : Config = _.cloneDeep(BASE_CONFIG);
   private env : Env;
   private context : CommandContext;
   private output : OutputConsumer;
@@ -67,16 +71,17 @@ export class BasicEngine implements Engine {
   private started = false;
   private gameData : Behaviour;
 
-  constructor(gameData : Behaviour, outputConsumer : OutputConsumer) {
+  constructor(gameData : Behaviour, outputConsumer : OutputConsumer, config? : Config) {
     this.gameData = gameData;
     this.output = outputConsumer;
+    Object.assign(this.config, config);
     Logger.setConsumer(getOutputLogger(this.output));
     [this.env, this.context] = this.reset();
   }
 
   reset() : [Env, CommandContext] {
-    this.config = _.cloneDeep(BASE_CONFIG);
     this.env = createRootEnv(_.cloneDeep(BASE_PROPS), _.cloneDeep(BASE_NS));
+    this.env.proxyManager.setUndoLevels(this.config.undoLevels ?? DEFAULT_UNDO_LEVELS);
 
     this.gameData.reset(this.env, this.output);
 
@@ -158,6 +163,12 @@ export class BasicEngine implements Engine {
         case "Reset":
           this.reset();
           break;
+        case "Undo":
+          this.undo();
+          break;
+        case "Redo":
+          this.redo();
+          break;
       }
     } catch (e) {
       logError(this.output, e);
@@ -175,6 +186,16 @@ export class BasicEngine implements Engine {
     const history = this.env.proxyManager.getHistory();
     const saveState = Output.saveState(history);
     this.output(saveState);
+  }
+
+  undo() {
+    this.env.proxyManager.undo();
+    this.getStatus();
+  }
+
+  redo() {
+    this.env.proxyManager.redo();
+    this.getStatus();
   }
 
   setConfig(newConfig : Config) {
@@ -243,7 +264,7 @@ export class BasicEngine implements Engine {
     this.env.proxyManager.pushHistory();
 
     // Send the current save state
-    this.save(); // TODO use a proxy to detect if anything has changed? (Use a counter, and increment it for every state change)
+    this.save(); // TODO use a proxy to detect if anything has changed? Can do this by checking the history accumulator
   }
 
   /**
