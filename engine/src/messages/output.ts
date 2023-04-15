@@ -26,7 +26,7 @@ export function words(command : string[], words : Word[]) : OutputMessage {
 export function status(status : string) : OutputMessage {
     return {
         type : "Status",
-        status : status
+        status : { "title": status }
     }
 }
 

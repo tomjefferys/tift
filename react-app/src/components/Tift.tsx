@@ -186,7 +186,7 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         wordsConsumer(outputMessage.words);
         break;
       case "Status":
-        statusConsumer(outputMessage.status);
+        statusConsumer(outputMessage.status["title"]);
         break;
       case "SaveState": 
         saveConsumer(JSON.stringify(outputMessage.state));

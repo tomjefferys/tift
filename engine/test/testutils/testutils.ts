@@ -25,7 +25,7 @@ export function listOutputConsumer(messages : string[], words : string[], saveDa
                 messages.push(message.message);
                 break;
             case "Status":
-                statuses.push(message.status);
+                statuses.push(message.status.title);
                 break;
             default:
                 throw new Error("Can't handle type " + message.type);

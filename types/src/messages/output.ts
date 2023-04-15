@@ -41,7 +41,7 @@ export interface Words {
 
 export interface Status {
     type : "Status",
-    status : string
+    status : {[key:string]:string}
 }
 
 /**

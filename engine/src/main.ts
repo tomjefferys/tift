@@ -165,7 +165,7 @@ export class OutputConsumerBuilder {
           this.wordsConsumer? this.wordsConsumer(message.command, message.words) : this.defaultConsumer(message);
           break;
         case "Status":
-          this.statusConsumer? this.statusConsumer(message.status) : this.defaultConsumer(message);
+          this.statusConsumer? this.statusConsumer(message.status.title) : this.defaultConsumer(message);
           break;
         case "SaveState": 
           this.saveConsumer? this.saveConsumer(JSON.stringify(message.state)) : this.defaultConsumer(message);

@@ -72,7 +72,7 @@ class MessageConsumer {
                 this.printMessages.push(message.value);
                 break;
             case "Status":
-                this.status = message.status;
+                this.status = message.status["title"];
                 break;
             case "Words":
                 this.wordCache = [message.command, message.words];
