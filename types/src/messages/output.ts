@@ -10,6 +10,12 @@ export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
 
 export type WordType = "word" | "option" | "control";
 
+export type StatusType = {
+    title : string, 
+    undoable : boolean,
+    redoable : boolean
+}
+
 export interface Word extends IdValue<string> {
     id : string;
     value : string;
@@ -41,7 +47,7 @@ export interface Words {
 
 export interface Status {
     type : "Status",
-    status : {[key:string]:string}
+    status : StatusType
 }
 
 /**

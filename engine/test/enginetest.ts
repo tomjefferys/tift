@@ -4,10 +4,11 @@ import { listOutputConsumer, SaveData, getEmptyHistory } from "./testutils/testu
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN } from "./testutils/testobjects";
 import { STANDARD_VERBS } from "./testutils/testutils";
+import { StatusType } from "tift-types/src/messages/output";
 
 let messages : string[];
 let wordsResponse : string[];
-let statuses : string[]
+let statuses : StatusType[]
 let saveData : SaveData;
 let builder : EngineBuilder;
 let engine : Engine;
@@ -967,24 +968,40 @@ test("Test undo", () => {
            });
     engine = builder.build();
     engine.send(Input.start());
+    expectStatus({undoable : false, redoable : false});
 
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    expectStatus({undoable : false, redoable : false});
+
     executeAndTest(["get", "ball"], {});
+    expectStatus({undoable : true, redoable : false});
+
     executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    expectStatus({undoable : true, redoable : false});
+
     executeAndTest(["put", "ball", "in", "box"], {});
+    expectStatus({undoable : true, redoable : false});
+
     executeAndTest(["look"], { expected : ["ball", "in box"] });
+    expectStatus({undoable : true, redoable : false});
 
     // Try undoing
     engine.send(Input.undo());
     executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    expectStatus({undoable : true, redoable : true});
+
     engine.send(Input.undo());
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    expectStatus({undoable : false, redoable : true});
 
     // Try redoing
     engine.send(Input.redo());
     executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    expectStatus({undoable : true, redoable : true});
+
     engine.send(Input.redo());
     executeAndTest(["look"], { expected : ["ball", "in box"] });
+    expectStatus({undoable : true, redoable : false});
 })
 
 test("Test undo, clear redo on new action", () => {
@@ -1008,19 +1025,26 @@ test("Test undo, clear redo on new action", () => {
 
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
     executeAndTest(["get", "ball"], {});
+    expectStatus({undoable : true, redoable : false});
+
     executeAndTest(["look"], { notExpected : ["ball", "in box"] });
     executeAndTest(["put", "ball", "in", "box"], {});
+    expectStatus({undoable : true, redoable : false});
+
     executeAndTest(["look"], { expected : ["ball", "in box"] });
 
     // Try undoing
     engine.send(Input.undo());
     executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    expectStatus({undoable : true, redoable : true});
     executeAndTest(["drop", "ball"], {});
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    expectStatus({undoable : true, redoable : false});
 
     // Try redoing, nothing should change
     engine.send(Input.redo());
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    expectStatus({undoable : true, redoable : false});
 
 });
 
@@ -1163,6 +1187,18 @@ function executeAndTest(command : string[], expectedMessages : ExpectedStrings) 
     })
     messages.length = 0;
 } 
+
+function expectStatus(expected : Partial<StatusType>) {
+    engine.send(Input.getStatus());
+    const actual = statuses.at(-1);
+    expect(actual).not.toBeUndefined();
+    if (actual) {
+        for(const [name, value] of Object.entries(expected)) {
+            expect(actual[name as keyof StatusType]).toBe(value);
+        }
+    }
+    statuses.length = 0;
+}
 
 function expectWords(command : string[], expectedNextWords : string[]) {
     const words = getWordIds(engine, (command));

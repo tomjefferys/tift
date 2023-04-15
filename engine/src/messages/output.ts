@@ -23,10 +23,10 @@ export function words(command : string[], words : Word[]) : OutputMessage {
     }
 }
 
-export function status(status : string) : OutputMessage {
+export function status(title : string, undoable : boolean, redoable : boolean) : OutputMessage {
     return {
         type : "Status",
-        status : { "title": status }
+        status : { title, undoable, redoable }
     }
 }
 

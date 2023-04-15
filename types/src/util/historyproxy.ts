@@ -50,6 +50,10 @@ export interface ProxyManager {
 
     replayHistory(history : History) : void;
 
+    isUndoable() : boolean;
+
+    isRedoable() : boolean;
+
     /**
      * Undo the last move
      * @param obj an oject to replay the history into

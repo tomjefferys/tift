@@ -298,7 +298,8 @@ export class BasicEngine implements Engine {
 
   getStatus() : void {
     const status = this.gameData.getStatus(this.env);
-    this.output(Output.status(status));
+
+    this.output(Output.status(status, this.env.proxyManager.isUndoable(), this.env.proxyManager.isRedoable()));
   }
 
   getEntities() : Entity[] {
