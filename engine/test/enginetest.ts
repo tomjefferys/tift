@@ -985,8 +985,44 @@ test("Test undo", () => {
     executeAndTest(["look"], { notExpected : ["ball", "in box"] });
     engine.send(Input.redo());
     executeAndTest(["look"], { expected : ["ball", "in box"] });
-
 })
+
+test("Test undo, clear redo on new action", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                id : "box",
+                desc : "A large wooden box",
+                location : "northRoom",
+                type : "item",
+                verbs : ["put.in"]
+           })
+           .withObj({
+                id : "ball",
+                desc : "A small ball",
+                location : "northRoom",
+                type : "item",
+                tags : ["carryable"]
+           });
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["put", "ball", "in", "box"], {});
+    executeAndTest(["look"], { expected : ["ball", "in box"] });
+
+    // Try undoing
+    engine.send(Input.undo());
+    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["drop", "ball"], {});
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+
+    // Try redoing, nothing should change
+    engine.send(Input.redo());
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+
+});
 
 test("Test push item", () => {
     builder.withObj({
