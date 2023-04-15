@@ -23,7 +23,7 @@ test("Test set primitives", () => {
 
     expect(target).toEqual({foo : "qux", corge : "xyzzy"});
     expect(proxy).toEqual({foo : "qux", corge : "xyzzy"});
-    expect(manager.getHistory()).toStrictEqual([set(["foo"], "qux"), set(["corge"],"xyzzy")]);
+    expect(manager.getHistory().baseHistory).toStrictEqual([set(["foo"], "qux"), set(["corge"],"xyzzy")]);
 });
 
 test("Test delete primitive", () => {
@@ -41,7 +41,7 @@ test("Test delete primitive", () => {
 
     expect(target).toEqual({baz : "qux"});
     expect(proxy).toEqual({baz : "qux"});
-    expect(manager.getHistory()).toStrictEqual([del(["foo"])])
+    expect(manager.getHistory().baseHistory).toStrictEqual([del(["foo"])])
 });
 
 test("Test object property", () => {
@@ -57,7 +57,7 @@ test("Test object property", () => {
 
     expect(target).toEqual({ foo : { bar : "grault" }, corge : "xyzzy"});
     expect(proxy).toEqual({ foo : { bar : "grault" }, corge : "xyzzy"});
-    expect(manager.getHistory()).toEqual([set(["foo", "bar"], "grault")]);
+    expect(manager.getHistory().baseHistory).toEqual([set(["foo", "bar"], "grault")]);
 });
 
 test("Test array setting", () => {
@@ -69,7 +69,7 @@ test("Test array setting", () => {
 
     manager.pushHistory();
 
-    expect(manager.getHistory()).toEqual([set(["foo", "2"], "qux"), set(["foo", "length"], 3)]);
+    expect(manager.getHistory().baseHistory).toEqual([set(["foo", "2"], "qux"), set(["foo", "length"], 3)]);
 });
 
 test("Test deeply nested new object", () => {
@@ -89,7 +89,7 @@ test("Test deeply nested new object", () => {
     const history = manager.getHistory();
 
     // Intermediate setting of empty objects should not be stored
-    expect(history).toStrictEqual([{"type":"Set","property":["foo","bar","baz","qux"],"newValue":"xyzzy"}]);
+    expect(history.baseHistory).toStrictEqual([{"type":"Set","property":["foo","bar","baz","qux"],"newValue":"xyzzy"}]);
 
     const [newObj, _newManager] = replayHistory({foo : {}}, manager.getHistory());
     expect(newObj.foo.bar.baz.qux).toEqual("xyzzy");
@@ -109,7 +109,7 @@ test("Test replace string with object", () => {
     const history = manager.getHistory();
 
     // Intermediate setting of empty objects should not be stored
-    expect(history).toStrictEqual([
+    expect(history.baseHistory).toStrictEqual([
         {"type":"Set","property":["foo"],"newValue":{},"replace":true},
         {"type":"Set","property":["foo","bar"],"newValue":"xyzzy"}]);
 
@@ -134,7 +134,7 @@ test("Test store empty object at leaf node", () => {
     const history = manager.getHistory();
 
     // Intermediate setting of empty objects should not be stored
-    expect(history).toStrictEqual([{"type":"Set","property":["foo","bar","baz"],"newValue":{}}]);
+    expect(history.baseHistory).toStrictEqual([{"type":"Set","property":["foo","bar","baz"],"newValue":{}}]);
 
     const [newObj, _newManager] = replayHistory({foo : {}}, manager.getHistory());
     expect(newObj.foo.bar.baz).toEqual({});
@@ -160,19 +160,19 @@ test("Test replay history", () => {
     const [newObj, newManager] = replayHistory({}, manager.getHistory());
 
     expect(newObj).toEqual(original);
-    expect(manager.getHistory()).toEqual(newManager.getHistory());
+    expect(manager.getHistory().baseHistory).toEqual(newManager.getHistory().baseHistory);
 });
 
 test("Test undo/redo: no history", () => {
     const original : Obj = {};
-    const [_proxy, manager] = createProxy(original, true, [], 10);
+    const [_proxy, manager] = createProxy(original, true, undefined, 10);
     expect(manager.isUndoable()).toBeFalsy();
     expect(manager.isRedoable()).toBeFalsy();
 });
 
 test("Test undo/redo", () => {
     const original : Obj = {};
-    const [proxy, manager] = createProxy(original, true, [], 10);
+    const [proxy, manager] = createProxy(original, true, undefined, 10);
     proxy.foo = "bar"
     manager.pushHistory();
     proxy.baz = {"qux": "xyzzy"}
@@ -248,7 +248,7 @@ test("Test undo/redo", () => {
 
 test("Test undo/redo: single undo level", () => {
     const original : Obj = {};
-    const [proxy, manager] = createProxy(original, true, [], 1);
+    const [proxy, manager] = createProxy(original, true, undefined, 1);
     proxy.foo = "bar"
     manager.pushHistory();
     proxy.baz = {"qux": "xyzzy"}
@@ -301,7 +301,7 @@ test("Test undo/redo: single undo level", () => {
 
 test("Test undo then change", () => {
     const original : Obj = {};
-    const [proxy, manager] = createProxy(original, true, [], 10);
+    const [proxy, manager] = createProxy(original, true, undefined, 10);
     proxy.foo = "bar"
     manager.pushHistory();
     proxy.baz = {"qux": "xyzzy"}
@@ -346,27 +346,27 @@ test("Test history compression", () => {
     const [proxy, manager] = createProxy(original, true);
     proxy.corge = "one";
     manager.pushHistory();
-    expect(manager.getHistory()).toEqual([set(["corge"], "one")]);
+    expect(manager.getHistory().baseHistory).toEqual([set(["corge"], "one")]);
 
     proxy.corge = "two";
     manager.pushHistory();
-    expect(manager.getHistory()).toEqual([set(["corge"], "two")]);
+    expect(manager.getHistory().baseHistory).toEqual([set(["corge"], "two")]);
 
     proxy.corge = "three";
     manager.pushHistory();
-    expect(manager.getHistory()).toEqual([set(["corge"], "three")]);
+    expect(manager.getHistory().baseHistory).toEqual([set(["corge"], "three")]);
 
     proxy.foo.bar = "qux";
     manager.pushHistory();
-    expect(manager.getHistory()).toEqual([set(["corge"], "three"), set(["foo", "bar"], "qux")]);
+    expect(manager.getHistory().baseHistory).toEqual([set(["corge"], "three"), set(["foo", "bar"], "qux")]);
 
     proxy.foo.baz = "quux";
     manager.pushHistory();
-    expect(manager.getHistory()).toEqual([set(["corge"], "three"), set(["foo", "bar"], "qux"), set(["foo", "baz"], "quux")]);
+    expect(manager.getHistory().baseHistory).toEqual([set(["corge"], "three"), set(["foo", "bar"], "qux"), set(["foo", "baz"], "quux")]);
 
     proxy.foo = "xyzzy";
     manager.pushHistory();
-    expect(manager.getHistory()).toEqual([set(["corge"], "three"), set(["foo"], "xyzzy", true)]);
+    expect(manager.getHistory().baseHistory).toEqual([set(["corge"], "three"), set(["foo"], "xyzzy", true)]);
 });
 
 

@@ -1,7 +1,7 @@
 import { Obj } from "./util/objects";
 import { Path } from "./path";
 import { ProxyManager } from "./util/historyproxy";
-import { Action } from "./util/historyproxy";
+import { History } from "./util/historyproxy";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -39,7 +39,7 @@ export interface Env {
 
     addBindings(bindings : Obj) : void;
 
-    replayHistory(history : Action[]) : void;
+    replayHistory(history : History) : void;
 
     createNamespaceReferences(ns : NameSpace) : Obj;
 

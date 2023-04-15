@@ -6,29 +6,14 @@ import * as Arrays from "./arrays";
 import * as objects from "./objects";
 import * as Type from "tift-types/src/util/historyproxy";
 
+type UndoEntry = Type.UndoEntry;
+type Action = Type.Action;
+type History = Type.History;
+
 const IS_PROXY = Symbol("isProxy");
 
 type PropType = objects.PropType;
 type Obj = objects.Obj;
-
-export type Action = Set | Del;
-
-export interface Set {
-    type : "Set",
-    property : PropType[],
-    newValue : any,
-    replace? : boolean,
-}
-
-export interface Del {
-    type : "Del",
-    property : PropType[],
-}
-
-interface UndoEntry {
-    undo : Action,
-    redo : Action
-}
 
 /**
  * Proxy manager. Creates proxys, and track changes to them
@@ -54,13 +39,19 @@ export class ProxyManager implements Type.ProxyManager {
 
     private undoLevels : number;
 
-    constructor(baseObject = {}, recordHistory = false, history : Action[] = [], undoLevels = 0) {
+    constructor(baseObject = {}, recordHistory = false, history? : History, undoLevels = 0) {
         this.baseProxy = this.createProxy(baseObject);
-        this.baseHistory = history;
+        if (history) {
+            this.baseHistory = history.baseHistory;
+            this.undoStack = history.undoStack;
+            this.redoStack = history.redoStack;
+        } else {
+            this.baseHistory = [];
+            this.undoStack = [];
+            this.redoStack = [];
+        }
         this.recordHistory = recordHistory;
         this.undoLevels = undoLevels;
-        this.undoStack = [];
-        this.redoStack = [];
         this.accumlator = [];
     }
 
@@ -79,8 +70,12 @@ export class ProxyManager implements Type.ProxyManager {
         return new Proxy(obj, this.createHandler(prefix));
     }
 
-    getHistory() : Action[] {
-        return [...this.baseHistory];
+    getHistory() : History {
+        return {
+            baseHistory : this.baseHistory,
+            undoStack : this.undoStack,
+            redoStack : this.redoStack
+        }
     }
 
     /**
@@ -104,8 +99,9 @@ export class ProxyManager implements Type.ProxyManager {
         this.recordHistory = false;
     }
 
-    replayHistory(history : Action[]) {
-        history.forEach(action => replayAction(this.baseProxy, action));
+    replayHistory(history : History) {
+        history.baseHistory.forEach(action => replayAction(this.baseProxy, action));
+        history.undoStack.forEach(undoTransaction => undoTransaction.forEach(undoStep => replayAction(this.baseProxy, undoStep.redo)))
     }
 
     /**
@@ -232,7 +228,7 @@ export class ProxyManager implements Type.ProxyManager {
     }
 }
 
-export function createProxy(original : Obj = {}, recordHistory = false, history : Action[] = [], undoLevels = 0) : [Obj, ProxyManager] {
+export function createProxy(original : Obj = {}, recordHistory = false, history? : History, undoLevels = 0) : [Obj, ProxyManager] {
     const manager = new ProxyManager(original, recordHistory, history, undoLevels);
     return [manager.getProxy(), manager];
 }
@@ -265,8 +261,9 @@ const shouldCreateProxy = (target : any, property : PropType, value : any) =>
  * @param history 
  * @returns the new object, and it's ProxyManager
  */
-export function replayHistory(obj : Obj, history : Action[]) : [Obj, ProxyManager] {
-    history.forEach(action => replayAction(obj, action));
+export function replayHistory(obj : Obj, history : History) : [Obj, ProxyManager] {
+    history.baseHistory.forEach(action => replayAction(obj, action));
+    history.undoStack.forEach(undoTransaction => undoTransaction.forEach(undoStep => replayAction(obj, undoStep.redo)))
     const proxyManager = new ProxyManager(obj, false, history);
     return [proxyManager.getProxy(), proxyManager];
 }

@@ -9,7 +9,8 @@ import _ from "lodash"
 import { pathElementEquals, fromValueList, makePath, toValueList } from "./path";
 import { Path, PathElement } from "tift-types/src/path"
 import { parsePath } from "./script/pathparser";
-import { Action, createProxy, ProxyManager } from "./util/historyproxy";
+import { History } from "tift-types/src/util/historyproxy";
+import { createProxy, ProxyManager } from "./util/historyproxy";
 import { Optional } from "tift-types/src/util/optional";
 import { Obj, isObject } from "./util/objects";
 import { AnyArray, EnvFn, ReturnType } from "tift-types/src/env";
@@ -226,7 +227,7 @@ export class Env implements Type.Env {
         return [...this.namespaces, ...parentNamespaces];
     }
 
-    replayHistory(history : Action[]) {
+    replayHistory(history : History) {
         this.proxyManager.replayHistory(history);
     }
 

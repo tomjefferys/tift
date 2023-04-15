@@ -16,7 +16,7 @@ import { Config } from "./config"
 import * as Conf from "./config"
 import { Optional } from "tift-types/src/util/optional";
 import { logError } from "./util/errors";
-import { Action } from "./util/historyproxy";
+import { History } from "tift-types/src/util/historyproxy";
 import { Obj } from "./util/objects"
 import * as Logger from "./util/logger";
 import { Behaviour } from "./builder/behaviour"
@@ -106,7 +106,7 @@ export class BasicEngine implements Engine {
     this.env.proxyManager.startRecording();
 
     if (saveData) {
-      const data = JSON.parse(saveData) as Action[];
+      const data = JSON.parse(saveData) as History;
       this.env.replayHistory(data);
     }
 

@@ -1,6 +1,6 @@
 import { BasicEngine, Engine } from "../src/engine";
 import { EngineBuilder } from "../src/builder/enginebuilder";
-import { listOutputConsumer, SaveData } from "./testutils/testutils";
+import { listOutputConsumer, SaveData, getEmptyHistory } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN } from "./testutils/testobjects";
 import { STANDARD_VERBS } from "./testutils/testutils";
@@ -16,7 +16,7 @@ beforeEach(() => {
     messages = [];
     wordsResponse = [];
     statuses = [];
-    saveData = { data : [] };
+    saveData = { data : getEmptyHistory() };
     builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses));
 });
 
@@ -529,7 +529,7 @@ test("Test load save after getting item", () => {
     engine.send(Input.start(saveStr));
     executeAndTest(["look"], { expected : ["An almost empty room"], notExpected :["key"]});
 
-    expect(saveData.data).toEqual(
+    expect(saveData.data.baseHistory).toEqual(
         [{"type":"Set", "property":["entities", "key", "location"], "newValue":"__INVENTORY__"}])
 });
 
@@ -565,7 +565,7 @@ test("Test reset", () => {
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 
     // Check the save data is empty
-    expect(saveData.data).toEqual([]);
+    expect(saveData.data.baseHistory).toEqual([]);
 })
 
 test("Test command deduplication", () => {
@@ -756,17 +756,17 @@ test("Test hiding/revealing object", () => {
     executeAndTest(["look"], { expected : ["can", "diamond", "in rubbish"]});
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
 
-    expect(saveData.data.length).toBe(2);
-    expect(saveData.data[0]).toStrictEqual({"type":"Del","property":["entities","diamond","tags","1"]});
-    expect(saveData.data[1]).toStrictEqual({"type":"Set","property":["entities","diamond","tags","length"],"newValue":1})
+    expect(saveData.data.baseHistory.length).toBe(2);
+    expect(saveData.data.baseHistory[0]).toStrictEqual({"type":"Del","property":["entities","diamond","tags","1"]});
+    expect(saveData.data.baseHistory[1]).toStrictEqual({"type":"Set","property":["entities","diamond","tags","length"],"newValue":1})
 
     expectWords(["get"], ["can", "diamond"]);
     executeAndTest(["get", "diamond"], {});
     executeAndTest(["look"], { expected : ["can", "in rubbish"], notExpected : ["diamond"]});
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
 
-    expect(saveData.data.length).toBe(3);
-    expect(saveData.data[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"__INVENTORY__"});
+    expect(saveData.data.baseHistory.length).toBe(3);
+    expect(saveData.data.baseHistory[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"__INVENTORY__"});
 });
 
 test("Test action with repeat", () => {
@@ -787,22 +787,22 @@ test("Test action with repeat", () => {
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
 
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]);
+    expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["tin can"], notExpected : ["mouldy bread", "banana peel"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":2}]);
+    expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":2}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["banana peel"], notExpected : ["tin can", "moudly bread"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]);
+    expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]);
+    expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["tin can"], notExpected : ["mouldy bread", "banana peel"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":2}]);
+    expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":2}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["banana peel"], notExpected : ["tin can", "moudly bread"]});
-    expect(saveData.data).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]);
+    expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]);
 
 });
 
@@ -823,12 +823,12 @@ test("Test action with nested repeats", () => {
     engine = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
-    expect(saveData.data).toStrictEqual([
+    expect(saveData.data.baseHistory).toStrictEqual([
         {"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]
     );
 
     executeAndTest(["examine", "rubbish"], { expected : ["bar"], notExpected : ["foo", "baz"]});
-    expect(saveData.data).toStrictEqual([
+    expect(saveData.data.baseHistory).toStrictEqual([
         {"type":"Set","property":["entities","rubbish","after","0","repeat","1","repeat","index"],"newValue":1},
         {"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]
     );

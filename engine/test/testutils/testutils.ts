@@ -3,11 +3,11 @@ import { bindParams } from "../../src/script/parser"
 import { createRootEnv } from "../../src/env";
 import { Env, EnvFn } from "tift-types/src/env";
 import { print } from "../../src/messages/output"
-import { Action } from "../../src/util/historyproxy";
+import { History } from "tift-types/src/util/historyproxy";
 
 export const STANDARD_VERBS = ["go", "look", "inventory", "wait"];
 
-export type SaveData = { data : Action[] };
+export type SaveData = { data : History };
 
 export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData, statuses : string[] ) : OutputConsumer {
     return message => {
@@ -33,11 +33,15 @@ export function listOutputConsumer(messages : string[], words : string[], saveDa
     }
 }
 
+export function getEmptyHistory() : History {
+    return { baseHistory : [], undoStack : [], redoStack : []};
+}
+
 export function defaultOutputConsumer() : [OutputConsumer, string[], string[], SaveData] {
     const messages : string[] = [];
     const words : string[] = [];
     const statuses : string[] = [];
-    const saveData = { data : [] }
+    const saveData = { data : getEmptyHistory() }
     const consumer = listOutputConsumer(messages, words, saveData, statuses);
     return [consumer, messages, words, saveData];
 
@@ -46,7 +50,7 @@ export function defaultOutputConsumer() : [OutputConsumer, string[], string[], S
 export function setUpEnv() : [Env, string[], string[], SaveData] {
     const messages : string[] = [];
     const words : string[] = [];
-    const saveData = { data : [] };
+    const saveData = { data : getEmptyHistory() }
     const statuses : string[] = [];
     const env = createRootEnv({"OUTPUT":listOutputConsumer(messages, words, saveData, statuses)});
     const write : EnvFn = bindParams(["value"], env => {

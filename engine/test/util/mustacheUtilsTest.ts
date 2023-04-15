@@ -94,24 +94,24 @@ test("Test firstTime", () => {
                             .withConfigEntry("undoLevels", 0)
                             .build();
     engine.send(Input.start());
-    expect(saveData.data).toStrictEqual([]);
+    expect(saveData.data.baseHistory).toStrictEqual([]);
 
     engine.send(Input.execute(["look"]));
     expect(messages.join(" ").trim()).toEqual("The floor creaks as you enter the almost empty room, there is a black cat here.");
-    expect(_.get(saveData, 'data[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
-    expect(_.get(saveData, 'data[0].newValue')).toStrictEqual(1);
+    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(1);
     messages.length = 0;
 
     engine.send(Input.execute(["look"]));
     expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
-    expect(_.get(saveData, 'data[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
-    expect(_.get(saveData, 'data[0].newValue')).toStrictEqual(2);
+    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(2);
     messages.length = 0;
 
     engine.send(Input.execute(["look"]));
     expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
-    expect(_.get(saveData, 'data[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
-    expect(_.get(saveData, 'data[0].newValue')).toStrictEqual(3);
+    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(3);
 });
 
 test("Test not needlessy updating state", () => {
@@ -127,18 +127,19 @@ test("Test not needlessy updating state", () => {
     const engine = new EngineBuilder()
                             .withOutput(consumer)
                             .withObj(room1)
+                            .withConfigEntry("undoLevels", 0)
                             .build();
     engine.send(Input.start());
-    expect(saveData.data).toStrictEqual([]);
+    expect(saveData.data.baseHistory).toStrictEqual([]);
 
     engine.send(Input.execute(["look"]));
     expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
-    expect(saveData.data).toStrictEqual([]);
+    expect(saveData.data.baseHistory).toStrictEqual([]);
     messages.length = 0;
 
     engine.send(Input.execute(["look"]));
     expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
-    expect(saveData.data).toStrictEqual([]);
+    expect(saveData.data.baseHistory).toStrictEqual([]);
     messages.length = 0;
 })
 

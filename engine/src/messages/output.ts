@@ -1,4 +1,4 @@
-import { Action } from "../util/historyproxy";
+import { History } from "tift-types/src/util/historyproxy";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { OutputMessage, WordType, Word, LogLevel, SetVar } from "tift-types/src/messages/output";
 
@@ -30,7 +30,7 @@ export function status(status : string) : OutputMessage {
     }
 }
 
-export function saveState(state : Action[]) : OutputMessage {
+export function saveState(state : History) : OutputMessage {
     return { type : "SaveState", state };
 }
 

@@ -18,9 +18,20 @@ export interface Del {
     property : PropType[]
 }
 
+export interface UndoEntry {
+    undo : Action,
+    redo : Action
+}
+
+export interface History {
+    baseHistory : Action[];
+    undoStack : UndoEntry[][];
+    redoStack : UndoEntry[][];
+}
+
 export interface ProxyManager {
 
-    getHistory() : Action[];
+    getHistory() : History;
 
     /**
      * Clear the proxy history
@@ -37,7 +48,7 @@ export interface ProxyManager {
      */
     stopRecording() : void;
 
-    replayHistory(history : Action[]) : void;
+    replayHistory(history : History) : void;
 
     /**
      * Undo the last move

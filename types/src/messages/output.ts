@@ -1,6 +1,6 @@
 import { ControlType } from "./controltype";
 import { IdValue } from "../shared";
-import { Action } from "../util/historyproxy";
+import { History } from "../util/historyproxy";
 
 export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control
 
@@ -60,5 +60,5 @@ export interface Log {
 
 export interface SaveState {
     type : "SaveState",
-    state : Action[]
+    state : History
 }
