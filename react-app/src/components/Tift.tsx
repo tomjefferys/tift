@@ -2,7 +2,7 @@ import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, word, createStateMachineFilter, buildStateMachine, handleInput } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
-import { OutputConsumer, OutputMessage, Word } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder, DecoratedForwarder } from "tift-engine/src/engineproxy";
 import { MachineOps } from "tift-engine/src/util/statemachine";
@@ -13,6 +13,7 @@ import { Box, Divider, useColorMode } from '@chakra-ui/react'
 
 import { InputMessage } from 'tift-types/src/messages/input';
 import * as Pauser from './pauser';
+import { getUndoRedoFilter } from "./undoredofilter";
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
@@ -26,8 +27,9 @@ const BACKSPACE : Word = { type : "control", id : "__BACKSPACE__", value : "BACK
 function Tift() {
     const [command, setCommand] = useState<Word[]>([]);
     const [words, setWords] = useState<Word[]>([]);
-    const [status, setStatus] = useState<string>("");
     const { setColorMode } = useColorMode();
+
+    const statusRef = useRef<StatusType>({ title : "", undoable : false, redoable : false});
   
     // Store messages as a ref, as the can be updated multiple times between renders
     // and using a state makes it tricky to get the most up to date values
@@ -50,7 +52,7 @@ function Tift() {
                 if (engine == null) {
                   throw new Error("Engine has not been initialized");
                 }
-                engine.send(Input.config({"autoLook" : true, "undoLevels" : 0}));
+                engine.send(Input.config({"autoLook" : true, "undoLevels" : 10}));
                 engine.send(Input.reset());
                 engine.send(Input.load(data));
                 engine.send(Input.start((saveData != null)? saveData : undefined));
@@ -91,7 +93,10 @@ function Tift() {
       messagesRef.current = savedMessages? JSON.parse(savedMessages) : [];
 
       // Set up Proxies
-      const restartMachine = createRestarter(forwarder => loadGame(GAME_FILE, forwarder, null));
+      const restartMachine = createRestarter(forwarder => {
+        window.localStorage.removeItem(AUTO_SAVE);
+        loadGame(GAME_FILE, forwarder, null)
+      });
       const colourSchemePicker = createColourSchemePicker(value => changeColourMode(value));
       const logClearer = createSimpleOption( "clear", () => {
         messagesRef.current = [];
@@ -101,19 +106,32 @@ function Tift() {
               words => latestWordsRef.current = words,
               words => {getWords(words); setWords(latestWordsRef.current)});
 
+      const undoFn = () => {
+        engine.send(Input.undo());
+        engine.send(Input.getStatus());
+        engine.send(Input.getNextWords([]));
+      }
+
+      const redoFn = () => { 
+        engine.send(Input.redo());
+        engine.send(Input.getStatus());
+      engine.send(Input.getNextWords([]));
+      }
+
       // Create the engine and attach proxies
       const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
                         .insertProxy("optionItems", createStateMachineFilter(
                                                     ["restart", restartMachine],
                                                     ["colours", colourSchemePicker],
                                                     ["clear", logClearer]))
-                        .insertProxy("pauser", pauser);
+                        .insertProxy("pauser", pauser)
+                        .insertProxy("undoredo", getUndoRedoFilter(statusRef, undoFn, redoFn));
 
       // Create the output consuimer
       const outputConsumer = getOutputConsumer(
         message => updateMessages(messagesRef.current, messageEntry(message)), 
         words => latestWordsRef.current = words,
-        status => setStatus(status),
+        status => statusRef.current = status,
         (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
         saveGame,
         createControlHandler(pauser)
@@ -161,7 +179,7 @@ function Tift() {
     return (
         <React.Fragment>
             <Box position={"relative"} height="69%">
-              <Output entries={messagesRef.current ?? []} status={status} command={command.map(word => word.value).join(" ")}/>
+              <Output entries={messagesRef.current ?? []} status={statusRef.current.title} command={command.map(word => word.value).join(" ")}/>
             </Box>
             <Divider/>
             <Box position={"relative"} height="30%">
@@ -173,7 +191,7 @@ function Tift() {
 
 function getOutputConsumer(messageConsumer : (message : string) => void,
                            wordsConsumer : (words : Word[]) => void,
-                           statusConsumer : (status : string) => void,
+                           statusConsumer : (status : StatusType) => void,
                            logConsumer : (level : LogLevel, message : string) => void,
                            saveConsumer : (saveData : string) => void,
                            controlConsumer : (control : ControlType) => void ) : (outputMessage : OutputMessage) => void {
@@ -186,10 +204,11 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         wordsConsumer(outputMessage.words);
         break;
       case "Status":
-        statusConsumer(outputMessage.status.title);
+        statusConsumer(outputMessage.status);
         break;
       case "SaveState": 
-        saveConsumer(JSON.stringify(outputMessage.state));
+        const saveData = JSON.stringify(outputMessage.state);
+        saveConsumer(saveData);
         break;
       case "Log":
         logConsumer(outputMessage.level, outputMessage.message);
@@ -278,7 +297,6 @@ function createSimpleOption(name : string, clearFn : (forewarder : DecoratedForw
 
 function createControlHandler(pauser : Pauser.Pauser) : (control : ControlType) => void {
   return control => {
-    console.log(control.type);
     if (control.type === "pause") {
       pauser.pause(control.durationMillis);
     }

@@ -190,12 +190,26 @@ export class BasicEngine implements Engine {
 
   undo() {
     this.env.proxyManager.undo();
+
+    this.context = this.getContext();
+    // Run any plugin actions
+    const actionContext = this.createPluginActionContext(undefined, this.context);
+    this.startActions.forEach(action => action(actionContext));
+
     this.getStatus();
+    this.save();
   }
 
   redo() {
     this.env.proxyManager.redo();
+
+    this.context = this.getContext();
+    // Run any plugin actions
+    const actionContext = this.createPluginActionContext(undefined, this.context);
+    this.startActions.forEach(action => action(actionContext));
+
     this.getStatus();
+    this.save();
   }
 
   setConfig(newConfig : Config) {
@@ -248,7 +262,9 @@ export class BasicEngine implements Engine {
     const postExecutionContext = this.createPluginActionContext(oldContext, this.context);
     this.postExecutionActions.forEach(action => action(postExecutionContext));
 
-    if (verb && !isInstant(verb)) {
+    const hasTimePassed = verb && !isInstant(verb);
+
+    if (hasTimePassed) {
       // Run any contextual rules
       const allEntities = _.flatten(Object.values(this.context.entities))
       const contextualRules = allEntities.flatMap(entity => entity.rules.map(rule => [entity, rule] as [Entity,RuleFn]));
@@ -258,13 +274,17 @@ export class BasicEngine implements Engine {
       const globalRules = this.env.findObjs(obj => obj["type"] === "rule");
       globalRules.filter(rule => this.isRuleInScope(rule))
                  .forEach(rule => executeRule(rule, rule["__COMPILED__"], this.env));
+                 
+
+      // push the history
+      const pushed = this.env.proxyManager.pushHistory();
+
+      // Send the current save state
+      if (pushed) {
+        this.save();
+      }
     }
 
-    // push the history
-    this.env.proxyManager.pushHistory();
-
-    // Send the current save state
-    this.save(); // TODO use a proxy to detect if anything has changed? Can do this by checking the history accumulator
   }
 
   /**
@@ -298,7 +318,6 @@ export class BasicEngine implements Engine {
 
   getStatus() : void {
     const status = this.gameData.getStatus(this.env);
-
     this.output(Output.status(status, this.env.proxyManager.isUndoable(), this.env.proxyManager.isRedoable()));
   }
 

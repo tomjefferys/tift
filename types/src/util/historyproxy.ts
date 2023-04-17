@@ -68,8 +68,9 @@ export interface ProxyManager {
 
     /**
      * Push the latest accumulated actions into the undo queue
+     * returns true if there was anything to push
      */
-    pushHistory(): void;
+    pushHistory() : boolean;
 
     /**
      * Set the maximum undo level

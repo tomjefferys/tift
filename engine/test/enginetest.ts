@@ -564,9 +564,6 @@ test("Test reset", () => {
 
     // The key should be back in place
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
-
-    // Check the save data is empty
-    expect(saveData.data.baseHistory).toEqual([]);
 })
 
 test("Test command deduplication", () => {
@@ -756,6 +753,7 @@ test("Test hiding/revealing object", () => {
     executeAndTest(["examine", "rubbish"], { expected : ["You find a diamond"]} );
     executeAndTest(["look"], { expected : ["can", "diamond", "in rubbish"]});
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
+    executeAndTest(["wait"], {}); // TODO maybe introduce explict save command to force save data to be gnerated
 
     expect(saveData.data.baseHistory.length).toBe(2);
     expect(saveData.data.baseHistory[0]).toStrictEqual({"type":"Del","property":["entities","diamond","tags","1"]});
@@ -787,22 +785,28 @@ test("Test action with repeat", () => {
     engine = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
+    executeAndTest(["wait"], {});
 
     expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["tin can"], notExpected : ["mouldy bread", "banana peel"]});
+    executeAndTest(["wait"], {});
     expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":2}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["banana peel"], notExpected : ["tin can", "moudly bread"]});
+    executeAndTest(["wait"], {});
     expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
+    executeAndTest(["wait"], {});
     expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["tin can"], notExpected : ["mouldy bread", "banana peel"]});
+    executeAndTest(["wait"], {});
     expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":2}]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["banana peel"], notExpected : ["tin can", "moudly bread"]});
+    executeAndTest(["wait"], {});
     expect(saveData.data.baseHistory).toStrictEqual([{"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]);
 
 });
@@ -824,11 +828,13 @@ test("Test action with nested repeats", () => {
     engine = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
+    executeAndTest(["wait"], {});
     expect(saveData.data.baseHistory).toStrictEqual([
         {"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":1}]
     );
 
     executeAndTest(["examine", "rubbish"], { expected : ["bar"], notExpected : ["foo", "baz"]});
+    executeAndTest(["wait"], {});
     expect(saveData.data.baseHistory).toStrictEqual([
         {"type":"Set","property":["entities","rubbish","after","0","repeat","1","repeat","index"],"newValue":1},
         {"type":"Set","property":["entities","rubbish","after","0","repeat","index"],"newValue":0}]
@@ -915,6 +921,19 @@ test("Test conditional verbs", () => {
     executeAndTest(["sit", "armchair"], { expected : ["You sit down"] });
     executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "sitting"], notExpected : ["standing"]});
 
+    words = getWordIds(engine, []);
+    expect(words.includes("sit")).toBeFalsy();
+    expect(words.includes("stand")).toBeTruthy();
+
+    // Test undo resets things correctly
+    engine.send(Input.undo());
+    executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "standing"], notExpected : ["sitting"]});
+    words = getWordIds(engine, []);
+    expect(words.includes("sit")).toBeTruthy();
+    expect(words.includes("stand")).toBeFalsy();
+
+    engine.send(Input.redo());
+    executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "sitting"], notExpected : ["standing"]});
     words = getWordIds(engine, []);
     expect(words.includes("sit")).toBeFalsy();
     expect(words.includes("stand")).toBeTruthy();

@@ -97,19 +97,22 @@ test("Test firstTime", () => {
     expect(saveData.data.baseHistory).toStrictEqual([]);
 
     engine.send(Input.execute(["look"]));
-    expect(messages.join(" ").trim()).toEqual("The floor creaks as you enter the almost empty room, there is a black cat here.");
+    engine.send(Input.execute(["wait"]));
+    expect(messages.join(" ")).toContain("The floor creaks as you enter the almost empty room, there is a black cat here.");
     expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
     expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(1);
     messages.length = 0;
 
     engine.send(Input.execute(["look"]));
-    expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
+    engine.send(Input.execute(["wait"]));
+    expect(messages.join(" ")).toContain("An almost empty room, there is a black cat here.");
     expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
     expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(2);
     messages.length = 0;
 
     engine.send(Input.execute(["look"]));
-    expect(messages.join(" ").trim()).toEqual("An almost empty room, there is a black cat here.");
+    engine.send(Input.execute(["wait"]));
+    expect(messages.join(" ")).toContain("An almost empty room, there is a black cat here.");
     expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
     expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(3);
 });

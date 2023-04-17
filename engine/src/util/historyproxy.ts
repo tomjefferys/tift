@@ -108,8 +108,9 @@ export class ProxyManager implements Type.ProxyManager {
      * Push the latest accumultated history onto the undo queue
      * and add old entries to the base history
      */
-    pushHistory() {
-        if (this.accumlator.length) {
+    pushHistory() : boolean {
+        const hasNewHistory = this.accumlator.length > 0;
+        if (hasNewHistory) {
             // Clear the redo stack
             this.redoStack.length = 0;
             this.undoStack.push([...this.accumlator]);
@@ -121,6 +122,7 @@ export class ProxyManager implements Type.ProxyManager {
                 }
             }
         }
+        return hasNewHistory;
     }
 
     isUndoable() : boolean {
@@ -174,9 +176,10 @@ export class ProxyManager implements Type.ProxyManager {
      * The process of overwriting enables the history to be kept as short as possible
      * @param newAction 
      */
-    private recordAction(newAction : Action, previousValue : any) {
-        const undoAction = previousValue? createSet(newAction.property, previousValue, true)
-                                        : createDel(newAction.property);
+    private recordAction(newAction : Action, previousValue : unknown, newValue? : unknown) {
+        const undoAction = (previousValue !== undefined)
+                                    ? createSet(newAction.property, previousValue, isReplace(newValue, previousValue))
+                                    : createDel(newAction.property);
         this.accumlator.push({ redo : newAction, undo : undoAction});
     }
 
@@ -209,9 +212,8 @@ export class ProxyManager implements Type.ProxyManager {
                 if (this.recordHistory) {
                     const path = [...prefix, property];
                     const oldValue = Reflect.get(target, property);
-                    const isReplace = !_.isUndefined(oldValue) && objects.getType(oldValue) !== objects.getType(newValue);
                     const clonedNewValue = _.isObject(newValue)? _.cloneDeep(newValue) : newValue;
-                    const action = createSet(path, clonedNewValue, isReplace)
+                    const action = createSet(path, clonedNewValue, isReplace(oldValue, newValue));
                     this.recordAction(action, oldValue);
                 }
                 return Reflect.set(target, property, newValue);
@@ -226,6 +228,16 @@ export class ProxyManager implements Type.ProxyManager {
             }
         }
     }
+}
+
+/**
+ * Are we replacing an existing value, and is it a different type?
+ * Knowing this helps us stop unnecessarily storing empty objects in the history
+ */
+function isReplace(oldValue : unknown, newValue : unknown) : boolean {
+    // TODO the type comparison is to ensure the replace property gets stored only when we need it
+    // it's a bit confusing though, should consider removing this optimization (especially if save data gets compressed)
+    return !_.isUndefined(oldValue) && objects.getType(oldValue) !== objects.getType(newValue);
 }
 
 export function createProxy(original : Obj = {}, recordHistory = false, history? : History, undoLevels = 0) : [Obj, ProxyManager] {
