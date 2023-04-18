@@ -103,12 +103,12 @@ export class BasicEngine implements Engine {
     this.gameData.start(this.env);
 
     this.env.proxyManager.clearHistory();
-    this.env.proxyManager.startRecording();
 
     if (saveData) {
       const data = JSON.parse(saveData) as History;
       this.env.replayHistory(data);
     }
+    this.env.proxyManager.startRecording();
 
     this.context = this.getContext();
 

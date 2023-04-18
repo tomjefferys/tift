@@ -7,20 +7,20 @@ export type Action = Set | Del;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Set {
-    type : "Set",
-    property : PropType[],
-    newValue : any,
-    replace? : boolean
+    readonly type : "Set",
+    readonly property : PropType[],
+    readonly newValue : any,
+    readonly replace? : boolean
 }
 
 export interface Del {
-    type : "Del",
-    property : PropType[]
+    readonly type : "Del",
+    readonly property : PropType[]
 }
 
 export interface UndoEntry {
-    undo : Action,
-    redo : Action
+    readonly undo : Action,
+    readonly redo : Action
 }
 
 export interface History {

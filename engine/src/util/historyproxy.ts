@@ -100,8 +100,16 @@ export class ProxyManager implements Type.ProxyManager {
     }
 
     replayHistory(history : History) {
-        history.baseHistory.forEach(action => replayAction(this.baseProxy, action));
-        history.undoStack.forEach(undoTransaction => undoTransaction.forEach(undoStep => replayAction(this.baseProxy, undoStep.redo)))
+        const isRecording = this.recordHistory;
+        try {
+            history.baseHistory.forEach(action => replayAction(this.baseProxy, action));
+            history.undoStack.forEach(undoTransaction => undoTransaction.forEach(undoStep => replayAction(this.baseProxy, undoStep.redo)))
+            this.baseHistory = [...history.baseHistory];
+            this.undoStack = [...history.undoStack];
+            this.redoStack = [...history.redoStack];
+        } finally {
+            this.recordHistory = isRecording;
+        }
     }
 
     /**

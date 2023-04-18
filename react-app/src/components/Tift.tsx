@@ -56,9 +56,9 @@ function Tift() {
                 engine.send(Input.reset());
                 engine.send(Input.load(data));
                 engine.send(Input.start((saveData != null)? saveData : undefined));
+                engine.send(Input.getStatus());
                 getWords([]);
                 setWords(latestWordsRef.current);
-                engine.send(Input.getStatus());
               })
   
     const changeColourMode = (newMode : string) => {
