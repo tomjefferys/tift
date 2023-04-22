@@ -10,16 +10,30 @@ export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
 
 export type WordType = "word" | "option" | "control";
 
+export type PoSType = "start" | "verb" | "directObject" | "preposition" | "indirectObject" | "modifier";
+
+type Not<T,R> = R extends T ? never : R;
+
 export type StatusType = {
     title : string, 
     undoable : boolean,
     redoable : boolean
 }
 
-export interface Word extends IdValue<string> {
-    id : string;
-    value : string;
-    type : WordType;
+export type Word = OptionWord | ControlWord | PartOfSpeech
+
+export interface OptionWord extends IdValue<string> {
+    type : "option";
+}
+
+export interface ControlWord extends IdValue<string> {
+    type : "control";
+}
+
+export interface PartOfSpeech extends IdValue<string> {
+    type : "word";
+    partOfSpeech : PoSType
+    modifierType? : string;
 }
 
 export interface Print {

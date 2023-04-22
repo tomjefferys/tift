@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid, IconButton } from "@chakra-ui/react";
+import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid, IconButton, Grid, GridItem} from "@chakra-ui/react";
 import { ArrowBackIcon } from "@chakra-ui/icons";
 import { Word } from "tift-types/src/messages/output";
 import { WordType } from "tift-types/src/messages/output";
@@ -14,6 +14,7 @@ interface ControlProps {
 interface WordProps {
     word : Word;
     wordSelected : WordSelected;
+    disabled? : boolean;
 }
 
 interface WordButtonsProps {
@@ -65,9 +66,77 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
 
 const WordButtons = ({ wordTypes, allWords, wordSelected } : WordButtonsProps) => {
     const words = filterWords(allWords, wordTypes);
-    return (<SimpleGrid columns={4}>
+    return isDirectionPicker(words)
+        ? createDirectionPicker(words, wordSelected)
+        : (<SimpleGrid columns={4}>
                 {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
-            </SimpleGrid>)
+            </SimpleGrid>);
+}
+
+const isDirectionPicker = (words : Word[]) : boolean => {
+    const isAllDirection = words.filter(word => word.type === "word")
+                                .every(word => word.type === "word" && word.modifierType === "direction");
+    return isAllDirection && words.some(word => directionItems.find(([wordId, _cols]) => wordId === word.id));
+}
+
+// |-------|-------|-------|-------|----|
+// | north | north | north | up    | <- |
+// | east  |       | west  |       |    |
+// |-------|-------|-------|-------|----|
+// |   | east  | west  |   | down  |
+// |   |       |       |   |       |
+// |-------|-------|-------|-------|
+// | south | south | south |
+// | east  |       | west  |
+// |-------|-------|-------|
+
+type WordId = string;
+type Columns = number;
+type GridEntry = [WordId, Columns];
+
+// Generate a new Id each time space is called
+const space = (() => {
+    let num = 0;
+    return () => {
+        return "__SPACE__" + (num++);
+    }
+})();
+
+const directionItems : GridEntry[] = [
+    ["northwest", 2], ["north", 2], ["northeast", 2], ["up", 2], ["__BACKSPACE__", 1],
+    [space(),1],["west", 2], ["east", 2], [space(), 1], ["down", 2], [space(), 1],
+    ["southwest", 2], ["south",2], ["southeast", 2]
+];
+
+const alwaysDisplayed = ["north", "east", "south", "west"];
+
+const createDirectionPicker = (words : Word[], wordSelected : WordSelected) => {
+    const placedIds : string[] = [];
+    return (
+        <Grid templateColumns='repeat(9,1fr)'>
+            {directionItems.map(item => {
+                const [itemId, colSpan] = item;
+                const word = words.find(word => word.id === itemId);
+                if (word) {
+                    placedIds.push(word.id);
+                }
+                return (
+                    <GridItem colSpan={colSpan} key={itemId}>
+                        {(word !== undefined)
+                            ? (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>)
+                            : (alwaysDisplayed.includes(itemId)
+                                ? (<WordButton key={itemId} 
+                                               word={{id : itemId, value : itemId, type : "word", partOfSpeech : "modifier" }}
+                                               disabled={true}
+                                               wordSelected={wordSelected}/>)
+                                : (<></>))}
+                    </GridItem>
+                )
+            })}
+            {words.filter(word => !placedIds.find(id => id === word.id))
+                  .map(word => (<GridItem colSpan={1} key={word.id}><WordButton key={word.id} word={word} wordSelected={wordSelected}/></GridItem>))}
+        </Grid>
+    );
 }
 
 // Disable button hover effect on touchscreens
@@ -79,17 +148,19 @@ const touchScreenNoHover = {
   }, 
 }
 
-const WordButton = ({ word, wordSelected } : WordProps) => 
+const WordButton = ({ word, wordSelected, disabled } : WordProps) => 
         (word.type === "control" && ICONS[word.id])
             ? (<IconButton variant="ghost" 
                            aria-label="backspace"
                            onClick={(event) => wordSelected(event,word)}
                            icon={ICONS[word.id]}
-                           sx={touchScreenNoHover}/>)
+                           sx={touchScreenNoHover}
+                           isDisabled={disabled}/>)
             : (<Button variant="ghost"
                 value={word.id} 
                 onClick={(event) => wordSelected(event, word)}
-                sx={touchScreenNoHover}>{word.value}</Button>)
+                sx={touchScreenNoHover}
+                isDisabled={disabled}>{word.value}</Button>)
 
 const filterWords = (words : Word[], types : WordType[]) => words.filter(word => types.includes(word.type));
 

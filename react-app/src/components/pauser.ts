@@ -12,7 +12,7 @@ export interface Pauser {
   unpause : () => void;
 }
 
-const CONTINUE = [word("continue", "continue", "word")];
+const CONTINUE = [word("continue", "continue", "control")];
 
 export type PauseFilter = Filters<InputMessage, OutputMessage> & Pauser;
 

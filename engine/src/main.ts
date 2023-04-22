@@ -1,5 +1,5 @@
 import { BasicEngine, Engine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage, Word, WordType } from "tift-types/src/messages/output";
+import { LogLevel, OutputConsumer, OutputMessage, Word } from "tift-types/src/messages/output";
 import { InputMessage } from "tift-types/src/messages/input"
 import { BiConsumer, Consumer } from "tift-types/src/util/functions";
 import * as EngineProxy from "./engineproxy";
@@ -52,7 +52,7 @@ export function handleInput(message : InputMessage) : EngineProxy.InputHandler {
   return new EngineProxy.InputHandler(message);
 }
 
-export function word(id : string, value : string, type : WordType) : Word {
+export function word(id : string, value : string, type : "option" | "control") : Word {
   return { id, value, type }
 }
 

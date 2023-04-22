@@ -2,17 +2,15 @@ import _ from "lodash";
 import { ActionSource, emptyActionSource } from "./actionsource";
 import { Entity } from "./entity";
 import { getName } from "./nameable";
-import { IdValue, mkIdValue } from "./shared";
 import { matchAll, not } from "./util/functions";
 import { Predicate } from "tift-types/src/util/functions";
 import * as Verb from "./verb"
+import { PoSType, PartOfSpeech } from "tift-types/src/messages/output";
 
 type Verb = Verb.Verb;
 
 // Part of Speech
 type Part =  Start | MainVerb | DirectObject | IndirectObject | Preposition | Modifier | Preposition
-
-export type PoSType = "start" | "verb" | "directObject" | "preposition" | "indirectObject" | "modifier";
 
 type PoSObjectType<T> =
         T extends "start" ? Start :
@@ -49,7 +47,7 @@ export interface SentenceNode {
 
     size() : number;
 
-    getWords() : IdValue<string>[];
+    getWords() : PartOfSpeech[];
 
     getActions() : ActionSource;
 
@@ -111,29 +109,38 @@ interface Modifiable {
     modifier : (modType : string, modValue : string) => SentenceNode & Prepositionable & Modifiable
 }
 
-function getWords(node : SentenceNode) : IdValue<string>[] {
+function getWords(node : SentenceNode) : PartOfSpeech[] {
     let word = undefined;
     const part = node.part;
     switch(part.type) {
         case "start": 
-            word = mkIdValue("start", "");
+            word = makeWord("start", "", part.type);
             break;
         case "verb":
-            word = mkIdValue(part.verb.id, getName(part.verb));
+            word = makeWord(part.verb.id, getName(part.verb), part.type);
             break;
         case "directObject":
         case "indirectObject":
-            word = mkIdValue(part.entity.id, getName(part.entity));
+            word = makeWord(part.entity.id, getName(part.entity), part.type);
             break;
         case "preposition":
+            word = makeWord(part.value, part.value, part.type);
+            break;
         case "modifier":
-            word = mkIdValue(part.value, part.value);
+            word = makeWord(part.value, part.value, part.type, part.modType);
             break;
     }
 
     const words = (node.previous && node.previous.part.type !== "start")? getWords(node.previous) : [];
     words.push(word);
     return words;
+}
+
+function makeWord(id : string, value : string, partOfSpeech : PoSType, modifierType? : string) : PartOfSpeech {
+    if (partOfSpeech === "modifier" && !modifierType) {
+        throw new Error("Can't create modifer without a modifier type");
+    }
+    return { id, value, type : "word", partOfSpeech, modifierType };
 }
 
 /**

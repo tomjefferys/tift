@@ -1,12 +1,12 @@
 import { History } from "tift-types/src/util/historyproxy";
 import { ControlType } from "tift-types/src/messages/controltype";
-import { OutputMessage, WordType, Word, LogLevel, SetVar } from "tift-types/src/messages/output";
+import { OutputMessage, Word, LogLevel, SetVar } from "tift-types/src/messages/output";
 
 interface Stringable {
     toString : () => string
 }
 
-export const word = (id : string, value : string, type : WordType) => ({id, value, type});
+export const word = (id : string, value : string, type : "option" | "control") : Word => ({id, value, type});
 
 export function print(value : Stringable) : OutputMessage {
     return {

@@ -2,7 +2,6 @@ import { isIntransitive, isTransitive, Verb, VerbContext } from "./verb"
 import { VerbMap } from "./types"
 import { Entity, VerbMatcher } from "./entity"
 import { MultiDict } from "./util/multidict"
-import { IdValue } from "./shared"
 import * as _ from "lodash"
 import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
@@ -10,6 +9,7 @@ import * as Arrays from "./util/arrays"
 import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable } from "./command"
 import { Env } from "tift-types/src/env"
 import * as Logger from "./util/logger"
+import { PartOfSpeech, Word } from "tift-types/src/messages/output"
 
 // verb                                -- intranitive verb
 // verb object                         -- transitive verb
@@ -28,19 +28,19 @@ const INITIAL_STATE : Command = start();
 
 const logger = Logger.getLogger("commandsearch");
 
-export function getAllCommands(objs: ContextEntities, verbs: Verb[], env : Env) : IdValue<string>[][] {
+export function getAllCommands(objs: ContextEntities, verbs: Verb[], env : Env) : PartOfSpeech[][] {
   const context = buildSearchContext(objs, verbs, env);
   return searchAll(context)
           .filter(state => state.isValid())
           .map(state => state.getWords());
 }
 
-export function getNextWords(partial : string[], objs : ContextEntities, verbs : Verb[], env : Env) : IdValue<string>[] {
+export function getNextWords(partial : string[], objs : ContextEntities, verbs : Verb[], env : Env) : Word[] {
   const context = buildSearchContext(objs, verbs, env);
   const nextWords = searchNext(partial, context)
           .map(state => _.last(state.getWords()))
           .filter(Boolean)
-          .map(word => word as IdValue<string>);
+          .map(word => word as Word);
   return _.uniqBy(nextWords, word => word.id);
 }
 

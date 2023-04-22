@@ -1,7 +1,7 @@
 import { OutputConsumerBuilder } from "./main";
 import { Execute, GetWords, InputMessage } from "tift-types/src/messages/input";
 import * as Output from "./messages/output";
-import { OutputMessage, WordType, Word } from "tift-types/src/messages/output"
+import { OutputMessage, Word } from "tift-types/src/messages/output"
 import { Consumer} from "tift-types/src/util/functions";
 import { DuplexProxy, Filters, Forwarder } from "tift-types/src/util/duplexproxy";
 import { createDuplexProxy } from "./util/duplexproxy";
@@ -109,7 +109,7 @@ export function createEngineProxy(engineBuilder : (outputConsumer : Consumer<Out
  * @param action 
  * @returns a filter pair
  */
-export function createWordFilter(type : WordType, name : string, action : Consumer<Forwarder<InputMessage, OutputMessage>>) : Filters<InputMessage, OutputMessage> {
+export function createWordFilter(type : "option" | "control", name : string, action : Consumer<Forwarder<InputMessage, OutputMessage>>) : Filters<InputMessage, OutputMessage> {
     const commandId = "__" + type + "(" + name + ")__";
     return {
         requestFilter : (message, forwarder) => {
