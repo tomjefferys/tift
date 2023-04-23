@@ -44,10 +44,6 @@ interface CustomButtonGridProps {
     wordSelected : WordSelected; 
 }
 
-const ICONS : {[key:string]:React.ReactElement} = { 
-    "__BACKSPACE__" : <ArrowBackIcon/>
-}
-
 const PANELS : PanelDefinition[] = 
                 [{name : "Game",   wordTypes : ["word", "control"]}, 
                  {name : "Options", wordTypes : ["option"]}];
