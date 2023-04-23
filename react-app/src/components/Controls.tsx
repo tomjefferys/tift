@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, TabList, Tab, TabPanels, TabPanel, Button, Container, SimpleGrid, IconButton, Grid, GridItem} from "@chakra-ui/react";
+import { Tabs, TabList, Tab, TabPanels, TabPanel, Container, SimpleGrid, Grid, GridItem} from "@chakra-ui/react";
 import { ArrowBackIcon } from "@chakra-ui/icons";
 import { Word } from "tift-types/src/messages/output";
 import { WordType } from "tift-types/src/messages/output";
+import WordButton from "./WordButton";
 
-type WordSelected = (event : React.MouseEvent<HTMLButtonElement>, word : Word) => void;
+export type WordSelected = (event : React.MouseEvent<HTMLButtonElement>, word : Word) => void;
+
+interface GridCell {
+    wordId : string;
+    columns : number;
+    defaultValue? : string;
+}
+
+const cell = (wordId : string, columns = 1, defaultValue? : string) : GridCell => ({ wordId, columns, defaultValue });
 
 interface ControlProps {
     words : Word[];
     wordSelected : WordSelected;
-}
-
-interface WordProps {
-    word : Word;
-    wordSelected : WordSelected;
-    disabled? : boolean;
 }
 
 interface WordButtonsProps {
@@ -26,6 +29,19 @@ interface WordButtonsProps {
 interface PanelDefinition {
     name : string;
     wordTypes : WordType[];
+}
+
+interface SimpleButtonGridProps {
+    words : Word[];
+    columns : number;
+    wordSelected : WordSelected; 
+}
+
+interface CustomButtonGridProps {
+    words : Word[];
+    totalColumns : number;
+    cells : GridCell[];
+    wordSelected : WordSelected; 
 }
 
 const ICONS : {[key:string]:React.ReactElement} = { 
@@ -62,22 +78,41 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
                 </TabPanels>
             </Tabs>
         </Container>)
-    };
+};
 
 const WordButtons = ({ wordTypes, allWords, wordSelected } : WordButtonsProps) => {
     const words = filterWords(allWords, wordTypes);
-    return isDirectionPicker(words)
-        ? createDirectionPicker(words, wordSelected)
-        : (<SimpleGrid columns={4}>
-                {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
-            </SimpleGrid>);
+    let element : JSX.Element;
+    if (isDirectionPicker(words)) {
+        element = <CustomButtonGrid  words={words} totalColumns={9} cells={DIRECTION_GRID} wordSelected={wordSelected} />
+    } else if (isOptionPicker(words)) {
+        element = <CustomButtonGrid  words={words} totalColumns={4} cells={OPTION_GRID} wordSelected={wordSelected} />
+    } else {
+        element = <SimpleButtonGrid words={words} columns={4} wordSelected={wordSelected} />
+    }
+    return element;
 }
+
+const SimpleButtonGrid = ({ words, columns, wordSelected } : SimpleButtonGridProps) =>
+    <SimpleGrid columns={columns}>
+        {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
+    </SimpleGrid>
+
 
 const isDirectionPicker = (words : Word[]) : boolean => {
     const isAllDirection = words.filter(word => word.type === "word")
                                 .every(word => word.type === "word" && word.modifierType === "direction");
-    return isAllDirection && words.some(word => directionItems.find(([wordId, _cols]) => wordId === word.id));
+    return isAllDirection && words.some(word => DIRECTION_GRID.find(({ wordId }) => wordId === word.id));
 }
+
+const isOptionPicker = (words : Word[]) : boolean => words.every(word => word.type === "option");
+
+
+// Generate a new Id each time space is called
+const space = (() => {
+    let num = 0;
+    return (columns : number) => cell("__SPACE__" + (num++), columns);
+})();
 
 // |-------|-------|-------|-------|----|
 // | north | north | north | up    | <- |
@@ -89,44 +124,35 @@ const isDirectionPicker = (words : Word[]) : boolean => {
 // | south | south | south |
 // | east  |       | west  |
 // |-------|-------|-------|
-
-type WordId = string;
-type Columns = number;
-type GridEntry = [WordId, Columns];
-
-// Generate a new Id each time space is called
-const space = (() => {
-    let num = 0;
-    return () => {
-        return "__SPACE__" + (num++);
-    }
-})();
-
-const directionItems : GridEntry[] = [
-    ["northwest", 2], ["north", 2], ["northeast", 2], ["up", 2], ["__BACKSPACE__", 1],
-    [space(),1],["west", 2], ["east", 2], [space(), 1], ["down", 2], [space(), 1],
-    ["southwest", 2], ["south",2], ["southeast", 2]
+const DIRECTION_GRID : GridCell[] = [
+    cell("northwest", 2), cell("north", 2, "north"), cell("northeast", 2), cell("up", 2), cell("__BACKSPACE__", 1),
+    space(1), cell("west", 2, "west"), cell("east", 2, "east"), space(1), cell("down", 2), space(1),
+    cell("southwest", 2), cell("south", 2, "south"), cell("southeast", 2)
 ];
 
-const alwaysDisplayed = ["north", "east", "south", "west"];
 
-const createDirectionPicker = (words : Word[], wordSelected : WordSelected) => {
+const OPTION_GRID : GridCell[] = [
+    cell("__option(restart)__"), cell("__option(colours)__"), cell("__option(clear)__"), space(1),
+    cell("__option(undo)__", 1, "undo"), cell("__option(redo)__", 1, "redo")
+];
+
+const CustomButtonGrid = ({ words, totalColumns, cells, wordSelected } : CustomButtonGridProps) => {
     const placedIds : string[] = [];
+    const templateColumns = `repeat(${totalColumns},1fr)`;
     return (
-        <Grid templateColumns='repeat(9,1fr)'>
-            {directionItems.map(item => {
-                const [itemId, colSpan] = item;
-                const word = words.find(word => word.id === itemId);
+        <Grid templateColumns={templateColumns}>
+            {cells.map(({ wordId, columns, defaultValue }) => {
+                const word = words.find(word => word.id === wordId);
                 if (word) {
                     placedIds.push(word.id);
                 }
                 return (
-                    <GridItem colSpan={colSpan} key={itemId}>
+                    <GridItem colSpan={columns} key={wordId}>
                         {(word !== undefined)
                             ? (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>)
-                            : (alwaysDisplayed.includes(itemId)
-                                ? (<WordButton key={itemId} 
-                                               word={{id : itemId, value : itemId, type : "word", partOfSpeech : "modifier" }}
+                            : ((defaultValue)
+                                ? (<WordButton key={wordId} 
+                                               word={{id : wordId, value : defaultValue, type : "word", partOfSpeech : "modifier" }}
                                                disabled={true}
                                                wordSelected={wordSelected}/>)
                                 : (<></>))}
@@ -137,30 +163,7 @@ const createDirectionPicker = (words : Word[], wordSelected : WordSelected) => {
                   .map(word => (<GridItem colSpan={1} key={word.id}><WordButton key={word.id} word={word} wordSelected={wordSelected}/></GridItem>))}
         </Grid>
     );
-}
-
-// Disable button hover effect on touchscreens
-const touchScreenNoHover = {
- "@media(hover: none)": {
-    _hover: { 
-        bg: "hoverbg"
-    }
-  }, 
-}
-
-const WordButton = ({ word, wordSelected, disabled } : WordProps) => 
-        (word.type === "control" && ICONS[word.id])
-            ? (<IconButton variant="ghost" 
-                           aria-label="backspace"
-                           onClick={(event) => wordSelected(event,word)}
-                           icon={ICONS[word.id]}
-                           sx={touchScreenNoHover}
-                           isDisabled={disabled}/>)
-            : (<Button variant="ghost"
-                value={word.id} 
-                onClick={(event) => wordSelected(event, word)}
-                sx={touchScreenNoHover}
-                isDisabled={disabled}>{word.value}</Button>)
+} 
 
 const filterWords = (words : Word[], types : WordType[]) => words.filter(word => types.includes(word.type));
 

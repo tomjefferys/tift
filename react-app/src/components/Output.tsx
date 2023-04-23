@@ -1,5 +1,4 @@
 import StatusBar from "./StatusBar";
-import "./Output.css";
 import React, { useEffect, useRef } from "react";
 import { OutputEntry } from "../outputentry";
 import ChakraUIRenderer from 'chakra-ui-markdown-renderer';
