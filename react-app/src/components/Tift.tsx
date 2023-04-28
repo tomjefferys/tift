@@ -14,6 +14,9 @@ import { Box, Divider, useColorMode } from '@chakra-ui/react'
 import { InputMessage } from 'tift-types/src/messages/input';
 import * as Pauser from './pauser';
 import { getUndoRedoFilter } from "./undoredofilter";
+import { Optional } from "tift-types/src/util/optional";
+import { handleKeyboardInput } from "./keyboardhandler";
+import { BACKSPACE } from "./util";
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
@@ -22,11 +25,12 @@ const MESSAGES = "TIFT_MESSAGES";
 
 const SCROLL_BACK_ITEMS = 200;
 
-const BACKSPACE : Word = { type : "control", id : "__BACKSPACE__", value : "BACKSPACE" };
 
 function Tift() {
     const [command, setCommand] = useState<Word[]>([]);
     const [words, setWords] = useState<Word[]>([]);
+
+    const [partialWord, setPartialWord] = useState<string>("");
     const { setColorMode } = useColorMode();
 
     const statusRef = useRef<StatusType>({ title : "", undoable : false, redoable : false});
@@ -37,9 +41,11 @@ function Tift() {
 
     // Store the latest words from the engine as a ref, separate from
     // the word state, as we want to avoid the word state updating unnecessarilly
-    const latestWordsRef = useRef<Word[]>([]);
+    const latestWordsRef = useRef<Word[]>(words);
   
-    const engineRef = useRef<Engine | null>(null)
+    const engineRef = useRef<Engine | null>(null);
+
+    const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
     const getWords = (command : Word[]) => engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
     const execute = (command : Word[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
@@ -59,6 +65,7 @@ function Tift() {
                 engine.send(Input.getStatus());
                 getWords([]);
                 setWords(latestWordsRef.current);
+                setFilteredWords(latestWordsRef.current);
               })
   
     const changeColourMode = (newMode : string) => {
@@ -115,7 +122,7 @@ function Tift() {
       const redoFn = () => { 
         engine.send(Input.redo());
         engine.send(Input.getStatus());
-      engine.send(Input.getNextWords([]));
+        engine.send(Input.getNextWords([]));
       }
 
       // Create the engine and attach proxies
@@ -146,6 +153,23 @@ function Tift() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
   
+    // Add keyboard listener
+    useEffect(() => {
+      const handleKeyDown = (e : KeyboardEvent) : void => {
+        const result = handleKeyboardInput(partialWord, words, e);
+        if (result.selected) {
+          wordSelected(undefined, result.selected);
+        } else {
+          setFilteredWords(result.filtered);
+        }
+        setPartialWord(result.partial);
+        return;
+      }
+
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    });
+  
     // When command updated
     useEffect(() => {
       getWords(command);
@@ -165,9 +189,10 @@ function Tift() {
         }
       }
       setWords(latestWordsRef.current);
+      setFilteredWords(latestWordsRef.current);
     }, [command]);
   
-    const wordSelected = (_event : SyntheticEvent, word : Word) => {
+    const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
       if (word === BACKSPACE) {
         setCommand(command.slice(0, -2));
       } else if (word.type === "option") {
@@ -176,14 +201,20 @@ function Tift() {
         setCommand([...command, word]);
       }
     }
+
+    const getCommand = () : string => {
+      return command.map(word => word.value).join(" ")
+                + ((partialWord.length)? " " + partialWord : "");
+    }
+
     return (
         <React.Fragment>
             <Box position={"relative"} height="69%">
-              <Output entries={messagesRef.current ?? []} status={statusRef.current.title} command={command.map(word => word.value).join(" ")}/>
+              <Output entries={messagesRef.current ?? []} status={statusRef.current.title} command={getCommand()}/>
             </Box>
             <Divider/>
             <Box position={"relative"} height="30%">
-              <Controls words={words ?? []} wordSelected={wordSelected}/>
+              <Controls words={filteredWords ?? []} wordSelected={wordSelected}/>
             </Box>
         </React.Fragment>
       );
