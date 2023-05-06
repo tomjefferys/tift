@@ -96,7 +96,7 @@ export function matchPhrase(tree : WordTree, phrase : string, accumulator = "") 
 export function addLeaf(tree : WordTree, leaf : Word) {
     const [word, children] = tree;
     if (children.length) {
-        if (word !== ROOT && children.find(([word, _]) => word.id === leaf.id) == undefined) {
+        if (word !== ROOT && children.find(([word, _]) => word.id === leaf.id) === undefined) {
             children.push(create(leaf));
         }
         children.forEach(child => addLeaf(child, leaf));
