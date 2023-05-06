@@ -30,10 +30,8 @@ export function handleKeyboardInput(partialWord : string, allWords : Word[], e :
             wordMatch = wordMatches[0];
         } else if (wordMatches.length > 1) {
             words.partial = findCommonPrefix(wordMatches);
+            wordMatch = wordMatches.find(word => word.value === words.partial);
         } else { 
-            // FIXME This allows 'get down', but doesn't autocomplete 'get'
-            // How do we distinguish between a verb phrase and a verb, eg 'get' vs 'get down'
-            // Or noun vs noun phrase 'rubber gloves'
             words.partial += " ";
         }
     } else if (e.key === "Enter") {

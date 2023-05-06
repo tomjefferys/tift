@@ -1,5 +1,5 @@
 import { ControlType } from "./controltype";
-import { IdValue } from "../shared";
+import { IdValue, Taggable } from "../shared";
 import { History } from "../util/historyproxy";
 
 export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control
@@ -22,15 +22,15 @@ export type StatusType = {
 
 export type Word = OptionWord | ControlWord | PartOfSpeech
 
-export interface OptionWord extends IdValue<string> {
+export interface OptionWord extends IdValue<string>, Partial<Taggable> {
     type : "option";
 }
 
-export interface ControlWord extends IdValue<string> {
+export interface ControlWord extends IdValue<string>, Partial<Taggable> {
     type : "control";
 }
 
-export interface PartOfSpeech extends IdValue<string> {
+export interface PartOfSpeech extends IdValue<string>, Partial<Taggable> {
     type : "word";
     partOfSpeech : PoSType
     modifierType? : string;

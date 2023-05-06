@@ -17,6 +17,9 @@ import { getUndoRedoFilter } from "./undoredofilter";
 import { Optional } from "tift-types/src/util/optional";
 import { handleKeyboardInput } from "./keyboardhandler";
 import { BACKSPACE } from "./util";
+import * as WordTree from "./wordtree";
+
+type WordTreeType = WordTree.WordTree;
 
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
@@ -25,10 +28,11 @@ const MESSAGES = "TIFT_MESSAGES";
 
 const SCROLL_BACK_ITEMS = 200;
 
+type WordList = Word[];
 
 function Tift() {
-    const [command, setCommand] = useState<Word[]>([]);
-    const [words, setWords] = useState<Word[]>([]);
+    const [command, setCommand] = useState<WordList>([]);
+    const [words, setWords] = useState<WordTreeType>(WordTree.createRoot());
 
     const [partialWord, setPartialWord] = useState<string>("");
     const { setColorMode } = useColorMode();
@@ -41,13 +45,15 @@ function Tift() {
 
     // Store the latest words from the engine as a ref, separate from
     // the word state, as we want to avoid the word state updating unnecessarilly
-    const latestWordsRef = useRef<Word[]>(words);
+    const latestWordsRef = useRef<WordTreeType>(words);
   
     const engineRef = useRef<Engine | null>(null);
 
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
-    const getWords = (command : Word[]) => engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
+    const getWords = (command : Word[]) => {
+      engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
+    }
     const execute = (command : Word[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
   
     // Load a game file from the `public` folder
@@ -65,7 +71,7 @@ function Tift() {
                 engine.send(Input.getStatus());
                 getWords([]);
                 setWords(latestWordsRef.current);
-                setFilteredWords(latestWordsRef.current);
+                setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
               })
   
     const changeColourMode = (newMode : string) => {
@@ -110,7 +116,7 @@ function Tift() {
         saveMessages([]);
       });
       const pauser = Pauser.createPauseFilter(
-              words => latestWordsRef.current = words,
+              words => WordTree.set(latestWordsRef.current, command, words),
               words => {getWords(words); setWords(latestWordsRef.current)});
 
       const undoFn = () => {
@@ -134,10 +140,10 @@ function Tift() {
                         .insertProxy("pauser", pauser)
                         .insertProxy("undoredo", getUndoRedoFilter(statusRef, undoFn, redoFn));
 
-      // Create the output consuimer
+      // Create the output consumer
       const outputConsumer = getOutputConsumer(
         message => updateMessages(messagesRef.current, messageEntry(message)), 
-        words => latestWordsRef.current = words,
+        (command, words) => WordTree.set(latestWordsRef.current, command, words),
         status => statusRef.current = status,
         (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
         saveGame,
@@ -156,7 +162,8 @@ function Tift() {
     // Add keyboard listener
     useEffect(() => {
       const handleKeyDown = (e : KeyboardEvent) : void => {
-        const result = handleKeyboardInput(partialWord, words, e);
+        const result = handleKeyboardInput(partialWord, 
+                WordTree.getWithPrefix(words, command.map(word => word.value).join(" ")), e);
         if (result.selected) {
           wordSelected(undefined, result.selected);
         } else {
@@ -173,23 +180,24 @@ function Tift() {
     // When command updated
     useEffect(() => {
       getWords(command);
-      const words = latestWordsRef.current;
+      const words = WordTree.get(latestWordsRef.current, command);
       const engine = engineRef.current;
       const gameWords = words.filter(word => word.type === "word");
       if (engine && command.length && !gameWords.length) {
         messagesRef.current?.push(commandEntry(command.map(word => word.value).join(" ")))
         execute(command);
         engine.send(Input.getStatus());
+        latestWordsRef.current = WordTree.createRoot();
         setCommand([]);
         getWords([]);
       } else if (engine && command.length && gameWords.length) {
         // Add in backspace if it's not already there
         if (!words.includes(BACKSPACE)) {
-          latestWordsRef.current = [...words, BACKSPACE];
+          WordTree.addLeaf(latestWordsRef.current, BACKSPACE);
         }
       }
       setWords(latestWordsRef.current);
-      setFilteredWords(latestWordsRef.current);
+      setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, command.map(word => word.value).join(" ")));
     }, [command]);
   
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
@@ -198,7 +206,14 @@ function Tift() {
       } else if (word.type === "option") {
         setCommand([word]);
       } else {
-        setCommand([...command, word]);
+        if (word.type === "word" && word.tags && word.tags.includes("truncated")) {
+            const matchedPhrase = WordTree.matchPhrase(latestWordsRef.current, [...command, word].map(word => word.value).join(" ") );
+            if (matchedPhrase) { 
+              setCommand(matchedPhrase);
+            }
+        } else {
+          setCommand([...command, word]);
+        }
       }
     }
 
@@ -221,7 +236,7 @@ function Tift() {
 }
 
 function getOutputConsumer(messageConsumer : (message : string) => void,
-                           wordsConsumer : (words : Word[]) => void,
+                           wordsConsumer : (command : string[], words : Word[]) => void,
                            statusConsumer : (status : StatusType) => void,
                            logConsumer : (level : LogLevel, message : string) => void,
                            saveConsumer : (saveData : string) => void,
@@ -232,7 +247,7 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         messageConsumer(outputMessage.value);
         break;
       case "Words":
-        wordsConsumer(outputMessage.words);
+        wordsConsumer(outputMessage.command, outputMessage.words);
         break;
       case "Status":
         statusConsumer(outputMessage.status);
