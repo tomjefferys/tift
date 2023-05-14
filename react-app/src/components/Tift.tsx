@@ -1,23 +1,22 @@
 import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
-import { getEngine, Input, createEngineProxy, word, createStateMachineFilter, buildStateMachine, handleInput } from "tift-engine"
+import { getEngine, Input, createEngineProxy, createStateMachineFilter } from "tift-engine"
 import { Engine } from "tift-engine/src/engine";
 import { OutputConsumer, OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
 import { ControlType } from "tift-types/src/messages/controltype";
-import { MessageForwarder, DecoratedForwarder } from "tift-engine/src/engineproxy";
-import { MachineOps } from "tift-engine/src/util/statemachine";
+import { MessageForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
 import Controls from './Controls';
 import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from '../outputentry';
 import { Box, Divider, useColorMode } from '@chakra-ui/react'
-
-import { InputMessage } from 'tift-types/src/messages/input';
+import { createRestarter } from "../util/restarter";
+import { createColourSchemePicker } from "../util/colourschemepicker";
 import * as Pauser from './pauser';
-import { getUndoRedoFilter } from "./undoredofilter";
+import { getUndoRedoFilter } from "../util/undoredofilter";
 import { Optional } from "tift-types/src/util/optional";
-import { handleKeyboardInput } from "./keyboardhandler";
-import { BACKSPACE } from "./util";
-import * as WordTree from "./wordtree";
+import { handleKeyboardInput } from "../util/keyboardhandler";
+import { BACKSPACE, createSimpleOption } from "../util/util";
+import * as WordTree from "../util/wordtree";
 
 type WordTreeType = WordTree.WordTree;
 
@@ -266,79 +265,6 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
         throw new Error("Unsupported OutputMessage Type: " + outputMessage.type);
     }
   }
-}
-
-function createRestarter(restartFn : (forwarder : DecoratedForwarder) => void) {
-    const restartOptions = ["restart", "cancel"].map(value => word(value, value, "option"));
-
-    return buildStateMachine("prompt", ["prompt", {
-        onEnter : (forwarder : DecoratedForwarder) => {
-            forwarder.print("All progress will be lost. Are you sure?");
-            forwarder.words([], restartOptions);
-        },
-        onAction : (input : InputMessage, forwarder : DecoratedForwarder) => {
-            let finished = false;
-            handleInput(input)
-                .onCommand(["restart"], () => {
-                    forwarder.print("restarting");
-                    restartFn(forwarder);
-                    finished = true;
-                })
-                .onCommand(["cancel"], () => {
-                    forwarder.print("cancelled");
-                    finished = true;
-                })
-                .onAnyCommand(command => forwarder.warn("Unexpected command: " + command.join(" ")))
-                .onGetWords(() => forwarder.words([], restartOptions))
-                .onAny(message => forwarder.send(message));
-            return finished ? "__TERMINATE__" : undefined;
-        }
-    }]);
-}
-
-function createColourSchemePicker(schemeChanger : (scheme : string) => void) {
-    const colourSchemes = ["light", "dark"].map(value => word(value, value, "option"));
-    return buildStateMachine("prompt", ["prompt", {
-        onEnter : (forwarder : DecoratedForwarder) => {
-            forwarder.print("Select a colour scheme: light, dark");
-            forwarder.words([], colourSchemes);
-        },
-        onAction : (input : InputMessage, forwarder : DecoratedForwarder) => {
-            let finished = false;
-            handleInput(input)
-                .onCommand(["light"], () => {
-                    forwarder.print("changing to light scheme");
-                    schemeChanger("light");
-                    finished = true;
-                })
-                .onCommand(["dark"], () => {
-                    forwarder.print("changing to dark scheme");
-                    schemeChanger("dark");
-                    finished = true;
-                })
-                .onCommand(["cancel"], () => {
-                    forwarder.print("cancelled");
-                    finished = true;
-                })
-                .onAnyCommand(command => forwarder.warn("Unexpected command: " + command.join(" ")))
-                .onGetWords(() => forwarder.words([], colourSchemes))
-                .onAny(message => forwarder.send(message));
-            return finished ? "__TERMINATE__" : undefined;
-        }
-    }]);
-}
-
-function createSimpleOption(name : string, clearFn : (forewarder : DecoratedForwarder) => void) {
-    return buildStateMachine(name, [name, {
-        onEnter : (forwarder : DecoratedForwarder, machine : MachineOps) => {
-            clearFn(forwarder);
-            machine.setStatus("FINISHED");
-        },
-        onAction : (input : InputMessage, forwarder : DecoratedForwarder) => {
-            forwarder.send(input);
-            return undefined;
-        }
-    }]);
 }
 
 function createControlHandler(pauser : Pauser.Pauser) : (control : ControlType) => void {

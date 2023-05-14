@@ -2,7 +2,7 @@ import { Word } from "tift-types/src/messages/output";
 import { Optional } from "tift-types/src/util/optional";
 import { BACKSPACE } from "./util";
 
-const ALPHA_NUMERIC_REGEX = /^[a-zA-Z0-9]$/;
+//const ALPHA_NUMERIC_REGEX = /^[a-zA-Z0-9]$/;
 
 export interface Words {
     partial : string;
