@@ -1,5 +1,5 @@
 import { getEngine, Input } from "tift-engine"
-import { Engine } from "tift-engine/src/engine";
+import { Engine } from "tift-types/src/engine";
 import * as _ from "lodash"
 import { IdValue } from "tift-engine/src/shared";
 import { OutputMessage } from "tift-types/src/messages/output";

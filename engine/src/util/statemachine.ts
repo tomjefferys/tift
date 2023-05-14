@@ -1,13 +1,7 @@
 import { Optional } from "tift-types/src/util/optional";
-
-export type StateName = string;
+import { Status, StateMachine, StateName, MachineOps } from "tift-types/src/util/statemachine"
 
 export const TERMINATE : StateName = "__TERMINATE__";
-
-export interface MachineOps {
-    setState(state : StateName) : void;
-    setStatus(status : Status) : void;
-}
 
 type StateFn<T> = (obj : T, machine : MachineOps) => void;
 type InputFn<M,T> = (input : M, obj : T) => Optional<StateName>;
@@ -19,22 +13,6 @@ export interface State<TIn,TObj> {
     onEnter? : StateFn<TObj>;
     onAction : InputFn<TIn,TObj>;
     onLeave? : StateFn<TObj>;
-}
-
-/**
- * The current status of the state machine
- * Machine should move from NOT_STARTED -> RUNNING -> FINISHED
- * It can then be restarted
- */
-export type Status = "NOT_STARTED" | "RUNNING" | "FINISHED";
-
-/**
- * A state machine
- */
-export interface StateMachine<TIn,TObj> {
-    start : (obj : TObj) => void;
-    send : (input : TIn, obj : TObj) => void;
-    getStatus : () => Status;
 }
 
 type StateMap<TIn,TObj> = {[key:StateName]:State<TIn,TObj>};

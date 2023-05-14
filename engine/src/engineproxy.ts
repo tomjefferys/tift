@@ -6,17 +6,16 @@ import { Consumer} from "tift-types/src/util/functions";
 import { DuplexProxy, Filters, Forwarder } from "tift-types/src/util/duplexproxy";
 import { createDuplexProxy } from "./util/duplexproxy";
 import * as _ from "lodash";
-import { Engine } from "./engine";
-import { StateMachine } from "./util/statemachine";
+import { Engine } from "tift-types/src/engine";
+import { StateMachine } from "tift-types/src/util/statemachine";
 import { Optional } from "tift-types/src/util/optional";
-
-export type MessageForwarder = Forwarder<InputMessage, OutputMessage>;
+import { MessageForwarder, DecoratedForwarder } from "tift-types/src/engineproxy";
 
 export type EngineProxy = DuplexProxy<InputMessage, OutputMessage>;
 
 const ENGINE_PROXY_NAME = "ENGINE";
 
-export class DecoratedForwarder implements MessageForwarder {
+export class DecoratedForwarderImpl implements DecoratedForwarder {
 
     readonly delegate : MessageForwarder;
 
@@ -155,7 +154,7 @@ export function createStateMachineFilter(...machines : MachineInfo[] ) : Filters
 
     return {
         requestFilter : (message, forwarder) => {
-            const decoratedFormatter = new DecoratedForwarder(forwarder);
+            const decoratedFormatter = new DecoratedForwarderImpl(forwarder);
             let handled = false;
             if (activeMachine?.getStatus() === "RUNNING") {
                 activeMachine.send(message, decoratedFormatter);

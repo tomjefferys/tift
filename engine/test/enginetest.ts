@@ -1,10 +1,11 @@
-import { BasicEngine, Engine } from "../src/engine";
+import { BasicEngine } from "../src/engine";
 import { EngineBuilder } from "../src/builder/enginebuilder";
 import { listOutputConsumer, SaveData, getEmptyHistory } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN } from "./testutils/testobjects";
 import { STANDARD_VERBS } from "./testutils/testutils";
 import { StatusType } from "tift-types/src/messages/output";
+import { Engine } from "tift-types/src/engine"
 
 let messages : string[];
 let wordsResponse : string[];

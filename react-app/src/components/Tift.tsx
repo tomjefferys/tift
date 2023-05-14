@@ -1,7 +1,7 @@
 import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter } from "tift-engine"
-import { Engine } from "tift-engine/src/engine";
+import { Engine } from "tift-types/src/engine";
 import { OutputConsumer, OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder } from "tift-types/src/engineproxy";

@@ -1,16 +1,15 @@
-import { BasicEngine, Engine } from "./engine";
+import { BasicEngine } from "./engine";
 import { LogLevel, OutputConsumer, OutputMessage, Word } from "tift-types/src/messages/output";
 import { InputMessage } from "tift-types/src/messages/input"
 import { BiConsumer, Consumer } from "tift-types/src/util/functions";
 import * as EngineProxy from "./engineproxy";
 import { Filters } from "tift-types/src/util/duplexproxy";
-import * as StateMachine from "./util/statemachine";
+import { State, buildStateMachine }  from "./util/statemachine";
 import { ControlType } from "tift-types/out/messages/controltype";
 import { getDefaultGameBehaviour } from "./builder/behaviour";
-
-type StateMachine = StateMachine.StateMachine<InputMessage, EngineProxy.DecoratedForwarder>;
-type StateName = StateMachine.StateName;
-type State = StateMachine.State<InputMessage, EngineProxy.DecoratedForwarder>;
+import { Engine } from "tift-types/src/engine";
+import { DecoratedForwarder, MessageForwarder } from "tift-types/src/engineproxy";
+import { StateMachine, StateName } from "tift-types/src/util/statemachine";
 
 /**
  * Main method for getting an engine
@@ -32,7 +31,7 @@ export function createEngineProxy(engineBuilder : (outputConsumer : OutputConsum
   return EngineProxy.createEngineProxy(engineBuilder);
 }
 
-export function createCommandFilter(name : string, action : Consumer<EngineProxy.MessageForwarder>) : Filters<InputMessage, OutputMessage> {
+export function createCommandFilter(name : string, action : Consumer<MessageForwarder>) : Filters<InputMessage, OutputMessage> {
   return EngineProxy.createWordFilter("option", name, action);
 }
 
@@ -44,8 +43,8 @@ export function createStateMachineFilter(...machines : EngineProxy.MachineInfo[]
   return EngineProxy.createStateMachineFilter(...machines);
 }
 
-export function buildStateMachine(initialState : StateName, ...states : [StateName, State][]) : StateMachine {
-  return StateMachine.buildStateMachine<InputMessage, EngineProxy.DecoratedForwarder>(initialState, ...states);
+export function createStateMachine(initialState : StateName, ...states : [StateName, State<InputMessage, DecoratedForwarder>][]) : StateMachine<InputMessage, DecoratedForwarder> {
+  return buildStateMachine(initialState, ...states);
 }
 
 export function handleInput(message : InputMessage) : EngineProxy.InputHandler {

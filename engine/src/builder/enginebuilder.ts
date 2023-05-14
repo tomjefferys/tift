@@ -3,7 +3,8 @@ import { VerbBuilder } from "./verbbuilder";
 import { EntityBuilder } from "./entitybuilder";
 import { Entity } from "../entity";
 import { getString, forEach, forEachEntry, ifExists, getObj } from "../util/objects";
-import { BasicEngine, Engine, EngineState } from "../engine";
+import { BasicEngine, EngineState } from "../engine";
+import { Engine } from "tift-types/src/engine";
 import { DEFAULT_VERBS } from "./defaultverbs";
 import { getObjs } from "../yamlparser";
 import { Obj } from "../util/objects"

@@ -1,7 +1,7 @@
-import { word, buildStateMachine, handleInput } from "tift-engine"
+import { word, createStateMachine, handleInput } from "tift-engine"
 import { InputMessage } from 'tift-types/src/messages/input';
-import { DecoratedForwarder } from "tift-engine/src/engineproxy";
-import { StateMachine } from "tift-engine/src/util/statemachine";
+import { DecoratedForwarder } from "tift-types/src/engineproxy";
+import { StateMachine } from "tift-types/src/util/statemachine";
 
 
 const CONFIRM = "restart";
@@ -19,7 +19,7 @@ const CANCELLED_MESSAGE = "cancelled";
 export function createRestarter(restartFn : (forwarder : DecoratedForwarder) => void) : StateMachine<InputMessage, DecoratedForwarder> {
     const restartOptions = [CONFIRM,CANCEL].map(value => word(value, value, "option"));
 
-    return buildStateMachine("prompt", ["prompt", {
+    return createStateMachine("prompt", ["prompt", {
         onEnter : (forwarder : DecoratedForwarder) => {
             forwarder.print("All progress will be lost. Are you sure?");
             forwarder.words([], restartOptions);

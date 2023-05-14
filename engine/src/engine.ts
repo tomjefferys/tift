@@ -21,14 +21,11 @@ import { Obj } from "./util/objects"
 import * as Logger from "./util/logger";
 import { Behaviour } from "./builder/behaviour"
 import { AUTOLOOK } from "./builder/plugins/autolook"
+import { Engine } from "tift-types/src/engine"
 
 const DEFAULT_UNDO_LEVELS = 10;
 
 const logger = Logger.getLogger("engine");
-
-export interface Engine {
-  send(message : InputMessage) : void;
-}
 
 export interface EngineState {
   getEntities : () => Entity[];
