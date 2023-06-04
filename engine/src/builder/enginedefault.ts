@@ -41,6 +41,10 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
         DEFAULT_FUNCTIONS.write(env);
         return mkResult(null);
     }),
+    say : bindParams(["value"], env => {
+        DEFAULT_FUNCTIONS.write(env.newChild({"value" : `"${env.get("value")}"`}));
+        return mkResult(null);
+    }),
     not : bindParams(["value"], env => {
         return mkResult(!env.get("value"));
     }),
