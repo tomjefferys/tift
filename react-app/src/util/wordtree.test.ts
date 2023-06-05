@@ -1,5 +1,5 @@
 import { Word } from "tift-types/src/messages/output";
-import * as WordTree from "../util/wordtree"
+import * as WordTree from "./wordtree"
 
 
 test("Test create/set/get", () => {
