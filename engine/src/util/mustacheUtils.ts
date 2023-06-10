@@ -25,7 +25,8 @@ export function formatEntityString(env : Env, entity : Obj, entityField : string
                 entity[LOOK_COUNT] = lookCount;
             }
             return lookCount === 0;
-        }
+        },
+        "br" : "\n  \n" // Force a line break
     };
 
     const specialsEnv = entitiesEnv.newChild(specialFunctions);
