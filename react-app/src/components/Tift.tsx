@@ -251,9 +251,10 @@ function getOutputConsumer(messageConsumer : (message : string) => void,
       case "Status":
         statusConsumer(outputMessage.status);
         break;
-      case "SaveState": 
-        const saveData = JSON.stringify(outputMessage.state);
-        saveConsumer(saveData);
+      case "SaveState": {
+          const saveData = JSON.stringify(outputMessage.state);
+          saveConsumer(saveData);
+        }
         break;
       case "Log":
         logConsumer(outputMessage.level, outputMessage.message);
