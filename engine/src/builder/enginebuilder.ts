@@ -15,8 +15,16 @@ import * as RuleBuilder from "./rulebuilder";
 import { Env } from "tift-types/src/env";
 import { getDefaultGameBehaviour } from "./behaviour";
 import { Config, ConfigValueType } from "../config";
+import { bindParams } from "../script/parser";
+import { Optional } from "tift-types/src/util/optional";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
+
+type FnDef = {
+    name : string, 
+    params : string[]
+}
+
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
@@ -36,6 +44,7 @@ export class EngineBuilder {
      
     withObj(obj : Obj) : EngineBuilder {
         try {
+            compileFunctions(obj);
             switch(obj["type"]) {
                 case "room":
                     this.entities.push(makeRoom(obj));
@@ -257,4 +266,35 @@ function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
     forEachEntry(obj["modifiers"], (type, mods) => {
         forEach(mods, mod => builder.withVerbModifier(type, getString(mod)))
     });
+}
+
+/**
+ * functions can be defined as 
+ * myFunc(): print("hello world")
+ * add(var1, var2): var1 + var2
+ * @param obj 
+ */
+function compileFunctions(obj : Obj) : Obj {
+    Object.entries(obj).map(
+        ([name, value]) => {
+            const fnDef = getFunctionDef(name);
+            if (fnDef) {
+                const thunk = RuleBuilder.evaluateRule(value);
+                obj[fnDef.name] = bindParams(fnDef.params, (env : Env) => thunk.resolve(env));
+            }
+        }
+    );
+    return obj;
+}
+
+function getFunctionDef(str : string) : Optional<FnDef> {
+    const re = /^(\w+)\(([\w, ]*)\)$/;
+    const match = re.exec(str);
+    let result = undefined;
+    if (match) {
+        const name = match[1];
+        const params = match[2].split(",").map(param => param.trim());
+        result = {name, params};
+    }
+    return result;
 }

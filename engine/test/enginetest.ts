@@ -1191,6 +1191,23 @@ test("Test string functions", () => {
     executeAndTest(["wait"], { expected : ["Time passes", "ello", "11"], notExpected : ["failed"] });
 });
 
+test("Test custom function", () => {
+   builder.withObj({
+    ...THE_ROOM,
+    "foo()" : "print('bar')",
+    "baz(qux)" : "print('baz' + qux)",
+    "corge(grault, xyzzy)" : "print(grault + xyzzy)"
+   }); 
+   builder.withObj({
+        id : "customFns",
+        type : "rule",
+        do : ["theRoom.foo()", "theRoom.baz('one')", "theRoom.corge('two', 'three')"]
+   })
+   engine = builder.build();
+   engine.send(Input.start());
+   executeAndTest(["wait"], { expected : [ "bar", "bazone", "twothree"]});
+});
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]
