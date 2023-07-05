@@ -1208,6 +1208,39 @@ test("Test custom function", () => {
    executeAndTest(["wait"], { expected : [ "bar", "bazone", "twothree"]});
 });
 
+test("Test location change events", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        exits : {
+            south : "southRoom"
+        },
+    });
+    builder.withObj({
+        ...SOUTH_ROOM,
+        exits : {
+            north : "northRoom"
+        }
+    });
+    builder.withObj({
+        id : "ball",
+        type : "item",
+        location : "northRoom",
+        "onMove(newLoc)" : "print('The ball bounces to ' + newLoc.id)"
+    });
+    builder.withObj({
+        id : "moveBall",
+        type : "rule",
+        repeat : ["move(ball).to(southRoom)", "move(ball).to(northRoom)"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["The ball bounces to southRoom"]});
+    executeAndTest(["wait"], { expected : ["The ball bounces to northRoom"]});
+    executeAndTest(["wait"], { expected : ["The ball bounces to southRoom"]});
+    executeAndTest(["wait"], { expected : ["The ball bounces to northRoom"]});
+
+})
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]

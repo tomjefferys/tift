@@ -16,6 +16,9 @@ export function getLocation(entity : Obj) : string {
 
 export function setLocation(env : Env, entity : Obj, location : string | object) : void {
     const locationEntity = Entities.getEntity(env, location);
+    if (entity["onMove"]) {
+        entity["onMove"](env.newChild({"newLoc" : locationEntity }));
+    }
     entity[LOCATION] = locationEntity.id;
 }
 
@@ -23,7 +26,7 @@ export function doMove(env : Env, entityId : string | object, destinationId : st
     try {
         const entity = Entities.getEntity(env, entityId);
         const destination = Entities.getEntity(env, destinationId);
-        entity[LOCATION] = destination.id;
+        setLocation(env, entity, destination);
     } catch(e) {
         throw new Error(`Could not move entity [${Errors.toStr(entityId)}] to [${Errors.toStr(destinationId)}]\n${Errors.getCauseMessage(e)}`);
     }
