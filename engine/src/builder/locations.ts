@@ -4,23 +4,60 @@ import * as MultiDict from "../util/multidict";
 import { Obj } from "tift-types/src/util/objects";
 
 import * as Errors from "../util/errors";
+import { Optional } from "tift-types/src/util/optional";
+import { ARGS } from "../script/parser";
 
 export const DARK = "dark";
 const LIGHTSOURCE = "lightSource";
 
 export const LOCATION = "location";
 
+const ON_MOVE = "onMove";
+const ON_REMOVE_CHILD = "onRemoveChild";
+const ON_ADD_CHILD = "onAddChild";
+
 export function getLocation(entity : Obj) : string {
     return entity[LOCATION];
 }
-
 export function setLocation(env : Env, entity : Obj, location : string | object) : void {
     const locationEntity = Entities.getEntity(env, location);
-    if (entity["onMove"]) {
-        entity["onMove"](env.newChild({"newLoc" : locationEntity }));
+    const oldLocation = getLocation(entity);
+    if (oldLocation) {
+        callOnRemoveChild(env, entity, Entities.getEntity(env, oldLocation));
     }
+    callOnMove(env, entity, locationEntity);
     entity[LOCATION] = locationEntity.id;
+    callOnAddChild(env, entity, locationEntity);
 }
+
+function callOnRemoveChild(env : Env, entity : Obj, location : Optional<Obj>) {
+    callAncestorFunction(env, entity, location, ON_REMOVE_CHILD);
+}
+ 
+function callOnAddChild(env : Env, entity : Obj, location : Obj) {
+    callAncestorFunction(env, entity, location, ON_ADD_CHILD);
+}
+
+function callOnMove(env : Env, entity : Obj, location : Obj) {
+    if (entity[ON_MOVE]) {
+        entity[ON_MOVE](env.newChild({ARGS : [location]}));
+    }
+}
+
+function callAncestorFunction(env : Env, entity: Obj, location : Optional<Obj>, fnName : string) {
+    let handled = false;
+    if (location && location[fnName]) {
+        const newEnv = env.newChild({[ARGS] : [entity]});
+        handled = location[fnName](newEnv);
+    }
+    if (location && !handled) {
+        const parentLocationId  = getLocation(location);
+        if (parentLocationId) {
+            callAncestorFunction(env, entity, Entities.getEntity(env, parentLocationId), fnName );
+        }
+    }
+}
+
 
 export function doMove(env : Env, entityId : string | object, destinationId : string | object) {
     try {

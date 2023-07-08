@@ -1214,12 +1214,16 @@ test("Test location change events", () => {
         exits : {
             south : "southRoom"
         },
+        "onAddChild(child)" : "print('north room hello ' + child.id)",
+        "onRemoveChild(child)" : "print('north room goodbye ' + child.id)"
     });
     builder.withObj({
         ...SOUTH_ROOM,
         exits : {
             north : "northRoom"
-        }
+        },
+        "onAddChild(child)" : "print('south room hello ' + child.id)",
+        "onRemoveChild(child)" : "print('south room goodbye ' + child.id)"
     });
     builder.withObj({
         id : "ball",
@@ -1234,10 +1238,14 @@ test("Test location change events", () => {
     })
     engine = builder.build();
     engine.send(Input.start());
-    executeAndTest(["wait"], { expected : ["The ball bounces to southRoom"]});
-    executeAndTest(["wait"], { expected : ["The ball bounces to northRoom"]});
-    executeAndTest(["wait"], { expected : ["The ball bounces to southRoom"]});
-    executeAndTest(["wait"], { expected : ["The ball bounces to northRoom"]});
+    executeAndTest(["wait"], { expected : ["The ball bounces to southRoom", "north room goodbye ball", "south room hello ball"],
+                               notExpected : ["south room goodbye ball", "north room hello ball"]});
+    executeAndTest(["wait"], { expected : ["The ball bounces to northRoom", "south room goodbye ball", "north room hello ball"],
+                               notExpected : ["north room goodbye ball", "south room hello ball"]});
+    executeAndTest(["wait"], { expected : ["The ball bounces to southRoom", "north room goodbye ball", "south room hello ball"],
+                               notExpected : ["south room goodbye ball", "north room hello ball"]});
+    executeAndTest(["wait"], { expected : ["The ball bounces to northRoom", "south room goodbye ball", "north room hello ball"],
+                               notExpected : ["north room goodbye ball", "south room hello ball"]});
 
 })
 
