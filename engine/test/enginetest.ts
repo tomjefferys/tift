@@ -1208,6 +1208,31 @@ test("Test custom function", () => {
    executeAndTest(["wait"], { expected : [ "bar", "bazone", "twothree"]});
 });
 
+test("Test custom function scope", () => {
+   builder.withObj({
+    ...THE_ROOM,
+    "myvar" : "bar",
+    "foo1()" : "print('foo1' + myvar)",
+    "foo2()" : "print('foo2' + this.myvar)",
+    "foo3()" : "print('foo3' + theRoom.myvar)",
+    "foo4()" : "print('foo4' + anItem.itemvar)",
+    "baz(qux)" : "print(qux + anItem.fnItem())"
+   }); 
+   builder.withObj({
+    ...ORDINARY_ITEM,
+    "itemvar" : "xyzzy",
+    "fnItem()" : "'quux'"
+   })
+   builder.withObj({
+        id : "customFns",
+        type : "rule",
+        do : ["theRoom.foo1()", "theRoom.foo2()", "theRoom.foo3()", "theRoom.foo4()","theRoom.baz('qux')"]
+   })
+   engine = builder.build();
+   engine.send(Input.start());
+   executeAndTest(["wait"], { expected : [ "foo1bar", "foo2bar", "foo3bar", "foo4xyzzy", "quxquux"]});
+});
+
 test("Test location change events", () => {
     builder.withObj({
         ...NORTH_ROOM,

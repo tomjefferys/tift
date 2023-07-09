@@ -330,7 +330,7 @@ function evaluateAssignmentExpression(assignment : AssignmentExpression) : Thunk
 export function bindParams(params : string[], fn : EnvFn, closureEnv : Optional<Env> = undefined) : EnvFn {
     return env => {
         const args = env.get(ARGS);
-        const scope = closureEnv ?? env
+        const scope = closureEnv?.newChild() ?? env
         for(let i=0; i<args.length && i<params.length; i++) {
             scope.def(params[i], args[i]);
         }

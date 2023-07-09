@@ -22,6 +22,7 @@ import * as Logger from "./util/logger";
 import { Behaviour } from "./builder/behaviour"
 import { AUTOLOOK } from "./builder/plugins/autolook"
 import { Engine } from "tift-types/src/engine"
+import { compileFunctions } from "./builder/functionbuilder";
 
 const DEFAULT_UNDO_LEVELS = 10;
 
@@ -129,6 +130,12 @@ export class BasicEngine implements Engine {
     objs.forEach(obj => props[obj.id as string] = obj); // FIXME reject anything without an id
     entities.forEach(entity => props["entities"][entity.id] = entity);
     verbs.forEach(verb => props["verbs"][verb.id] = verb);
+
+    // Now compile any functions
+    objs.forEach(obj => compileFunctions(undefined, obj.id, this.env));
+    entities.forEach(entity => compileFunctions("entities", entity.id, this.env));
+    entities.forEach(verb => compileFunctions("verbs", verb.id, this.env));
+
   }
 
   getContext() : CommandContext {
