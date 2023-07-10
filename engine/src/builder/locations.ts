@@ -4,8 +4,11 @@ import * as MultiDict from "../util/multidict";
 import { Obj } from "tift-types/src/util/objects";
 
 import * as Errors from "../util/errors";
+import * as Output from "./output";
+import * as Player from "./player";
 import { Optional } from "tift-types/src/util/optional";
 import { ARGS } from "../script/parser";
+import { EnvFn, mkResult } from "../script/thunk";
 
 export const DARK = "dark";
 const LIGHTSOURCE = "lightSource";
@@ -50,7 +53,7 @@ function callAncestorFunction(env : Env, entity: Obj, location : Optional<Obj>, 
         const newEnv = env.newChild({[ARGS] : [entity]});
         handled = location[fnName](newEnv);
     }
-    if (location && !handled) {
+    if (location && !handled) { // FIXME handled is not a boolean
         const parentLocationId  = getLocation(location);
         if (parentLocationId) {
             callAncestorFunction(env, entity, Entities.getEntity(env, parentLocationId), fnName );
@@ -104,4 +107,38 @@ export function closeExit(env : Env, roomId : string, direction : string) {
     const room = Entities.getEntity(env, roomId);
     delete room.exits[direction];
     MultiDict.remove(room.verbModifiers, "direction", direction);
+}
+
+/**
+ * Find the exit (if present) that leads directly from one roon to another 
+ */
+export function findExit(env : Env, fromId : string, toId : string) : Optional<string> {
+    const fromRoom = Entities.getEntity(env, fromId);
+    const toRoom = Entities.getEntity(env, toId);
+    const allExits = fromRoom["exits"];
+    const [exit, _room] = Object.entries(allExits)
+                                .find(([_name, value]) => value === toRoom.id)
+                                    ?? [undefined, undefined];
+    return exit;
+}
+
+export function makeOnMove() : EnvFn {
+    return env => {
+        const entityId = env.get("id");
+        const entity = Entities.getEntity(env, entityId);
+        const oldLocation = entity[LOCATION];
+        const newLocation = env.get("newLoc");
+        const leaveDirection = findExit(env, oldLocation, newLocation);
+        const arriveDirection = findExit(env, newLocation, oldLocation);
+
+        const name = entity["name"] ?? entity["id"];
+        const playerLocation = Player.getLocation(env);
+        if (playerLocation === oldLocation) {
+            Output.write(env, name + " leaves " + leaveDirection);
+        }
+        if (playerLocation === newLocation.id) {
+            Output.write(env, name + " enters from the " + arriveDirection);
+        }
+        return mkResult(true);
+    };
 }

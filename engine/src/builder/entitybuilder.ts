@@ -70,7 +70,7 @@ export class EntityBuilder {
     return this;
   }
 
-  withProp(name : string, value : string) {
+  withProp(name : string, value : unknown) {
     this.props[name] = value; 
     return this;
   }

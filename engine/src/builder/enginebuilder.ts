@@ -15,6 +15,7 @@ import * as RuleBuilder from "./rulebuilder";
 import { Env } from "tift-types/src/env";
 import { getDefaultGameBehaviour } from "./behaviour";
 import { Config, ConfigValueType } from "../config";
+import * as Location from "./locations";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -152,6 +153,12 @@ export function makeItem(obj : Obj) : Entity {
     if (_.has(obj, "desc")) {
         builder.withVerb("examine");
     }
+    if (tags.includes("NPC")) {
+        if (!obj["onMove(newLoc)"]) {
+            builder.withProp("onMove(newLoc)", Location.makeOnMove());
+        }
+    }
+
     return builder.build();
 }
 

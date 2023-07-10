@@ -1272,7 +1272,39 @@ test("Test location change events", () => {
     executeAndTest(["wait"], { expected : ["The ball bounces to northRoom", "south room goodbye ball", "north room hello ball"],
                                notExpected : ["north room goodbye ball", "south room hello ball"]});
 
-})
+});
+
+test("NPC implicit onMove", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        exits : {
+            south : "southRoom"
+        },
+    });
+    builder.withObj({
+        ...SOUTH_ROOM,
+        exits : {
+            north : "northRoom"
+        },
+    });
+    builder.withObj({
+        id : "ball",
+        name : "the ball",
+        type : "item",
+        location : "northRoom",
+        tags : ["NPC"]
+    });
+    builder.withObj({
+        id : "moveBall",
+        type : "rule",
+        repeat : ["move(ball).to(southRoom)", "move(ball).to(northRoom)"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["wait"], { expected : ["the ball leaves south"] });
+    executeAndTest(["wait"], { expected : ["the ball enters from the south"] });
+});
 
 interface ExpectedStrings {
     expected? : string[],

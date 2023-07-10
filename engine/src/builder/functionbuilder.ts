@@ -4,6 +4,8 @@ import { Optional } from "tift-types/src/util/optional";
 import { bindParams } from "../script/parser";
 import * as Path from "../path";
 import * as RuleBuilder from "./rulebuilder";
+import * as _ from "lodash";
+import { EnvFn } from "../script/thunk";
 
 const FN_REGEX = /^(\w+)\(([\w, ]*)\)$/;
 
@@ -34,8 +36,15 @@ function compileObjFunctions(obj : Obj, scope : Env) : Obj {
         ([name, value]) => {
             const fnDef = getFunctionDef(name);
             if (fnDef) {
-                const thunk = RuleBuilder.evaluateRule(value);
-                obj[fnDef.name] = bindParams(fnDef.params, (env : Env) => thunk.resolve(env), scope);
+                // If value is a string compile it, else assume it's an envFunction
+                let envFn : EnvFn;
+                if (_.isFunction(value)) {
+                    envFn = value;
+                } else {
+                    const thunk = RuleBuilder.evaluateRule(value);
+                    envFn = (env : Env) => thunk.resolve(env);
+                }
+                obj[fnDef.name] = bindParams(fnDef.params, envFn, scope);
             }
         }
     );
