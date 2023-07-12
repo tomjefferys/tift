@@ -6,7 +6,7 @@ import * as Errors from "../util/errors";
 import _ from "lodash";
 
 // Utility functions pertaining to an entity
-
+export const ENTITY_TYPE = "entity";
 const NS_ENTITIES = "entities";
 
 export function getEntity(env : Env, entityParam : unknown) : Obj {
@@ -20,8 +20,7 @@ export function getEntity(env : Env, entityParam : unknown) : Obj {
 }
 
 export function isEntity(obj : Obj) : boolean {
-    // TODO find a better way of doing this
-    return Boolean(obj.type);
+    return obj.type === ENTITY_TYPE;
 }
 
 export function isEntityVisible(obj : Obj) : boolean {

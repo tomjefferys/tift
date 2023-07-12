@@ -19,8 +19,6 @@ type Entity = Entity.Entity;
 type EntityDict = MultiDict.MultiDict<Entity>;
 type Verb = Verb.Verb;
 
-// TODO put these somewhere better
-const ROOM = "room";
 const START = "start"
 
 
@@ -103,7 +101,7 @@ class DefaultBehaviour implements Behaviour {
     }
         
     private findStartingLocation(env : Env) : string {
-        const startingLocs = env.findObjs(obj => obj["type"] === ROOM && Entity.hasTag(obj, START));
+        const startingLocs = env.findObjs(obj => obj["type"] === Entities.ENTITY_TYPE && Entity.hasTag(obj, START));
         if (startingLocs.length == 0) {
             throw new Error("No starting location defined");
         }

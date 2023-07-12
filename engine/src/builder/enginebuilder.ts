@@ -21,13 +21,11 @@ type ActionerBuilder = VerbBuilder | EntityBuilder;
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
-    verbs : Verb[] = [];
-    entities : Entity[] = [];
     objs : Obj[] = [];
     config : Config = {};
 
     constructor() {
-        DEFAULT_VERBS.forEach(verb => this.verbs.push(verb));
+        DEFAULT_VERBS.forEach(verb => this.objs.push(verb));
     }
 
     withOutput(outputConsumer : OutputConsumer) {
@@ -37,17 +35,16 @@ export class EngineBuilder {
      
     withObj(obj : Obj) : EngineBuilder {
         try {
-            //compileFunctions(obj);
             switch(obj["type"]) {
                 case "room":
-                    this.entities.push(makeRoom(obj));
+                    this.objs.push(makeRoom(obj));
                     break;
                 case "object":
                 case "item":
-                    this.entities.push(makeItem(obj));
+                    this.objs.push(makeItem(obj));
                     break;
                 case "verb":
-                    this.verbs.push(makeVerb(obj));
+                    this.objs.push(makeVerb(obj));
                     break;
                 case "rule":
                     this.objs.push(makeRule(obj));
@@ -86,7 +83,7 @@ export class EngineBuilder {
     }
     
     addTo(engine : BasicEngine) {
-        engine.addContent(this.entities, this.verbs, this.objs);
+        engine.addContent(this.objs);
     }
 }
 

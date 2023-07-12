@@ -7,6 +7,7 @@ import { RuleFn } from "../entity";
 import { getString, getArray } from "../util/objects";
 import { buildVerbMatcher } from "../entity";
 import _ from "lodash";
+import { ENTITY_TYPE } from "./entities";
 
 export class EntityBuilder {
   id : string;
@@ -89,6 +90,7 @@ export class EntityBuilder {
 
   build() : Entity {
     return {...this.props,
+            type : ENTITY_TYPE,
             id : this.id,
             verbs : this.verbs,
             verbModifiers : this.verbModifiers,

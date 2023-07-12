@@ -23,6 +23,7 @@ import { Behaviour } from "./builder/behaviour"
 import { AUTOLOOK } from "./builder/plugins/autolook"
 import { Engine } from "tift-types/src/engine"
 import { compileFunctions } from "./builder/functionbuilder";
+import { ENTITY_TYPE } from "./builder/entities"
 
 const DEFAULT_UNDO_LEVELS = 10;
 
@@ -57,6 +58,11 @@ const BASE_CONFIG : Config = {
 const BASE_PROPS = { "entities" : {}, "verbs" : {}};
 const BASE_NS = [["entities"], ["verbs"]];
 const BASE_CONTEXT = { entities : {}, verbs : [] }
+
+const TYPE_NAMESPACES : {[key : string]: string}= {
+  ENTITY_TYPE : "entities",
+  "verb" : "verbs"
+}
  
 
 export class BasicEngine implements Engine {
@@ -124,19 +130,19 @@ export class BasicEngine implements Engine {
     }
   }
 
-  addContent(entities : Entity[], verbs : Verb[], objs : Obj[]) {
+  addContent(objs : Obj[]) {
     const props = this.env.properties;
-    // These need adding to the readonly root Env
-    objs.forEach(obj => props[obj.id as string] = obj); // FIXME reject anything without an id
-    entities.forEach(entity => props["entities"][entity.id] = entity);
-    verbs.forEach(verb => props["verbs"][verb.id] = verb);
-
-    // Now compile any functions
-    objs.forEach(obj => compileFunctions(undefined, obj.id, this.env));
-    entities.forEach(entity => compileFunctions("entities", entity.id, this.env));
-    entities.forEach(verb => compileFunctions("verbs", verb.id, this.env));
-
+    objs.forEach(obj => {
+      let namespace = TYPE_NAMESPACES[obj["type"]];
+      if (namespace) {
+        props[namespace][obj.id] = obj;
+      } else {
+        props[obj.id] = obj;
+      }
+      compileFunctions(namespace, obj.id, this.env);
+    });
   }
+
 
   getContext() : CommandContext {
     return this.gameData.getContext(this.env);
@@ -183,7 +189,7 @@ export class BasicEngine implements Engine {
   loadData(message : Load) {
     const builder = new EngineBuilder();
     builder.fromYaml(message.data);
-    this.addContent(builder.entities, builder.verbs, builder.objs);
+    this.addContent(builder.objs);
   }
 
   save() {
@@ -326,7 +332,7 @@ export class BasicEngine implements Engine {
   }
 
   getEntities() : Entity[] {
-    return this.env.findObjs(obj => obj["type"] === "room" || obj["type"] === "object" || obj["type"] === "item") as Entity[];
+    return this.env.findObjs(obj => obj["type"] === ENTITY_TYPE) as Entity[];
   }
 
   getVerbs() : Verb[] {
