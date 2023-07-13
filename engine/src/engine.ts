@@ -133,7 +133,7 @@ export class BasicEngine implements Engine {
   addContent(objs : Obj[]) {
     const props = this.env.properties;
     objs.forEach(obj => {
-      let namespace = TYPE_NAMESPACES[obj["type"]];
+      const namespace = TYPE_NAMESPACES[obj["type"]];
       if (namespace) {
         props[namespace][obj.id] = obj;
       } else {
