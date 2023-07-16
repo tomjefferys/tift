@@ -5,7 +5,11 @@ import { bindParams } from "../script/parser";
 import * as Path from "../path";
 import * as RuleBuilder from "./rulebuilder";
 import * as _ from "lodash";
-import { EnvFn } from "../script/thunk";
+import { EnvFn, mkResult } from "../script/thunk";
+import { formatString } from "../util/mustacheUtils";
+
+
+export const IMPLICIT_FUNCTION = "__IMPLICIT_FUNCTION__";
 
 const FN_REGEX = /^(\w+)\(([\w, ]*)\)$/;
 
@@ -15,14 +19,42 @@ type FnDef = {
 }
 
 export function compileFunctions(namespace : Optional<string>, id : string, env : Env) {
-    const path = Path.fromValueList((namespace == undefined)? [id] : [namespace, id]);
-    const obj = env.get(path);
-    // Set up the scope
-    // TODO we're doing something similar in phaseaction and mustacheUtils. Consider a "scopeutils" 
-    const nsEnv = (namespace != undefined)? env.newChild(env.createNamespaceReferences([namespace])) : env; 
-    const scope = nsEnv.newChild({"this" : obj})
-                       .newChild(obj);
+    const obj = getObj(namespace, id, env);
+    const scope = getScope(namespace, obj, env);
     compileObjFunctions(obj, scope);
+}
+
+export function compileStrings(namespace : Optional<string>, id : string, env : Env) {
+    const obj = getObj(namespace, id, env);
+    const scope = getScope(namespace, obj, env);
+    compileObjStrings(obj, scope);
+}
+
+function getObj(namespace : Optional<string>, id : string, env : Env) {
+    const path = Path.fromValueList((namespace == undefined)? [id] : [namespace, id]);
+    return env.get(path);
+}
+
+function getScope(namespace : Optional<string>, obj : Obj, env : Env) : Env {
+    const nsEnv = (namespace != undefined)? env.newChild(env.createNamespaceReferences([namespace])) : env; 
+    return nsEnv.newChild({"this" : obj}).newChild(obj);
+}
+
+// 'compiles' any strings containing a mustache expression 
+// to a function, so it can be evalutated at run time
+function compileObjStrings(obj : Obj, scope : Env) : void {
+    Object.entries(obj)
+          .filter(([_name, value]) => {
+            return _.isString(value) && value.includes("{{")
+          })
+          .filter(([name, _value]) => name !== "desc")
+          .forEach(([name, value]) => {
+            const strFn = Object.assign(
+             (_env : Env) => mkResult(formatString(scope, value)),
+             {[IMPLICIT_FUNCTION] : true} // Define "implicit" as a constant.  Maybe call it "__IMPLICIT_FUNCTION__"
+            );
+            obj[name] = strFn;
+          });
 }
 
 /**

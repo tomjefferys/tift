@@ -22,7 +22,7 @@ import * as Logger from "./util/logger";
 import { Behaviour } from "./builder/behaviour"
 import { AUTOLOOK } from "./builder/plugins/autolook"
 import { Engine } from "tift-types/src/engine"
-import { compileFunctions } from "./builder/functionbuilder";
+import { compileFunctions, compileStrings } from "./builder/functionbuilder";
 import { ENTITY_TYPE } from "./builder/entities"
 
 const DEFAULT_UNDO_LEVELS = 10;
@@ -140,8 +140,10 @@ export class BasicEngine implements Engine {
         props[obj.id] = obj;
       }
       compileFunctions(namespace, obj.id, this.env);
+      compileStrings(namespace, obj.id, this.env);
     });
   }
+
 
 
   getContext() : CommandContext {

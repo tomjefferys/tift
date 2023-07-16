@@ -9,6 +9,7 @@ import  jsepAssignment, { AssignmentExpression } from '@jsep-plugin/assignment';
 import { Optional } from 'tift-types/src/util/optional';
 import { rethrowCompileError } from '../util/errors';
 import { formatString } from '../util/mustacheUtils';
+import { IMPLICIT_FUNCTION } from '../builder/functionbuilder';
 
 // Configure Jsep
 jsep.plugins.register(jsepAssignment as unknown as IPlugin);
@@ -190,10 +191,14 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
         envFn = env => {
             const obj = objThunk.resolve(env).getValue() as {[key:string]:unknown}
             const property = propertyThunk.resolve(env).getValue() as string;
-            return mkResult(obj[property]);
+            return expandImplicitFunctions(env, obj[property]);
         }
     }
     return mkThunk(envFn, memberExpression, builtInProperty? "property" : "normal");
+}
+
+function expandImplicitFunctions(env : Env, value : unknown) : Result {
+    return mkResult((value && _.has(value, IMPLICIT_FUNCTION))? (value as EnvFn)(env) : value);
 }
 
 function getBuiltInProperty(expression : Expression) : string | undefined {
@@ -238,7 +243,10 @@ function evaluateIdentifier(identifier : Identifier) : Thunk {
             envFn = _ => mkResult(identifier.name);
             break;
         case("normal"):
-            envFn = env => mkResult(env.get(identifier.name));
+            envFn = env => {
+                const value = env.get(identifier.name);
+                return expandImplicitFunctions(env, value);
+            }
             break;
     }
     return mkThunk(envFn, identifier, type);

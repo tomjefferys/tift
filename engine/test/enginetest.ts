@@ -1320,6 +1320,19 @@ test("Test mustache in expression strings", () => {
     executeAndTest(["wait"], { expected : ["this.foo == northRoom"] });
 });
 
+test("Test mustache in object property", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        foo : "bar",
+        qux : "qux {{foo}}",
+        baz : "xyzzy",
+        rules : ["print(this.baz)", "print(this.qux)"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["xyzzy", "qux bar"]});
+});
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]
