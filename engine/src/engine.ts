@@ -60,7 +60,7 @@ const BASE_NS = [["entities"], ["verbs"]];
 const BASE_CONTEXT = { entities : {}, verbs : [] }
 
 const TYPE_NAMESPACES : {[key : string]: string}= {
-  ENTITY_TYPE : "entities",
+  [ENTITY_TYPE] : "entities",
   "verb" : "verbs"
 }
  
