@@ -8,6 +8,7 @@ import { isPath } from '../path';
 import  jsepAssignment, { AssignmentExpression } from '@jsep-plugin/assignment';
 import { Optional } from 'tift-types/src/util/optional';
 import { rethrowCompileError } from '../util/errors';
+import { formatString } from '../util/mustacheUtils';
 
 // Configure Jsep
 jsep.plugins.register(jsepAssignment as unknown as IPlugin);
@@ -292,8 +293,12 @@ function evaluateThis(_this : ThisExpression) : Thunk {
 }
 
 function evaluateLiteral(literal : Literal) : Thunk {
-    const envFn : EnvFn =  _ => mkResult(literal.value);
+    const envFn : EnvFn =  _.isString(literal.value)? mkStringFn(literal.value) : _ => mkResult(literal.value);
     return mkThunk(envFn, literal);
+}
+
+function mkStringFn(str : string) : EnvFn {
+    return env => mkResult(formatString(env, str));
 }
 
 function evaluateCompound(compound : Compound) {

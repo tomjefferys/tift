@@ -53,3 +53,37 @@ export function formatEntityString(env : Env, entity : Obj, entityField : string
         throw new Error(`Error formatting ${entity.id}.${entityField}\n"${template.trim()}"\n${getCauseMessage(e)}`);
     }
 }
+
+export function formatString(env : Env, str : string) : string {
+    const specialFunctions = {
+        "choose" : () => (text : string, render : (str : string) => void) => {
+           const choice = _.sample(text.split("||"));
+           return choice? render(choice) : "";
+        },
+        "sometimes" : () => (text : string, render : (str : string) => void) => {
+            return (_.random(0,1,true) < 0.5)? render(text) : "";
+        },
+        "br" : "\n  \n" // Force a line break
+    };
+
+    const specialsEnv = env.newChild(specialFunctions);
+
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const handler = {
+        has : (_target : any, key : any) => {
+            return specialsEnv.has(key); 
+        },
+        get : (_target : any, key : any) => {
+            const value = specialsEnv.get(key);
+            return isFound(value) ? value : "NOT FOUND";
+        }
+    }
+    const proxy = new Proxy({}, handler);
+
+    try {
+        return Mustache.render(str, proxy);
+    } catch(e) {
+        throw new Error(`Error formatting ${str}`);
+    }
+
+}

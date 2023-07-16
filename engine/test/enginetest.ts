@@ -1306,6 +1306,20 @@ test("NPC implicit onMove", () => {
     executeAndTest(["wait"], { expected : ["the ball enters from the south"] });
 });
 
+test("Test mustache in expression strings", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        foo : "bar",
+        rules : {
+            repeat: [["print('this.foo == {{this.foo}}')", "this.foo = '{{this.id}}'"], "print('this.foo == {{this.foo}}')"]
+        }
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["this.foo == bar"] });
+    executeAndTest(["wait"], { expected : ["this.foo == northRoom"] });
+});
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]

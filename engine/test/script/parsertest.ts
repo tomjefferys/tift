@@ -415,3 +415,14 @@ test("Test match operator using 'this', not a match", () => {
     expect(messages.length).toBe(0);
     expect(result.getValue()).toBeFalsy();
 })
+
+test("Test mustache expansion", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+            set(a, 3),
+            set(b, a + 7),
+            write("{{a}} plus 7 equals {{b}}"),
+        `);
+    fn(env);
+    expect(messages).toContain("3 plus 7 equals 10");
+});
