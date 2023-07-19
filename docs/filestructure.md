@@ -5,3 +5,34 @@ YAML is a human readable markup language, similar to json.
 
 An example might look like:
 
+```yaml
+---
+room: northRoom,
+desc: The room is dark and square
+tags: 
+  - start
+---
+item: ball
+name: The ball
+desc: The ball is red and bouncy
+tags:
+  - carryable
+  - pushable
+---
+```
+
+This contains two YAML documents separated by a `---`.  They both describe entities.  `northRoom` is a location, and `ball` is an item.
+
+YAML has nice syntax for multiline strings, alowing for long descriptions
+```yaml
+---
+room: northRoom
+desc: |
+  The room is dark and square.
+  In the middle is a fountain which gurgles with muddy water
+tags:
+  - start
+---
+```
+
+YAML documents are typically either [entities](entities.md), [verbs](verbs.md), or [rules](rules.md)
