@@ -44,14 +44,15 @@ function getScope(namespace : Optional<string>, obj : Obj, env : Env) : Env {
 // to a function, so it can be evalutated at run time
 function compileObjStrings(obj : Obj, scope : Env) : void {
     Object.entries(obj)
+        // If value id object, just call compileObJStrings on it, but create an outer scope for the current object
           .filter(([_name, value]) => {
             return _.isString(value) && value.includes("{{")
           })
           .filter(([name, _value]) => name !== "desc")
           .forEach(([name, value]) => {
             const strFn = Object.assign(
-             (_env : Env) => mkResult(formatString(scope, value)),
-             {[IMPLICIT_FUNCTION] : true} // Define "implicit" as a constant.  Maybe call it "__IMPLICIT_FUNCTION__"
+             (_env : Env) => mkResult(formatString(scope, value, [obj, name])),
+             {[IMPLICIT_FUNCTION] : true}
             );
             obj[name] = strFn;
           });

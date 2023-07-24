@@ -5,12 +5,11 @@ import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Player from "./player";
 import { Env } from "tift-types/src/env";
-import { formatEntityString } from "../util/mustacheUtils";
+import { formatString } from "../util/mustacheUtils";
 import { VerbBuilder } from "./verbbuilder";
 import { Obj } from "tift-types/src/util/objects";
 import { getName, Nameable } from "../nameable";
 import * as Mustache from "mustache"
-import { Optional } from "tift-types/src/util/optional";
 import * as Output from "./output";
 
 const LOOK_TEMPLATE = 
@@ -31,12 +30,12 @@ You can see:
 
 const LOOK_ITEM_TEMPLATE = `{{name}}{{#location}} ( in {{.}} ){{/location}}`;
 
-export const LOOK_COUNT = "__LOOK_COUNT__";
-
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
 
-    const desc = (location["desc"] && formatEntityString(env, location, "desc")) 
+    const descScope = env.newChild(env.createNamespaceReferences(["entities"]));
+
+    const desc = (location["desc"] && formatString(descScope, location["desc"], [location, "desc"])) 
                         ?? location["name"]
                         ?? location["id"];
 
@@ -66,12 +65,6 @@ export const LOOK_FN = (env : Env) => {
 
     const output = Mustache.render(LOOK_TEMPLATE, view, { item : LOOK_ITEM_TEMPLATE });
 
-    // Update look count if it exists. It should only have been created if needed by one of the mustache functions
-    // FIXME related code is split between here and mustacheUtils. Should try to move it to one place.
-    const lookCount : Optional<number> = location[LOOK_COUNT];
-    if (lookCount !== undefined) {
-        location[LOOK_COUNT] = lookCount + 1;
-    }
     Output.write(env, output);
 
     return mkResult(true);
@@ -177,7 +170,8 @@ const EXAMINE = phaseActionBuilder("examine")
             matchBuilder().withVerb(matchVerb("examine")).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                const output = formatEntityString(env, item, "desc");
+                const output = item["desc"] ? formatString(env, item["desc"], [item, "desc"])
+                                            : (item["name"] ?? item["id"]);
                 Output.write(env, output);
                 return mkResult(true);
             }));

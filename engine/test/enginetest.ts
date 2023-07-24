@@ -1333,6 +1333,36 @@ test("Test mustache in object property", () => {
     executeAndTest(["wait"], { expected : ["xyzzy", "qux bar"]});
 });
 
+test("Test mustache firstTime in expression string", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        foo : "bar",
+        baz : "qux",
+        rules : [
+            "print('{{#firstTime}}{{this.foo}}{{/firstTime}}{{^firstTime}}{{this.baz}}{{/firstTime}}')"
+        ]
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["Error formatting"]});
+})
+
+test("Test mustache firstTime in property string", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        foo : "bar",
+        baz : "qux",
+        xyzzy: '{{#firstTime}}{{this.foo}}{{/firstTime}}{{^firstTime}}{{this.baz}}{{/firstTime}}',
+        rules : [
+            "print(this.xyzzy)"
+        ]
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["bar"], notExpected : ["qux"]});
+    executeAndTest(["wait"], { expected : ["qux"], notExpected : ["bar"]});
+});
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]

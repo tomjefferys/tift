@@ -1,4 +1,4 @@
-import { formatEntityString } from "../../src/util/mustacheUtils";
+import { formatString } from "../../src/util/mustacheUtils";
 import { createRootEnv } from "../../src/env";
 import { defaultOutputConsumer } from "../testutils/testutils";
 import { EngineBuilder } from "../../src/builder/enginebuilder";
@@ -12,7 +12,9 @@ test("Test formatEntityString", () => {
         "desc" : "Foo: {{foo}}, Baz: {{baz}}"
     };
 
-    const result = formatEntityString(env, entity, "desc");
+    const scope = env.newChild(env.createNamespaceReferences(["entities"]));
+
+    const result = formatString(scope, entity["desc"], [entity, "desc"]);
     expect(result).toEqual("Foo: corge, Baz: qux");
 });
 
@@ -73,8 +75,8 @@ test("Test choose", () => {
         "foo" : "corge",
         "desc" : "{{#choose}}{{foo}}||{{baz}}{{/choose}}"
     };
-
-    const result = formatEntityString(env, entity, "desc");
+    const scope = env.newChild(env.createNamespaceReferences(["entities"]));
+    const result = formatString(scope, entity["desc"], [entity, "desc"]);
     expect(["corge","qux"]).toContain(result);
 });
 
@@ -99,21 +101,21 @@ test("Test firstTime", () => {
     engine.send(Input.execute(["look"]));
     engine.send(Input.execute(["wait"]));
     expect(messages.join(" ")).toContain("The floor creaks as you enter the almost empty room, there is a black cat here.");
-    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__COUNT(desc)__"]);
     expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(1);
     messages.length = 0;
 
     engine.send(Input.execute(["look"]));
     engine.send(Input.execute(["wait"]));
     expect(messages.join(" ")).toContain("An almost empty room, there is a black cat here.");
-    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__COUNT(desc)__"]);
     expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(2);
     messages.length = 0;
 
     engine.send(Input.execute(["look"]));
     engine.send(Input.execute(["wait"]));
     expect(messages.join(" ")).toContain("An almost empty room, there is a black cat here.");
-    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__LOOK_COUNT__"]);
+    expect(_.get(saveData, 'data.baseHistory[0].property')).toStrictEqual(["entities", "theRoom1", "__COUNT(desc)__"]);
     expect(_.get(saveData, 'data.baseHistory[0].newValue')).toStrictEqual(3);
 });
 

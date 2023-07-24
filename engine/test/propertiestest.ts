@@ -48,7 +48,6 @@ test("Test setProperties", () => {
 test("Test setProperties, selectively overwrite", () => {
     Properties.setProperties(env, "foo", { "bar" : "baz", "qux" : { "quux": "grault" }});
     Properties.setProperties(env, "foo", { "qux" : { "quux": "xyzzy", "one" : "two" }});
-    console.log(JSON.stringify(env.properties));
     expect(Properties.getProperty(env, "foo.bar")).toBe("baz");
     expect(Properties.getProperty(env, "foo.qux.quux")).toBe("xyzzy");
     expect(Properties.getProperty(env, "foo.qux.one")).toBe("two");
