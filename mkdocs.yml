@@ -1,0 +1,9 @@
+site_name: TIFT 
+theme:
+    name: readthedocs
+nav:
+  - Getting Started: gettingstarted.md
+  - File Structure: filestructure.md
+  - Expression Language: expressionlanguage.md
+  - Entities: entities.md
+  - Verbs: verbs.md
