@@ -9,8 +9,8 @@ import { formatString } from "../util/mustacheUtils";
 import { VerbBuilder } from "./verbbuilder";
 import { Obj } from "tift-types/src/util/objects";
 import { getName, Nameable } from "../nameable";
-import * as Mustache from "mustache"
 import * as Output from "./output";
+import { IMPLICIT_FUNCTION } from "./functionbuilder";
 
 const LOOK_TEMPLATE = 
 `{{#isDark}}
@@ -18,7 +18,7 @@ const LOOK_TEMPLATE =
 {{/isDark}}
 
 {{^isDark}}
-{{desc}}
+{{desc}}{{^desc}}{{name}}{{^name}}{{id}}{{/name}}{{/desc}}
 
 {{#hasItems}}
 You can see:
@@ -32,12 +32,6 @@ const LOOK_ITEM_TEMPLATE = `{{name}}{{#location}} ( in {{.}} ){{/location}}`;
 
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
-
-    const descScope = env.newChild(env.createNamespaceReferences(["entities"]));
-
-    const desc = (location["desc"] && formatString(descScope, location["desc"], [location, "desc"])) 
-                        ?? location["name"]
-                        ?? location["id"];
 
     const items = Locations.findEntites(env, location)
                            .filter(Entities.isEntity)
@@ -57,13 +51,15 @@ export const LOOK_FN = (env : Env) => {
 
     // Desc should have any moustache expressions expanded
     const view = {
-        "desc" : desc,
         "hasItems" : Boolean(items.length),
         "items" : items.map(getItemDescription),
         "isDark" : isDark
     }
 
-    const output = Mustache.render(LOOK_TEMPLATE, view, { item : LOOK_ITEM_TEMPLATE });
+    const scope = env.newChild(view).newChild(location);
+    const partials = { item : LOOK_ITEM_TEMPLATE };
+
+    const output = formatString(scope, LOOK_TEMPLATE, undefined, partials);
 
     Output.write(env, output);
 
@@ -170,9 +166,8 @@ const EXAMINE = phaseActionBuilder("examine")
             matchBuilder().withVerb(matchVerb("examine")).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                const output = item["desc"] ? formatString(env, item["desc"], [item, "desc"])
-                                            : (item["name"] ?? item["id"]);
-                Output.write(env, output);
+                const output = item["desc"] ?? item["name"] ?? item["id"];
+                Output.write(env, output[IMPLICIT_FUNCTION]? output(env).getValue() : output);
                 return mkResult(true);
             }));
 

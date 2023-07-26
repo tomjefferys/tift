@@ -6,6 +6,7 @@ import * as _ from "lodash"
 import * as Mustache from "mustache"
 import { getCauseMessage } from "./errors";
 import { Optional } from "tift-types/src/util/optional"
+import { IMPLICIT_FUNCTION } from "../builder/functionbuilder"
 
 const COUNT = (name : string) => `__COUNT(${name})__`;
 
@@ -13,7 +14,7 @@ type ObjProp = [Obj,string];
 type IncrementFunction = (tag : string) => void;
 type FinalizeFunction = () => void;
 
-export function formatString(env : Env, str : string, objProp? : Optional<ObjProp>) : string {
+export function formatString(env : Env, str : string, objProp? : Optional<ObjProp>, partials? : Record<string,string>) : string {
     const [count, incrementCount, finalizeCount] = getCountAndIncrement(str, objProp);
 
     const specialFunctions = {
@@ -45,13 +46,17 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
         },
         get : (_target : any, key : any) => {
             const value = scope.get(key);
-            return isFound(value) ? value : "NOT FOUND";
+            let result = "NOT FOUND";
+            if (isFound(value)) {
+                result = value[IMPLICIT_FUNCTION]? value(env).getValue() : value;
+            }
+            return result;
         }
     }
     const proxy = new Proxy({}, handler);
 
     try {
-        const result = Mustache.render(str, proxy);
+        const result = Mustache.render(str, proxy, partials);
         finalizeCount();
         return result;
     } catch(e) {

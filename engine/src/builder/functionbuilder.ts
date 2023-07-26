@@ -48,7 +48,6 @@ function compileObjStrings(obj : Obj, scope : Env) : void {
           .filter(([_name, value]) => {
             return _.isString(value) && value.includes("{{")
           })
-          .filter(([name, _value]) => name !== "desc")
           .forEach(([name, value]) => {
             const strFn = Object.assign(
              (_env : Env) => mkResult(formatString(scope, value, [obj, name])),
