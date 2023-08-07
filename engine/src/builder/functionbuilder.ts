@@ -11,6 +11,8 @@ import { formatString } from "../util/mustacheUtils";
 
 export const IMPLICIT_FUNCTION = "__IMPLICIT_FUNCTION__";
 
+const SPECIAL_FIELDS = ["before", "actions", "after", "rules"];
+
 const FN_REGEX = /^(\w+)\(([\w, ]*)\)$/;
 
 type FnDef = {
@@ -18,17 +20,30 @@ type FnDef = {
     params : string[]
 }
 
+type FnImpl = {
+    name : string,
+    envFn : EnvFn
+}
+
+/**
+ * Compiles a function (normal or string).  Returns the function name and the function
+ */
+type Compiler = (name : string, value : unknown, scope : Env, obj : Obj) => Optional<FnImpl>;
+
 export function compileFunctions(namespace : Optional<string>, id : string, env : Env) {
-    const obj = getObj(namespace, id, env);
-    const scope = getScope(namespace, obj, env);
-    compileObjFunctions(obj, scope);
+    compile(namespace, id, env, compileFunction);
 }
 
 export function compileStrings(namespace : Optional<string>, id : string, env : Env) {
+    compile(namespace, id, env, makeStrFunction);
+}
+
+function compile(namespace : Optional<string>, id : string, env : Env, compiler : Compiler) {
     const obj = getObj(namespace, id, env);
     const scope = getScope(namespace, obj, env);
-    compileObjStrings(obj, scope);
+    compileObj(obj, scope, compiler);
 }
+
 
 function getObj(namespace : Optional<string>, id : string, env : Env) {
     const path = Path.fromValueList((namespace == undefined)? [id] : [namespace, id]);
@@ -40,47 +55,56 @@ function getScope(namespace : Optional<string>, obj : Obj, env : Env) : Env {
     return nsEnv.newChild({"this" : obj}).newChild(obj);
 }
 
-// 'compiles' any strings containing a mustache expression 
-// to a function, so it can be evalutated at run time
-function compileObjStrings(obj : Obj, scope : Env) : void {
+function compileObj(obj : Obj, scope : Env, compiler : Compiler, isInnerObject = false) : void {
     Object.entries(obj)
-        // If value id object, just call compileObJStrings on it, but create an outer scope for the current object
-          .filter(([_name, value]) => {
-            return _.isString(value) && value.includes("{{")
-          })
           .forEach(([name, value]) => {
-            const strFn = Object.assign(
-             (_env : Env) => mkResult(formatString(scope, value, [obj, name])),
-             {[IMPLICIT_FUNCTION] : true}
-            );
-            obj[name] = strFn;
-          });
+            if (isInnerObject || !SPECIAL_FIELDS.includes(name)) {
+                const fnImpl = compiler(name, value, scope, obj);
+                if (fnImpl) {
+                    obj[fnImpl.name] = fnImpl.envFn;
+                } else if (_.isObject(value)) {
+                    compileObj(value, scope.newChild(obj), compiler, true );
+                }
+            }
+          })
+}
+
+const makeStrFunction : Compiler = (name, value, scope, obj) => {
+    let result : Optional<FnImpl> = undefined;
+    if (_.isString(value)&& !getFunctionDef(name) && value.includes("{{")) {
+        const envFn = Object.assign(
+            (_env : Env) => mkResult(formatString(scope, value, [obj, name])),
+            {[IMPLICIT_FUNCTION] : true}
+        );
+        result = { name, envFn }
+    }
+    return result;
 }
 
 /**
  * functions can be defined as 
  * myFunc(): print("hello world")
  * add(var1, var2): var1 + var2
- * @param obj 
  */
-function compileObjFunctions(obj : Obj, scope : Env) : Obj {
-    Object.entries(obj).map(
-        ([name, value]) => {
-            const fnDef = getFunctionDef(name);
-            if (fnDef) {
-                // If value is a string compile it, else assume it's an envFunction
-                let envFn : EnvFn;
-                if (_.isFunction(value)) {
-                    envFn = value;
-                } else {
-                    const thunk = RuleBuilder.evaluateRule(value);
-                    envFn = (env : Env) => thunk.resolve(env);
-                }
-                obj[fnDef.name] = bindParams(fnDef.params, envFn, scope);
-            }
+const compileFunction : Compiler = (name, value, scope, _obj) => {
+    const fnDef = getFunctionDef(name);
+    let result : Optional<FnImpl> = undefined;
+    if (fnDef) {
+        let envFn : EnvFn;
+        if (_.isFunction(value)) {
+            // Could be implicitly defined function (no compilation needed)
+            envFn = value;
+        } else {
+            // Else compile the function
+            const thunk = RuleBuilder.evaluateRule(value);
+            envFn = (env) => thunk.resolve(env);
         }
-    );
-    return obj;
+        result = {
+            name : fnDef.name, 
+            envFn : bindParams(fnDef.params, envFn, scope)
+        };
+    }
+    return result;
 }
 
 function getFunctionDef(str : string) : Optional<FnDef> {

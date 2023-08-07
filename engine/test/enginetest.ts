@@ -1363,6 +1363,53 @@ test("Test mustache firstTime in property string", () => {
     executeAndTest(["wait"], { expected : ["qux"], notExpected : ["bar"]});
 });
 
+test("Test mustache in child property", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        foo : "bar",
+        child : {
+            foo : "childfoo",
+            quux : "quux {{foo}}",
+            gchild : {
+                quux : "gchild quux {{foo}}"
+            }
+        },
+        baz : "baz {{foo}}",
+        rules : [
+            "print(this.baz)",
+            "print(this.child.quux)",
+            "print(this.child.gchild.quux)"
+        ]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["baz bar", "quux childfoo", "gchild quux childfoo"]});
+});
+
+test("Test mustache in array", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        foo : "bar",
+        baz : [
+            "baz0 {{foo}}",
+            "baz1",
+            {
+                "qux" : "qux {{foo}}",
+                "quux" : "quux {{0}} {{1}}"
+            }
+        ],
+        rules : [
+            "print(this.baz[0])",
+            "print(this.baz[1])",
+            "print(this.baz[2].qux)",
+            "print(this.baz[2].quux)"
+        ]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["baz0 bar", "baz1", "qux bar", "quux baz0 bar baz1"]});
+});
+
 interface ExpectedStrings {
     expected? : string[],
     notExpected? : string[]
