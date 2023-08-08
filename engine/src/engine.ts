@@ -388,7 +388,8 @@ function executeBestMatchAction(actions : PhaseAction[], env : Env, command : Se
 
 function executeRule(scope : Obj, rule : RuleFn, env : Env) {
   const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
-  const ruleEnv = entitiesEnv.newChild({"this" : scope});
+  const entityEnv = entitiesEnv.newChild(scope);
+  const ruleEnv = entityEnv.newChild({"this" : scope});
   const result = rule(ruleEnv);
   if(result && _.isString(result)) {
     env.execute("write", {"value":result});

@@ -1244,9 +1244,9 @@ test("Test custom functions in child object", () => {
             "foo3()" : "'foo3' + ' ' + foo1() + ' ' + foo2()"
         },
         rules : [
-            "print('1 ' + this.foo1())",
-            "print('2 ' + this.child.foo2())",
-            "print('3 ' + this.child.foo3())",
+            "print('1 ' + foo1())",
+            "print('2 ' + child.foo2())",
+            "print('3 ' + child.foo3())",
         ]
     });
     engine = builder.build();
