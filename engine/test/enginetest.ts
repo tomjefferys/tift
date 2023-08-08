@@ -1233,6 +1233,31 @@ test("Test custom function scope", () => {
    executeAndTest(["wait"], { expected : [ "foo1bar", "foo2bar", "foo3bar", "foo4xyzzy", "quxquux"]});
 });
 
+test("Test custom functions in child object", () => {
+    builder.withObj({
+        ...THE_ROOM,
+        myvar : "bar",
+        "foo1()" : "'foo1' + ' ' + myvar",
+        child : {
+            myvar : "baz",
+            "foo2()" : "'foo2' + ' ' + myvar",
+            "foo3()" : "'foo3' + ' ' + foo1() + ' ' + foo2()"
+        },
+        rules : [
+            "print('1 ' + this.foo1())",
+            "print('2 ' + this.child.foo2())",
+            "print('3 ' + this.child.foo3())",
+        ]
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : [
+        "1 foo1 bar",
+        "2 foo2 baz",
+        "3 foo3 foo1 bar foo2 baz"
+    ]});
+});
+
 test("Test location change events", () => {
     builder.withObj({
         ...NORTH_ROOM,

@@ -63,7 +63,7 @@ function compileObj(obj : Obj, scope : Env, compiler : Compiler, isInnerObject =
                 if (fnImpl) {
                     obj[fnImpl.name] = fnImpl.envFn;
                 } else if (_.isObject(value)) {
-                    compileObj(value, scope.newChild(obj), compiler, true );
+                    compileObj(value, scope.newChild(value), compiler, true );
                 }
             }
           })
