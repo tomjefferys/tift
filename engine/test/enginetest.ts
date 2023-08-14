@@ -222,11 +222,15 @@ test("Test simple before/after rules", () => {
     builder.withObj({
         id : "rule1",
         type : "rule",
+        "beforeGame()" : "print('hello game')",
         "beforeTurn()" : "print('hello world')",
         "afterTurn()" : "print('goodbye world')"
     });
     engine = builder.build();
     engine.send(Input.start());
+    engine.send(Input.execute(["wait"]));
+    expect(messages).toEqual(["hello game", "hello world", "Time passes", "goodbye world"]);
+    messages.length = 0;
     engine.send(Input.execute(["wait"]));
     expect(messages).toEqual(["hello world", "Time passes", "goodbye world"]);
     messages.length = 0;
@@ -235,17 +239,22 @@ test("Test simple before/after rules", () => {
 test("Test simple global/contextal before/after rules", () => {
     builder.withObj({
         ...THE_ROOM,
+        "beforeGame()" : "print('before game')",
         "beforeTurn()" : "print('room before')",
         "afterTurn()" : "print('room after')"
     });
     builder.withObj({
         id : "rule1",
         type : "rule",
+        "beforeGame()" : "print('before game')",
         "beforeTurn()" : "print('rule before')",
         "afterTurn()" : "print('rule after')"
     });
     engine = builder.build();
     engine.send(Input.start());
+    engine.send(Input.execute(["wait"]));
+    expect(messages).toEqual(['before game', 'before game','rule before', 'room before', 'Time passes', 'room after', 'rule after']);
+    messages.length = 0;
     engine.send(Input.execute(["wait"]));
     expect(messages).toEqual(['rule before', 'room before', 'Time passes', 'room after', 'rule after']);
     messages.length = 0;

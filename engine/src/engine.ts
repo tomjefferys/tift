@@ -30,8 +30,9 @@ const DEFAULT_UNDO_LEVELS = 10;
 
 const logger = Logger.getLogger("engine");
 
-const AFTER_TURN = "afterTurn";
+const BEFORE_GAME = "beforeGame";
 const BEFORE_TURN = "beforeTurn";
+const AFTER_TURN = "afterTurn";
 
 export interface EngineState {
   getEntities : () => Entity[];
@@ -124,6 +125,14 @@ export class BasicEngine implements Engine {
     // Run any plugin actions
     const actionContext = this.createPluginActionContext(undefined, this.context);
     this.startActions.forEach(action => action(actionContext));
+
+    if (!saveData) {
+      // Run any before game rules
+      // but only if this is a brand new game
+      const startupRules = this.env.findObjs(obj => obj[BEFORE_GAME] !== undefined)
+                                .map(rule => [rule, rule[BEFORE_GAME]] as [Obj, EnvFn]);
+      startupRules.forEach(([obj, rule]) => executeRule(obj, rule, this.env));
+    }
 
     this.started = true;
   }
