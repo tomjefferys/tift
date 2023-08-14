@@ -96,7 +96,7 @@ const compileFunction : Compiler = (name, value, scope, _obj) => {
             envFn = value;
         } else {
             // Else compile the function
-            const thunk = RuleBuilder.evaluateRule(value);
+            const thunk = RuleBuilder.evaluateRule(value, _obj["id"] + "." + fnDef.name);
             envFn = (env) => thunk.resolve(env);
         }
         result = {

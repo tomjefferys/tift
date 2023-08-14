@@ -3,7 +3,6 @@ import { AfterAction, MainAction, BeforeAction } from "../script/phaseaction";
 import { Obj } from "tift-types/src/util/objects";
 import { VerbMatcher, Entity, PROPS } from "../entity";
 import { MultiDict } from "../util/multidict";
-import { RuleFn } from "../entity";
 import { getString, getArray } from "../util/objects";
 import { buildVerbMatcher } from "../entity";
 import _ from "lodash";
@@ -17,7 +16,6 @@ export class EntityBuilder {
   before : BeforeAction[] = [];
   actions : MainAction[] = [];
   after : AfterAction[] = [];
-  rules : RuleFn[] = [];
   
   constructor(props : Obj) {
     if (!props) {
@@ -84,10 +82,6 @@ export class EntityBuilder {
     return this;
   }
   
-  withRule(rule : RuleFn) {
-    this.rules.push(rule);
-  }
-
   build() : Entity {
     return {...this.props,
             type : ENTITY_TYPE,
@@ -96,7 +90,6 @@ export class EntityBuilder {
             verbModifiers : this.verbModifiers,
             before : this.before,
             actions : this.actions,
-            after : this.after,
-            rules : this.rules };
+            after : this.after };
   }
 }

@@ -65,10 +65,10 @@ export function unset(obj : Obj, path : PropType[]) : unknown {
 
 /**
  * @param value 
- * @returns true if value is object like (ie an object or an array)
+ * @returns true if value is object like (ie an object, array, or function)
  */
 export function isObject(value : unknown) : value is Obj {
-    return typeof value === 'object' && value !== null
+    return (typeof value === 'object' || typeof value === 'function') && value !== null
 }
 
 

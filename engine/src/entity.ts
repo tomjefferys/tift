@@ -18,7 +18,6 @@ export interface Entity extends Nameable, ActionSource {
   id : string,
   verbs : VerbMatcher[],
   verbModifiers : MultiDict<string>,
-  rules : RuleFn[],
   [props : string]: unknown
 }
 

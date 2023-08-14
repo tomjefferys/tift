@@ -210,7 +210,7 @@ test("Test simple rules", () => {
     builder.withObj({
         id : "rule1",
         type : "rule",
-        do : ["print('hello world')"]
+        "afterTurn()" : ["print('hello world')"]
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -583,7 +583,7 @@ test("Test contextual rules", () => {
         name : "The North Room",
         desc : "The room is dark and square",
         myvar : "foo",
-        rules : ["print(this.myvar)"],
+        "afterTurn()" : ["print(this.myvar)"],
         exits : {
             south : "southRoom"
         },
@@ -593,7 +593,7 @@ test("Test contextual rules", () => {
         name : "The South Room",
         desc : "The room is light and round",
         myvar : "bar",
-        rules : ["this.myvar"],
+        "afterTurn()" : ["this.myvar"],
         exits : {
             north : "northRoom"
         }
@@ -612,7 +612,7 @@ test("Test repeat rule", () => {
         name : "The North Room",
         desc : "The room is dark and square",
         myvar : "foo",
-        rules : { "repeat" : ["'foo'", "'bar'", "'baz'"] } 
+        "afterTurn()" : { "repeat" : ["'foo'", "'bar'", "'baz'"] } 
     });
     engine = builder.build();
     engine.send(Input.start());
@@ -628,7 +628,7 @@ test("Test nested repeat rule", () => {
         name : "The North Room",
         desc : "The room is dark and square",
         myvar : "foo",
-        rules : { "repeat" : ["'foo'", { "repeat" : ["'bar'", "'baz'"] } , "'qux'"] } 
+        "afterTurn()" : { "repeat" : ["'foo'", { "repeat" : ["'bar'", "'baz'"] } , "'qux'"] } 
     });
     engine = builder.build();
     engine.send(Input.start());
@@ -667,8 +667,10 @@ test("Test moveTo", () => {
     builder.withObj({
         id: "moveGoblin",
         type: "rule",
-        repeat: ["do(print('The goblin goes south'), move('goblin').to('southRoom'))",
+        "afterTurn()": {
+            "repeat": ["do(print('The goblin goes south'), move('goblin').to('southRoom'))",
                         "do(print('The goblin goes north'), move('goblin').to('northRoom'))"]
+        }
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -706,12 +708,12 @@ test("Test scoped rules", () => {
         id:"scopedGhost",
         type:"rule",
         scope: ["southRoom"],
-        do: "'wooo-oo'"
+        "afterTurn()": "'wooo-oo'"
     })
     builder.withObj({
         id:"globalMonster",
         type:"rule",
-        do: "'grr'"
+        "afterTurn()": "'grr'"
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -1172,7 +1174,7 @@ test("Test math functions", () => {
     builder.withObj({
         id : "mathFns",
         type : "rule",
-        do : ["a=1", "b=2", "c = 3", "print(Math.min(b,a,c))"]
+        "afterTurn()" : ["a=1", "b=2", "c = 3", "print(Math.min(b,a,c))"]
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -1184,7 +1186,7 @@ test("Test string functions", () => {
     builder.withObj({
         id : "mathFns",
         type : "rule",
-        do : ["do(text = 'hello world', print(String.substr(text, 1, 4))), print(String.length(text))"]
+        "afterTurn()" : ["do(text = 'hello world', print(String.substr(text, 1, 4))), print(String.length(text))"]
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -1201,7 +1203,7 @@ test("Test custom function", () => {
    builder.withObj({
         id : "customFns",
         type : "rule",
-        do : ["theRoom.foo()", "theRoom.baz('one')", "theRoom.corge('two', 'three')"]
+        "afterTurn()" : ["theRoom.foo()", "theRoom.baz('one')", "theRoom.corge('two', 'three')"]
    })
    engine = builder.build();
    engine.send(Input.start());
@@ -1226,7 +1228,7 @@ test("Test custom function scope", () => {
    builder.withObj({
         id : "customFns",
         type : "rule",
-        do : ["theRoom.foo1()", "theRoom.foo2()", "theRoom.foo3()", "theRoom.foo4()","theRoom.baz('qux')"]
+        "afterTurn()" : ["theRoom.foo1()", "theRoom.foo2()", "theRoom.foo3()", "theRoom.foo4()","theRoom.baz('qux')"]
    })
    engine = builder.build();
    engine.send(Input.start());
@@ -1243,7 +1245,7 @@ test("Test custom functions in child object", () => {
             "foo2()" : "'foo2' + ' ' + myvar",
             "foo3()" : "'foo3' + ' ' + foo1() + ' ' + foo2()"
         },
-        rules : [
+        "afterTurn()" : [
             "print('1 ' + foo1())",
             "print('2 ' + child.foo2())",
             "print('3 ' + child.foo3())",
@@ -1284,7 +1286,9 @@ test("Test location change events", () => {
     builder.withObj({
         id : "moveBall",
         type : "rule",
-        repeat : ["move(ball).to(southRoom)", "move(ball).to(northRoom)"]
+        "afterTurn()" : {
+            repeat : ["move(ball).to(southRoom)", "move(ball).to(northRoom)"]
+        }
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -1322,7 +1326,9 @@ test("NPC implicit onMove", () => {
     builder.withObj({
         id : "moveBall",
         type : "rule",
-        repeat : ["move(ball).to(southRoom)", "move(ball).to(northRoom)"]
+        "afterTurn()" : {
+            repeat : ["move(ball).to(southRoom)", "move(ball).to(northRoom)"]
+        }
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -1335,7 +1341,7 @@ test("Test mustache in expression strings", () => {
     builder.withObj({
         ...NORTH_ROOM,
         foo : "bar",
-        rules : {
+        "afterTurn()" : {
             repeat: [["print('this.foo == {{this.foo}}')", "this.foo = '{{this.id}}'"], "print('this.foo == {{this.foo}}')"]
         }
     });
@@ -1351,7 +1357,7 @@ test("Test mustache in object property", () => {
         foo : "bar",
         qux : "qux {{foo}}",
         baz : "xyzzy",
-        rules : ["print(this.baz)", "print(this.qux)"]
+        "afterTurn()" : ["print(this.baz)", "print(this.qux)"]
     })
     engine = builder.build();
     engine.send(Input.start());
@@ -1363,7 +1369,7 @@ test("Test mustache firstTime in expression string", () => {
         ...NORTH_ROOM,
         foo : "bar",
         baz : "qux",
-        rules : [
+        "afterTurn()" : [
             "print('{{#firstTime}}{{this.foo}}{{/firstTime}}{{^firstTime}}{{this.baz}}{{/firstTime}}')"
         ]
     });
@@ -1378,7 +1384,7 @@ test("Test mustache firstTime in property string", () => {
         foo : "bar",
         baz : "qux",
         xyzzy: '{{#firstTime}}{{this.foo}}{{/firstTime}}{{^firstTime}}{{this.baz}}{{/firstTime}}',
-        rules : [
+        "afterTurn()" : [
             "print(this.xyzzy)"
         ]
     });
@@ -1400,7 +1406,7 @@ test("Test mustache in child property", () => {
             }
         },
         baz : "baz {{foo}}",
-        rules : [
+        "afterTurn()" : [
             "print(this.baz)",
             "print(this.child.quux)",
             "print(this.child.gchild.quux)"
@@ -1423,7 +1429,7 @@ test("Test mustache in array", () => {
                 "quux" : "quux {{0}} {{1}}"
             }
         ],
-        rules : [
+        "afterTurn()" : [
             "print(this.baz[0])",
             "print(this.baz[1])",
             "print(this.baz[2].qux)",

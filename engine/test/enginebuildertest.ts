@@ -1,5 +1,4 @@
-import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeRule, makeItem } from "../src/builder/enginebuilder";
-import { setUpEnv } from "./testutils/testutils"
+import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeItem } from "../src/builder/enginebuilder";
 import * as fs from "fs";
 import _ from "lodash";
 import { DEFAULT_VERBS } from "../src/builder/defaultverbs";
@@ -138,49 +137,6 @@ test("Build room", () => {
     expect(room.verbs).toContainEqual({"verb":"look"});
     expect(room.verbModifiers).toStrictEqual({"direction":["north", "east"]});
 })
-
-test("Build rule", () => {
-    const obj = {
-      "id": "rule1",
-      "type": "rule",
-      "do": ["write('hello')", "write('world')"]
-    }
-
-    const rule = makeRule(obj);
-    const [env, messages] = setUpEnv();
-    rule["__COMPILED__"](env);
-    expect(messages).toStrictEqual(["hello", "world"]);
-});
-
-test("Build rule - single expr", () => {
-    const obj = {
-      "id": "rule1",
-      "type": "rule",
-      "do": "write('hello world')"
-    }
-
-    const rule = makeRule(obj);
-    const [env, messages] = setUpEnv();
-    rule["__COMPILED__"](env);
-    expect(messages).toStrictEqual(["hello world"]);
-});
-
-test("Build rule - error", () => {
-    const obj = {
-      "id": "rule1",
-      "type": "rule",
-      "do": "write('hello world)"
-    }
-
-    try {
-      makeRule(obj);
-      fail();
-    } catch (e) {
-      const error = e as Error;
-      expect(error.message).toContain("rule1.do");
-      expect(error.message).toContain("write('hello world)");
-    }
-});
 
 test("Build entity - action error", () => {
     const obj = {

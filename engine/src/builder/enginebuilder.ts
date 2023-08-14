@@ -12,7 +12,6 @@ import { OutputConsumer } from "tift-types/src/messages/output";
 import _ from "lodash";
 import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "../script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
-import { Env } from "tift-types/src/env";
 import { getDefaultGameBehaviour } from "./behaviour";
 import { Config, ConfigValueType } from "../config";
 import * as Location from "./locations";
@@ -47,7 +46,7 @@ export class EngineBuilder {
                     this.objs.push(makeVerb(obj));
                     break;
                 case "rule":
-                    this.objs.push(makeRule(obj));
+                    this.objs.push(obj);
                     break;
                 default:
                     throw new Error("Unknown object type");
@@ -133,7 +132,6 @@ export function makeItem(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj);
     addActions(builder, obj);
-    addRules(builder, obj);
     const tags = obj?.tags ?? [];
     if (tags.includes("carryable")) {
         builder.withVerb("get");
@@ -163,7 +161,6 @@ export function makeRoom(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj);
     addActions(builder, obj);
-    addRules(builder, obj);
     builder.withVerb("go");
     for(const [dir, dest] of Object.entries(obj["exits"] ?? {})) {
         if (typeof dest !== "string") {
@@ -173,31 +170,6 @@ export function makeRoom(obj : Obj) : Entity {
     }
     builder.withVerb("look");
     return builder.build();
-}
-
-export function makeRule(obj : Obj) : Obj {
-    const thunk = RuleBuilder.evaluateRule(obj, `${obj.id}`);
-    obj["__COMPILED__"] = (env : Env) => thunk.resolve(env).getValue();
-    return obj;
-}
-
-/**
- * Compiles any rules attached to an object, or room.
- * These are executed every turn whilst the object is
- * in context
- * @param obj 
- * 
- * could be ["rule1", "rule2v"]
- * or [{"repeat" : ["rule1", "rule2"]}, "rule3"]
- * or [{"random" : ["rule1", "rule2"]}]
- * or [{"repeat" : { "random" : "rule1", "rule2"}}]
- */
-function addRules(builder : EntityBuilder, obj : Obj) {
-    const rules = obj["rules"];
-    if (rules) {
-        const thunk = RuleBuilder.evaluateRule(rules, obj["id"] + ".rules");
-        builder.withRule(env => thunk.resolve(env).getValue());
-    }
 }
 
 

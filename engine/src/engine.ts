@@ -1,5 +1,5 @@
 import { isInstant, Verb } from "./verb"
-import { Entity, RuleFn } from "./entity"
+import { Entity } from "./entity"
 import { Env } from "tift-types/src/env"
 import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
@@ -24,10 +24,13 @@ import { AUTOLOOK } from "./builder/plugins/autolook"
 import { Engine } from "tift-types/src/engine"
 import { compileFunctions, compileStrings } from "./builder/functionbuilder";
 import { ENTITY_TYPE } from "./builder/entities"
+import { EnvFn } from "./script/thunk"
 
 const DEFAULT_UNDO_LEVELS = 10;
 
 const logger = Logger.getLogger("engine");
+
+const AFTER_TURN = "afterTurn";
 
 export interface EngineState {
   getEntities : () => Entity[];
@@ -61,6 +64,7 @@ const BASE_CONTEXT = { entities : {}, verbs : [] }
 
 const TYPE_NAMESPACES : {[key : string]: string}= {
   [ENTITY_TYPE] : "entities",
+  "rule" : "entities",
   "verb" : "verbs"
 }
  
@@ -279,14 +283,17 @@ export class BasicEngine implements Engine {
     if (hasTimePassed) {
       // Run any contextual rules
       const allEntities = _.flatten(Object.values(this.context.entities))
-      const contextualRules = allEntities.flatMap(entity => entity.rules.map(rule => [entity, rule] as [Entity,RuleFn]));
-      contextualRules.forEach(([entity,rule]) => executeRule(entity, rule, this.env));
+      const contextualRules = allEntities.filter(entity => entity[AFTER_TURN] != undefined)
+                                         .map(entity => [entity, entity[AFTER_TURN]] as [Obj, EnvFn]);
 
       // Find and execute any global rules
-      const globalRules = this.env.findObjs(obj => obj["type"] === "rule");
-      globalRules.filter(rule => this.isRuleInScope(rule))
-                 .forEach(rule => executeRule(rule, rule["__COMPILED__"], this.env));
-                 
+      const globalRules = this.env.findObjs(obj => obj["type"] === "rule")
+                              .filter(rule => this.isRuleInScope(rule))
+                              .filter(rule => rule[AFTER_TURN] != undefined)
+                              .map(rule => [rule, rule[AFTER_TURN]] as [Obj, EnvFn]);
+      
+      const allRules = [...contextualRules, ...globalRules];
+      allRules.forEach(([obj, rule]) => executeRule(obj, rule, this.env));
 
       // push the history
       const pushed = this.env.proxyManager.pushHistory();
@@ -386,11 +393,11 @@ function executeBestMatchAction(actions : PhaseAction[], env : Env, command : Se
   return handled;
 }
 
-function executeRule(scope : Obj, rule : RuleFn, env : Env) {
+function executeRule(scope : Obj, rule : EnvFn, env : Env) {
   const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
   const entityEnv = entitiesEnv.newChild(scope);
   const ruleEnv = entityEnv.newChild({"this" : scope});
-  const result = rule(ruleEnv);
+  const result = rule(ruleEnv).getValue();
   if(result && _.isString(result)) {
     env.execute("write", {"value":result});
   }
