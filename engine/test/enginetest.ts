@@ -217,6 +217,40 @@ test("Test simple rules", () => {
     executeAndTest(["wait"], { expected : ["Time passes", "hello world"]});
 });
 
+test("Test simple before/after rules", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "rule1",
+        type : "rule",
+        "beforeTurn()" : "print('hello world')",
+        "afterTurn()" : "print('goodbye world')"
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    engine.send(Input.execute(["wait"]));
+    expect(messages).toEqual(["hello world", "Time passes", "goodbye world"]);
+    messages.length = 0;
+});
+
+test("Test simple global/contextal before/after rules", () => {
+    builder.withObj({
+        ...THE_ROOM,
+        "beforeTurn()" : "print('room before')",
+        "afterTurn()" : "print('room after')"
+    });
+    builder.withObj({
+        id : "rule1",
+        type : "rule",
+        "beforeTurn()" : "print('rule before')",
+        "afterTurn()" : "print('rule after')"
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    engine.send(Input.execute(["wait"]));
+    expect(messages).toEqual(['rule before', 'room before', 'Time passes', 'room after', 'rule after']);
+    messages.length = 0;
+});
+
 test("Test before and after actions", () => {
     builder.withObj(THE_ROOM);
     builder.withObj({

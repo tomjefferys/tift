@@ -31,6 +31,7 @@ const DEFAULT_UNDO_LEVELS = 10;
 const logger = Logger.getLogger("engine");
 
 const AFTER_TURN = "afterTurn";
+const BEFORE_TURN = "beforeTurn";
 
 export interface EngineState {
   getEntities : () => Entity[];
@@ -244,6 +245,16 @@ export class BasicEngine implements Engine {
     if (!matchedCommand) {
       throw new Error("Could not match command: " + JSON.stringify(command));
     }
+    const verb = matchedCommand.getPoS("verb")?.verb;
+    const isTimePassing = verb && !isInstant(verb);
+    // Run any before turn rules
+    if (isTimePassing) {
+      const contextualRules = this.getContextualRules(BEFORE_TURN);
+      const globalRules = this.getGlobalRules(BEFORE_TURN);
+      
+      const allRules = [...globalRules, ...contextualRules];
+      allRules.forEach(([obj, rule]) => executeRule(obj, rule, this.env));
+    }
 
     // Get ordered list of in scope entities
     const inScopeEnitites = this.sortEntities(matchedCommand);
@@ -255,7 +266,6 @@ export class BasicEngine implements Engine {
     const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, childEnv, matchedCommand, entity) )
 
     // Main action
-    const verb = matchedCommand.getPoS("verb")?.verb;
     const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb) : false;
 
     // After actions
@@ -278,20 +288,11 @@ export class BasicEngine implements Engine {
     const postExecutionContext = this.createPluginActionContext(oldContext, this.context);
     this.postExecutionActions.forEach(action => action(postExecutionContext));
 
-    const hasTimePassed = verb && !isInstant(verb);
 
-    if (hasTimePassed) {
-      // Run any contextual rules
-      const allEntities = _.flatten(Object.values(this.context.entities))
-      const contextualRules = allEntities.filter(entity => entity[AFTER_TURN] != undefined)
-                                         .map(entity => [entity, entity[AFTER_TURN]] as [Obj, EnvFn]);
-
-      // Find and execute any global rules
-      const globalRules = this.env.findObjs(obj => obj["type"] === "rule")
-                              .filter(rule => this.isRuleInScope(rule))
-                              .filter(rule => rule[AFTER_TURN] != undefined)
-                              .map(rule => [rule, rule[AFTER_TURN]] as [Obj, EnvFn]);
-      
+    if (isTimePassing) {
+      // Run afterTurn rules
+      const contextualRules = this.getContextualRules(AFTER_TURN);
+      const globalRules = this.getGlobalRules(AFTER_TURN);
       const allRules = [...contextualRules, ...globalRules];
       allRules.forEach(([obj, rule]) => executeRule(obj, rule, this.env));
 
@@ -305,6 +306,22 @@ export class BasicEngine implements Engine {
     }
 
   }
+
+  getContextualRules(methodName : string) : [Obj, EnvFn][] {
+      const allEntities = _.flatten(Object.values(this.context.entities))
+      const contextualRules = allEntities.filter(entity => entity[methodName] != undefined)
+                                         .map(entity => [entity, entity[methodName]] as [Obj, EnvFn]);
+      return contextualRules;
+  }
+
+  getGlobalRules(methodName : string) : [Obj, EnvFn][] {
+      const globalRules = this.env.findObjs(obj => obj["type"] === "rule")
+                              .filter(rule => this.isRuleInScope(rule))
+                              .filter(rule => rule[methodName] != undefined)
+                              .map(rule => [rule, rule[methodName]] as [Obj, EnvFn]);
+      return globalRules;
+  }
+
 
   /**
    * Arrange entities in the following execution order
