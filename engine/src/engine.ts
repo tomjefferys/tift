@@ -24,7 +24,8 @@ import { AUTOLOOK } from "./builder/plugins/autolook"
 import { Engine } from "tift-types/src/engine"
 import { compileFunctions, compileStrings } from "./builder/functionbuilder";
 import { ENTITY_TYPE } from "./builder/entities"
-import { EnvFn } from "./script/thunk"
+import { EnvFn } from "./script/thunk";
+import * as Properties from "./properties";
 
 const DEFAULT_UNDO_LEVELS = 10;
 
@@ -147,14 +148,19 @@ export class BasicEngine implements Engine {
   addContent(objs : Obj[]) {
     const props = this.env.properties;
     objs.forEach(obj => {
-      const namespace = TYPE_NAMESPACES[obj["type"]];
-      if (namespace) {
-        props[namespace][obj.id] = obj;
+      const { id, type, ...properties } = obj;
+      if (type === "property") {
+        Properties.setProperties(this.env, id, properties);
       } else {
-        props[obj.id] = obj;
+        const namespace = TYPE_NAMESPACES[type];
+        if (namespace) {
+          props[namespace][id] = obj;
+        } else {
+          props[id] = obj;
+        }
+        compileFunctions(namespace, id, this.env);
+        compileStrings(namespace, id, this.env);
       }
-      compileFunctions(namespace, obj.id, this.env);
-      compileStrings(namespace, obj.id, this.env);
     });
   }
 

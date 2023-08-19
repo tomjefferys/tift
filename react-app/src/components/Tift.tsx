@@ -20,6 +20,7 @@ import * as WordTree from "../util/wordtree";
 
 type WordTreeType = WordTree.WordTree;
 
+const DEFAULTS_FILE = "defaults.yaml";
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
 const AUTO_SAVE = "TIFT_AUTO_SAVE";
@@ -54,17 +55,23 @@ function Tift() {
       engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
     }
     const execute = (command : Word[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
-  
+
     // Load a game file from the `public` folder
     const loadGame = (name : string, engine : MessageForwarder, saveData : string | null) => 
             fetch(process.env.PUBLIC_URL + "/" + name)
               .then((response) => response.text())
-              .then(data => {
+              .then(async data => {
                 if (engine == null) {
                   throw new Error("Engine has not been initialized");
                 }
                 engine.send(Input.config({"autoLook" : true, "undoLevels" : 10}));
                 engine.send(Input.reset());
+
+                // Load default behaviour
+                const defaults = await loadDefaults();
+                engine.send(Input.load(defaults));
+
+                // Load the game data
                 engine.send(Input.load(data));
                 engine.send(Input.start((saveData != null)? saveData : undefined));
                 engine.send(Input.getStatus());
@@ -274,6 +281,11 @@ function createControlHandler(pauser : Pauser.Pauser) : (control : ControlType) 
       pauser.pause(control.durationMillis);
     }
   }
+}
+
+async function loadDefaults() : Promise<string> {
+    return fetch(process.env.PUBLIC_URL + "/" + DEFAULTS_FILE)
+            .then((response) => response.text());
 }
 
 export default Tift;

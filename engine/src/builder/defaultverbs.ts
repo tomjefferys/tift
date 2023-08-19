@@ -11,24 +11,7 @@ import { Obj } from "tift-types/src/util/objects";
 import { getName, Nameable } from "../nameable";
 import * as Output from "./output";
 import { IMPLICIT_FUNCTION } from "./functionbuilder";
-
-const LOOK_TEMPLATE = 
-`{{#isDark}}
-  It is dark, you cannot see a thing.
-{{/isDark}}
-
-{{^isDark}}
-{{desc}}{{^desc}}{{name}}{{^name}}{{id}}{{/name}}{{/desc}}
-
-{{#hasItems}}
-You can see:
-{{/hasItems}}
-{{#items}}
-- {{> item}}
-{{/items}}
-{{/isDark}}`;
-
-const LOOK_ITEM_TEMPLATE = `{{name}}{{#location}} ( in {{.}} ){{/location}}`;
+import * as Property from "../properties";
 
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
@@ -57,9 +40,10 @@ export const LOOK_FN = (env : Env) => {
     }
 
     const scope = env.newChild(view).newChild(location);
-    const partials = { item : LOOK_ITEM_TEMPLATE };
+    const lookTemplate = Property.getPropertyString(env, "look.templates.main");
+    const partials = Property.getProperty(env, "look.templates.partials") as Record<string,string>
 
-    const output = formatString(scope, LOOK_TEMPLATE, undefined, partials);
+    const output = formatString(scope, lookTemplate, undefined, partials);
 
     Output.write(env, output);
 
@@ -90,7 +74,8 @@ const WAIT = phaseActionBuilder("wait")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("wait")).build(),
             mkThunk(env => {
-                Output.write(env,  "Time passes");
+                const message = Property.getPropertyString(env, "wait.message")
+                Output.write(env, message);
                 return mkResult(true);
     }));
         

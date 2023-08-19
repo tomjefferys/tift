@@ -1,6 +1,6 @@
 import { formatString } from "../../src/util/mustacheUtils";
 import { createRootEnv } from "../../src/env";
-import { defaultOutputConsumer } from "../testutils/testutils";
+import { defaultOutputConsumer, loadDefaults } from "../testutils/testutils";
 import { EngineBuilder } from "../../src/builder/enginebuilder";
 import { Input } from "../../src/main";
 import _ from "lodash";
@@ -30,10 +30,11 @@ test("Test formatEntityString when looking and using same entity", () => {
 
     const [consumer, messages, _words] = defaultOutputConsumer();
 
-    const engine = new EngineBuilder()
+    const builder = new EngineBuilder()
                             .withOutput(consumer)
-                            .withObj(room1)
-                            .build();
+                            .withObj(room1);
+    loadDefaults(builder);
+    const engine = builder.build();
     engine.send(Input.start());
     engine.send(Input.execute(["look"]));
     expect(messages.join(" ").trim()).toEqual("An almost empty room except for a flickering light");
@@ -58,11 +59,12 @@ test("Test formatEntityString when looking with different entity", () => {
 
     const [consumer, messages, _words] = defaultOutputConsumer();
 
-    const engine = new EngineBuilder()
+    const builder = new EngineBuilder()
                             .withOutput(consumer)
                             .withObj(room1)
-                            .withObj(room2)
-                            .build();
+                            .withObj(room2);
+    loadDefaults(builder);
+    const engine = builder.build();
 
     engine.send(Input.start());
     engine.send(Input.execute(["look"]));
@@ -90,11 +92,12 @@ test("Test firstTime", () => {
     };
 
     const [consumer, messages, _words, saveData] = defaultOutputConsumer();
-    const engine = new EngineBuilder()
+    const builder = new EngineBuilder()
                             .withOutput(consumer)
                             .withObj(room1)
-                            .withConfigEntry("undoLevels", 0)
-                            .build();
+                            .withConfigEntry("undoLevels", 0);
+    loadDefaults(builder);
+    const engine = builder.build();
     engine.send(Input.start());
     expect(saveData.data.baseHistory).toStrictEqual([]);
 
@@ -129,11 +132,13 @@ test("Test not needlessy updating state", () => {
     };
 
     const [consumer, messages, _words, saveData] = defaultOutputConsumer();
-    const engine = new EngineBuilder()
+    const builder = new EngineBuilder()
                             .withOutput(consumer)
                             .withObj(room1)
-                            .withConfigEntry("undoLevels", 0)
-                            .build();
+                            .withConfigEntry("undoLevels", 0);
+    loadDefaults(builder);
+    const engine = builder.build();
+
     engine.send(Input.start());
     expect(saveData.data.baseHistory).toStrictEqual([]);
 

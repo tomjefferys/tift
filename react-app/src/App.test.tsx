@@ -4,6 +4,7 @@ import { rest } from 'msw'
 import {setupServer} from 'msw/node'
 import App from './App';
 import userEvent from '@testing-library/user-event';
+import * as fs from "fs";
 
 const TEST_DATA = `
 ---
@@ -32,6 +33,10 @@ after:
 const server = setupServer(
   rest.get('/adventure.yaml', (req, res, ctx) => {
     return res(ctx.body(TEST_DATA));
+  }),
+  rest.get('/defaults.yaml', (req, res, ctx) => {
+    const data = fs.readFileSync("public/properties.yaml", "utf8");
+    return res(ctx.body(data));
   })
 )
 

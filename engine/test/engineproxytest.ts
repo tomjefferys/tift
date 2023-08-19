@@ -12,7 +12,7 @@ import _ from "lodash";
 import dedent from "dedent-js";
 import { buildStateMachine, TERMINATE } from "../src/util/statemachine";
 import { InputMessage } from "tift-types/src/messages/input";
-import { STANDARD_VERBS } from "./testutils/testutils";
+import { loadDefaultsYAML, STANDARD_VERBS } from "./testutils/testutils";
 
 test("Test basic no-op engine proxy" , () => {
     const proxy = createEngineProxy(getEngineBuilder());
@@ -100,6 +100,7 @@ test("Test restart using command proxy", () => {
     // Instructions to perform a restart
     const engineInitializer = (forwarder : MessageForwarder) => {
         forwarder.send(Input.reset());
+        forwarder.send(Input.load(loadDefaultsYAML()))
         forwarder.send(Input.load(data));
         forwarder.send(Input.start());
     }
@@ -158,6 +159,7 @@ test("test restart using state machine proxy", () => {
     // Instructions to perform a restart
     const engineInitializer = (forwarder : MessageForwarder) => {
         forwarder.send(Input.reset());
+        forwarder.send(Input.load(loadDefaultsYAML()))
         forwarder.send(Input.load(data));
         forwarder.send(Input.start());
     }

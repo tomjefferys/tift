@@ -6,7 +6,8 @@ const prototypes = {
   "object":{"type":"object"},
   "item":{"type":"item"},
   "rule":{"type":"rule"},
-  "verb":{"type":"verb"}
+  "verb":{"type":"verb"},
+  "property":{"type":"property"}
 }
 
 export function getObjs(data: string) {

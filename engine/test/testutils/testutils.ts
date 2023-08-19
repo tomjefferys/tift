@@ -4,6 +4,9 @@ import { createRootEnv } from "../../src/env";
 import { Env, EnvFn } from "tift-types/src/env";
 import { print } from "../../src/messages/output"
 import { History } from "tift-types/src/util/historyproxy";
+import { EngineBuilder } from "../../src/builder/enginebuilder";
+import * as YAMLParser from "../../src/yamlparser";
+import * as fs from "fs"
 
 export const STANDARD_VERBS = ["go", "look", "inventory", "wait"];
 
@@ -59,4 +62,14 @@ export function setUpEnv() : [Env, string[], string[], SaveData] {
     });
     env.set("write", write);
     return [env, messages, words, saveData];
+}
+
+export function loadDefaultsYAML() : string {
+    return fs.readFileSync("test/resources/properties.yaml", "utf8");
+}
+
+export function loadDefaults(builder : EngineBuilder) {
+    const defaults = loadDefaultsYAML();
+    YAMLParser.getObjs(defaults)
+              .forEach(obj => builder.withObj(obj));
 }

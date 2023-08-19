@@ -9,6 +9,8 @@ import * as Player from "./player";
 import { Optional } from "tift-types/src/util/optional";
 import { ARGS } from "../script/parser";
 import { EnvFn, mkResult } from "../script/thunk";
+import * as MustacheUtils from "../util/mustacheUtils";
+import * as Properties from "../properties";
 
 export const DARK = "dark";
 const LIGHTSOURCE = "lightSource";
@@ -134,10 +136,14 @@ export function makeOnMove() : EnvFn {
         const name = entity["name"] ?? entity["id"];
         const playerLocation = Player.getLocation(env);
         if (playerLocation === oldLocation) {
-            Output.write(env, name + " leaves " + leaveDirection);
+            const message = Properties.getPropertyString(env, "location.messages.leaves");
+            const messageEnv = env.newChild({ entity : name, direction : leaveDirection});
+            Output.write(env, MustacheUtils.formatString(messageEnv, message));
         }
         if (playerLocation === newLocation.id) {
-            Output.write(env, name + " enters from the " + arriveDirection);
+            const message = Properties.getPropertyString(env, "location.messages.arrives");
+            const messageEnv = env.newChild({ entity : name, direction : arriveDirection});
+            Output.write(env, MustacheUtils.formatString(messageEnv, message));
         }
         return mkResult(true);
     };

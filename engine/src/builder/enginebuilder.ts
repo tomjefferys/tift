@@ -48,6 +48,9 @@ export class EngineBuilder {
                 case "rule":
                     this.objs.push(obj);
                     break;
+                case "property":
+                    this.objs.push(obj);
+                    break;
                 default:
                     throw new Error("Unknown object type");
             }

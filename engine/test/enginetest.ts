@@ -1,6 +1,6 @@
 import { BasicEngine } from "../src/engine";
 import { EngineBuilder } from "../src/builder/enginebuilder";
-import { listOutputConsumer, SaveData, getEmptyHistory } from "./testutils/testutils";
+import { listOutputConsumer, SaveData, getEmptyHistory, loadDefaults } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN } from "./testutils/testobjects";
 import { STANDARD_VERBS } from "./testutils/testutils";
@@ -20,6 +20,7 @@ beforeEach(() => {
     statuses = [];
     saveData = { data : getEmptyHistory() };
     builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses));
+    loadDefaults(builder);
 });
 
 test("Test single room, no exits", () => {
@@ -590,6 +591,7 @@ test("Test reset", () => {
             tags : ["carryable"]
         });
         builder.withConfigEntry("undoLevels", 0);
+        loadDefaults(builder);
         return builder;
     }
     // Start a game
@@ -1525,3 +1527,9 @@ function getWordIds(engine : Engine, partial : string[]) : string[] {
     wordsResponse.length = 0;
     return words;
 }
+
+//function loadDefaults(builder : EngineBuilder) {
+//    const defaults = fs.readFileSync("test/resources/defaults.yaml", "utf8");
+//    YAMLParser.getObjs(defaults)
+//              .forEach(obj => builder.withObj(obj));
+//}
