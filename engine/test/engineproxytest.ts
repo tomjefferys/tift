@@ -2,7 +2,7 @@ import { EngineBuilder } from "../src/builder/enginebuilder";
 import { getEngine, Input, OutputConsumerBuilder } from "../src/main";
 import { Consumer } from "tift-types/src/util/functions";
 import { Forwarder } from "tift-types/src/util/duplexproxy";
-import { NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
+import { GAME_METADATA, NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
 import * as Output from "../src/messages/output";
 import { OutputMessage, OutputConsumer } from "tift-types/src/messages/output";
 import { createWordFilter, createEngineProxy, createStateMachineFilter, handleInput } from "../src/engineproxy";
@@ -85,6 +85,10 @@ test("Test commandproxy", () => {
 test("Test restart using command proxy", () => {
     const data = dedent(`
         ---
+        game: The Game
+        options:
+          - useDefaultVerbs
+        ---
         room: northRoom
         desc: The north room
         exits:
@@ -143,6 +147,10 @@ test("Test restart using command proxy", () => {
 
 test("test restart using state machine proxy", () => {
     const data = dedent(`
+        ---
+        game: The Game
+        options:
+          - useDefaultVerbs
         ---
         room: northRoom
         desc: The north room
@@ -270,7 +278,7 @@ function getWordCapturer() : [string[], OutputConsumer] {
 
 function getEngineBuilder() : (output : Consumer<OutputMessage>) => Engine {
     return (output) => {
-        const builder = new EngineBuilder().withOutput(output);
+        const builder = new EngineBuilder().withOutput(output).withObj(GAME_METADATA);
         addRooms(builder);
         return builder.build();
     }

@@ -4,6 +4,7 @@ import { defaultOutputConsumer, loadDefaults } from "../testutils/testutils";
 import { EngineBuilder } from "../../src/builder/enginebuilder";
 import { Input } from "../../src/main";
 import _ from "lodash";
+import { GAME_METADATA } from "../testutils/testobjects";
 
 test("Test formatEntityString", () => {
     const env = createRootEnv({ "entities" : { "foo" : "bar", "baz" : "qux"}}, [["entities"]]);
@@ -32,6 +33,7 @@ test("Test formatEntityString when looking and using same entity", () => {
 
     const builder = new EngineBuilder()
                             .withOutput(consumer)
+                            .withObj(GAME_METADATA)
                             .withObj(room1);
     loadDefaults(builder);
     const engine = builder.build();
@@ -61,6 +63,7 @@ test("Test formatEntityString when looking with different entity", () => {
 
     const builder = new EngineBuilder()
                             .withOutput(consumer)
+                            .withObj(GAME_METADATA)
                             .withObj(room1)
                             .withObj(room2);
     loadDefaults(builder);
@@ -94,6 +97,7 @@ test("Test firstTime", () => {
     const [consumer, messages, _words, saveData] = defaultOutputConsumer();
     const builder = new EngineBuilder()
                             .withOutput(consumer)
+                            .withObj(GAME_METADATA)
                             .withObj(room1)
                             .withConfigEntry("undoLevels", 0);
     loadDefaults(builder);
@@ -134,6 +138,7 @@ test("Test not needlessy updating state", () => {
     const [consumer, messages, _words, saveData] = defaultOutputConsumer();
     const builder = new EngineBuilder()
                             .withOutput(consumer)
+                            .withObj(GAME_METADATA)
                             .withObj(room1)
                             .withConfigEntry("undoLevels", 0);
     loadDefaults(builder);

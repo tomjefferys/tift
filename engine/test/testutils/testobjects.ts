@@ -1,3 +1,8 @@
+export const GAME_METADATA = {
+    "id" : "__metadata__",
+    "type" : "metadata",
+    "options" : ["useDefaultVerbs"]
+}; 
 
 export const THE_ROOM = {
     id : "theRoom",

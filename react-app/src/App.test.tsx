@@ -8,6 +8,10 @@ import * as fs from "fs";
 
 const TEST_DATA = `
 ---
+game: Test Game
+options:
+  - useDefaultVerbs
+---
 room: cave
 desc: A dark dank cave
 tags: [start]

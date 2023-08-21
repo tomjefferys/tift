@@ -2,7 +2,7 @@ import { BasicEngine } from "../src/engine";
 import { EngineBuilder } from "../src/builder/enginebuilder";
 import { listOutputConsumer, SaveData, getEmptyHistory, loadDefaults } from "./testutils/testutils";
 import { Input } from "../src/main";
-import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN } from "./testutils/testobjects";
+import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN, GAME_METADATA } from "./testutils/testobjects";
 import { STANDARD_VERBS } from "./testutils/testutils";
 import { StatusType } from "tift-types/src/messages/output";
 import { Engine } from "tift-types/src/engine"
@@ -20,6 +20,7 @@ beforeEach(() => {
     statuses = [];
     saveData = { data : getEmptyHistory() };
     builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses));
+    builder.withObj(GAME_METADATA);
     loadDefaults(builder);
 });
 
@@ -583,6 +584,7 @@ test("Test reset", () => {
     // Need to recreate the builder later, so store constructions as a lambda
     const getBuilder = () => {
         const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses));
+        builder.withObj(GAME_METADATA);
         builder.withObj(THE_ROOM);
         builder.withObj({
             id : "key",
@@ -1527,9 +1529,3 @@ function getWordIds(engine : Engine, partial : string[]) : string[] {
     wordsResponse.length = 0;
     return words;
 }
-
-//function loadDefaults(builder : EngineBuilder) {
-//    const defaults = fs.readFileSync("test/resources/defaults.yaml", "utf8");
-//    YAMLParser.getObjs(defaults)
-//              .forEach(obj => builder.withObj(obj));
-//}

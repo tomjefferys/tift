@@ -5,7 +5,6 @@ import { Entity } from "../entity";
 import { getString, forEach, forEachEntry, ifExists, getObj } from "../util/objects";
 import { BasicEngine, EngineState } from "../engine";
 import { Engine } from "tift-types/src/engine";
-import { DEFAULT_VERBS } from "./defaultverbs";
 import { getObjs } from "../yamlparser";
 import { Obj } from "../util/objects"
 import { OutputConsumer } from "tift-types/src/messages/output";
@@ -15,6 +14,8 @@ import * as RuleBuilder from "./rulebuilder";
 import { getDefaultGameBehaviour } from "./behaviour";
 import { Config, ConfigValueType } from "../config";
 import * as Location from "./locations";
+import { Env } from "tift-types/src/env";
+import { getDefaultVerbs } from "./defaultverbs";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -23,9 +24,9 @@ export class EngineBuilder {
     objs : Obj[] = [];
     config : Config = {};
 
-    constructor() {
-        DEFAULT_VERBS.forEach(verb => this.objs.push(verb));
-    }
+    //constructor() {
+    //    DEFAULT_VERBS.forEach(verb => this.objs.push(verb));
+    //}
 
     withOutput(outputConsumer : OutputConsumer) {
         this.outputConsumer = outputConsumer;
@@ -49,6 +50,7 @@ export class EngineBuilder {
                     this.objs.push(obj);
                     break;
                 case "property":
+                case "metadata":
                     this.objs.push(obj);
                     break;
                 default:
@@ -85,7 +87,20 @@ export class EngineBuilder {
     }
     
     addTo(engine : BasicEngine) {
-        engine.addContent(this.objs);
+        engine.addContent(env => this.addToEnv(env));
+    }
+
+    addToEnv(env : Env) : Obj[] {
+        const objs = [...this.objs];
+        const defaults : Obj[] = [];
+        const metadata = objs.find(obj => obj["id"] === "__metadata__");
+        if (metadata) {
+            const options = metadata["options"] ?? [];
+            if (options.includes('useDefaultVerbs')) {
+                defaults.push(...getDefaultVerbs(env));
+            }
+        }
+        return [...defaults, ...objs];
     }
 }
 

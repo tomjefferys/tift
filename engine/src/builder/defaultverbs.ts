@@ -193,8 +193,15 @@ const PUSH = phaseActionBuilder("push")
                 return mkResult(true);
             }));
 
+export function getDefaultVerbs(env : Env) : Obj[] {
+    return DEFAULT_VERBS.map(verb => ({
+        ...verb,
+        name :  Property.getPropertyString(env, `${verb["id"]}.name`, verb["id"])
+    }));
+}
+
 // TODO we should load this from a data file
-export const DEFAULT_VERBS = [
+const DEFAULT_VERBS = [
       new VerbBuilder({"id":"go"})
                   .withTrait("intransitive")
                   .withAction(GO)

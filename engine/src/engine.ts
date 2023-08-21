@@ -145,7 +145,8 @@ export class BasicEngine implements Engine {
     }
   }
 
-  addContent(objs : Obj[]) {
+  addContent(getContent : (env : Env) => Obj[]) {
+    const objs = getContent(this.env);
     const props = this.env.properties;
     objs.forEach(obj => {
       const { id, type, ...properties } = obj;
@@ -211,7 +212,7 @@ export class BasicEngine implements Engine {
   loadData(message : Load) {
     const builder = new EngineBuilder();
     builder.fromYaml(message.data);
-    this.addContent(builder.objs);
+    this.addContent(env => builder.addToEnv(env));
   }
 
   save() {

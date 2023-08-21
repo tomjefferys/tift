@@ -7,34 +7,38 @@ import { property } from "./path";
 import { Path } from "tift-types/src/path";
 import _ from "lodash";
 import { Env } from "tift-types/src/env";
+import { Optional } from "tift-types/src/util/optional";
 
 
 const PROPS_KEY = property("properties");
 
-export function getProperty(env : Env, path : string) : unknown {
-    return getPropertyByPath(env, parsePath(path));
+export function getProperty<T>(env : Env, path : string, defaultValue : Optional<T> = undefined) : T {
+    return getPropertyByPath(env, parsePath(path), defaultValue);
 }
 
-function getPropertyByPath(env : Env, path : Path) {
+function getPropertyByPath<T>(env : Env, path : Path, defaultValue : Optional<T> = undefined) : T {
     const fullPath : Path = [PROPS_KEY, ...path];
-    const value = env.get(fullPath);
+    let value = env.get(fullPath);
     if(isNotFound(value)) {
-        throw new Error(`property ${path} could not be found`);
+        if (defaultValue) {
+            value = defaultValue;
+        } else {
+            throw new Error(`property ${path} could not be found`);
+        }
     }
     return value;
 }
 
-export function getPropertyString(env : Env, path : string) : string {
-    const value = getProperty(env, path);
+export function getPropertyString(env : Env, path : string, defaultValue : Optional<string> = undefined) : string {
+    const value = getProperty(env, path, defaultValue);
     if (!_.isString(value)) {
         throw new Error(`property ${path} is not a string`);
     }
     return value as string;
 }
 
-export function setProperty(env : Env, path : string, value : unknown) : void {
+export function setProperty<T>(env : Env, path : string, value : T) : void {
     setPropertyByPath(env, parsePath(path), value);
-    //env.set([PROPS_KEY, ...parsePath(path)], value);
 }
 
 function setPropertyByPath(env : Env, path : Path, value : unknown) : void {
