@@ -7,7 +7,8 @@ const prototypes = {
   "item":{"type":"item"},
   "rule":{"type":"rule"},
   "verb":{"type":"verb"},
-  "property":{"type":"property"}
+  "property":{"type":"property"},
+  "game":{"type":"metadata"}
 }
 
 export function getObjs(data: string) {
@@ -19,8 +20,11 @@ export function getObjs(data: string) {
     }
     for(const [name, pt] of Object.entries(prototypes)) {
       if (doc[name]) {
-        const newDoc : Obj = Object.assign({"id": doc[name]}, pt, doc);
+        let newDoc : Obj = Object.assign({"id": doc[name]}, pt, doc);
         delete newDoc[name];
+        if (name === "game") {
+          newDoc = {...newDoc, name : doc[name], id : "__metadata__"};
+        }
         docs.push(newDoc);
       }
     } 
