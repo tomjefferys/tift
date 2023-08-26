@@ -6,7 +6,6 @@ import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUT
 import { STANDARD_VERBS } from "./testutils/testutils";
 import { StatusType } from "tift-types/src/messages/output";
 import { Engine } from "tift-types/src/engine"
-import { of } from "../src/util/arrays";
 
 let messages : string[];
 let wordsResponse : string[];
