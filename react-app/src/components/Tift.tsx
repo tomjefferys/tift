@@ -20,7 +20,7 @@ import * as WordTree from "../util/wordtree";
 
 type WordTreeType = WordTree.WordTree;
 
-const DEFAULTS_FILE = "defaults.yaml";
+const DEFAULTS_FILE = "properties.yaml";
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
 const AUTO_SAVE = "TIFT_AUTO_SAVE";

@@ -6,6 +6,7 @@ import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUT
 import { STANDARD_VERBS } from "./testutils/testutils";
 import { StatusType } from "tift-types/src/messages/output";
 import { Engine } from "tift-types/src/engine"
+import { of } from "../src/util/arrays";
 
 let messages : string[];
 let wordsResponse : string[];
@@ -1215,6 +1216,44 @@ test("Test dark room with lightsource in inventory", () => {
 
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["dark", "torch"]});
 })
+
+test("Test dark room can still move", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        exits : {
+            "south" : "southRoom"
+        },
+        tags : ["start", "dark"]
+    }).withObj({
+        ...SOUTH_ROOM,
+        exits : {
+            "north" : "northRoom"
+        },
+        tags : ["dark"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    
+    const words = getWordIds(engine, []);
+    expect(words).toContain("go");
+
+    const goWords = getWordIds(engine, ["go"]);
+    expect(goWords).toContain("south");
+});
+
+test("Test dark room can wait", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start", "dark"]
+    });
+    engine = builder.build();
+    engine.send(Input.start());
+    
+    const words = getWordIds(engine, []);
+    expect(words).toContain("wait");
+
+    executeAndTest(["wait"], {expected : ["Time passes"]});
+});
 
 test("Test math functions", () => {
     builder.withObj(THE_ROOM);

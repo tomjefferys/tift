@@ -20,6 +20,7 @@ export function makePlayer(obj : Obj, start : string) {
     }).withVerb("inventory")
       .withVerb("wait")
       .withTag("container")
+      .withTag("visibleWhenDark")
       .build();
     obj["entities"][PLAYER] = player;
 

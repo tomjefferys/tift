@@ -12,14 +12,13 @@ import { Nameable, getName } from "../nameable";
 import { CommandContext } from "../engine";
 import * as MultiDict from "../util/multidict";
 import * as Logger from "../util/logger";
+import * as Tags from "./tags";
 
 const logger = Logger.getLogger("behaviour");
 
 type Entity = Entity.Entity;
 type EntityDict = MultiDict.MultiDict<Entity>;
 type Verb = Verb.Verb;
-
-const START = "start"
 
 
 // Define some default behaviour
@@ -101,7 +100,7 @@ class DefaultBehaviour implements Behaviour {
     }
         
     private findStartingLocation(env : Env) : string {
-        const startingLocs = env.findObjs(obj => obj["type"] === Entities.ENTITY_TYPE && Entity.hasTag(obj, START));
+        const startingLocs = env.findObjs(obj => obj["type"] === Entities.ENTITY_TYPE && Entity.hasTag(obj, Tags.START));
         if (startingLocs.length == 0) {
             throw new Error("No starting location defined");
         }

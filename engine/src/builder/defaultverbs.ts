@@ -12,6 +12,7 @@ import { getName, Nameable } from "../nameable";
 import * as Output from "./output";
 import { IMPLICIT_FUNCTION } from "./functionbuilder";
 import * as Property from "../properties";
+import * as Tags from "./tags";
 
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
@@ -22,7 +23,7 @@ export const LOOK_FN = (env : Env) => {
                            .filter(obj => Entities.isEntityMovable(obj) || Entities.isEntityNPC(obj))
                            .filter(obj => !Locations.isAtLocation(env, Player.PLAYER, obj));
                     
-    const isDark = Entities.entityHasTag(location, Locations.DARK) && !Locations.isLightSourceAtLocation(env, location);
+    const isDark = Entities.entityHasTag(location, Tags.DARK) && !Locations.isLightSourceAtLocation(env, location);
 
     const getItemDescription = (item : Obj) => {
         const itemLocation = Locations.getLocation(item);

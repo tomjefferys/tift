@@ -11,9 +11,7 @@ import { ARGS } from "../script/parser";
 import { EnvFn, mkResult } from "../script/thunk";
 import * as MustacheUtils from "../util/mustacheUtils";
 import * as Properties from "../properties";
-
-export const DARK = "dark";
-const LIGHTSOURCE = "lightSource";
+import * as Tags from "./tags";
 
 export const LOCATION = "location";
 
@@ -79,10 +77,13 @@ export function doMove(env : Env, entityId : string | object, destinationId : st
  * @param location 
  */
 export function findEntites(env : Env, location : Obj) : Obj[] {
-    const canSee = !Entities.entityHasTag(location, DARK) || isLightSourceAtLocation(env, location);
-    return canSee ? env.findObjs(obj => obj?.location === location.id && Entities.isEntity(obj) && Entities.isEntityVisible(obj))
-                         .flatMap(obj => [obj, ...findEntites(env, obj)])  // TODO this should check for 'container' tag
-                  : [];
+    const isDark = Entities.entityHasTag(location, Tags.DARK);
+    const canSee = !isDark || isLightSourceAtLocation(env, location);
+    return env.findObjs(obj => obj?.location === location.id)
+              .filter(obj => Entities.isEntity(obj))
+              .filter(obj => canSee || Entities.entityHasTag(obj, Tags.VISIBLE_WHEN_DARK))
+              .filter(obj => Entities.isEntityVisible(obj))
+              .flatMap(obj => [obj, ...findEntites(env, obj)])  // TODO this should check for 'container' tag
 }
 
 export function isAtLocation(env : Env, location : string, obj : Obj) : boolean {
@@ -95,7 +96,7 @@ export function isAtLocation(env : Env, location : string, obj : Obj) : boolean 
 }
 
 export function isLightSourceAtLocation(env : Env, location : Obj) : boolean {
-    return env.findObjs(obj => Entities.isEntity(obj) && Entities.entityHasTag(obj, LIGHTSOURCE))
+    return env.findObjs(obj => Entities.isEntity(obj) && Entities.entityHasTag(obj, Tags.LIGHTSOURCE))
             .some(entity => isAtLocation(env, location.id, entity));
 }
 

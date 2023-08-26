@@ -38,7 +38,7 @@ const server = setupServer(
   rest.get('/adventure.yaml', (req, res, ctx) => {
     return res(ctx.body(TEST_DATA));
   }),
-  rest.get('/defaults.yaml', (req, res, ctx) => {
+  rest.get('/properties.yaml', (req, res, ctx) => {
     const data = fs.readFileSync("public/properties.yaml", "utf8");
     return res(ctx.body(data));
   })
