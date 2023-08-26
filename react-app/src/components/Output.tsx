@@ -5,6 +5,12 @@ import ChakraUIRenderer from 'chakra-ui-markdown-renderer';
 import ReactMarkdown from "react-markdown";
 import { Box, Container, List, ListItem, Text } from "@chakra-ui/react";
 
+const LEVEL_COLOURS : Record<string, string> = {
+    "info" : "blue",
+    "warn" : "yellow",
+    "error" : "red"
+}
+
 interface OutputProps {
     entries : OutputEntry[];
     status : string;
@@ -22,8 +28,7 @@ interface LogEntryProps {
 
 const MessageEntry = ({ value } : EntryProps)  => (<ReactMarkdown components={ChakraUIRenderer()}>{value}</ReactMarkdown>)
 const CommandEntry = ({ value } : EntryProps) => (<Text color={"green"}>&gt; {value}</Text>)
-const LogEntry = ({ logLevel, message } : LogEntryProps) => 
-        (<div className={"log-" + logLevel}> {message}{} </div>)
+const LogEntry = ({ logLevel, message } : LogEntryProps) => (<Text color={LEVEL_COLOURS[logLevel]}>{message}</Text>)
 
 const renderMessage = (message : OutputEntry) => {
     switch(message.type) {
