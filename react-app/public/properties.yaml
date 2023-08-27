@@ -24,6 +24,6 @@ message: Time passes
 ---
 property: location
 messages:
-  leaves: "{{entity}} leaves {{direction}}"
-  arrives: "{{entity}} enters from the {{direction}}"
+  leaves: "{{entity}} leaves{{#direction}} {{direction}}{{/direction}}"
+  arrives: "{{entity}} enters{{#direction}} from the {{direction}}{{/direction}}"
 ---

@@ -46,8 +46,8 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
         },
         get : (_target : any, key : any) => {
             const value = scope.get(key);
-            let result = "NOT FOUND";
-            if (isFound(value)) {
+            let result = undefined;
+            if (value !== undefined && isFound(value)) {
                 result = value[IMPLICIT_FUNCTION]? value(env).getValue() : value;
             }
             return result;

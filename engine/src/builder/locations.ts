@@ -118,7 +118,7 @@ export function closeExit(env : Env, roomId : string, direction : string) {
 export function findExit(env : Env, fromId : string, toId : string) : Optional<string> {
     const fromRoom = Entities.getEntity(env, fromId);
     const toRoom = Entities.getEntity(env, toId);
-    const allExits = fromRoom["exits"];
+    const allExits = fromRoom["exits"] ?? {};
     const [exit, _room] = Object.entries(allExits)
                                 .find(([_name, value]) => value === toRoom.id)
                                     ?? [undefined, undefined];
