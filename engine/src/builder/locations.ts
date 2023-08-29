@@ -77,13 +77,16 @@ export function doMove(env : Env, entityId : string | object, destinationId : st
  * @param location 
  */
 export function findEntites(env : Env, location : Obj) : Obj[] {
-    const isDark = Entities.entityHasTag(location, Tags.DARK);
-    const canSee = !isDark || isLightSourceAtLocation(env, location);
+    const canSee = canSeeAtLocation(env, location);
     return env.findObjs(obj => obj?.location === location.id)
               .filter(obj => Entities.isEntity(obj))
-              .filter(obj => canSee || Entities.entityHasTag(obj, Tags.VISIBLE_WHEN_DARK))
-              .filter(obj => Entities.isEntityVisible(obj))
+              .filter(obj => Entities.isEntityVisible(env, canSee, obj))
               .flatMap(obj => [obj, ...findEntites(env, obj)])  // TODO this should check for 'container' tag
+}
+
+export function canSeeAtLocation(env : Env, location : Obj) : boolean {
+    const isDark = Entities.entityHasTag(location, Tags.DARK);
+    return !isDark || isLightSourceAtLocation(env, location);
 }
 
 export function isAtLocation(env : Env, location : string, obj : Obj) : boolean {

@@ -16,6 +16,7 @@ import { Config, ConfigValueType } from "../config";
 import * as Location from "./locations";
 import { Env } from "tift-types/src/env";
 import { getDefaultVerbs } from "./defaultverbs";
+import * as Entities from "./entities";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -169,6 +170,11 @@ export function makeItem(obj : Obj) : Entity {
     if (tags.includes("NPC")) {
         if (!obj["onMove(newLoc)"]) {
             builder.withProp("onMove(newLoc)", Location.makeOnMove());
+        }
+    }
+    if (tags.includes("visibleWhenDark")) {
+        if (!obj["visibleWhen()"]) {
+            builder.withProp("visibleWhen()", Entities.makeVisibleWhenDarkFn());
         }
     }
 

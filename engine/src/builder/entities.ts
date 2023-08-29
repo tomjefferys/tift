@@ -4,6 +4,9 @@ import { isFound } from "../env";
 import { makePath } from "../path";
 import * as Errors from "../util/errors";
 import _ from "lodash";
+import { LOCATION } from "./locations";
+import { DARK } from "./tags";
+import { EnvFn, mkResult } from "../script/thunk";
 
 // Utility functions pertaining to an entity
 export const ENTITY_TYPE = "entity";
@@ -23,8 +26,8 @@ export function isEntity(obj : Obj) : boolean {
     return obj.type === ENTITY_TYPE;
 }
 
-export function isEntityVisible(obj : Obj) : boolean {
-    return !entityHasTag(obj, "hidden");
+export function isEntityVisible(env : Env, canSee : boolean, obj : Obj) : boolean {
+    return (obj["visibleWhen"] ? obj["visibleWhen"](env) : canSee) && !entityHasTag(obj, "hidden");
 }
 
 export function isEntityMovable(obj : Obj) : boolean {
@@ -59,5 +62,14 @@ export function delEntityTag(obj : Obj, tag : string) : void {
         if (index != -1) {
             obj.tags.splice(index, 1);
         }
+    }
+}
+
+export function makeVisibleWhenDarkFn() : EnvFn {
+    return env => {
+        const locationId = env.get(LOCATION);
+        const location = getEntity(env, locationId);
+        const result = entityHasTag(location, DARK);
+        return mkResult(result);
     }
 }

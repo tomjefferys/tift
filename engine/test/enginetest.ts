@@ -1254,6 +1254,51 @@ test("Test dark room can wait", () => {
     executeAndTest(["wait"], {expected : ["Time passes"]});
 });
 
+test("Test visibleWhenDarkTag", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start", "dark"]
+    }).withObj({
+        id : "ball",
+        type : "item",
+        location : "northRoom",
+        tags : ["carryable"]
+    }).withObj({
+        id : "stickers",
+        desc : "glow in the dark stickers",
+        type : "item",
+        location : "northRoom",
+        tags : ["carryable", "visibleWhenDark"]
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { notExpected : ["ball", "stickers"]}); // should we see stickers?
+    const words = getWordIds(engine, ["get"]);
+    expect(words).toContain("stickers");
+    expect(words).not.toContain("ball");
+});
+
+test("Test visibleWhen function", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start", "dark"]
+    }).withObj({
+        id : "stickers",
+        desc : "glow in the dark stickers",
+        type : "item",
+        location : "northRoom",
+        "visibleWhen()" : "hasTag(location, 'dark')",
+        tags : ["carryable"]
+    })
+    engine = builder.build();
+    engine.send(Input.start()); 
+
+    const words = getWordIds(engine, ["get"]);
+    expect(words).toContain("stickers");
+
+})
+
 test("Test math functions", () => {
     builder.withObj(THE_ROOM);
     builder.withObj({

@@ -4,12 +4,15 @@ import { Env } from "tift-types/src/env";
 import { Entity } from "../entity";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
+import { bindParams } from "../script/parser";
 
 export const PLAYER = "__PLAYER__";
 export const INVENTORY = "__INVENTORY__";
 export const WEARING = "__WEARING__";
 
-export function makePlayer(obj : Obj, start : string) {
+export function makePlayer(env : Env, start : string) {
+
+    const props = env.properties;
 
     const player = new EntityBuilder({
         id : PLAYER,
@@ -20,9 +23,9 @@ export function makePlayer(obj : Obj, start : string) {
     }).withVerb("inventory")
       .withVerb("wait")
       .withTag("container")
-      .withTag("visibleWhenDark")
       .build();
-    obj["entities"][PLAYER] = player;
+    props["entities"][PLAYER] = player;
+    player["visibleWhen"] = bindParams([], Entities.makeVisibleWhenDarkFn(), env.newChild(player));
 
     // Set up the inventory
     const inventory = new EntityBuilder({
@@ -32,7 +35,7 @@ export function makePlayer(obj : Obj, start : string) {
     }).withTag("container")
       .build();
 
-    obj["entities"][INVENTORY] = inventory;
+    props["entities"][INVENTORY] = inventory;
 
     // Set up the "wearing" inventory (where items go if the are being worn)
     const wearing = new EntityBuilder({
@@ -42,7 +45,7 @@ export function makePlayer(obj : Obj, start : string) {
     }).withTag("container")
       .build();
 
-    obj["entities"][WEARING] = wearing;
+    props["entities"][WEARING] = wearing;
 }
 
 export const getPlayer : ((env:Env) => Entity) = env => Entities.getEntity(env, PLAYER) as Entity;

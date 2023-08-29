@@ -17,9 +17,11 @@ import * as Tags from "./tags";
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
 
+    const canSee = Locations.canSeeAtLocation(env, location);
+
     const items = Locations.findEntites(env, location)
                            .filter(Entities.isEntity)
-                           .filter(Entities.isEntityVisible)
+                           .filter(entity => Entities.isEntityVisible(env, canSee, entity))
                            .filter(obj => Entities.isEntityMovable(obj) || Entities.isEntityNPC(obj))
                            .filter(obj => !Locations.isAtLocation(env, Player.PLAYER, obj));
                     
