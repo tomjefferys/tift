@@ -43,7 +43,6 @@ class DefaultBehaviour implements Behaviour {
     }
 
     start(env : Env) {
-        //const rootProps = env.properties;
         const start = this.findStartingLocation(env);
         Player.makePlayer(env, start);
     }

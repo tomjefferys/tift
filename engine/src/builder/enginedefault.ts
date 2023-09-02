@@ -38,6 +38,7 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
         return mkResult(null);
     }),
     print : bindParams(["value"], env => {
+        // TODO consider getting the location here, and if there is one check it matches with the player location
         DEFAULT_FUNCTIONS.write(env);
         return mkResult(null);
     }),
@@ -80,6 +81,12 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                         env =>{
                             const entity = Entities.getEntity(env, env.get("entityId"));
                             Entities.delEntityTag(entity, "hidden");
+                            return mkResult(null);
+                        }),
+    hide : bindParams(["entityId"],
+                        env => {
+                            const entity = Entities.getEntity(env, env.get("entityId"));
+                            Entities.setEntityTag(entity, "hidden");
                             return mkResult(null);
                         }),
     random : bindParams(["low","high"], env => {

@@ -285,6 +285,7 @@ export class BasicEngine implements Engine {
     const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb) : false;
 
     // After actions
+    // TODO consider an explicit "clearbuffer" function for clearing the text buffer
     const [afterChildEnv, afterOutputProxy] = this.createOutputProxy();
     if (handledMain) {
       inScopeEnitites.some(entity => executeBestMatchAction(entity.after, afterChildEnv, matchedCommand, entity));
