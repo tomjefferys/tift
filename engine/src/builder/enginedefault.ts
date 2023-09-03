@@ -22,6 +22,9 @@ const moveFn = bindParams(["id"], env => {
     });
 });
 
+// FIXME, these all end up being dynamically scoped. This is probably not a good thing,
+// but the way print and printAt call write depends on this.  Would allow for implicit printAt if we keep it?
+// bindParams third param effectively enables/disabled dynamic scoping
 const DEFAULT_FUNCTIONS : EnvFnMap = {
     setLocation : env => {
         Locations.doMove(env, Player.getPlayer(env), env.get("dest"));
@@ -38,9 +41,17 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
         return mkResult(null);
     }),
     print : bindParams(["value"], env => {
-        // TODO consider getting the location here, and if there is one check it matches with the player location
         DEFAULT_FUNCTIONS.write(env);
         return mkResult(null);
+    }),
+    printAt : bindParams(["location", "value"], env => {
+        const playerLocation = Player.getLocation(env);
+        const printLocation = env.get("location");
+        const locationMatch = printLocation === playerLocation;
+        if (locationMatch) {
+            DEFAULT_FUNCTIONS.write(env);
+        }
+        return mkResult(locationMatch);
     }),
     say : bindParams(["value"], env => {
         DEFAULT_FUNCTIONS.write(env.newChild({"value" : `"${env.get("value")}"`}));

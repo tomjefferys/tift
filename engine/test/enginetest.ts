@@ -732,6 +732,47 @@ test("Test moveTo", () => {
     executeAndTest(["look"], { expected : ["Goblin"]});
 });
 
+test("Test printAt", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        exits : {
+            south : "southRoom"
+        },
+    })
+    builder.withObj({
+        ...SOUTH_ROOM,
+        name : "The South Room",
+        desc : "The room is light and round",
+        exits : {
+            north : "northRoom"
+        }
+    })
+    builder.withObj({
+        ...GOBLIN,
+        location : "northRoom"
+    });
+    builder.withObj({
+        id: "moveGoblin",
+        type: "rule",
+        "afterTurn()": {
+            "repeat": [
+                ["printAt(goblin.location, 'The goblin goes south')",
+                 "move(goblin).to(southRoom)"],
+                ["printAt(goblin.location, 'The goblin goes north')",
+                 "move(goblin).to(northRoom)"]
+            ]
+        }
+    })
+    engine = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["The goblin goes south"]});
+    executeAndTest(["wait"], { notExpected : ["The goblin goes north"]});
+    executeAndTest(["wait"], { expected : ["The goblin goes south"]});
+    executeAndTest(["wait"], { notExpected : ["The goblin goes north"]});
+});
+
 test("Test scoped rules", () => {
     builder.withObj({
         ...NORTH_ROOM,
