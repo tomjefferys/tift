@@ -41,6 +41,10 @@ const server = setupServer(
   rest.get('/properties.yaml', (req, res, ctx) => {
     const data = fs.readFileSync("public/properties.yaml", "utf8");
     return res(ctx.body(data));
+  }),
+  rest.get('/stdlib.yaml', (req, res, ctx) => {
+    const data = fs.readFileSync("public/stdlib.yaml", "utf8");
+    return res(ctx.body(data));
   })
 )
 

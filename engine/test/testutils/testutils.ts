@@ -1,4 +1,4 @@
-import { OutputConsumer, StatusType } from "tift-types/src/messages/output";
+import { Log, LogLevel, OutputConsumer, StatusType } from "tift-types/src/messages/output";
 import { bindParams } from "../../src/script/parser"
 import { createRootEnv } from "../../src/env";
 import { Env, EnvFn } from "tift-types/src/env";
@@ -12,7 +12,7 @@ export const STANDARD_VERBS = ["go", "look", "inventory", "wait"];
 
 export type SaveData = { data : History };
 
-export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData, statuses : StatusType[] ) : OutputConsumer {
+export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData, statuses : StatusType[], log : Log[] ) : OutputConsumer {
     return message => {
         switch(message.type) {
             case "Print":
@@ -25,7 +25,7 @@ export function listOutputConsumer(messages : string[], words : string[], saveDa
                 saveData.data = message.state;
                 break;
             case "Log":
-                messages.push(message.message);
+                log.push(message);
                 break;
             case "Status":
                 statuses.push(message.status);
@@ -45,7 +45,8 @@ export function defaultOutputConsumer() : [OutputConsumer, string[], string[], S
     const words : string[] = [];
     const statuses : StatusType[] = [];
     const saveData = { data : getEmptyHistory() }
-    const consumer = listOutputConsumer(messages, words, saveData, statuses);
+    const log : Log[] = [];
+    const consumer = listOutputConsumer(messages, words, saveData, statuses, log);
     return [consumer, messages, words, saveData];
 
 }
@@ -55,7 +56,8 @@ export function setUpEnv() : [Env, string[], string[], SaveData] {
     const words : string[] = [];
     const saveData = { data : getEmptyHistory() }
     const statuses : StatusType[] = [];
-    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages, words, saveData, statuses)});
+    const log : Log[] = [];
+    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages, words, saveData, statuses, log)});
     const write : EnvFn = bindParams(["value"], env => {
         const value = env.get("value");
         return env.get("OUTPUT")(print(value));
@@ -64,12 +66,23 @@ export function setUpEnv() : [Env, string[], string[], SaveData] {
     return [env, messages, words, saveData];
 }
 
+export const findLogMessages : (level : LogLevel, messages : Log[]) => string[] =
+    (level,messages) => messages.filter(message => message.level === level).map(message => message.message)
+
 export function loadDefaultsYAML() : string {
     return fs.readFileSync("test/resources/properties.yaml", "utf8");
+}
+
+export function loadStdLib() : string {
+    return fs.readFileSync("test/resources/stdlib.yaml", "utf8");
 }
 
 export function loadDefaults(builder : EngineBuilder) {
     const defaults = loadDefaultsYAML();
     YAMLParser.getObjs(defaults)
+              .forEach(obj => builder.withObj(obj));
+
+    const stdlib = loadStdLib();
+    YAMLParser.getObjs(stdlib)
               .forEach(obj => builder.withObj(obj));
 }

@@ -22,7 +22,7 @@ import * as Logger from "./util/logger";
 import { Behaviour } from "./builder/behaviour"
 import { AUTOLOOK } from "./builder/plugins/autolook"
 import { Engine } from "tift-types/src/engine"
-import { compileFunctions, compileStrings } from "./builder/functionbuilder";
+import { compileFunctions, compileGlobalFunction, compileStrings } from "./builder/functionbuilder";
 import { ENTITY_TYPE } from "./builder/entities"
 import { EnvFn } from "./script/thunk";
 import * as Properties from "./properties";
@@ -152,6 +152,12 @@ export class BasicEngine implements Engine {
       const { id, type, ...properties } = obj;
       if (type === "property") {
         Properties.setProperties(this.env, id, properties);
+      } else if (type === "global") {
+        Object.entries(obj)
+              .forEach(([key,value]) => {
+                props[key] = value;
+                compileGlobalFunction(key, value, this.env);
+              })
       } else {
         const namespace = TYPE_NAMESPACES[type];
         if (namespace) {

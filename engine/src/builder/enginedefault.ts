@@ -44,22 +44,6 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
         DEFAULT_FUNCTIONS.write(env);
         return mkResult(null);
     }),
-    printAt : bindParams(["location", "value"], env => {
-        const playerLocation = Player.getLocation(env);
-        const printLocation = env.get("location");
-        const locationMatch = printLocation === playerLocation;
-        if (locationMatch) {
-            DEFAULT_FUNCTIONS.write(env);
-        }
-        return mkResult(locationMatch);
-    }),
-    say : bindParams(["value"], env => {
-        DEFAULT_FUNCTIONS.write(env.newChild({"value" : `"${env.get("value")}"`}));
-        return mkResult(null);
-    }),
-    not : bindParams(["value"], env => {
-        return mkResult(!env.get("value"));
-    }),
     openExit : bindParams(["room", "direction", "target"], 
                         env => {
                             Locations.addExit(env, env.getStr("room"), env.getStr("direction"), env.get("target"));
@@ -86,18 +70,6 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                         env => {
                             const entity = Entities.getEntity(env, env.get("entityId"));
                             Entities.delEntityTag(entity, env.getStr("tag"));
-                            return mkResult(null);
-                        }),
-    reveal : bindParams(["entityId"],
-                        env =>{
-                            const entity = Entities.getEntity(env, env.get("entityId"));
-                            Entities.delEntityTag(entity, "hidden");
-                            return mkResult(null);
-                        }),
-    hide : bindParams(["entityId"],
-                        env => {
-                            const entity = Entities.getEntity(env, env.get("entityId"));
-                            Entities.setEntityTag(entity, "hidden");
                             return mkResult(null);
                         }),
     random : bindParams(["low","high"], env => {

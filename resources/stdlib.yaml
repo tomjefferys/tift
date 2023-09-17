@@ -1,0 +1,14 @@
+---
+global: stdlib
+printAt(location, message):
+  - playerLocation = getLocation()
+  - locationMatch = location == playerLocation
+  - if(locationMatch).then(print(message))
+  - return locationMatch
+say(message): print('"' + message + '"')
+hide(entity): setTag(entity,'hidden')
+reveal(entity): delTag(entity,'hidden')
+not(value): "!value"
+and(value1, value2): value1 && value2
+or(value1, value2): value1 || value2
+---

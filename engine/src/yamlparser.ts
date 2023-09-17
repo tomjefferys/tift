@@ -8,7 +8,8 @@ const prototypes = {
   "rule":{"type":"rule"},
   "verb":{"type":"verb"},
   "property":{"type":"property"},
-  "game":{"type":"metadata"}
+  "game":{"type":"metadata"},
+  "global":{"type":"global"}
 }
 
 export function getObjs(data: string) {

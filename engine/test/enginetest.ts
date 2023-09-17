@@ -1,16 +1,17 @@
 import { BasicEngine } from "../src/engine";
 import { EngineBuilder } from "../src/builder/enginebuilder";
-import { listOutputConsumer, SaveData, getEmptyHistory, loadDefaults } from "./testutils/testutils";
+import { listOutputConsumer, SaveData, getEmptyHistory, loadDefaults, findLogMessages } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN, GAME_METADATA } from "./testutils/testobjects";
 import { STANDARD_VERBS } from "./testutils/testutils";
-import { StatusType } from "tift-types/src/messages/output";
+import { Log, StatusType } from "tift-types/src/messages/output";
 import { Engine } from "tift-types/src/engine"
 
 let messages : string[];
 let wordsResponse : string[];
 let statuses : StatusType[]
 let saveData : SaveData;
+let log : Log[];
 let builder : EngineBuilder;
 let engine : Engine;
 
@@ -19,7 +20,8 @@ beforeEach(() => {
     wordsResponse = [];
     statuses = [];
     saveData = { data : getEmptyHistory() };
-    builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses));
+    log = [];
+    builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log));
     builder.withObj(GAME_METADATA);
     loadDefaults(builder);
 });
@@ -503,7 +505,7 @@ test("Test error when executing", () => {
     engine = builder.build();
     engine.send(Input.start());
 
-    executeAndTest(["fuddle", "thing"], { expected : ["thing.before[0]", "Execution failed"]});
+    executeAndTest(["fuddle", "thing"], { errors : ["thing.before[0]", "Execution failed"]});
 });
 
 test("Test load save data", () => {
@@ -583,7 +585,7 @@ test("Test load save after getting item", () => {
 test("Test reset", () => {
     // Need to recreate the builder later, so store constructions as a lambda
     const getBuilder = () => {
-        const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses));
+        const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log));
         builder.withObj(GAME_METADATA);
         builder.withObj(THE_ROOM);
         builder.withObj({
@@ -1546,7 +1548,7 @@ test("Test mustache firstTime in expression string", () => {
     });
     engine = builder.build();
     engine.send(Input.start());
-    executeAndTest(["wait"], { expected : ["Error formatting"]});
+    executeAndTest(["wait"], { errors : ["Error formatting"]});
 })
 
 test("Test mustache firstTime in property string", () => {
@@ -1614,11 +1616,29 @@ test("Test mustache in array", () => {
 
 interface ExpectedStrings {
     expected? : string[],
-    notExpected? : string[]
+    notExpected? : string[],
+    errors? : string[]
 }
 
 function executeAndTest(command : string[], expectedMessages : ExpectedStrings) {
     engine.send(Input.execute(command));
+
+    if (expectedMessages.errors) {
+        const logMessages = [...findLogMessages("error", log),
+                             ...findLogMessages("warn", log)].join("\n");
+        expectedMessages.errors.forEach(str => {
+            expect(logMessages).toContain(str);
+        });
+    } else {
+        const errors = findLogMessages("error", log);
+        expect(errors).toHaveLength(0);
+
+        const warnings = findLogMessages("warn", log);
+        expect(warnings).toHaveLength(0);
+    }
+
+    log.length = 0;
+
     const joined = messages.join("\n");
     expectedMessages.expected?.forEach(str => {
         expect(joined).toContain(str);

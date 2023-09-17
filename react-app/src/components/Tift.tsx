@@ -21,6 +21,7 @@ import * as WordTree from "../util/wordtree";
 type WordTreeType = WordTree.WordTree;
 
 const DEFAULTS_FILE = "properties.yaml";
+const STDLIB_FILE = "stdlib.yaml";
 const GAME_FILE = "adventure.yaml";
 //const GAME_FILE = "example.yaml";
 const AUTO_SAVE = "TIFT_AUTO_SAVE";
@@ -70,6 +71,10 @@ function Tift() {
                 // Load default behaviour
                 const defaults = await loadDefaults();
                 engine.send(Input.load(defaults));
+
+                // Load the standard library
+                const stdlib = await loadStdLib();
+                engine.send(Input.load(stdlib));
 
                 // Load the game data
                 engine.send(Input.load(data));
@@ -285,6 +290,11 @@ function createControlHandler(pauser : Pauser.Pauser) : (control : ControlType) 
 
 async function loadDefaults() : Promise<string> {
     return fetch(process.env.PUBLIC_URL + "/" + DEFAULTS_FILE)
+            .then((response) => response.text());
+}
+
+async function loadStdLib() : Promise<string> {
+    return fetch(process.env.PUBLIC_URL + "/" + STDLIB_FILE)
             .then((response) => response.text());
 }
 

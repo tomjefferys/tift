@@ -52,6 +52,7 @@ export class EngineBuilder {
                     break;
                 case "property":
                 case "metadata":
+                case "global":
                     this.objs.push(obj);
                     break;
                 default:

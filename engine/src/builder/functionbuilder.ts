@@ -38,6 +38,16 @@ export function compileStrings(namespace : Optional<string>, id : string, env : 
     compile(namespace, id, env, makeStrFunction);
 }
 
+export function compileGlobalFunction(id : string, value : string, env : Env) {
+    const fnDef = getFunctionDef(id);
+    if (fnDef) {
+        const result = compileFnDef(fnDef, value, env, {});
+        env.set(result.name, result.envFn);
+    } else if (_.isObject(value)) {
+        compileFunctions(undefined, id, env);
+    }
+}
+
 function compile(namespace : Optional<string>, id : string, env : Env, compiler : Compiler) {
     const obj = getObj(namespace, id, env);
     const scope = getScope(namespace, obj, env);
@@ -86,25 +96,25 @@ const makeStrFunction : Compiler = (name, value, scope, obj) => {
  * myFunc(): print("hello world")
  * add(var1, var2): var1 + var2
  */
-const compileFunction : Compiler = (name, value, scope, _obj) => {
+const compileFunction : Compiler = (name, value, scope, obj) => {
     const fnDef = getFunctionDef(name);
-    let result : Optional<FnImpl> = undefined;
-    if (fnDef) {
-        let envFn : EnvFn;
-        if (_.isFunction(value)) {
-            // Could be implicitly defined function (no compilation needed)
-            envFn = value;
-        } else {
-            // Else compile the function
-            const thunk = RuleBuilder.evaluateRule(value, _obj["id"] + "." + fnDef.name);
-            envFn = (env) => thunk.resolve(env);
-        }
-        result = {
-            name : fnDef.name, 
-            envFn : bindParams(fnDef.params, envFn, scope)
-        };
+    return fnDef? compileFnDef(fnDef, value, scope, obj) : undefined;
+}
+
+const compileFnDef = (fnDef : FnDef, value : unknown, scope : Env, obj : Obj) => {
+    let envFn : EnvFn;
+    if (_.isFunction(value)) {
+        // Could be implicitly defined function (no compilation needed)
+        envFn = value;
+    } else {
+        // Else compile the function
+        const thunk = RuleBuilder.evaluateRule(value, obj["id"] + "." + fnDef.name);
+        envFn = (env) => thunk.resolve(env);
     }
-    return result;
+    return {
+        name : fnDef.name, 
+        envFn : bindParams(fnDef.params, envFn, scope)
+    }
 }
 
 function getFunctionDef(str : string) : Optional<FnDef> {
