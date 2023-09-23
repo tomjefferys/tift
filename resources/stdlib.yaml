@@ -11,4 +11,13 @@ reveal(entity): delTag(entity,'hidden')
 not(value): "!value"
 and(value1, value2): value1 && value2
 or(value1, value2): value1 || value2
+hasTag(entity, tag): Array.includes(getEntity(entity).tags, tag)
+setTag(entity, tag):
+   if: not(hasTag(entity, tag))
+   then: Array.push(entity.tags, tag)
+delTag(entity, tag):
+    - entityObject = getEntity(entity)
+    - index = Array.indexOf(entityObject.tags, tag)
+    - if: index != -1
+      then: Array.splice(entityObject.tags, index, 1)
 ---

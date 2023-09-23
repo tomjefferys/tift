@@ -1,11 +1,10 @@
 import { BasicEngine } from "../src/engine";
 import { EngineBuilder } from "../src/builder/enginebuilder";
-import { listOutputConsumer, SaveData, getEmptyHistory, loadDefaults, findLogMessages } from "./testutils/testutils";
+import { listOutputConsumer, SaveData, loadDefaults, ExecuteAndTestFn, GetWordIdsFn, ExpectWordsFn, createEngineTestEnvironment, EngineRef, ExpectStatusFn } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN, GAME_METADATA } from "./testutils/testobjects";
 import { STANDARD_VERBS } from "./testutils/testutils";
 import { Log, StatusType } from "tift-types/src/messages/output";
-import { Engine } from "tift-types/src/engine"
 
 let messages : string[];
 let wordsResponse : string[];
@@ -13,22 +12,30 @@ let statuses : StatusType[]
 let saveData : SaveData;
 let log : Log[];
 let builder : EngineBuilder;
-let engine : Engine;
+let engine : EngineRef;
+let executeAndTest : ExecuteAndTestFn;
+let getWordIds : GetWordIdsFn;
+let expectWords : ExpectWordsFn;
+let expectStatus : ExpectStatusFn;
 
 beforeEach(() => {
-    messages = [];
-    wordsResponse = [];
-    statuses = [];
-    saveData = { data : getEmptyHistory() };
-    log = [];
-    builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log));
-    builder.withObj(GAME_METADATA);
-    loadDefaults(builder);
+    const testEnvironment = createEngineTestEnvironment();
+    messages = testEnvironment.messages;
+    engine = testEnvironment.engine;
+    builder = testEnvironment.builder;
+    saveData = testEnvironment.saveData;
+    wordsResponse = testEnvironment.wordsResponse;
+    statuses = testEnvironment.statuses;
+    log = testEnvironment.log;
+    executeAndTest = testEnvironment.executeAndTest;
+    getWordIds = testEnvironment.getWordsIds;
+    expectWords = testEnvironment.expectWords;
+    expectStatus = testEnvironment.expectStatus;
 });
 
 test("Test single room, no exits", () => {
     builder.withObj(NORTH_ROOM)
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     expectWords([], [...STANDARD_VERBS]);
@@ -44,7 +51,7 @@ test("Test single room, with one exit", () => {
             south : "southRoom"
         },
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     expectWords([], [...STANDARD_VERBS]);
@@ -62,7 +69,7 @@ test("Test single room, with two exits", () => {
             east : "eastRoom"
         },
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     expectWords([], [...STANDARD_VERBS]);
@@ -88,7 +95,7 @@ test("Test two rooms", () => {
             north : "northRoom"
         }
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     expectWords(["go"],["south"]);
@@ -116,7 +123,7 @@ test("Test auto look", () => {
             north : "northRoom"
         }
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.config({"autoLook" : true }));
     engine.send(Input.start());
 
@@ -131,7 +138,7 @@ test("Test auto look", () => {
 test("Test room with item", () => {
     builder.withObj(THE_ROOM);
     builder.withObj(ORDINARY_ITEM);
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     
     engine.send(Input.execute(["look"]));
@@ -144,7 +151,7 @@ test("Test get item", () => {
     builder.withObj(THE_ROOM);
     builder.withObj(ORDINARY_ITEM);
 
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["look"], {expected : ["an ordinary item"]});
@@ -161,7 +168,7 @@ test("Test get named item", () => {
         location : "theRoom",
         tags : ["carryable"]
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["rusty key"]});
 
@@ -179,7 +186,7 @@ test("Test get/drop", () => {
         location : "theRoom",
         tags : ["carryable"]
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 
@@ -203,7 +210,7 @@ test("Test examine", () => {
         desc : "A little teapot, {{dimensions}}",
         dimensions : "short and stout"
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     expectWords([], [...STANDARD_VERBS, "examine"]);
     executeAndTest(["examine", "teapot"], { expected : ["A little teapot, short and stout"]});
@@ -216,7 +223,7 @@ test("Test simple rules", () => {
         type : "rule",
         "afterTurn()" : ["print('hello world')"]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["Time passes", "hello world"]});
 });
@@ -230,7 +237,7 @@ test("Test simple before/after rules", () => {
         "beforeTurn()" : "print('hello world')",
         "afterTurn()" : "print('goodbye world')"
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     engine.send(Input.execute(["wait"]));
     expect(messages).toEqual(["hello game", "hello world", "Time passes", "goodbye world"]);
@@ -254,7 +261,7 @@ test("Test simple global/contextal before/after rules", () => {
         "beforeTurn()" : "print('rule before')",
         "afterTurn()" : "print('rule after')"
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     engine.send(Input.execute(["wait"]));
     expect(messages).toEqual(['before game', 'before game','rule before', 'room before', 'Time passes', 'room after', 'rule after']);
@@ -284,7 +291,7 @@ test("Test before and after actions", () => {
         tags : ["carryable"]
     });
 
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
     executeAndTest(["get", "hotRock"], { expected : ["Ouch!"], notExpected : ["Bingo!"]});
@@ -313,7 +320,7 @@ test("Test before and after actions specified as object properties", () => {
         tags : ["carryable"]
     });
 
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["hot rock", "cool rock"]});
     executeAndTest(["get", "hotRock"], { expected : ["Ouch!"], notExpected : ["Bingo!"]});
@@ -347,7 +354,7 @@ test("Test before precedence", () => {
         ...YET_ANOTHER_ITEM,
         after : "get(this) => 'Finally something gettable'"
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
      
     executeAndTest(["look"], { expected : ["an ordinary item", "another item", "another another item"]});
@@ -402,7 +409,7 @@ test("Test open door", () => {
                     "close($openable) => do(openable.isOpen = false, 'Closed!')"
                 ]
            })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     // Initial state
@@ -442,7 +449,7 @@ test('Test ask verb', () => {
             verbs : ["ask.about"],
             before : ["ask(barkeep).about(this) => 'I recomend the porter'"]
            });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     expectWords([], [...STANDARD_VERBS, "ask"]);
     expectWords(["ask"], ["barkeep"]);
@@ -471,7 +478,7 @@ test("Test setting 'this' in match action", () => {
                 tags : ["transitive"]
            });
 
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     // Initial state
@@ -502,7 +509,7 @@ test("Test error when executing", () => {
                 tags : ["transitive"]
            });
 
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["fuddle", "thing"], { errors : ["thing.before[0]", "Execution failed"]});
@@ -533,7 +540,7 @@ test("Test load save data", () => {
 
     builder.withConfig(config);
 
-    engine = builder.build();
+    engine.ref = builder.build();
     
     engine.send(Input.start());
 
@@ -543,7 +550,7 @@ test("Test load save data", () => {
     executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] })
     const saveStr = JSON.stringify(saveData.data);
 
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start(saveStr));
 
     const allMessages = messages.join();
@@ -565,7 +572,7 @@ test("Test load save after getting item", () => {
 
 
     // Start a game
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 
@@ -574,7 +581,7 @@ test("Test load save after getting item", () => {
     const saveStr = JSON.stringify(saveData.data);
 
     // Start a new game, using the save data
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start(saveStr));
     executeAndTest(["look"], { expected : ["An almost empty room"], notExpected :["key"]});
 
@@ -599,7 +606,7 @@ test("Test reset", () => {
         return builder;
     }
     // Start a game
-    engine = getBuilder().build();
+    engine.ref = getBuilder().build();
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 
@@ -609,7 +616,7 @@ test("Test reset", () => {
 
     // Reset the engine
     engine.send(Input.reset());
-    getBuilder().addTo(engine as BasicEngine);
+    getBuilder().addTo(engine.ref as BasicEngine);
     engine.send(Input.start());
 
     // The key should be back in place
@@ -617,7 +624,7 @@ test("Test reset", () => {
 })
 
 test("Test command deduplication", () => {
-    engine = builder.withObj(THE_ROOM)
+    engine.ref = builder.withObj(THE_ROOM)
                     .withObj(ORDINARY_ITEM)
                     .withObj(OTHER_ITEM)
                     .build();
@@ -647,7 +654,7 @@ test("Test contextual rules", () => {
             north : "northRoom"
         }
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar"]});
     executeAndTest(["go", "south"], { expected : ["bar"], notExpected : ["foo"]})
@@ -663,7 +670,7 @@ test("Test repeat rule", () => {
         myvar : "foo",
         "afterTurn()" : { "repeat" : ["'foo'", "'bar'", "'baz'"] } 
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz"]})
     executeAndTest(["wait"], { expected : ["bar"], notExpected : ["foo", "baz"]})
@@ -679,7 +686,7 @@ test("Test nested repeat rule", () => {
         myvar : "foo",
         "afterTurn()" : { "repeat" : ["'foo'", { "repeat" : ["'bar'", "'baz'"] } , "'qux'"] } 
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz", "qux"]})
     executeAndTest(["wait"], { expected : ["bar"], notExpected : ["foo", "baz", "qux"]})
@@ -721,7 +728,7 @@ test("Test moveTo", () => {
                         "do(print('The goblin goes north'), move('goblin').to('northRoom'))"]
         }
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["Goblin"]});
     executeAndTest(["wait"], { expected : ["The goblin goes south"]});
@@ -767,7 +774,7 @@ test("Test printAt", () => {
             ]
         }
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["The goblin goes south"]});
     executeAndTest(["wait"], { notExpected : ["The goblin goes north"]});
@@ -805,61 +812,13 @@ test("Test scoped rules", () => {
         type:"rule",
         "afterTurn()": "'grr'"
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["grr"], notExpected : ["wooo-oo"]});
     executeAndTest(["go", "south"], { expected : ["grr", "wooo-oo"]});
     executeAndTest(["wait"], { expected : ["grr", "wooo-oo"]});
     executeAndTest(["go", "north"], { expected : ["grr"], notExpected : ["wooo-oo"]});
 })
-
-test("Test hiding/revealing object", () => {
-    builder.withObj({...NORTH_ROOM })
-           .withObj({
-                id : "diamond",
-                type : "item",
-                location : "rubbish",
-                tags : ["carryable", "hidden"]
-            })
-            .withObj({
-                id : "can",
-                type : "item",
-                location : "rubbish",
-                tags : ["carryable"]
-            })
-            .withObj({
-                id : "rubbish",
-                desc: "A pile of stinking rubbish",
-                type : "item",
-                location : "northRoom",
-                after : {
-                    "examine(this)" : "if(hasTag('diamond','hidden')).then(do(reveal('diamond'), 'You find a diamond'))",
-                }
-            })
-           .withConfigEntry("undoLevels", 0);
-    engine = builder.build();
-    engine.send(Input.start());
-
-    executeAndTest(["look"], { expected : ["can", "in rubbish"], notExpected : ["diamond"]});
-    expectWords(["get"], ["can"]);
-
-    executeAndTest(["examine", "rubbish"], { expected : ["You find a diamond"]} );
-    executeAndTest(["look"], { expected : ["can", "diamond", "in rubbish"]});
-    executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
-    executeAndTest(["wait"], {}); // TODO maybe introduce explict save command to force save data to be gnerated
-
-    expect(saveData.data.baseHistory.length).toBe(2);
-    expect(saveData.data.baseHistory[0]).toStrictEqual({"type":"Del","property":["entities","diamond","tags","1"]});
-    expect(saveData.data.baseHistory[1]).toStrictEqual({"type":"Set","property":["entities","diamond","tags","length"],"newValue":1})
-
-    expectWords(["get"], ["can", "diamond"]);
-    executeAndTest(["get", "diamond"], {});
-    executeAndTest(["look"], { expected : ["can", "in rubbish"], notExpected : ["diamond"]});
-    executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
-
-    expect(saveData.data.baseHistory.length).toBe(3);
-    expect(saveData.data.baseHistory[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"__INVENTORY__"});
-});
 
 test("Test action with repeat", () => {
     builder.withObj({...NORTH_ROOM})
@@ -875,7 +834,7 @@ test("Test action with repeat", () => {
                }
            })
           .withConfigEntry("undoLevels", 0);
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["mouldy bread"], notExpected : ["tin can", "banana peel"]});
     executeAndTest(["wait"], {});
@@ -918,7 +877,7 @@ test("Test action with nested repeats", () => {
                }
            })
           .withConfigEntry("undoLevels", 0);
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "rubbish"], { expected : ["foo"], notExpected : ["bar", "baz"]});
     executeAndTest(["wait"], {});
@@ -963,7 +922,7 @@ test("Test property setting in before phase", () => {
                 type : "verb",
                 tags : ["transitive"]
            });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "standing"], notExpected : ["sitting"]});
     executeAndTest(["sit", "armchair"], { expected : ["You sit down"] });
@@ -1003,10 +962,10 @@ test("Test conditional verbs", () => {
                 type : "verb",
                 tags : ["intransitive"]
            });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
-    let words = getWordIds(engine, []);
+    let words = getWordIds([]);
     expect(words.includes("sit")).toBeTruthy();
     expect(words.includes("stand")).toBeFalsy();
 
@@ -1014,20 +973,20 @@ test("Test conditional verbs", () => {
     executeAndTest(["sit", "armchair"], { expected : ["You sit down"] });
     executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "sitting"], notExpected : ["standing"]});
 
-    words = getWordIds(engine, []);
+    words = getWordIds([]);
     expect(words.includes("sit")).toBeFalsy();
     expect(words.includes("stand")).toBeTruthy();
 
     // Test undo resets things correctly
     engine.send(Input.undo());
     executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "standing"], notExpected : ["sitting"]});
-    words = getWordIds(engine, []);
+    words = getWordIds([]);
     expect(words.includes("sit")).toBeTruthy();
     expect(words.includes("stand")).toBeFalsy();
 
     engine.send(Input.redo());
     executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "sitting"], notExpected : ["standing"]});
-    words = getWordIds(engine, []);
+    words = getWordIds([]);
     expect(words.includes("sit")).toBeFalsy();
     expect(words.includes("stand")).toBeTruthy();
 
@@ -1052,7 +1011,7 @@ test("Test put item in container", () => {
                 type : "item",
                 tags : ["carryable"]
            });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
@@ -1078,7 +1037,7 @@ test("Test undo", () => {
                 type : "item",
                 tags : ["carryable"]
            });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     expectStatus({undoable : false, redoable : false});
 
@@ -1132,7 +1091,7 @@ test("Test undo, clear redo on new action", () => {
                 type : "item",
                 tags : ["carryable"]
            });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
@@ -1179,17 +1138,17 @@ test("Test push item", () => {
         location : "northRoom",
         tags : ["pushable"]
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start()); 
 
     executeAndTest(["look"], { expected : ["box"]});
-    let words = getWordIds(engine, []);
+    let words = getWordIds([]);
     expect(words).toContain("push");
 
-    words = getWordIds(engine, ["push"]);
+    words = getWordIds(["push"]);
     expect(words).toContain("box");
 
-    words = getWordIds(engine, ["push", "box"]);
+    words = getWordIds(["push", "box"]);
     expect(words).toContain("south");
 
     executeAndTest(["push", "box", "south"], { expected : ["Pushed", "box", "south"]});
@@ -1211,7 +1170,7 @@ test("Test dark room", () => {
         location : "northRoom",
         tags : ["carryable"]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["look"], { expected : ["dark"], notExpected : ["ball"]});
@@ -1232,7 +1191,7 @@ test("Test dark room with lightsource", () => {
         location : "northRoom",
         tags : ["carryable", "lightSource"]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["look"], { expected : ["ball", "torch"], notExpected : ["dark"]});
@@ -1253,7 +1212,7 @@ test("Test dark room with lightsource in inventory", () => {
         location : "__INVENTORY__",
         tags : ["carryable", "lightSource"]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["look"], { expected : ["ball"], notExpected : ["dark", "torch"]});
@@ -1273,13 +1232,13 @@ test("Test dark room can still move", () => {
         },
         tags : ["dark"]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     
-    const words = getWordIds(engine, []);
+    const words = getWordIds([]);
     expect(words).toContain("go");
 
-    const goWords = getWordIds(engine, ["go"]);
+    const goWords = getWordIds(["go"]);
     expect(goWords).toContain("south");
 });
 
@@ -1288,10 +1247,10 @@ test("Test dark room can wait", () => {
         ...NORTH_ROOM,
         tags : ["start", "dark"]
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     
-    const words = getWordIds(engine, []);
+    const words = getWordIds([]);
     expect(words).toContain("wait");
 
     executeAndTest(["wait"], {expected : ["Time passes"]});
@@ -1313,11 +1272,11 @@ test("Test visibleWhenDarkTag", () => {
         location : "northRoom",
         tags : ["carryable", "visibleWhenDark"]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["look"], { notExpected : ["ball", "stickers"]}); // should we see stickers?
-    const words = getWordIds(engine, ["get"]);
+    const words = getWordIds(["get"]);
     expect(words).toContain("stickers");
     expect(words).not.toContain("ball");
 });
@@ -1334,37 +1293,13 @@ test("Test visibleWhen function", () => {
         "visibleWhen()" : "hasTag(location, 'dark')",
         tags : ["carryable"]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start()); 
 
-    const words = getWordIds(engine, ["get"]);
+    const words = getWordIds(["get"]);
     expect(words).toContain("stickers");
 
 })
-
-test("Test math functions", () => {
-    builder.withObj(THE_ROOM);
-    builder.withObj({
-        id : "mathFns",
-        type : "rule",
-        "afterTurn()" : ["a=1", "b=2", "c = 3", "print(Math.min(b,a,c))"]
-    })
-    engine = builder.build();
-    engine.send(Input.start());
-    executeAndTest(["wait"], { expected : ["Time passes", "1"], notExpected : ["failed"] });
-});
-
-test("Test string functions", () => {
-    builder.withObj(THE_ROOM);
-    builder.withObj({
-        id : "mathFns",
-        type : "rule",
-        "afterTurn()" : ["do(text = 'hello world', print(String.substr(text, 1, 4))), print(String.length(text))"]
-    })
-    engine = builder.build();
-    engine.send(Input.start());
-    executeAndTest(["wait"], { expected : ["Time passes", "ello", "11"], notExpected : ["failed"] });
-});
 
 test("Test custom function", () => {
    builder.withObj({
@@ -1378,7 +1313,7 @@ test("Test custom function", () => {
         type : "rule",
         "afterTurn()" : ["theRoom.foo()", "theRoom.baz('one')", "theRoom.corge('two', 'three')"]
    })
-   engine = builder.build();
+   engine.ref = builder.build();
    engine.send(Input.start());
    executeAndTest(["wait"], { expected : [ "bar", "bazone", "twothree"]});
 });
@@ -1403,7 +1338,7 @@ test("Test custom function scope", () => {
         type : "rule",
         "afterTurn()" : ["theRoom.foo1()", "theRoom.foo2()", "theRoom.foo3()", "theRoom.foo4()","theRoom.baz('qux')"]
    })
-   engine = builder.build();
+   engine.ref = builder.build();
    engine.send(Input.start());
    executeAndTest(["wait"], { expected : [ "foo1bar", "foo2bar", "foo3bar", "foo4xyzzy", "quxquux"]});
 });
@@ -1424,7 +1359,7 @@ test("Test custom functions in child object", () => {
             "print('3 ' + child.foo3())",
         ]
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : [
         "1 foo1 bar",
@@ -1463,7 +1398,7 @@ test("Test location change events", () => {
             repeat : ["move(ball).to(southRoom)", "move(ball).to(northRoom)"]
         }
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["The ball bounces to southRoom", "north room goodbye ball", "south room hello ball"],
                                notExpected : ["south room goodbye ball", "north room hello ball"]});
@@ -1503,7 +1438,7 @@ test("NPC implicit onMove", () => {
             repeat : ["move(ball).to(southRoom)", "move(ball).to(northRoom)"]
         }
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
 
     executeAndTest(["wait"], { expected : ["the ball leaves south"] });
@@ -1518,7 +1453,7 @@ test("Test mustache in expression strings", () => {
             repeat: [["print('this.foo == {{this.foo}}')", "this.foo = '{{this.id}}'"], "print('this.foo == {{this.foo}}')"]
         }
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["this.foo == bar"] });
     executeAndTest(["wait"], { expected : ["this.foo == northRoom"] });
@@ -1532,7 +1467,7 @@ test("Test mustache in object property", () => {
         baz : "xyzzy",
         "afterTurn()" : ["print(this.baz)", "print(this.qux)"]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["xyzzy", "qux bar"]});
 });
@@ -1546,7 +1481,7 @@ test("Test mustache firstTime in expression string", () => {
             "print('{{#firstTime}}{{this.foo}}{{/firstTime}}{{^firstTime}}{{this.baz}}{{/firstTime}}')"
         ]
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { errors : ["Error formatting"]});
 })
@@ -1561,7 +1496,7 @@ test("Test mustache firstTime in property string", () => {
             "print(this.xyzzy)"
         ]
     });
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["bar"], notExpected : ["qux"]});
     executeAndTest(["wait"], { expected : ["qux"], notExpected : ["bar"]});
@@ -1585,7 +1520,7 @@ test("Test mustache in child property", () => {
             "print(this.child.gchild.quux)"
         ]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["baz bar", "quux childfoo", "gchild quux childfoo"]});
 });
@@ -1609,67 +1544,27 @@ test("Test mustache in array", () => {
             "print(this.baz[2].quux)"
         ]
     })
-    engine = builder.build();
+    engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["baz0 bar", "baz1", "qux bar", "quux baz0 bar baz1"]});
 });
 
-interface ExpectedStrings {
-    expected? : string[],
-    notExpected? : string[],
-    errors? : string[]
-}
+//function expectStatus(expected : Partial<StatusType>) {
+//    engine.send(Input.getStatus());
+//    const actual = statuses.at(-1);
+//    expect(actual).not.toBeUndefined();
+//    if (actual) {
+//        for(const [name, value] of Object.entries(expected)) {
+//            expect(actual[name as keyof StatusType]).toBe(value);
+//        }
+//    }
+//    statuses.length = 0;
+//}
 
-function executeAndTest(command : string[], expectedMessages : ExpectedStrings) {
-    engine.send(Input.execute(command));
 
-    if (expectedMessages.errors) {
-        const logMessages = [...findLogMessages("error", log),
-                             ...findLogMessages("warn", log)].join("\n");
-        expectedMessages.errors.forEach(str => {
-            expect(logMessages).toContain(str);
-        });
-    } else {
-        const errors = findLogMessages("error", log);
-        expect(errors).toHaveLength(0);
-
-        const warnings = findLogMessages("warn", log);
-        expect(warnings).toHaveLength(0);
-    }
-
-    log.length = 0;
-
-    const joined = messages.join("\n");
-    expectedMessages.expected?.forEach(str => {
-        expect(joined).toContain(str);
-    })
-    expectedMessages.notExpected?.forEach(str => {
-        expect(joined).not.toContain(str);
-    })
-    messages.length = 0;
-} 
-
-function expectStatus(expected : Partial<StatusType>) {
-    engine.send(Input.getStatus());
-    const actual = statuses.at(-1);
-    expect(actual).not.toBeUndefined();
-    if (actual) {
-        for(const [name, value] of Object.entries(expected)) {
-            expect(actual[name as keyof StatusType]).toBe(value);
-        }
-    }
-    statuses.length = 0;
-}
-
-function expectWords(command : string[], expectedNextWords : string[]) {
-    const words = getWordIds(engine, (command));
-    expect(words).toHaveLength(expectedNextWords.length);
-    expect(words).toEqual(expect.arrayContaining(expectedNextWords));
-}
-
-function getWordIds(engine : Engine, partial : string[]) : string[] {
-    engine.send(Input.getNextWords(partial));
-    const words = [...wordsResponse];
-    wordsResponse.length = 0;
-    return words;
-}
+//function getWordIds(engine : Engine, partial : string[]) : string[] {
+//    engine.send(Input.getNextWords(partial));
+//    const words = [...wordsResponse];
+//    wordsResponse.length = 0;
+//    return words;
+//}

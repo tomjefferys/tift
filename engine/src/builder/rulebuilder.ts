@@ -157,11 +157,14 @@ const buildRandom : RuleEvaluator = (rules, path) => {
  */
 const components : {[key:string]:[RuleMethodType, RuleEvaluator]} = {
     when :      ["condition", evaluator],
+    if :        ["condition", evaluator],
     unless :    ["condition", buildUnless],
     all :       ["action",    buildAll],
     do :        ["action",    buildAll],
+    then :      ["action",    buildAll],
     switch :    ["action",    buildSwitch],
     repeat :    ["action",    buildRepeat],
     random :    ["action",    buildRandom],
-    otherwise : ["otherwise", evaluator]
+    otherwise : ["otherwise", evaluator],
+    else :      ["otherwise", evaluator]
 }

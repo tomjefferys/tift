@@ -33,7 +33,6 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
     moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),
     move : moveFn,
     getLocation : env => Player.getLocation(env),
-    getEntity : env => Entities.getEntity(env, env.getStr("id")),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
     writeMessage : env => getOutput(env)(env.get("message")),
     pause : bindParams(["duration"], env => {
@@ -54,24 +53,7 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             Locations.closeExit(env, env.getStr("room"), env.getStr("direction"));
                             return mkResult(null);
                         } ),
-    hasTag : bindParams(["entityId", "tag"],
-                        env => {
-                            const entity = Entities.getEntity(env, env.get("entityId"));
-                            const result = Entities.entityHasTag(entity, env.getStr("tag"));
-                            return mkResult(result);
-                        }),
-    setTag : bindParams(["entityId", "tag"], 
-                         env => {
-                            const entity = Entities.getEntity(env, env.get("entityId"));
-                            Entities.setEntityTag(entity, env.getStr("tag"));
-                            return mkResult(null);
-                         }),
-    delTag : bindParams(["entityId", "tag"], 
-                        env => {
-                            const entity = Entities.getEntity(env, env.get("entityId"));
-                            Entities.delEntityTag(entity, env.getStr("tag"));
-                            return mkResult(null);
-                        }),
+    getEntity : bindParams(["entityId"], env => mkResult(Entities.getEntity(env, env.get("entityId")))),
     random : bindParams(["low","high"], env => {
                             const low = env.get("low");
                             const high = env.get("high");
@@ -85,6 +67,7 @@ export function makeDefaultFunctions(obj : Obj) {
     }
     obj["Math"] = makeMath();
     obj["String"] = makeString();
+    obj["Array"] = makeArray();
 }
 
 /**
@@ -111,41 +94,55 @@ function makeMath() : EnvFnMap {
  * Wrap all the javascript string methods, and expose in the style of String.substr("myStr", 2)
  */
 function makeString() : EnvFnMap {
-    const str : EnvFnMap = {};
-    for(const name of Object.getOwnPropertyNames(String.prototype)) {
-        const value = (String.prototype as Obj)[name];
+    return mapJSFunctions(String, (name, value) => {
+        if (!_.isString(value)) {
+            throw new Error(`First argument passed to ${name} must be a string. ${value} is not a string`);
+        }
+    });
+}
+
+function makeArray() : EnvFnMap {
+    return mapJSFunctions(Array, (name, value) => {
+        if (!_.isArray(value)) {
+            throw new Error(`First argument passed to ${name} must be an array. ${value} is not an array`);
+        }
+    });
+}
+
+function mapJSFunctions(type : StringConstructor | ArrayConstructor, checkType : (name : string, value : unknown) => void ) {
+    const fnMap : EnvFnMap = {};
+    for(const name of Object.getOwnPropertyNames(type.prototype)) {
+        const value = (type.prototype as Obj)[name];
         if (_.isFunction(value)) {
-            str[name] = env => {
+            fnMap[name] = env => {
                 const args = env.get(ARGS);
                 if (args.length === 0) {
                     throw new Error(`Not enough args passed to ${name}`);
                 }
-                const theStr = args[0];
-                if (!_.isString(theStr)) {
-                    throw new Error(`First argument passed to ${name} must be a string. ${theStr} is not a string`);
-                }
+                const arg0 = args[0];
+                checkType(name, arg0);
+
                 const fnArgs = args.slice(1);
-                const result = (theStr as unknown as Obj)[name](...fnArgs);
-                //const result = getStringProperty(theStr, name)(...fnArgs); // TODO figure out why this doesn't work!
+                const result = (arg0 as unknown as Obj)[name](...fnArgs);
                 return mkResult(result);
             }
         } else { 
-            str[name] = env => {
+            fnMap[name] = env => {
                 const args = env.get(ARGS);
                 if (args.length !== 1) {
                     throw new Error(`Expecting exactly 1 argument passed to ${name}, but recieved ${args.length}`);
                 }
-                const theStr = args[0];
-                if (!_.isString(theStr)) {
-                    throw new Error(`First argument passed to ${name} must be a string. ${theStr} is not a string`);
-                }
-                const result = getStringProperty(theStr, name);
+                const arg0 = args[0];
+                checkType(name, arg0);
+                const result = getStringProperty(arg0, name);
                 return mkResult(result);
             }
         }
     }
-    return str;
+    return fnMap;
 }
+
+
 
 // Reflectively execute a method on string object
 function getStringProperty(str : string, property : string) {
