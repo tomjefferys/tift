@@ -26,6 +26,7 @@ export const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
       visititedLocations.push(newLocation.id);
       LOOK_FN(context.env);
     }
+    Output.flush(context.env);
   } 
 }
 

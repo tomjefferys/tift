@@ -5,6 +5,7 @@ import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
 import * as Output from "./messages/output";
+import * as MessageOut from "./builder/output";
 import * as multidict from "./util/multidict";
 import * as _ from "lodash";
 import * as arrays from "./util/arrays";
@@ -281,27 +282,15 @@ export class BasicEngine implements Engine {
     // Get ordered list of in scope entities
     const inScopeEnitites = this.sortEntities(matchedCommand);
 
-    // Create a new child environment with it's own output conusmer
-    const [childEnv, mainOutputProxy] = this.createOutputProxy();
-
     // Before actions
-    const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, childEnv, matchedCommand, entity) )
+    const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, this.env, matchedCommand, entity) )
 
     // Main action
-    const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, childEnv, matchedCommand, verb) : false;
+    const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, this.env, matchedCommand, verb) : false;
 
     // After actions
-    // TODO consider an explicit "clearbuffer" function for clearing the text buffer
-    const [afterChildEnv, afterOutputProxy] = this.createOutputProxy();
     if (handledMain) {
-      inScopeEnitites.some(entity => executeBestMatchAction(entity.after, afterChildEnv, matchedCommand, entity));
-    }
-
-    // Flush the output
-    if (afterOutputProxy.hasContent()) {
-      afterOutputProxy.flush();
-    } else {
-      mainOutputProxy.flush();
+      inScopeEnitites.some(entity => executeBestMatchAction(entity.after, this.env, matchedCommand, entity));
     }
 
     const oldContext = this.context;
@@ -327,7 +316,7 @@ export class BasicEngine implements Engine {
         this.save();
       }
     }
-
+    MessageOut.flush(this.env);
   }
 
   getContextualRules(methodName : string) : [Obj, EnvFn][] {
@@ -386,19 +375,6 @@ export class BasicEngine implements Engine {
 
   getVerbs() : Verb[] {
     return this.env.findObjs(obj => obj["type"] === "verb") as Verb[];
-  }
-
-  createOutputProxy() : [Env, OutputProxy] {
-    const messages : OutputMessage[] = [];
-    const childEnvObj = {};
-    this.gameData.makeOutputConsumer(childEnvObj, message => messages.push(message));
-    const childEnv = this.env.newChild(childEnvObj);
-    const principalOutput = this.gameData.getOutput(this.env);
-    const outputProxy = {
-      flush : () => messages.forEach(message => principalOutput(message)),
-      hasContent : () => messages.length > 0
-    }
-    return [childEnv, outputProxy];
   }
 
   /**

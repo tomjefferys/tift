@@ -1,6 +1,5 @@
 import { EnvFn } from "tift-types/src/env";
 import { control, print } from "../messages/output";
-import { getOutput } from "./output";
 import { mkResult } from "../script/thunk";
 import { ARGS, bindParams } from "../script/parser";
 import { Obj } from "../util/objects"
@@ -8,6 +7,7 @@ import _ from "lodash";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Player from "./player";
+import * as Output from "./output";
 
 type EnvFnMap = {[key:string]:EnvFn};
 
@@ -34,7 +34,8 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
     move : moveFn,
     getLocation : env => Player.getLocation(env),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
-    writeMessage : env => getOutput(env)(env.get("message")),
+    writeMessage : env => Output.getOutput(env)(env.get("message")),
+    clearBuffer : env => Output.clear(env),
     pause : bindParams(["duration"], env => {
         DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message" : control({ type : "pause", durationMillis : env.get("duration"), interruptable : true})}));
         return mkResult(null);
