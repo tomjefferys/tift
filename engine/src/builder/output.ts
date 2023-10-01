@@ -1,13 +1,18 @@
 import { Env } from "tift-types/src/env";
 import { Obj } from "tift-types/src/util/objects";
 import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
+import { print } from "../messages/output";
 
 interface OutputProxy {
     write : (message : OutputMessage) => void; 
     flush : () => void;
+    messages : OutputMessage[];
     hasContent : () => boolean;
     clear : () => void;
 }
+
+export const MAIN_DESC_TAB = "mainDesc";
+export const ITEMS_DESC_TAB = "itemsDesc";
 
 export const OUTPUT = Symbol("__OUTPUT__");
 
@@ -30,9 +35,21 @@ export function makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) {
     obj[OUTPUT] = makeOutputProxy(outputConsumer);
 }
 
-// TODO change to direct call
-export function write(env : Env, message : string) {
-    env.execute("write", {"value": message});
+export function write(env : Env, message : string, tag? : string) {
+    const outputProxy = getOutputProxy(env);
+    outputProxy.write(print(message, tag));
+}
+
+export function pushOutputProxy(env : Env) : Env {
+    const child = {
+        [OUTPUT] : makeOutputProxy(getOutput(env))
+    }
+    return env.newChild(child);
+}
+
+export function getMessages(env : Env) : OutputMessage[] {
+    const outputProxy = getOutputProxy(env);
+    return outputProxy.messages;
 }
 
 function getOutputProxy(env : Env) : OutputProxy {
@@ -43,7 +60,7 @@ function getOutputProxy(env : Env) : OutputProxy {
     return outputProxy;
 }
 
-function makeOutputProxy(outputConsumer : OutputConsumer) {
+function makeOutputProxy(outputConsumer : OutputConsumer) : OutputProxy {
     const messages : OutputMessage[] = [];
     const outputProxy = {
       write : (message : OutputMessage) => messages.push(message),
@@ -52,7 +69,8 @@ function makeOutputProxy(outputConsumer : OutputConsumer) {
         messages.length = 0;
       },
       hasContent : () => messages.length > 0,
-      clear : () => messages.length = 0
+      clear : () => messages.length = 0,
+      messages
     }
     return outputProxy;
 }

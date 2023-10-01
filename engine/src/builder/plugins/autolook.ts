@@ -4,10 +4,13 @@ import { Entity } from "../../entity";
 import * as MultiDict from "../../util/multidict";
 import * as Player from "../player";
 import * as Output from "../output";
-import { LOOK_FN } from "../defaultverbs";
+import * as Hash from "../../util/hash";
 import { bold } from "../../markdown";
 import { getName } from "../../nameable";
 import _ from "lodash";
+import { Print } from "tift-types/src/messages/output";
+
+type LocationDescriptionHashes = {[key: string]: string};
 
 /**
  * Plugin that provides automatic looking when visiting a location for the first time
@@ -20,12 +23,29 @@ export const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
     const player = Player.getPlayer(context.env);
     Output.write(context.env, bold(getName(newLocation)));
 
-    const visititedLocations = player["visitedLocations"] as string[];
+    const visitedLocations = player["visitedLocations"] as LocationDescriptionHashes;
 
-    if (!visititedLocations.includes(newLocation.id)) {
-      visititedLocations.push(newLocation.id);
-      LOOK_FN(context.env);
+    // Set up a new environment with it's own output
+    const childEnv = Output.pushOutputProxy(context.env);
+
+    // Run the look function and take a hash
+    context.executor(childEnv, context.end, ["look"]);
+
+    // Hash the main description
+    const messages = Output.getMessages(childEnv);
+    const mainDesc = messages.filter((message) : message is Print => message.type === "Print")
+                             .filter(message => message.tag === Output.MAIN_DESC_TAB)
+                             .map(message => message.value)
+                             .join();
+    const descHash = Hash.cyrb53a(mainDesc);
+
+    // Check if it's changes
+    const oldHash = visitedLocations[newLocation.id];
+    if(descHash !== oldHash) {
+      visitedLocations[newLocation.id] = descHash;
+      Output.flush(childEnv);
     }
+
     Output.flush(context.env);
   } 
 }

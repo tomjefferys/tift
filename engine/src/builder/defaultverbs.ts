@@ -43,15 +43,20 @@ export const LOOK_FN = (env : Env) => {
     }
 
     const scope = env.newChild(view).newChild(location);
-    const lookTemplate = Property.getPropertyString(env, "look.templates.main");
+    const mainTemplate = Property.getPropertyString(env, "look.templates.main");
+    const itemsTemplate = Property.getPropertyString(env, "look.templates.items");
     const partials = Property.getProperty(env, "look.templates.partials") as Record<string,string>
 
-    const output = formatString(scope, lookTemplate, undefined, partials);
+    const mainOutput = formatString(scope, mainTemplate, undefined, partials);
+    const itemsOutput = formatString(scope, itemsTemplate, undefined, partials);
 
-    Output.write(env, output);
+    // Tag the output
+    Output.write(env, mainOutput, Output.MAIN_DESC_TAB);
+    Output.write(env, itemsOutput, Output.ITEMS_DESC_TAB);
 
     return mkResult(true);
 }
+
 const LOOK = phaseActionBuilder("look")
         .withPhase("main")
         .withMatcherOnMatch(

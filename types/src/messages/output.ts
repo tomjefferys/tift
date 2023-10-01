@@ -38,7 +38,8 @@ export interface PartOfSpeech extends IdValue<string>, Partial<Taggable> {
 
 export interface Print {
     type : "Print",
-    value : string
+    value : string,
+    tag? : string
 }
 
 export interface SetVar {

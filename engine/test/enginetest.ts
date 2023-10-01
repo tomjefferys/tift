@@ -131,9 +131,72 @@ test("Test auto look", () => {
     messages.length = 0;
 
     executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] })
-    executeAndTest(["go", "north"], { expected : [ "**The North Room**" ] })
-    executeAndTest(["go", "south"], { expected : [ "**The South Room**" ] })
+    executeAndTest(["go", "north"], { expected : [ "**The North Room**" ], notExpected : ["The room is dark and square"] })
+    executeAndTest(["go", "south"], { expected : [ "**The South Room**" ], notExpected : ["The room is light and round"] })
 })
+
+test("Test auto look with description change", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        exits : {
+            south : "southRoom"
+        },
+    })
+    builder.withObj({
+        ...SOUTH_ROOM,
+        name : "The South Room",
+        desc : "The room is light and round",
+        exits : {
+            north : "northRoom"
+        }
+    })
+    builder.withObj({
+        id : "switch", 
+        type : "item",
+        location : "southRoom",
+        verbs : ["toggle"],
+        before : { 
+            "toggle(this)" : "northRoom.desc = 'The room is light and square'"
+        }
+    })
+    builder.withObj({
+        id : "toggle", 
+        type : "verb",
+        tags : ["transitive"]
+    })
+    engine.ref = builder.build();
+    engine.send(Input.config({"autoLook" : true }));
+    engine.send(Input.start());
+
+    expect(messages.join()).toContain("The room is dark and square");
+    messages.length = 0;
+
+    executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] });
+    executeAndTest(["toggle", "switch"], {});
+    executeAndTest(["go", "north"], { expected : [ "The room is light and square" ], notExpected : ["The room is dark and square"] });
+    executeAndTest(["go", "south"], { expected : [ "**The South Room**" ], notExpected : ["The room is light and round"] })
+    executeAndTest(["go", "north"], { expected : [ "**The North Room**" ], notExpected : ["The room is light and square"] })
+})
+//builder.withObj(THE_ROOM)
+//.withObj({
+//     id : "thing",
+//     name : "thing",
+//     type : "item",
+//     location : "theRoom",
+//     fuddled : false,
+//     desc : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
+//     verbs : ["fuddle"],
+//     before : [
+//        "fuddle(this) => do(this.fuddled = true, 'Fuddled!')"
+//     ]
+//})
+//.withObj({
+//     id : "fuddle",
+//     type : "verb",
+//     tags : ["transitive"]
+//});
 
 test("Test room with item", () => {
     builder.withObj(THE_ROOM);

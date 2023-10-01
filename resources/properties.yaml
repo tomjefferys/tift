@@ -8,13 +8,15 @@ templates:
 
     {{^isDark}}
     {{desc}}{{^desc}}{{name}}{{^name}}{{id}}{{/name}}{{/desc}}
-
-    {{#hasItems}}
-    You can see:
-    {{/hasItems}}
-    {{#items}}
-    - {{> item}}
-    {{/items}}
+    {{/isDark}} 
+  items: |
+    {{^isDark}}
+      {{#hasItems}}
+        You can see:
+      {{/hasItems}}
+      {{#items}}
+        - {{> item}}
+      {{/items}}
     {{/isDark}} 
   partials:
     item: "{{name}}{{#location}} ( in {{.}} ){{/location}}"

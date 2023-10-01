@@ -8,10 +8,11 @@ interface Stringable {
 
 export const word = (id : string, value : string, type : "option" | "control") : Word => ({id, value, type});
 
-export function print(value : Stringable) : OutputMessage {
+export function print(value : Stringable, tag? : string) : OutputMessage {
     return {
         type : "Print",
-        value : value.toString()
+        value : value.toString(),
+        ...(tag? { tag } : {})
     }
 }
 

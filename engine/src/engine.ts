@@ -3,7 +3,7 @@ import { Entity } from "./entity"
 import { Env } from "tift-types/src/env"
 import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
+import { OutputConsumer } from "tift-types/src/messages/output";
 import * as Output from "./messages/output";
 import * as MessageOut from "./builder/output";
 import * as multidict from "./util/multidict";
@@ -46,18 +46,17 @@ export interface CommandContext {
   verbs : Verb[];
 }
 
-interface OutputProxy {
-  flush : () => void;
-  hasContent : () => boolean;
-}
+type CommandExecutor = (env : Env, context : CommandContext, command : string[]) => void;
 
 export interface PluginActionContext {
   start? : CommandContext,
   end : CommandContext,
   env : Env,
+  executor : CommandExecutor
 }
 
 export type PluginAction = (context : PluginActionContext) => void;
+
 
 const BASE_CONFIG : Config = {
   undoLevels : DEFAULT_UNDO_LEVELS 
@@ -263,12 +262,8 @@ export class BasicEngine implements Engine {
   }
 
   execute(command: string[]): void {
-    const searchContext = buildSearchContext(this.context.entities, this.context.verbs, this.env);
-    const matchedCommand = searchExact(command, searchContext);
-    if (!matchedCommand) {
-      throw new Error("Could not match command: " + JSON.stringify(command));
-    }
-    const verb = matchedCommand.getPoS("verb")?.verb;
+    const [matchedCommand, verb] = searchCommand(this.env, this.context, command);
+
     const isTimePassing = verb && !isInstant(verb);
     // Run any before turn rules
     if (isTimePassing) {
@@ -279,19 +274,7 @@ export class BasicEngine implements Engine {
       allRules.forEach(([obj, rule]) => executeRule(obj, rule, this.env));
     }
 
-    // Get ordered list of in scope entities
-    const inScopeEnitites = this.sortEntities(matchedCommand);
-
-    // Before actions
-    const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, this.env, matchedCommand, entity) )
-
-    // Main action
-    const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, this.env, matchedCommand, verb) : false;
-
-    // After actions
-    if (handledMain) {
-      inScopeEnitites.some(entity => executeBestMatchAction(entity.after, this.env, matchedCommand, entity));
-    }
+    executeActions(this.env, this.context, matchedCommand, verb)
 
     const oldContext = this.context;
     this.context = this.getContext();
@@ -299,7 +282,6 @@ export class BasicEngine implements Engine {
     // Run any post execution actions
     const postExecutionContext = this.createPluginActionContext(oldContext, this.context);
     this.postExecutionActions.forEach(action => action(postExecutionContext));
-
 
     if (isTimePassing) {
       // Run afterTurn rules
@@ -357,11 +339,8 @@ export class BasicEngine implements Engine {
   }
 
   createPluginActionContext(start : Optional<CommandContext>, end : CommandContext) : PluginActionContext {
-    return {
-      start : start,
-      end : end,
-      env : this.env
-    }
+    const env = this.env;
+    return {start, end, env, executor : commandExecutor}
   }
 
   getStatus() : void {
@@ -392,6 +371,65 @@ export class BasicEngine implements Engine {
                         .some(entity => ruleEntities.includes(entity))
               : true; 
   }
+}
+
+const commandExecutor : CommandExecutor = (env, context, command) => {
+  const [matchedCommand, verb] = searchCommand(env, context, command);
+  executeActions(env, context, matchedCommand, verb);
+}
+
+/**
+ * Search for a command in the provided context
+ */
+function searchCommand(env : Env, context : CommandContext, command : string[]) : [SentenceNode, Verb?] {
+  const searchContext = buildSearchContext(context.entities, context.verbs, env);
+  const matchedCommand = searchExact(command, searchContext);
+  if (!matchedCommand) {
+    throw new Error("Could not match command: " + JSON.stringify(command));
+  }
+  const verb = matchedCommand.getPoS("verb")?.verb;
+  return [matchedCommand, verb];
+}
+
+/**
+ * execute before/main/after actions 
+ */
+function executeActions(env : Env, context : CommandContext, matchedCommand : SentenceNode, verb? : Verb) {
+      // Get ordered list of in scope entities
+      const inScopeEnitites = sortEntities(context, matchedCommand);
+
+      // Before actions
+      const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, env, matchedCommand, entity) )
+  
+      // Main action
+      const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, env, matchedCommand, verb) : false;
+  
+      // After actions
+      if (handledMain) {
+        inScopeEnitites.some(entity => executeBestMatchAction(entity.after, env, matchedCommand, entity));
+      }
+
+}
+
+/**
+ * Arrange entities in the following execution order
+ * 1. Scope/Context
+ * 2. Room
+ * 3. Object being acted on
+ * 4. The indirect object 
+ * 
+ * @param matchedCommand 
+ * @returns 
+ */
+function sortEntities(context : CommandContext, matchedCommand : SentenceNode) : Entity[] {
+  const allContextEntities = _.flatten(Object.values(context.entities))
+  const location = getLocationFromContext(context);
+  const directObject = matchedCommand.getPoS("directObject")?.entity;
+  const indirectObject = matchedCommand.getPoS("indirectObject")?.entity;
+  const inScopeEnitites = arrays.of(indirectObject, directObject, location);
+  allContextEntities.forEach(entity => arrays.pushIfUnique(inScopeEnitites, entity, (entity1, entity2) => entity1.id === entity2.id));
+  inScopeEnitites.reverse();
+  return inScopeEnitites;
 }
 
 function executeBestMatchAction(actions : PhaseAction[], env : Env, command : SentenceNode, agent : Obj ) {

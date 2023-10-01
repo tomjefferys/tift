@@ -19,7 +19,7 @@ export function makePlayer(env : Env, start : string) {
         type : "player",
         location : start,
         score : 0,
-        visitedLocations : []
+        visitedLocations : {}
     }).withVerb("inventory")
       .withVerb("wait")
       .withTag("container")
