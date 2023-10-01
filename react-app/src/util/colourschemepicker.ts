@@ -15,7 +15,7 @@ const CHANGE_MESSAGE = (scheme : string) => `changine to ${scheme} scheme`;
  * @returns the colour scheme picker
  */
 export function createColourSchemePicker(schemeChanger : (scheme : string) => void) : StateMachine<InputMessage, DecoratedForwarder> {
-    const colourSchemes = [LIGHT, DARK].map(value => word(value, value, "option"));
+    const colourSchemes = [LIGHT, DARK].map(value => word(value, value, "select"));
     return createStateMachine("prompt", ["prompt", {
         onEnter : (forwarder : DecoratedForwarder) => {
             forwarder.print("Select a colour scheme: light, dark");

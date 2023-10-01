@@ -6,7 +6,9 @@ interface Stringable {
     toString : () => string
 }
 
-export const word = (id : string, value : string, type : "option" | "control") : Word => ({id, value, type});
+type WordType = "option" | "control" | "select";
+
+export const word = (id : string, value : string, type : WordType) : Word => ({id, value, type});
 
 export function print(value : Stringable, tag? : string) : OutputMessage {
     return {

@@ -51,7 +51,7 @@ export function handleInput(message : InputMessage) : EngineProxy.InputHandler {
   return new EngineProxy.InputHandler(message);
 }
 
-export function word(id : string, value : string, type : "option" | "control", tags = undefined ) : Word {
+export function word(id : string, value : string, type : "option" | "control" | "select", tags = undefined ) : Word {
   return { id, value, type, tags }
 }
 

@@ -17,7 +17,7 @@ const CANCELLED_MESSAGE = "cancelled";
  * @returns the restarter state machine
  */
 export function createRestarter(restartFn : (forwarder : DecoratedForwarder) => void) : StateMachine<InputMessage, DecoratedForwarder> {
-    const restartOptions = [CONFIRM,CANCEL].map(value => word(value, value, "option"));
+    const restartOptions = [CONFIRM,CANCEL].map(value => word(value, value, "select"));
 
     return createStateMachine("prompt", ["prompt", {
         onEnter : (forwarder : DecoratedForwarder) => {

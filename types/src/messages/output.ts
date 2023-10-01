@@ -8,7 +8,7 @@ export type OutputConsumer = (message : OutputMessage) => void;
 
 export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
 
-export type WordType = "word" | "option" | "control";
+export type WordType = "word" | "option" | "control" | "select";
 
 export type PoSType = "start" | "verb" | "directObject" | "preposition" | "indirectObject" | "modifier";
 
@@ -20,7 +20,7 @@ export type StatusType = {
     redoable : boolean
 }
 
-export type Word = OptionWord | ControlWord | PartOfSpeech
+export type Word = OptionWord | ControlWord | SelectWord | PartOfSpeech;
 
 export interface OptionWord extends IdValue<string>, Partial<Taggable> {
     type : "option";
@@ -28,6 +28,10 @@ export interface OptionWord extends IdValue<string>, Partial<Taggable> {
 
 export interface ControlWord extends IdValue<string>, Partial<Taggable> {
     type : "control";
+}
+
+export interface SelectWord extends IdValue<string>, Partial<Taggable> {
+    type : "select";
 }
 
 export interface PartOfSpeech extends IdValue<string>, Partial<Taggable> {

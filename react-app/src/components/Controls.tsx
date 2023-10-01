@@ -45,7 +45,7 @@ interface CustomButtonGridProps {
 
 const PANELS : PanelDefinition[] = 
                 [{name : "Game",   wordTypes : ["word", "control"]}, 
-                 {name : "Options", wordTypes : ["option"]}];
+                 {name : "Options", wordTypes : ["option", "select"]}];
 
 const Controls = ({ words, wordSelected } : ControlProps) => {
 

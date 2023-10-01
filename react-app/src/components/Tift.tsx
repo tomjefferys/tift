@@ -144,12 +144,12 @@ function Tift() {
 
       // Create the engine and attach proxies
       const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
+                        .insertProxy("undoredo", getUndoRedoFilter(statusRef, undoFn, redoFn))
                         .insertProxy("optionItems", createStateMachineFilter(
                                                     ["restart", restartMachine],
                                                     ["colours", colourSchemePicker],
                                                     ["clear", logClearer]))
-                        .insertProxy("pauser", pauser)
-                        .insertProxy("undoredo", getUndoRedoFilter(statusRef, undoFn, redoFn));
+                        .insertProxy("pauser", pauser);
 
       // Create the output consumer
       const outputConsumer = getOutputConsumer(
