@@ -207,8 +207,10 @@ function Tift() {
           WordTree.addLeaf(latestWordsRef.current, BACKSPACE);
         }
       }
-      setWords(latestWordsRef.current);
-      setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, command.map(word => word.value).join(" ")));
+      if (!command.length || gameWords.length) {
+        setWords(latestWordsRef.current);
+        setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, command.map(word => word.value).join(" ")));
+      }
     }, [command]);
   
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
