@@ -4,7 +4,7 @@ printAt(location, message):
   - playerLocation = getLocation()
   - locationMatch = location == playerLocation
   - if(locationMatch).then(print(message))
-  - return locationMatch
+  - return(locationMatch)
 say(message): print('"' + message + '"')
 hide(entity): setTag(entity,'hidden')
 reveal(entity): delTag(entity,'hidden')
@@ -20,4 +20,6 @@ delTag(entity, tag):
     - index = Array.indexOf(entityObject.tags, tag)
     - if: index != -1
       then: Array.splice(entityObject.tags, index, 1)
+return(value): value
+isCarrying(item): isAtLocation(item, '__PLAYER__') 
 ---

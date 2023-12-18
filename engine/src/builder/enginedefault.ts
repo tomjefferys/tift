@@ -42,16 +42,16 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
     }),
     print : bindParams(["value"], env => {
         DEFAULT_FUNCTIONS.write(env);
-        return mkResult(null);
+        return mkResult(true);
     }),
     openExit : bindParams(["room", "direction", "target"], 
                         env => {
-                            Locations.addExit(env, env.getStr("room"), env.getStr("direction"), env.get("target"));
+                            Locations.addExit(env, env.get("room"), env.getStr("direction"), env.get("target"));
                             return mkResult(null);
                         } ),
     closeExit : bindParams(["room", "direction"], 
                         env => {
-                            Locations.closeExit(env, env.getStr("room"), env.getStr("direction"));
+                            Locations.closeExit(env, env.get("room"), env.getStr("direction"));
                             return mkResult(null);
                         } ),
     getEntity : bindParams(["entityId"], env => mkResult(Entities.getEntity(env, env.get("entityId")))),
@@ -59,6 +59,13 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const low = env.get("low");
                             const high = env.get("high");
                             return mkResult(Math.floor((Math.random() * (high - low + 1)) + low));
+                        }),
+    isAtLocation : bindParams(["item", "location"],
+                        env => {
+                            const location = env.get("location");
+                            const locationStr = Entities.getEntity(env, location).id;
+                            const atLocation = Locations.isAtLocation(env, locationStr, env.get("item"));
+                            return mkResult(atLocation);
                         })
 }
 
