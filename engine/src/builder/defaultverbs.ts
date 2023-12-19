@@ -184,6 +184,32 @@ const TAKE_OFF = phaseActionBuilder("remove")
                 return mkResult(true);
             }));
 
+const OPEN = phaseActionBuilder("open")
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("open")).withObject(captureObject("openable")).build(),
+            mkThunk(env => {
+                const item = env.get("openable");
+                item.is_open = true;
+                const message = Property.getPropertyString(env, "open.message");
+                const messageEnv = env.newChild(item);
+                Output.write(env, formatString(messageEnv, message));
+                return mkResult(true);
+            }));
+
+const CLOSE = phaseActionBuilder("close")
+        .withPhase("main")
+        .withMatcherOnMatch(
+            matchBuilder().withVerb(matchVerb("close")).withObject(captureObject("openable")).build(),
+            mkThunk(env => {
+                const item = env.get("openable");
+                item.is_open = false;
+                const message = Property.getPropertyString(env, "close.message");
+                const messageEnv = env.newChild(item);
+                Output.write(env, formatString(messageEnv, message));
+                return mkResult(true);
+            }));
+
 const PUSH = phaseActionBuilder("push")
         .withPhase("main")
         .withMatcherOnMatch(
@@ -264,6 +290,14 @@ const DEFAULT_VERBS = [
                   .withTrait("transitive")
                   .withAction(TAKE_OFF)
                   .withContext("wearing")
+                  .build(),
+      new VerbBuilder({"id":"open"})
+                  .withTrait("transitive")
+                  .withAction(OPEN)
+                  .build(),
+      new VerbBuilder({"id":"close"})
+                  .withTrait("transitive")
+                  .withAction(CLOSE)
                   .build(),
       new VerbBuilder({"id":"push"})
                   .withTrait("transitive")

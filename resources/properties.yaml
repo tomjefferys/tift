@@ -24,6 +24,12 @@ templates:
 property: wait
 message: Time passes
 ---
+property: open
+message: You open {{name}}
+---
+property: close
+message: You close {{name}}
+---
 property: location
 messages:
   leaves: "{{entity}} leaves{{#direction}} {{direction}}{{/direction}}"

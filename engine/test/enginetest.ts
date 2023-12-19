@@ -1084,6 +1084,56 @@ test("Test put item in container", () => {
     executeAndTest(["look"], { expected : ["ball", "in box"] });
 })
 
+test("Test openable", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                id : "door",
+                location : "northRoom",
+                desc : "An old wooden door",
+                type : "item",
+                tags : ["openable"],
+                before : {
+                    "examine(this)" : {
+                        when : "this.is_open",
+                        do : "print('The door is open')",
+                        otherwise : "print('The door is closed')"
+                    }
+                }
+           })
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "door"], { expected : ["closed"], notExpected : ["open"]});
+    executeAndTest(["open", "door"], { expected : ["open"] });
+    executeAndTest(["examine", "door"], { expected : ["open"], notExpected : ["closed"]});
+    executeAndTest(["close", "door"], { expected : ["close"] });
+    executeAndTest(["examine", "door"], { expected : ["closed"], notExpected : ["open"]});
+});
+
+test("Test closable", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                id : "door",
+                location : "northRoom",
+                desc : "An old wooden door",
+                type : "item",
+                tags : ["closable"],
+                before : {
+                    "examine(this)" : {
+                        when : "this.is_open",
+                        do : "print('The door is open')",
+                        otherwise : "print('The door is closed')"
+                    }
+                }
+           })
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "door"], { expected : ["open"], notExpected : ["closed"]});
+    executeAndTest(["close", "door"], { expected : ["close"]});
+    executeAndTest(["examine", "door"], { expected : ["closed"], notExpected : ["open"]});
+    executeAndTest(["open", "door"], { expected : ["open"]});
+    executeAndTest(["examine", "door"], { expected : ["open"], notExpected : ["closed"]});
+});
+
 test("Test undo", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({

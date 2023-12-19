@@ -178,7 +178,16 @@ export function makeItem(obj : Obj) : Entity {
             builder.withProp("visibleWhen()", Entities.makeVisibleWhenDarkFn());
         }
     }
-
+    if (tags.includes("openable")) {
+        builder.withVerb("open");
+        builder.withVerb("close");
+        builder.withProp("is_open", false);
+    }
+    if (tags.includes("closable")) {
+        builder.withVerb("open");
+        builder.withVerb("close");
+        builder.withProp("is_open", true);
+    }
     return builder.build();
 }
 
