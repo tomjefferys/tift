@@ -17,6 +17,7 @@ import * as Location from "./locations";
 import { Env } from "tift-types/src/env";
 import { getDefaultVerbs } from "./defaultverbs";
 import * as Entities from "./entities";
+import { parseToThunk } from "../script/parser";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -179,16 +180,18 @@ export function makeItem(obj : Obj) : Entity {
         }
     }
     if (tags.includes("openable")) {
-        builder.withVerb("open");
-        builder.withVerb("close");
-        builder.withProp("is_open", false);
+        addOpenClose(builder, false);
     }
     if (tags.includes("closable")) {
-        builder.withVerb("open");
-        builder.withVerb("close");
-        builder.withProp("is_open", true);
+        addOpenClose(builder, true);
     }
     return builder.build();
+}
+
+function addOpenClose(builder : EntityBuilder, isOpen : boolean) {
+    builder.withVerbMatcher({ verb : "open", condition : parseToThunk("is_open == false") });
+    builder.withVerbMatcher({ verb : "close", condition : parseToThunk("is_open == true") });
+    builder.withProp("is_open", isOpen);
 }
 
 export function makeRoom(obj : Obj) : Entity {

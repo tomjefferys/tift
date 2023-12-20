@@ -1103,10 +1103,21 @@ test("Test openable", () => {
     engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "door"], { expected : ["closed"], notExpected : ["open"]});
+    let words = getWordIds([]);
+    expect(words).toContain("open");
+    expect(words).not.toContain("close");
+
     executeAndTest(["open", "door"], { expected : ["open"] });
     executeAndTest(["examine", "door"], { expected : ["open"], notExpected : ["closed"]});
+    words = getWordIds([]);
+    expect(words).toContain("close");
+    expect(words).not.toContain("open");
+
     executeAndTest(["close", "door"], { expected : ["close"] });
     executeAndTest(["examine", "door"], { expected : ["closed"], notExpected : ["open"]});
+    words = getWordIds([]);
+    expect(words).toContain("open");
+    expect(words).not.toContain("close");
 });
 
 test("Test closable", () => {
@@ -1128,10 +1139,21 @@ test("Test closable", () => {
     engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["examine", "door"], { expected : ["open"], notExpected : ["closed"]});
+    let words = getWordIds([]);
+    expect(words).toContain("close");
+    expect(words).not.toContain("open");
+
     executeAndTest(["close", "door"], { expected : ["close"]});
     executeAndTest(["examine", "door"], { expected : ["closed"], notExpected : ["open"]});
+    words = getWordIds([]);
+    expect(words).toContain("open");
+    expect(words).not.toContain("close");
+
     executeAndTest(["open", "door"], { expected : ["open"]});
     executeAndTest(["examine", "door"], { expected : ["open"], notExpected : ["closed"]});
+    words = getWordIds([]);
+    expect(words).toContain("close");
+    expect(words).not.toContain("open");
 });
 
 test("Test undo", () => {
