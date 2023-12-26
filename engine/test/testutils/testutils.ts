@@ -108,6 +108,7 @@ export function createEngineRef() : EngineRef {
                 throw new Error("Engine reference has not been set yet");
             }
             engine.ref.send(message);
+            return Promise.resolve();
         } 
     }
     return engine;

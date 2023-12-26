@@ -102,3 +102,13 @@ export function addLeaf(tree : WordTree, leaf : Word) {
         children.forEach(child => addLeaf(child, leaf));
     }
 }
+
+export function flatten(tree : WordTree) : string[] {
+    const [word, children] = tree;
+    const words = [];
+    words.push(word.id);
+    for(const child of children) {
+        words.push(...flatten(child))
+    }
+    return words;
+}

@@ -1,5 +1,5 @@
 import { InputMessage } from "./messages/input";
 
 export interface Engine {
-  send(message : InputMessage) : void;
+  send(message : InputMessage) : Promise<void>;
 }

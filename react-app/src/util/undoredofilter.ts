@@ -7,14 +7,14 @@ import { RefObject } from "react";
 
 export function getUndoRedoFilter(
                     statusRef : RefObject<StatusType>, 
-                    undoFn : () => void,
-                    redoFn : () => void) : Filters<InputMessage, OutputMessage> {
+                    undoFn : () => Promise<void>,
+                    redoFn : () => Promise<void>) : Filters<InputMessage, OutputMessage> {
     return {
-        requestFilter : (input, forwarder) => {
-            handleInput(input)
-                .onCommand([getId("undo")], undoFn)
-                .onCommand([getId("redo")], redoFn)
-            .onAny(message => forwarder.send(message));
+        requestFilter : async (input, forwarder) => {
+            const handler = handleInput(input);
+            await handler.onCommand([getId("undo")], undoFn);
+            await handler.onCommand([getId("redo")], redoFn);
+            await handler.onAny(async message => forwarder.send(message));
         },
         responseFilter : (message, forwarder) => {
             const outputConsumer = new OutputConsumerBuilder()

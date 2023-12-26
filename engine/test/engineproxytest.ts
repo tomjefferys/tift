@@ -82,7 +82,7 @@ test("Test commandproxy", () => {
     expect(output).toEqual(expect.arrayContaining(["Restarting"]));
 });
 
-test("Test restart using command proxy", () => {
+test("Test restart using command proxy", async () => {
     const data = dedent(`
         ---
         game: The Game
@@ -123,29 +123,29 @@ test("Test restart using command proxy", () => {
     // Initialize
     engineInitializer(engineProxy);
 
-    engineProxy.send(Input.execute(["look"]));
+    await engineProxy.send(Input.execute(["look"]));
     expect(output[0]).toEqual(expect.stringContaining("The north room"));
     output.length = 0;
 
-    engineProxy.send(Input.getNextWords([]));
+    await engineProxy.send(Input.getNextWords([]));
     expect(output).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
     output.length = 0;
 
-    engineProxy.send(Input.execute(["go", "south"]))
-    engineProxy.send(Input.execute(["look"]));
+    await engineProxy.send(Input.execute(["go", "south"]))
+    await engineProxy.send(Input.execute(["look"]));
     expect(output[0]).toEqual(expect.stringContaining("The south room"));
     output.length = 0;
 
-    engineProxy.send(Input.execute(["__option(restart)__"]));
-    engineProxy.send(Input.execute(["look"]));
+    await engineProxy.send(Input.execute(["__option(restart)__"]));
+    await engineProxy.send(Input.execute(["look"]));
     expect(output[0]).toEqual(expect.stringContaining("The north room"));
 
-    engineProxy.send(Input.getNextWords([]));
+    await engineProxy.send(Input.getNextWords([]));
     expect(output).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
     output.length = 0;
 })
 
-test("test restart using state machine proxy", () => {
+test("test restart using state machine proxy", async () => {
     const data = dedent(`
         ---
         game: The Game
@@ -163,7 +163,6 @@ test("test restart using state machine proxy", () => {
         exits:
           north: northRoom
         `);
-
     // Instructions to perform a restart
     const engineInitializer = (forwarder : MessageForwarder) => {
         forwarder.send(Input.reset());
@@ -180,25 +179,25 @@ test("test restart using state machine proxy", () => {
             forwarder.print("Are you sure?");
             forwarder.words([], restartOptions);
         },
-        onAction : (input, forwarder) => {
+        onAction : async (input, forwarder) => {
             let finished = false;
-            handleInput(input)
-                .onCommand(["restart"], () => {
+            const handler = handleInput(input);
+            await handler.onCommand(["restart"], async () => {
                     forwarder.print("restarting");
                     engineInitializer(forwarder);
                     finished = true;
-                })
-                .onCommand(["cancel"], () => {
+                });
+            await handler.onCommand(["cancel"], async () => {
                     forwarder.print("cancel");
                     finished = true;
-                })
-                .onAnyCommand(command => {
+                });
+            await handler.onAnyCommand(async command => {
                     forwarder.warn("Unexpected command: " + command.join(" "));
-                })
-                .onGetWords(() => {
+                });
+            await handler.onGetWords(async () => {
                     forwarder.respond(Output.words([], restartOptions));
-                })
-                .onAny(message => {
+                });
+            await handler.onAny(async message => {
                     forwarder.warn("Unexpected message: " + JSON.stringify(message));
                 });
             return finished ? TERMINATE : undefined;
@@ -219,50 +218,50 @@ test("test restart using state machine proxy", () => {
     // Initialize
     engineInitializer(engineProxy);
 
-    engineProxy.send(Input.execute(["look"]));
+    await engineProxy.send(Input.execute(["look"]));
     expect(output[0]).toEqual(expect.stringContaining("The north room"));
     output.length = 0;
 
-    engineProxy.send(Input.getNextWords([]));
+    await engineProxy.send(Input.getNextWords([]));
     expect(output).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
     output.length = 0;
 
-    engineProxy.send(Input.execute(["go", "south"]))
-    engineProxy.send(Input.execute(["look"]));
+    await engineProxy.send(Input.execute(["go", "south"]))
+    await engineProxy.send(Input.execute(["look"]));
     expect(output[0]).toEqual(expect.stringContaining("The south room"));
     output.length = 0;
 
     // Trigger restart
-    engineProxy.send(Input.execute(["__option(restart)__"]));
+    await engineProxy.send(Input.execute(["__option(restart)__"]));
     expect(output).toEqual(["Are you sure?", "restart", "cancel"])
     output.length = 0;
 
     // Cancel
-    engineProxy.send(Input.execute(["cancel"]));
+    await engineProxy.send(Input.execute(["cancel"]));
     expect(output).toEqual(["cancel"]);
     output.length = 0;
 
     // Still in south room
-    engineProxy.send(Input.execute(["look"]));
+    await engineProxy.send(Input.execute(["look"]));
     expect(output[0]).toEqual(expect.stringContaining("The south room"));
     output.length = 0;
 
     // Trigger restart
-    engineProxy.send(Input.execute(["__option(restart)__"]));
+    await engineProxy.send(Input.execute(["__option(restart)__"]));
     expect(output).toEqual(["Are you sure?", "restart", "cancel"])
     output.length = 0;
 
     // Confirm
-    engineProxy.send(Input.execute(["restart"]));
+    await engineProxy.send(Input.execute(["restart"]));
     expect(output).toEqual(["restarting"]);
     output.length = 0;
 
     // Back in north room
-    engineProxy.send(Input.execute(["look"]));
+    await engineProxy.send(Input.execute(["look"]));
     expect(output[0]).toEqual(expect.stringContaining("The north room"));
     output.length = 0;
 
-    engineProxy.send(Input.getNextWords([]));
+    await engineProxy.send(Input.getNextWords([]));
     expect(output).toEqual(expect.arrayContaining(["go", "look", "wait", "restart"]));
     output.length = 0;
 })

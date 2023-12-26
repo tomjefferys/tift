@@ -4,7 +4,7 @@ import { Status, StateMachine, StateName, MachineOps } from "tift-types/src/util
 export const TERMINATE : StateName = "__TERMINATE__";
 
 type StateFn<T> = (obj : T, machine : MachineOps) => void;
-type InputFn<M,T> = (input : M, obj : T) => Optional<StateName>;
+type InputFn<M,T> = (input : M, obj : T) => Promise<Optional<StateName>>;
 
 /** 
  * A state for a state machine
@@ -66,7 +66,7 @@ export function buildStateMachine<TIn,TObj>(initialState : StateName, ...states 
             status = "RUNNING";
             switchStates(initialState, obj);
         },
-        send : (input : TIn, obj : TObj) => {
+        send : async (input : TIn, obj : TObj) => {
             if (status !== "RUNNING") {
                 throw new Error("State machine can't recieve input it is " + status);
             }
@@ -74,7 +74,7 @@ export function buildStateMachine<TIn,TObj>(initialState : StateName, ...states 
                 throw new Error("State machine state is undefined");
             }
             const state = getState(currentState);
-            const nextState = state.onAction(input, obj);
+            const nextState = await state.onAction(input, obj);
             if (nextState === TERMINATE) {
                 status = "FINISHED";
                 switchStates(undefined, obj);

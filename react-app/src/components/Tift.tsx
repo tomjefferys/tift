@@ -52,10 +52,11 @@ function Tift() {
 
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
-    const getWords = (command : Word[]) => {
-      engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
+    const getWords = async (command : Word[]) : Promise<void> => {
+      await engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
     }
-    const execute = (command : Word[]) => engineRef.current?.send(Input.execute(command.map(word => word.id)));
+
+    const execute = async (command : Word[]) => await engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
     // Load a game file from the `public` folder
     const loadGame = (name : string, engine : MessageForwarder, saveData : string | null) => 
@@ -80,9 +81,11 @@ function Tift() {
                 engine.send(Input.load(data));
                 engine.send(Input.start((saveData != null)? saveData : undefined));
                 engine.send(Input.getStatus());
+
                 getWords([]);
                 setWords(latestWordsRef.current);
                 setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
+                setCommand([]);
               })
   
     const changeColourMode = (newMode : string) => {
@@ -117,9 +120,12 @@ function Tift() {
       messagesRef.current = savedMessages? JSON.parse(savedMessages) : [];
 
       // Set up Proxies
-      const restartMachine = createRestarter(forwarder => {
+      // Restart is now running asynchronously, so the thing calling it does not block
+      const restartMachine = createRestarter(async forwarder => {
+        setWords(WordTree.createRoot());
+        latestWordsRef.current = WordTree.createRoot();
         window.localStorage.removeItem(AUTO_SAVE);
-        loadGame(GAME_FILE, forwarder, null)
+        await loadGame(GAME_FILE, forwarder, null);
       });
       const colourSchemePicker = createColourSchemePicker(value => changeColourMode(value));
       const logClearer = createSimpleOption( "clear", () => {
@@ -127,16 +133,16 @@ function Tift() {
         saveMessages([]);
       });
       const pauser = Pauser.createPauseFilter(
-              words => WordTree.set(latestWordsRef.current, command, words),
-              words => {getWords(words); setWords(latestWordsRef.current)});
+              async words => WordTree.set(latestWordsRef.current, command, words),
+              async words => {getWords(words); setWords(latestWordsRef.current)});
 
-      const undoFn = () => {
+      const undoFn = async () => {
         engine.send(Input.undo());
         engine.send(Input.getStatus());
         engine.send(Input.getNextWords([]));
       }
 
-      const redoFn = () => { 
+      const redoFn = async () => { 
         engine.send(Input.redo());
         engine.send(Input.getStatus());
         engine.send(Input.getNextWords([]));
@@ -149,11 +155,12 @@ function Tift() {
                                                     ["restart", restartMachine],
                                                     ["colours", colourSchemePicker],
                                                     ["clear", logClearer]))
-                        .insertProxy("pauser", pauser);
+                        //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
 
       // Create the output consumer
       const outputConsumer = getOutputConsumer(
         message => updateMessages(messagesRef.current, messageEntry(message)), 
+
         (command, words) => WordTree.set(latestWordsRef.current, command, words),
         status => statusRef.current = status,
         (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
@@ -165,6 +172,7 @@ function Tift() {
   
       engineRef.current = engine;
       const saveData = window.localStorage.getItem(AUTO_SAVE);
+      
   
       loadGame(GAME_FILE, engine, saveData);
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,17 +198,21 @@ function Tift() {
   
     // When command updated
     useEffect(() => {
-      getWords(command);
+      commandUpdated();
+    }, [command]);
+
+    const commandUpdated = async () => {
+      await getWords(command);
       const words = WordTree.get(latestWordsRef.current, command);
       const engine = engineRef.current;
       const gameWords = words.filter(word => word.type === "word");
       if (engine && command.length && !gameWords.length) {
         messagesRef.current?.push(commandEntry(command.map(word => word.value).join(" ")))
-        execute(command);
+        await execute(command);
         engine.send(Input.getStatus());
         latestWordsRef.current = WordTree.createRoot();
         setCommand([]);
-        getWords([]);
+        await getWords([]);
       } else if (engine && command.length && gameWords.length) {
         // Add in backspace if it's not already there
         if (!words.includes(BACKSPACE)) {
@@ -211,7 +223,7 @@ function Tift() {
         setWords(latestWordsRef.current);
         setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, command.map(word => word.value).join(" ")));
       }
-    }, [command]);
+    }
   
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
       if (word === BACKSPACE) {

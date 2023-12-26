@@ -38,8 +38,8 @@ class DuplexProxyImpl<S,T> implements DuplexProxy<S,T> {
     }
 
     // Client -> S -> Server
-    send(request : S) {
-        this.requestFilter(request, this.getForwarder());
+    async send(request : S) {
+        await this.requestFilter(request, this.getForwarder());
     }
 
     // Server -> T -> Client
@@ -66,7 +66,7 @@ class DuplexProxyImpl<S,T> implements DuplexProxy<S,T> {
     insertProxy(name : string, filters : Filters<S,T>) : DuplexProxy<S,T> {
         const newProxy = new DuplexProxyImpl<S,T>(name, filters);
 
-        newProxy.requestListener = request => this.send(request); //this.requestListener;
+        newProxy.requestListener = async request => this.send(request); //this.requestListener;
         this.responseListener = response => newProxy.respond(response);
 
         return newProxy;
@@ -74,7 +74,7 @@ class DuplexProxyImpl<S,T> implements DuplexProxy<S,T> {
     
     private getForwarder() : Forwarder<S,T> {
         return {
-            send : request => this.forwardRequest(request),
+            send : async request => this.forwardRequest(request),
             respond : response => this.forwardResponse(response)
         }
     }

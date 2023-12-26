@@ -8,8 +8,8 @@ import { Filters, Forwarder } from "tift-types/src/util/duplexproxy";
  * Provides a "continue" command to skip
  */
 export interface Pauser {
-  pause : (timeMillis : number) => void;
-  unpause : () => void;
+  pause : (timeMillis : number) => Promise<void>;
+  unpause : () => Promise<void>;
 }
 
 const CONTINUE = [word("continue", "continue", "control")];
@@ -23,16 +23,16 @@ export function createPauseFilter(setWords : (words : Word[]) => void, getWords 
   let paused = false;
   let timer : ReturnType<typeof setTimeout> | null = null;
   const pauser : PauseFilter = {
-    requestFilter : (input, forwarder) => {
+    requestFilter : async (input, forwarder) => {
       if (paused) {
-        handleInput(input)
-          .onCommand(["continue"], pauser.unpause)
-          .onGetWords(command => command[0] === "continue" 
+        const handler = handleInput(input);
+        await handler.onCommand(["continue"], pauser.unpause);
+        await handler.onGetWords( async command => command[0] === "continue" 
                                   ? forwarder.respond({ type : "Words", command, words : []})
-                                  : forwarder.respond({ type : "Words", command, words : CONTINUE}))
-          .onAny(message => forwarder.send(message));
+                                  : forwarder.respond({ type : "Words", command, words : CONTINUE}));
+        await handler.onAny(async message => forwarder.send(message));
       } else {
-        forwarder.send(input);
+        await forwarder.send(input);
       }
     },
     responseFilter : (output, forwarder) => {
@@ -42,12 +42,12 @@ export function createPauseFilter(setWords : (words : Word[]) => void, getWords 
         forwarder.respond(output);
       }
     },
-    pause : timeMillis => { 
+    pause : async timeMillis => { 
       paused = true;
       setWords(CONTINUE);
       timer = setTimeout(pauser.unpause, timeMillis);
     },
-    unpause : () => {
+    unpause : async () => {
       if (timer) {
         clearTimeout(timer);
         timer = null;

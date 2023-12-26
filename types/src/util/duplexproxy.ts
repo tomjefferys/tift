@@ -4,14 +4,14 @@ import { Consumer, BiConsumer } from "./functions"
  * Something that can forward on a request or response
  */
 export interface Forwarder<S,T> {
-    send(request : S) : void;
+    send(request : S) : Promise<void>;
     respond(response : T) : void;
 }
 
 /**
  * A request filter.  This is a consumer, that can intercept and manipulate requests
  */
-export type RequestFilter<S,T> = BiConsumer<S, Forwarder<S,T>>;
+export type RequestFilter<S,T> = (request : S, forwarder : Forwarder<S,T>) => Promise<void>;
 
 /**
  * A response filter.  This is a consumer, that can intercept and manipulate responses
@@ -42,7 +42,7 @@ export interface DuplexProxy<S,T> extends Forwarder<S,T> {
     setResponseListener(responseListener : Consumer<T>) : void; 
 
     // Client -> S -> Server
-    send(request : S) : void; 
+    send(request : S) : Promise<void>; 
 
     // Server -> T -> Client
     respond(response : T) : void;

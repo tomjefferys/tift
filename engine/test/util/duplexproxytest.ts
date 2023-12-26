@@ -29,7 +29,7 @@ test("Test no-op proxy", () => {
 test("Test intercepting proxy", () => {
     // Create the proxy
     const proxy = createDuplexProxy<string,number>("test",{
-        requestFilter : (str, proxy) => proxy.respond(str.length + 1)
+        requestFilter : async (str, proxy) => proxy.respond(str.length + 1)
     });
 
     // Creatre the delegate, call to the proxy output

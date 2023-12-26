@@ -21,26 +21,26 @@ export function createColourSchemePicker(schemeChanger : (scheme : string) => vo
             forwarder.print("Select a colour scheme: light, dark");
             forwarder.words([], colourSchemes);
         },
-        onAction : (input : InputMessage, forwarder : DecoratedForwarder) => {
+        onAction : async (input : InputMessage, forwarder : DecoratedForwarder) => {
             let finished = false;
-            handleInput(input)
-                .onCommand([LIGHT], () => {
+            let handler = await handleInput(input)
+                .onCommand([LIGHT], async () => {
                     forwarder.print(CHANGE_MESSAGE(LIGHT));
                     schemeChanger(LIGHT);
                     finished = true;
-                })
-                .onCommand([DARK], () => {
+                });
+            handler = await handler.onCommand([DARK], async () => {
                     forwarder.print(CHANGE_MESSAGE(DARK));
                     schemeChanger(DARK);
                     finished = true;
-                })
-                .onCommand([CANCEL], () => {
+                });
+            handler = await handler.onCommand([CANCEL], async () => {
                     forwarder.print("cancelled");
                     finished = true;
                 })
-                .onAnyCommand(command => forwarder.warn("Unexpected command: " + command.join(" ")))
-                .onGetWords(() => forwarder.words([], colourSchemes))
-                .onAny(message => forwarder.send(message));
+            handler = await handler.onAnyCommand(async command => forwarder.warn("Unexpected command: " + command.join(" ")));
+            handler = await handler.onGetWords(async () => forwarder.words([], colourSchemes));
+            handler = await handler.onAny(async message => forwarder.send(message));
             return finished ? "__TERMINATE__" : undefined;
         }
     }]);

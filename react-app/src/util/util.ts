@@ -12,7 +12,7 @@ export function createSimpleOption(name : string, clearFn : (forewarder : Decora
             clearFn(forwarder);
             machine.setStatus("FINISHED");
         },
-        onAction : (input : InputMessage, forwarder : DecoratedForwarder) => {
+        onAction : async (input : InputMessage, forwarder : DecoratedForwarder) => {
             forwarder.send(input);
             return undefined;
         }

@@ -34,6 +34,7 @@ const WordButton = ({ word, wordSelected, disabled } : WordProps) =>
                 value={word.id} 
                 onClick={(event) => wordSelected(event, word)}
                 sx={touchScreenNoHover}
-                isDisabled={disabled}>{word.value}</Button>)
+                isDisabled={disabled}
+                data-testid={word.id}>{word.value}</Button>)
 
 export default WordButton;

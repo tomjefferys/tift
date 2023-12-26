@@ -177,7 +177,7 @@ export class BasicEngine implements Engine {
     return this.gameData.getContext(this.env);
   }
 
-  send(message : InputMessage) : void {
+  send(message : InputMessage) : Promise<void> {
     const startTime = Date.now();
     try { 
       switch(message.type) {
@@ -213,6 +213,7 @@ export class BasicEngine implements Engine {
       logError(this.output, e);
     }
     logger.debug(() => `${JSON.stringify(message)}: ${Date.now() - startTime}ms`);
+    return Promise.resolve();
   }
 
   loadData(message : Load) {

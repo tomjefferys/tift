@@ -23,8 +23,8 @@ export class DecoratedForwarderImpl implements DecoratedForwarder {
         this.delegate = delegate;
     }
 
-    send(request : InputMessage) : void {
-        this.delegate.send(request);
+    send(request : InputMessage) : Promise<void> {
+        return this.delegate.send(request);
     }
 
     respond(response : OutputMessage) : void {
@@ -58,28 +58,28 @@ export class InputHandler {
         this.message = message;
     }
 
-    on(predicate : () => boolean, fn : () => void) {
+    async on(predicate : () => boolean, fn : () => Promise<void>) {
         if (!this.matched && predicate()) {
-            fn();
+            await fn();
             this.matched = true;
         }
         return this;
     }
 
-    onCommand(command : string[], fn : () => void) {
-        return this.on(() => this.message.type === "Execute" && _.isEqual(this.message.command, command), fn);
+    async onCommand(command : string[], fn : () => Promise<void>) {
+        return await this.on(() => this.message.type === "Execute" && _.isEqual(this.message.command, command), fn);
     }
 
-    onAnyCommand(fn : (command : string[]) => void) {
-        return this.on(() => this.message.type === "Execute", () => fn((this.message as Execute).command));
+    async onAnyCommand(fn : (command : string[]) => Promise<void>) {
+        return await this.on(() => this.message.type === "Execute", async () => fn((this.message as Execute).command));
     }
 
-    onGetWords(fn : (words : string[]) => void) {
-        return this.on(() => this.message.type === "GetWords", () => fn((this.message as GetWords).command));
+    async onGetWords(fn : (words : string[]) => Promise<void>) {
+        return await this.on(() => this.message.type === "GetWords", async () => fn((this.message as GetWords).command));
     }
 
-    onAny(fn : (message : InputMessage) => void) {
-        return this.on(() => true, () => fn(this.message));
+    async onAny(fn : (message : InputMessage) => Promise<void>) {
+        return await this.on(() => true, async () => fn(this.message));
     }
 }
 
@@ -111,7 +111,7 @@ export function createEngineProxy(engineBuilder : (outputConsumer : Consumer<Out
 export function createWordFilter(type : "option" | "control", name : string, action : Consumer<Forwarder<InputMessage, OutputMessage>>) : Filters<InputMessage, OutputMessage> {
     const commandId = "__" + type + "(" + name + ")__";
     return {
-        requestFilter : (message, forwarder) => {
+        requestFilter : async (message, forwarder) => {
             if (message.type === "Execute" && _.last(message.command) === commandId) {
                 action(forwarder);
             } else if (message.type === "GetWords" && _.last(message.command) === commandId) {
@@ -153,11 +153,11 @@ export function createStateMachineFilter(...machines : MachineInfo[] ) : Filters
     let activeMachine : Optional<StateMachine<InputMessage,DecoratedForwarder>> = undefined;
 
     return {
-        requestFilter : (message, forwarder) => {
+        requestFilter : async (message, forwarder) => {
             const decoratedFormatter = new DecoratedForwarderImpl(forwarder);
             let handled = false;
             if (activeMachine?.getStatus() === "RUNNING") {
-                activeMachine.send(message, decoratedFormatter);
+                await activeMachine.send(message, decoratedFormatter);
                 handled = true;
             } else if (message.type === "Execute") {
                 const command = commands.find(value => value.id === _.last(message.command));
@@ -178,7 +178,7 @@ export function createStateMachineFilter(...machines : MachineInfo[] ) : Filters
                 }
             } 
             if (!handled) {
-                forwarder.send(message);
+                await forwarder.send(message);
             }
         },
 

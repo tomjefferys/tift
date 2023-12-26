@@ -18,6 +18,6 @@ export type Status = "NOT_STARTED" | "RUNNING" | "FINISHED";
  */
 export interface StateMachine<TIn,TObj> {
     start : (obj : TObj) => void;
-    send : (input : TIn, obj : TObj) => void;
+    send : (input : TIn, obj : TObj) => Promise<void>;
     getStatus : () => Status;
 }
