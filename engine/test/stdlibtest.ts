@@ -116,3 +116,70 @@ test("Test hiding/revealing object", () => {
     expect(saveData.data.baseHistory.length).toBe(3);
     expect(saveData.data.baseHistory[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"__INVENTORY__"});
 });
+
+test("Test isCarrying", () => {
+    builder.withObj({...NORTH_ROOM})
+        .withObj({id : "door",
+                  type : "item",
+                  location : "northRoom",
+                  tags : ["openable"],
+                  before :
+                    { "open(this)" : {
+                        "when": "isCarrying(key)",
+                        "do": ["print('You open the door')", "open(door)"],
+                        "otherwise": "print('You need a key to open the door')" }
+                    }
+                })
+        .withObj({id : "key",
+                    type : "item",
+                    location : "northRoom",
+                    tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["open", "door"], { expected : ["You need a key to open the door"], notExpected : ["You open the door"]});
+    executeAndTest(["get", "key"], {});
+    executeAndTest(["open", "door"], { expected : ["You open the door"]});
+});
+
+test("Test open/close", () => {
+    builder.withObj({...NORTH_ROOM})
+        .withObj({id : "door",
+                  type : "item",
+                  location : "northRoom",
+                  desc : "The green door",
+                  tags : ["openable"],
+                  before : {
+                    "examine(this)": {
+                        if: "this.is_open",
+                        then: "print('The door is open')",
+                        else: "print('The door is closed')"
+                    }
+                  }})
+        .withObj({id : "key",
+                  type : "item",
+                  location : "northRoom",
+                  tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
+    executeAndTest(["open", "door"], {} );
+    executeAndTest(["examine", "door"], { expected : ["The door is open"]});
+    executeAndTest(["close", "door"], {} );
+    executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
+});
+
+test("Test open un-openable", () => {
+    builder.withObj({...NORTH_ROOM})
+    .withObj({id : "key",
+                type : "item",
+                location : "northRoom",
+                verbs : ["open"],
+                tags : ["carryable"],
+                before : {
+                    "open(this)" : "open(this)"
+                }});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["open", "key"], { errors : ["You cannot open key"]});
+})
+    

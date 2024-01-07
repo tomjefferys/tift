@@ -1,5 +1,5 @@
 import { EnvFn } from "tift-types/src/env";
-import { control, print } from "../messages/output";
+import { control, print, log } from "../messages/output";
 import { mkResult } from "../script/thunk";
 import { ARGS, bindParams } from "../script/parser";
 import { Obj } from "../util/objects"
@@ -44,6 +44,14 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
         DEFAULT_FUNCTIONS.write(env);
         return mkResult(true);
     }),
+    error : bindParams(["value"], env => {
+        DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message" : log( "error", env.get("value"))}));
+        return mkResult(false);
+    }),
+    warn : bindParams(["value"], env => {
+        DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message" : log( "warn", env.get("value"))}));
+        return mkResult(false);
+    }),
     openExit : bindParams(["room", "direction", "target"], 
                         env => {
                             Locations.addExit(env, env.get("room"), env.getStr("direction"), env.get("target"));
@@ -64,7 +72,8 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                         env => {
                             const location = env.get("location");
                             const locationStr = Entities.getEntity(env, location).id;
-                            const atLocation = Locations.isAtLocation(env, locationStr, env.get("item"));
+                            const itemEntity = Entities.getEntity(env, env.get("item"));
+                            const atLocation = Locations.isAtLocation(env, locationStr, itemEntity);
                             return mkResult(atLocation);
                         })
 }

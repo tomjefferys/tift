@@ -22,4 +22,13 @@ delTag(entity, tag):
       then: Array.splice(entityObject.tags, index, 1)
 return(value): value
 isCarrying(item): isAtLocation(item, '__PLAYER__') 
+isOpenable(item): hasTag(item, 'openable') || hasTag(item, 'closable')
+open(item):
+  if: isOpenable(item)
+  then: item.isOpen = true
+  else: error('You cannot open ' + item.id)
+close(item):
+  if: isOpenable(item)
+  then: item.isOpen = false
+  else: error('You cannot close ' + item.id)
 ---
