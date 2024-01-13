@@ -76,12 +76,12 @@ export function doMove(env : Env, entityId : string | object, destinationId : st
  * Recursively find objects at a location and their child objs
  * @param location 
  */
-export function findEntites(env : Env, location : Obj) : Obj[] {
+export function findEntities(env : Env, location : Obj) : Obj[] {
     const canSee = canSeeAtLocation(env, location);
     return env.findObjs(obj => obj?.location === location.id)
               .filter(obj => Entities.isEntity(obj))
               .filter(obj => Entities.isEntityVisible(env, canSee, obj))
-              .flatMap(obj => [obj, ...findEntites(env, obj)])  // TODO this should check for 'container' tag
+              .flatMap(obj => [obj, ...findEntities(env, obj)])  // TODO this should check for 'container' tag
 }
 
 export function canSeeAtLocation(env : Env, location : Obj) : boolean {

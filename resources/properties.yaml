@@ -21,6 +21,16 @@ templates:
   partials:
     item: "{{name}}{{#location}} ( in {{.}} ){{/location}}"
 ---
+property: examine
+templates:
+  container: |
+    containing {{#items}}{{> item}}{{/items}}
+  partials:
+    item: |
+       {{name}}
+       {{^isLast}}{{^isPenultimate}}, {{/isPenultimate}}{{/isLast}}
+       {{#isPenultimate}}and {{/isPenultimate}}
+---
 property: wait
 message: Time passes
 ---

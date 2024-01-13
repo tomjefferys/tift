@@ -183,3 +183,38 @@ test("Test open un-openable", () => {
     executeAndTest(["open", "key"], { errors : ["You cannot open key"]});
 })
     
+test("Test container", () => {
+    builder.withObj({...NORTH_ROOM})
+        .withObj({id : "chest",
+                    name : "chest",
+                    type : "item",
+                    location : "northRoom",
+                    desc : "A large chest",
+                    tags : ["container"]
+                    })
+                .withObj({id : "ball",
+                          name : "ball",
+                          type : "item",
+                          location : "northRoom",
+                          tags : ["carryable"]})
+                .withObj({id : "cube",
+                          name : "cube",    
+                          type : "item", 
+                          location : "northRoom",
+                          tags : ["carryable"]});
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball", "cube"]});
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["get", "cube"], {});
+    executeAndTest(["put", "ball", "in", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"], notExpected : ["cube"]});
+    executeAndTest(["put", "cube", "in", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball", "cube"]});
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "cube"], notExpected : ["ball"]});
+    executeAndTest(["get", "cube"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball", "cube"]});
+})

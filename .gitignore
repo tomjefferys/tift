@@ -8,3 +8,4 @@ notes.txt
 node_modules
 webapp/dist
 .DS_store
+.VSCodeCounter

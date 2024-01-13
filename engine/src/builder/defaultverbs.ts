@@ -19,7 +19,7 @@ export const LOOK_FN = (env : Env) => {
 
     const canSee = Locations.canSeeAtLocation(env, location);
 
-    const items = Locations.findEntites(env, location)
+    const items = Locations.findEntities(env, location)
                            .filter(Entities.isEntity)
                            .filter(entity => Entities.isEntityVisible(env, canSee, entity))
                            .filter(obj => Entities.isEntityMovable(obj) || Entities.isEntityNPC(obj))
@@ -54,6 +54,27 @@ export const LOOK_FN = (env : Env) => {
     Output.write(env, mainOutput, Output.MAIN_DESC_TAB);
     Output.write(env, itemsOutput, Output.ITEMS_DESC_TAB);
 
+    return mkResult(true);
+}
+
+export const EXAMINE_CONTAINER_FN = (env : Env) => {
+    const container = env.get("container");
+    const items = Locations.findEntities(env, container)
+                           .filter(Entities.isEntity)
+                           .filter(entity => Entities.isEntityVisible(env, true, entity));
+                    
+    const template = Property.getPropertyString(env, "examine.templates.container");
+    const partials = Property.getProperty(env, "examine.templates.partials") as Record<string,string>;
+
+    const view = {
+        items : items.map((item, index, array) => ({ 
+                        name : getName(item as Nameable),
+                        isPenultimate : index === array.length - 2,
+                        isLast : index === array.length - 1 }))
+    }
+    const scope = env.newChild(view);
+    const output = formatString(scope, template, undefined, partials);
+    Output.write(env, output);
     return mkResult(true);
 }
 

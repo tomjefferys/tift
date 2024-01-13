@@ -9,15 +9,17 @@ import { getObjs } from "../yamlparser";
 import { Obj } from "../util/objects"
 import { OutputConsumer } from "tift-types/src/messages/output";
 import _ from "lodash";
-import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "../script/phaseaction";
+import { Phase, PhaseAction, PhaseActionBuilder, phaseActionBuilder, PhaseActionType } from "../script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
 import { getDefaultGameBehaviour } from "./behaviour";
 import { Config, ConfigValueType } from "../config";
 import * as Location from "./locations";
 import { Env } from "tift-types/src/env";
-import { getDefaultVerbs } from "./defaultverbs";
+import { EXAMINE_CONTAINER_FN, getDefaultVerbs } from "./defaultverbs";
 import * as Entities from "./entities";
 import { parseToThunk } from "../script/parser";
+import { captureObject, matchBuilder, matchVerb } from "../commandmatcher";
+import { mkThunk } from "../script/thunk";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -184,6 +186,24 @@ export function makeItem(obj : Obj) : Entity {
     }
     if (tags.includes("closable")) {
         addOpenClose(builder, true);
+    }
+    if (tags.includes("container")) {
+        builder.withAttributedVerb("put", "in");
+
+        const matcher = matchBuilder()
+                            .withVerb(matchVerb("examine"))
+                            .withObject(captureObject("this"))
+                            .build();
+
+        const thunk = mkThunk(env => {
+            const childEnv = env.newChild({"container" : env.get("this")})
+            return EXAMINE_CONTAINER_FN(childEnv);
+        })
+        const phaseAction = 
+            new PhaseActionBuilder()
+                            .withPhase("after")
+                            .withMatcherOnMatch(matcher, thunk);
+        builder.withAfter(phaseAction);
     }
     return builder.build();
 }

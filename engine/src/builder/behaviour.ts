@@ -59,7 +59,7 @@ class DefaultBehaviour implements Behaviour {
         }
 
         // Get any other entities that are here
-        Locations.findEntites(env, locationEntity)
+        Locations.findEntities(env, locationEntity)
             .filter(entity => !Locations.isAtLocation(env, Player.PLAYER, entity))
             .forEach(entity => MultiDict.add(contextEntities, "environment", entity));
 
