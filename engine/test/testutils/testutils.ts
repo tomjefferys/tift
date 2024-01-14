@@ -156,13 +156,17 @@ export function createGetWordIds(engine : EngineRef, wordsResponse : string[]) :
     }
 }
 
-export type ExpectWordsFn = (command : string[], expectedNextWords : string[]) => void;
+export type ExpectWordsFn = (command : string[], expectedNextWords : string[], exactMatch? : boolean) => void;
 
 export function createExpectWords(getWordIds : GetWordIdsFn) : ExpectWordsFn {
-    return (command, expectedNextWords) => {
+    return (command, expectedNextWords, exactMatch = true) => {
         const words = getWordIds((command));
-        expect(words).toHaveLength(expectedNextWords.length);
-        expect(words).toEqual(expect.arrayContaining(expectedNextWords));
+        if (exactMatch) {
+            expect(words).toHaveLength(expectedNextWords.length);
+            expect(words).toEqual(expect.arrayContaining(expectedNextWords));
+        } else {
+            expectedNextWords.forEach(expected => expect(words).toContain(expected));
+        }
     }
 }
 

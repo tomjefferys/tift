@@ -209,6 +209,8 @@ test("Test container", () => {
     executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball", "cube"]});
     executeAndTest(["get", "ball"], {});
     executeAndTest(["get", "cube"], {});
+    expectWords([], ["put"], false);
+    expectWords(["put"], ["ball", "cube"]);
     executeAndTest(["put", "ball", "in", "chest"], {});
     executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"], notExpected : ["cube"]});
     executeAndTest(["put", "cube", "in", "chest"], {});

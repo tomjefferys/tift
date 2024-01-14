@@ -24,9 +24,9 @@ templates:
 property: examine
 templates:
   container: |
-    containing {{#items}}{{> item}}{{/items}}
+    inside {{container}} is {{#items}}{{> item}}{{/items}}
   partials:
-    item: |
+    item: >
        {{name}}
        {{^isLast}}{{^isPenultimate}}, {{/isPenultimate}}{{/isLast}}
        {{#isPenultimate}}and {{/isPenultimate}}

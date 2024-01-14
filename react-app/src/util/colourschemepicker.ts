@@ -40,7 +40,7 @@ export function createColourSchemePicker(schemeChanger : (scheme : string) => vo
                 })
             handler = await handler.onAnyCommand(async command => forwarder.warn("Unexpected command: " + command.join(" ")));
             handler = await handler.onGetWords(async () => forwarder.words([], colourSchemes));
-            handler = await handler.onAny(async message => forwarder.send(message));
+            await handler.onAny(async message => forwarder.send(message));
             return finished ? "__TERMINATE__" : undefined;
         }
     }]);

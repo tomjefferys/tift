@@ -67,6 +67,7 @@ export const EXAMINE_CONTAINER_FN = (env : Env) => {
     const partials = Property.getProperty(env, "examine.templates.partials") as Record<string,string>;
 
     const view = {
+        container : getName(container as Nameable),
         items : items.map((item, index, array) => ({ 
                         name : getName(item as Nameable),
                         isPenultimate : index === array.length - 2,
