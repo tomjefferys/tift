@@ -220,3 +220,41 @@ test("Test container", () => {
     executeAndTest(["get", "cube"], {});
     executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball", "cube"]});
 })
+
+/**
+ * Test the getName function returns the name of the object
+ */
+test("Test getName", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "ball",
+                        name : "large ball",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["carryable"],
+                        before : {
+                            "get(this)" : "print(getName(this) + ' is too heavy to lift')"
+                        }});
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["get", "ball"], { expected : ["large ball is too heavy to lift"]});
+});
+
+/**
+ * Test the getFullName function returns the full name of the object
+ */
+test("Test getFullName", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "ball",
+                        name : "large ball",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["carryable"],
+                        before : {
+                            "get(this)" : "print(getFullName(this) + ' is too heavy to lift')"
+                        }});
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["get", "ball"], { expected : ["the large ball is too heavy to lift"]});
+});   

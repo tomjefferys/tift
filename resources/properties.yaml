@@ -24,7 +24,7 @@ templates:
 property: examine
 templates:
   container: |
-    inside {{container}} is {{#items}}{{> item}}{{/items}}
+    Inside {{container}} is {{#items}}{{> item}}{{/items}}.
   partials:
     item: >
        {{name}}

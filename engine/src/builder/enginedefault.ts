@@ -8,6 +8,9 @@ import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Player from "./player";
 import * as Output from "./output";
+import * as Nameable from "../nameable";
+
+type Nameable = Nameable.Nameable;
 
 type EnvFnMap = {[key:string]:EnvFn};
 
@@ -75,6 +78,14 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const itemEntity = Entities.getEntity(env, env.get("item"));
                             const atLocation = Locations.isAtLocation(env, locationStr, itemEntity);
                             return mkResult(atLocation);
+                        }),
+    getName : bindParams(["entity"], env => {
+                            const entity = Entities.getEntity(env, env.get("entity"));
+                            return mkResult(Nameable.getFullName(entity as Nameable));
+                        }),
+    getFullName : bindParams(["entity"], env => {
+                            const entity = Entities.getEntity(env, env.get("entity"));
+                            return mkResult(Nameable.getFullName(entity as Nameable));
                         })
 }
 

@@ -8,7 +8,7 @@ import { Env } from "tift-types/src/env";
 import { formatString } from "../util/mustacheUtils";
 import { VerbBuilder } from "./verbbuilder";
 import { Obj } from "tift-types/src/util/objects";
-import { getName, Nameable } from "../nameable";
+import { getName, getFullName, Nameable } from "../nameable";
 import * as Output from "./output";
 import { IMPLICIT_FUNCTION } from "./functionbuilder";
 import * as Property from "../properties";
@@ -67,9 +67,9 @@ export const EXAMINE_CONTAINER_FN = (env : Env) => {
     const partials = Property.getProperty(env, "examine.templates.partials") as Record<string,string>;
 
     const view = {
-        container : getName(container as Nameable),
+        container : getFullName(container as Nameable),
         items : items.map((item, index, array) => ({ 
-                        name : getName(item as Nameable),
+                        name : getFullName(item as Nameable),
                         isPenultimate : index === array.length - 2,
                         isLast : index === array.length - 1 }))
     }
