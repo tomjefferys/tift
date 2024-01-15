@@ -9,29 +9,33 @@ import { getObjs } from "../yamlparser";
 import { Obj } from "../util/objects"
 import { OutputConsumer } from "tift-types/src/messages/output";
 import _ from "lodash";
-import { Phase, PhaseAction, PhaseActionBuilder, phaseActionBuilder, PhaseActionType } from "../script/phaseaction";
+import { Phase, PhaseAction, phaseActionBuilder, PhaseActionType } from "../script/phaseaction";
 import * as RuleBuilder from "./rulebuilder";
 import { getDefaultGameBehaviour } from "./behaviour";
 import { Config, ConfigValueType } from "../config";
-import * as Location from "./locations";
 import { Env } from "tift-types/src/env";
-import { EXAMINE_CONTAINER_FN, GET_FROM_CONTAINER_FN, getDefaultVerbs } from "./defaultverbs";
-import * as Entities from "./entities";
-import { parseToThunk } from "../script/parser";
-import { captureObject, matchBuilder, matchVerb } from "../commandmatcher";
-import { mkThunk } from "../script/thunk";
-import * as Tags from "./tags";
+import { getDefaultVerbs } from "./defaultverbs";
+import * as Trait from "./traits/trait";
+import { OPENABLE } from "./traits/openable";
+import { CONTAINER } from "./traits/container";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
+
+const DEFAULT_TRAITS = [
+    Trait.CARRYABLE,
+    Trait.WEARABLE,
+    Trait.PUSHABLE,
+    Trait.EXAMINABLE,
+    Trait.NPC,
+    Trait.VISIBLE_WHEN_DARK,
+    OPENABLE,
+    CONTAINER
+];
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
     objs : Obj[] = [];
     config : Config = {};
-
-    //constructor() {
-    //    DEFAULT_VERBS.forEach(verb => this.objs.push(verb));
-    //}
 
     withOutput(outputConsumer : OutputConsumer) {
         this.outputConsumer = outputConsumer;
@@ -156,83 +160,11 @@ export function makeItem(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj);
     addActions(builder, obj);
-    const tags = obj?.tags ?? [];
-    if (tags.includes("carryable")) {
-        builder.withVerb("get");
-        builder.withVerb("drop");
-        builder.withVerb("put");
-    }
-    if (tags.includes("wearable")) {
-        builder.withVerb("wear");
-        builder.withVerb("remove");
-    }
-    if (tags.includes("pushable")) {
-        builder.withVerb("push");
-    }
-    if (_.has(obj, "desc")) {
-        builder.withVerb("examine");
-    }
-    if (tags.includes("NPC")) {
-        if (!obj["onMove(newLoc)"]) {
-            builder.withProp("onMove(newLoc)", Location.makeOnMove());
-        }
-    }
-    if (tags.includes("visibleWhenDark")) {
-        if (!obj["visibleWhen()"]) {
-            builder.withProp("visibleWhen()", Entities.makeVisibleWhenDarkFn());
-        }
-    }
-    let isOpenable = false;
-    if (tags.includes(Tags.OPENABLE)) {
-        addOpenClose(builder, false);
-        isOpenable = true;
-    }
-    if (tags.includes(Tags.CLOSABLE)) {
-        addOpenClose(builder, true);
-        isOpenable = true;
-    }
-    if (tags.includes(Tags.CONTAINER)) {
-        builder.withAttributedVerb("put", "in");
+    const tags = obj?.tags ?? [] as string[];
 
-        const matcher = matchBuilder()
-                            .withVerb(matchVerb("examine"))
-                            .withObject(captureObject("this"))
-                            .build();
+    DEFAULT_TRAITS.forEach(trait => trait(obj, tags, builder));
 
-        const thunk = mkThunk(env => {
-            const childEnv = env.newChild({"container" : env.get("this")})
-            return EXAMINE_CONTAINER_FN(childEnv);
-        })
-        const phaseAction = 
-            new PhaseActionBuilder()
-                            .withPhase("after")
-                            .withMatcherOnMatch(matcher, thunk);
-        builder.withAfter(phaseAction);
-
-        if (isOpenable) {
-            const matcher = matchBuilder()
-                                .withVerb(matchVerb("get"))
-                                .withObject(captureObject("item"))
-                                .build();
-
-            const thunk = mkThunk(env => {
-                const childEnv = env.newChild({"container" : env.get("this")})
-                return GET_FROM_CONTAINER_FN(childEnv);
-            });
-            const phaseAction = 
-                new PhaseActionBuilder()
-                            .withPhase("before")
-                            .withMatcherOnMatch(matcher, thunk);   
-            builder.withBefore(phaseAction);
-        }
-    }
     return builder.build();
-}
-
-function addOpenClose(builder : EntityBuilder, isOpen : boolean) {
-    builder.withVerbMatcher({ verb : "open", condition : parseToThunk("is_open == false") });
-    builder.withVerbMatcher({ verb : "close", condition : parseToThunk("is_open == true") });
-    builder.withProp("is_open", isOpen);
 }
 
 export function makeRoom(obj : Obj) : Entity {

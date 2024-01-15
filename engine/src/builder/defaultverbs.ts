@@ -8,11 +8,24 @@ import { Env } from "tift-types/src/env";
 import { formatString } from "../util/mustacheUtils";
 import { VerbBuilder } from "./verbbuilder";
 import { Obj } from "tift-types/src/util/objects";
-import { getName, getFullName, Nameable } from "../nameable";
+import { getName, Nameable } from "../nameable";
 import * as Output from "./output";
 import { IMPLICIT_FUNCTION } from "./functionbuilder";
 import * as Property from "../properties";
 import * as Tags from "./tags";
+
+export const VERB_NAMES = {
+    GET : "get",
+    DROP : "drop",
+    PUT : "put",
+    WEAR : "wear",
+    REMOVE : "remove",
+    OPEN : "open",
+    CLOSE : "close",
+    PUSH : "push",
+    EXAMINE : "examine"
+
+}
 
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
@@ -57,48 +70,6 @@ export const LOOK_FN = (env : Env) => {
     return mkResult(true);
 }
 
-export const EXAMINE_CONTAINER_FN = (env : Env) => {
-    const container = env.get("container");
-    const items = Locations.findEntities(env, container)
-                           .filter(Entities.isEntity)
-                           .filter(entity => Entities.isEntityVisible(env, true, entity));
-                    
-    const template = Property.getPropertyString(env, "examine.templates.container");
-    const partials = Property.getProperty(env, "examine.templates.partials") as Record<string,string>;
-
-    const view = {
-        container : getFullName(container as Nameable),
-        items : items.map((item, index, array) => ({ 
-                        name : getFullName(item as Nameable),
-                        isPenultimate : index === array.length - 2,
-                        isLast : index === array.length - 1 }))
-    }
-    const scope = env.newChild(view);
-    const output = formatString(scope, template, undefined, partials);
-    Output.write(env, output);
-    return mkResult(true);
-}
-
-export const GET_FROM_CONTAINER_FN = (env : Env) => {
-    const item = env.get("item");
-    const container = env.get("container");
-    let canGet = true;
-    if(Entities.entityHasTag(container, Tags.OPENABLE) || Entities.entityHasTag(container, Tags.CLOSABLE)) {
-        if (!container.is_open) {
-            const template = Property.getPropertyString(env, "get.templates.container.closed");
-            const partials = Property.getProperty(env, "get.templates.partials", {}) as Record<string,string>;
-            const view = {
-                container : getFullName(container as Nameable),
-                item : getFullName(item as Nameable)
-            }
-            const scope = env.newChild(view);
-            const output = formatString(scope, template, undefined, partials);
-            Output.write(env, output);
-            canGet = false;
-        }
-    }
-    return mkResult(!canGet)
-}
 
 const LOOK = phaseActionBuilder("look")
         .withPhase("main")
@@ -145,20 +116,20 @@ const GO = phaseActionBuilder("go")
             })
         );
 
-const GET = phaseActionBuilder("get")
+const GET = phaseActionBuilder(VERB_NAMES.GET)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("get")).withObject(captureObject("item")).build(),
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.GET)).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
                 Locations.setLocation(env, item, Player.INVENTORY);
                 return mkResult(true);
             }));
 
-const DROP = phaseActionBuilder("drop")
+const DROP = phaseActionBuilder(VERB_NAMES.DROP)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("drop")).withObject(captureObject("item")).build(), 
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.DROP)).withObject(captureObject("item")).build(), 
             mkThunk(env => {
                 const item = env.get("item");
                 const location = Player.getLocation(env);
@@ -166,10 +137,10 @@ const DROP = phaseActionBuilder("drop")
                 return mkResult(true);
             }));
 
-const PUT_IN = phaseActionBuilder("put")
+const PUT_IN = phaseActionBuilder(VERB_NAMES.PUT)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("put"))
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.PUT))
                           .withObject(captureObject("item"))
                           .withAttribute(attributeMatchBuilder().withAttribute(matchAttribute("in"))
                                                                 .withObject(captureIndirectObject("container")))
@@ -181,10 +152,10 @@ const PUT_IN = phaseActionBuilder("put")
                 return mkResult(true);
             }));
 
-const PUT_ON = phaseActionBuilder("put")
+const PUT_ON = phaseActionBuilder(VERB_NAMES.PUT)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("put"))
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.PUT))
                           .withObject(captureObject("item"))
                           .withAttribute(attributeMatchBuilder().withAttribute(matchAttribute("on"))
                                                                 .withObject(captureIndirectObject("container")))
@@ -196,10 +167,10 @@ const PUT_ON = phaseActionBuilder("put")
                 return mkResult(true);
             }));
 
-const EXAMINE = phaseActionBuilder("examine")
+const EXAMINE = phaseActionBuilder(VERB_NAMES.EXAMINE)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("examine")).withObject(captureObject("item")).build(),
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.EXAMINE)).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
                 const output = item["desc"] ?? item["name"] ?? item["id"];
@@ -207,30 +178,30 @@ const EXAMINE = phaseActionBuilder("examine")
                 return mkResult(true);
             }));
 
-const WEAR = phaseActionBuilder("wear")
+const WEAR = phaseActionBuilder(VERB_NAMES.WEAR)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("wear")).withObject(captureObject("wearable")).build(),
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.WEAR)).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
                 Locations.setLocation(env, item, Player.WEARING);
                 return mkResult(true);
             }));
 
-const TAKE_OFF = phaseActionBuilder("remove")
+const TAKE_OFF = phaseActionBuilder(VERB_NAMES.REMOVE)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("remove")).withObject(captureObject("wearable")).build(),
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.REMOVE)).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
                 Locations.setLocation(env, item, Player.INVENTORY);
                 return mkResult(true);
             }));
 
-const OPEN = phaseActionBuilder("open")
+const OPEN = phaseActionBuilder(VERB_NAMES.OPEN)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("open")).withObject(captureObject("openable")).build(),
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.OPEN)).withObject(captureObject("openable")).build(),
             mkThunk(env => {
                 const item = env.get("openable");
                 item.is_open = true;
@@ -240,10 +211,10 @@ const OPEN = phaseActionBuilder("open")
                 return mkResult(true);
             }));
 
-const CLOSE = phaseActionBuilder("close")
+const CLOSE = phaseActionBuilder(VERB_NAMES.CLOSE)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("close")).withObject(captureObject("openable")).build(),
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.CLOSE)).withObject(captureObject("openable")).build(),
             mkThunk(env => {
                 const item = env.get("openable");
                 item.is_open = false;
@@ -253,10 +224,10 @@ const CLOSE = phaseActionBuilder("close")
                 return mkResult(true);
             }));
 
-const PUSH = phaseActionBuilder("push")
+const PUSH = phaseActionBuilder(VERB_NAMES.PUSH)
         .withPhase("main")
         .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb("push")).withObject(captureObject("pushable")).withModifier(captureModifier("direction")).build(),
+            matchBuilder().withVerb(matchVerb(VERB_NAMES.PUSH)).withObject(captureObject("pushable")).withModifier(captureModifier("direction")).build(),
             mkThunk(env => {
                 const item =  env.get("pushable");
                 const direction = env.get("direction");
@@ -298,18 +269,18 @@ const DEFAULT_VERBS = [
                   .withTrait("intransitive")
                   .withAction(WAIT)
                   .build(),
-      new VerbBuilder({"id":"get"})
+      new VerbBuilder({"id":VERB_NAMES.GET})
                   .withTrait("transitive")
                   .withAction(GET)
                   .withContext("environment")
                   .build(),
-      new VerbBuilder({"id":"drop"})
+      new VerbBuilder({"id":VERB_NAMES.DROP})
                   .withTrait("transitive")
                   .withAction(DROP)
                   .withContext("inventory")
                   .withContext("holding")
                   .build(),
-      new VerbBuilder({"id":"put"})
+      new VerbBuilder({"id":VERB_NAMES.PUT})
                   .withTrait("transitive")
                   .withAction(PUT_IN)
                   .withAction(PUT_ON)
@@ -319,30 +290,30 @@ const DEFAULT_VERBS = [
                   .withContext("holding")
                   .withContext("environment", "indirect")
                   .build(),
-      new VerbBuilder({"id":"examine"})
+      new VerbBuilder({"id":VERB_NAMES.EXAMINE})
                   .withTrait("transitive")
                   .withTrait("instant")
                   .withAction(EXAMINE)
                   .build(),
-      new VerbBuilder({"id":"wear"})
+      new VerbBuilder({"id":VERB_NAMES.WEAR})
                   .withTrait("transitive")
                   .withAction(WEAR)
                   .withContext("inventory")
                   .build(),
-      new VerbBuilder({"id":"remove"})
+      new VerbBuilder({"id":VERB_NAMES.REMOVE})
                   .withTrait("transitive")
                   .withAction(TAKE_OFF)
                   .withContext("wearing")
                   .build(),
-      new VerbBuilder({"id":"open"})
+      new VerbBuilder({"id":VERB_NAMES.OPEN})
                   .withTrait("transitive")
                   .withAction(OPEN)
                   .build(),
-      new VerbBuilder({"id":"close"})
+      new VerbBuilder({"id":VERB_NAMES.CLOSE})
                   .withTrait("transitive")
                   .withAction(CLOSE)
                   .build(),
-      new VerbBuilder({"id":"push"})
+      new VerbBuilder({"id":VERB_NAMES.PUSH})
                   .withTrait("transitive")
                   .withAction(PUSH)
                   .withContext("environment")
