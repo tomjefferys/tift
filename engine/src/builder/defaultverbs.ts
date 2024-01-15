@@ -79,6 +79,27 @@ export const EXAMINE_CONTAINER_FN = (env : Env) => {
     return mkResult(true);
 }
 
+export const GET_FROM_CONTAINER_FN = (env : Env) => {
+    const item = env.get("item");
+    const container = env.get("container");
+    let canGet = true;
+    if(Entities.entityHasTag(container, Tags.OPENABLE) || Entities.entityHasTag(container, Tags.CLOSABLE)) {
+        if (!container.is_open) {
+            const template = Property.getPropertyString(env, "get.templates.container.closed");
+            const partials = Property.getProperty(env, "get.templates.partials", {}) as Record<string,string>;
+            const view = {
+                container : getFullName(container as Nameable),
+                item : getFullName(item as Nameable)
+            }
+            const scope = env.newChild(view);
+            const output = formatString(scope, template, undefined, partials);
+            Output.write(env, output);
+            canGet = false;
+        }
+    }
+    return mkResult(!canGet)
+}
+
 const LOOK = phaseActionBuilder("look")
         .withPhase("main")
         .withMatcherOnMatch(

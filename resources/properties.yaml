@@ -31,6 +31,13 @@ templates:
        {{^isLast}}{{^isPenultimate}}, {{/isPenultimate}}{{/isLast}}
        {{#isPenultimate}}and {{/isPenultimate}}
 ---
+property: get
+templates:
+  container:
+    closed: >
+      Can't get {{item}} from {{container}}, {{container}} is closed.
+
+---
 property: wait
 message: Time passes
 ---

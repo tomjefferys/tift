@@ -15,11 +15,12 @@ import { getDefaultGameBehaviour } from "./behaviour";
 import { Config, ConfigValueType } from "../config";
 import * as Location from "./locations";
 import { Env } from "tift-types/src/env";
-import { EXAMINE_CONTAINER_FN, getDefaultVerbs } from "./defaultverbs";
+import { EXAMINE_CONTAINER_FN, GET_FROM_CONTAINER_FN, getDefaultVerbs } from "./defaultverbs";
 import * as Entities from "./entities";
 import { parseToThunk } from "../script/parser";
 import { captureObject, matchBuilder, matchVerb } from "../commandmatcher";
 import { mkThunk } from "../script/thunk";
+import * as Tags from "./tags";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -181,13 +182,16 @@ export function makeItem(obj : Obj) : Entity {
             builder.withProp("visibleWhen()", Entities.makeVisibleWhenDarkFn());
         }
     }
-    if (tags.includes("openable")) {
+    let isOpenable = false;
+    if (tags.includes(Tags.OPENABLE)) {
         addOpenClose(builder, false);
+        isOpenable = true;
     }
-    if (tags.includes("closable")) {
+    if (tags.includes(Tags.CLOSABLE)) {
         addOpenClose(builder, true);
+        isOpenable = true;
     }
-    if (tags.includes("container")) {
+    if (tags.includes(Tags.CONTAINER)) {
         builder.withAttributedVerb("put", "in");
 
         const matcher = matchBuilder()
@@ -204,6 +208,23 @@ export function makeItem(obj : Obj) : Entity {
                             .withPhase("after")
                             .withMatcherOnMatch(matcher, thunk);
         builder.withAfter(phaseAction);
+
+        if (isOpenable) {
+            const matcher = matchBuilder()
+                                .withVerb(matchVerb("get"))
+                                .withObject(captureObject("item"))
+                                .build();
+
+            const thunk = mkThunk(env => {
+                const childEnv = env.newChild({"container" : env.get("this")})
+                return GET_FROM_CONTAINER_FN(childEnv);
+            });
+            const phaseAction = 
+                new PhaseActionBuilder()
+                            .withPhase("before")
+                            .withMatcherOnMatch(matcher, thunk);   
+            builder.withBefore(phaseAction);
+        }
     }
     return builder.build();
 }

@@ -222,6 +222,46 @@ test("Test container", () => {
 })
 
 /**
+ * Test that you can't get an item that is inside a closed container
+ */
+test("Test get from closed container", () => {
+    builder.withObj({...NORTH_ROOM})
+        .withObj({id : "chest",
+                    name : "chest",
+                    type : "item",
+                    location : "northRoom",
+                    desc : "A large chest",
+                    tags : ["container", "closable"]
+                    })
+                .withObj({id : "ball",
+                          name : "ball",
+                          type : "item",
+                          location : "chest",
+                          tags : ["carryable"]})
+                .withObj({id : "cube",
+                          name : "cube",    
+                          type : "item", 
+                          location : "chest",
+                          tags : ["carryable"]});
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["get", "cube"], {});
+    executeAndTest(["put", "ball", "in", "chest"], {});
+    executeAndTest(["put", "cube", "in", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball", "cube"]});
+    executeAndTest(["close", "chest"], {});
+    executeAndTest(["get", "ball"], { expected : ["the ball", "the chest is closed"]});
+    executeAndTest(["get", "cube"], { expected : ["the cube", "the chest is closed"]});
+    executeAndTest(["open", "chest"], {});
+    executeAndTest(["get", "cube"], {});
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball", "cube"]});
+});
+
+/**
  * Test the getName function returns the name of the object
  */
 test("Test getName", () => {
