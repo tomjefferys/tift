@@ -15,22 +15,9 @@ import { getDefaultGameBehaviour } from "./behaviour";
 import { Config, ConfigValueType } from "../config";
 import { Env } from "tift-types/src/env";
 import { getDefaultVerbs } from "./defaultverbs";
-import * as Trait from "./traits/trait";
-import { OPENABLE } from "./traits/openable";
-import { CONTAINER } from "./traits/container";
+import { TRAITS } from "./traits/trait";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
-
-const DEFAULT_TRAITS = [
-    Trait.CARRYABLE,
-    Trait.WEARABLE,
-    Trait.PUSHABLE,
-    Trait.EXAMINABLE,
-    Trait.NPC,
-    Trait.VISIBLE_WHEN_DARK,
-    OPENABLE,
-    CONTAINER
-];
 
 export class EngineBuilder {
     private outputConsumer? : OutputConsumer;
@@ -162,7 +149,7 @@ export function makeItem(obj : Obj) : Entity {
     addActions(builder, obj);
     const tags = obj?.tags ?? [] as string[];
 
-    DEFAULT_TRAITS.forEach(trait => trait(obj, tags, builder));
+    TRAITS.forEach(trait => trait(obj, tags, builder));
 
     return builder.build();
 }

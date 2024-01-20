@@ -5,6 +5,8 @@ import * as Tags from "../tags";
 import _ from "lodash";
 import * as Location from "../locations";
 import * as Entities from "../entities";
+import { CONTAINER } from "./container";
+import { OPENABLE } from "./openable";
 
 /**
  * A trait processor is a function which takes an object, its tags and an entity builder and adds
@@ -12,7 +14,7 @@ import * as Entities from "../entities";
  */
 export type TraitProcessor = (obj : Obj, tags : string[], entityBuilder : EntityBuilder) => void;
 
-export const CARRYABLE : TraitProcessor = (obj, tags, builder) => {
+const CARRYABLE : TraitProcessor = (_obj, tags, builder) => {
     if (tags.includes(Tags.CARRYABLE)) {
         builder.withVerb(VERB_NAMES.GET);
         builder.withVerb(VERB_NAMES.DROP);
@@ -20,26 +22,26 @@ export const CARRYABLE : TraitProcessor = (obj, tags, builder) => {
     }
 }
 
-export const WEARABLE : TraitProcessor = (obj, tags, builder) => {
+const WEARABLE : TraitProcessor = (_obj, tags, builder) => {
     if (tags.includes(Tags.WEARABLE)) {
         builder.withVerb(VERB_NAMES.WEAR);
         builder.withVerb(VERB_NAMES.REMOVE);
     }
 }
 
-export const PUSHABLE : TraitProcessor = (obj, tags, builder) => {
+const PUSHABLE : TraitProcessor = (_obj, tags, builder) => {
     if (tags.includes(Tags.PUSHABLE)) {
         builder.withVerb(VERB_NAMES.PUSH);
     }
 }
 
-export const EXAMINABLE : TraitProcessor = (obj, tags, builder) => {
+const EXAMINABLE : TraitProcessor = (obj, _tags, builder) => {
     if (_.has(obj, "desc")) {
         builder.withVerb("examine");
     }
 }
 
-export const NPC : TraitProcessor = (obj, tags, builder) => {
+const NPC : TraitProcessor = (obj, tags, builder) => {
     if (tags.includes("NPC")) {
         if (!obj["onMove(newLoc)"]) {
             builder.withProp("onMove(newLoc)", Location.makeOnMove());
@@ -47,10 +49,21 @@ export const NPC : TraitProcessor = (obj, tags, builder) => {
     }
 }
 
-export const VISIBLE_WHEN_DARK : TraitProcessor = (obj, tags, builder) => {
+const VISIBLE_WHEN_DARK : TraitProcessor = (obj, tags, builder) => {
     if (tags.includes("visibleWhenDark")) {
         if (!obj["visibleWhen()"]) {
             builder.withProp("visibleWhen()", Entities.makeVisibleWhenDarkFn());
         }
     }
 }
+
+export const TRAITS : TraitProcessor[] = [
+    CARRYABLE,
+    WEARABLE,
+    PUSHABLE,
+    EXAMINABLE,
+    NPC,
+    VISIBLE_WHEN_DARK,
+    CONTAINER,
+    OPENABLE
+];
