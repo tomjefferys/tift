@@ -18,13 +18,13 @@ import * as Conf from "./config"
 import { Optional } from "tift-types/src/util/optional";
 import { logError } from "./util/errors";
 import { History } from "tift-types/src/util/historyproxy";
-import { Obj } from "./util/objects"
+import { Obj, KIND } from "./util/objects"
 import * as Logger from "./util/logger";
 import { Behaviour } from "./builder/behaviour"
 import { AUTOLOOK } from "./builder/plugins/autolook"
 import { Engine } from "tift-types/src/engine"
 import { compileFunctions, compileGlobalFunction, compileStrings } from "./builder/functionbuilder";
-import { ENTITY_TYPE } from "./builder/entities"
+import * as Entities from "./builder/entities";
 import { EnvFn } from "./script/thunk";
 import * as Properties from "./properties";
 
@@ -66,7 +66,7 @@ const BASE_NS = [["entities"], ["verbs"]];
 const BASE_CONTEXT = { entities : {}, verbs : [] }
 
 const TYPE_NAMESPACES : {[key : string]: string}= {
-  [ENTITY_TYPE] : "entities",
+  [Entities.ENTITY_KIND] : "entities",
   "rule" : "entities",
   "verb" : "verbs"
 }
@@ -159,7 +159,8 @@ export class BasicEngine implements Engine {
                 compileGlobalFunction(key, value, this.env);
               })
       } else {
-        const namespace = TYPE_NAMESPACES[type];
+        const kind = obj[KIND] ?? type;
+        const namespace = TYPE_NAMESPACES[kind];
         if (namespace) {
           props[namespace][id] = obj;
         } else {
@@ -208,6 +209,9 @@ export class BasicEngine implements Engine {
         case "Redo":
           this.redo();
           break;
+        case "GetInfo":
+          this.getInfo();
+          break;
       }
     } catch (e) {
       logError(this.output, e);
@@ -250,6 +254,10 @@ export class BasicEngine implements Engine {
 
     this.getStatus();
     this.save();
+  }
+
+  getInfo() {
+    this.output(Output.log("info", "Version: 0.0.2"));
   }
 
   setConfig(newConfig : Config) {
@@ -350,7 +358,7 @@ export class BasicEngine implements Engine {
   }
 
   getEntities() : Entity[] {
-    return this.env.findObjs(obj => obj["type"] === ENTITY_TYPE) as Entity[];
+    return this.env.findObjs(obj => Entities.isEntity(obj)) as Entity[];
   }
 
   getVerbs() : Verb[] {

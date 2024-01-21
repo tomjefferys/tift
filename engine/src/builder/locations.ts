@@ -98,6 +98,16 @@ export function isAtLocation(env : Env, location : string, obj : Obj) : boolean 
     return result;
 }
 
+export function isInContainer(env : Env, obj : Obj) : boolean {
+    const locationId = getLocation(obj);
+    if (!locationId) {
+        return false;
+    }
+    const location = Entities.getEntity(env, locationId);
+    return location && Entities.entityHasTag(location, Tags.CONTAINER) 
+                    && location.type !== Entities.Types.SPECIAL;
+}
+
 export function isLightSourceAtLocation(env : Env, location : Obj) : boolean {
     return env.findObjs(obj => Entities.isEntity(obj) && Entities.entityHasTag(obj, Tags.LIGHTSOURCE))
             .some(entity => isAtLocation(env, location.id, entity));

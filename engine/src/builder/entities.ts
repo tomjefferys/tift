@@ -1,4 +1,5 @@
 import { Obj } from "tift-types/src/util/objects";
+import { KIND } from "../util/objects";
 import { Env } from "tift-types/src/env";
 import { isFound } from "../env";
 import { makePath } from "../path";
@@ -9,8 +10,16 @@ import { DARK } from "./tags";
 import { EnvFn, mkResult } from "../script/thunk";
 
 // Utility functions pertaining to an entity
-export const ENTITY_TYPE = "entity";
+export const ENTITY_KIND = "entity";
 const NS_ENTITIES = "entities";
+
+export const Types = {
+    PLAYER : "player",
+    SPECIAL : "special",
+    ITEM : "item",
+    OBJECT : "object",
+    ROOM : "room"
+}
 
 export function getEntity(env : Env, entityParam : unknown) : Obj {
     const entity = _.isString(entityParam) 
@@ -23,7 +32,7 @@ export function getEntity(env : Env, entityParam : unknown) : Obj {
 }
 
 export function isEntity(obj : Obj) : boolean {
-    return obj.type === ENTITY_TYPE;
+    return obj[KIND] === ENTITY_KIND;
 }
 
 export function isEntityVisible(env : Env, canSee : boolean, obj : Obj) : boolean {

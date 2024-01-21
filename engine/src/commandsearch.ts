@@ -68,7 +68,8 @@ function isVerbEnabled(context : SearchContext, entity : Entity, verbMatcher : V
   if (verbMatcher.condition) {
     const entitiesEnv = context.env.newChild(context.env.createNamespaceReferences(["entities"]));
     const entityEnv = entitiesEnv.newChild(entity);
-    enabled = Boolean(verbMatcher.condition.resolve(entityEnv).getValue());
+    const thisEnv = entityEnv.newChild({"this" : entity});
+    enabled = Boolean(verbMatcher.condition.resolve(thisEnv).getValue());
   }
 
   return enabled;

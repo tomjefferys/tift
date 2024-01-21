@@ -102,6 +102,10 @@ export namespace Input {
   export function redo() : InputMessage {
     return { type : "Redo" };
   }
+
+  export function getInfo() : InputMessage {
+    return { type : "GetInfo" };
+  }
 }
 
 /**

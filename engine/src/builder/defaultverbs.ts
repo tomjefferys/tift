@@ -273,6 +273,7 @@ const DEFAULT_VERBS = [
                   .withTrait("transitive")
                   .withAction(GET)
                   .withContext("environment")
+                  .withContext("container")
                   .build(),
       new VerbBuilder({"id":VERB_NAMES.DROP})
                   .withTrait("transitive")
@@ -288,7 +289,6 @@ const DEFAULT_VERBS = [
                   .withAttribute("on")
                   .withContext("inventory")
                   .withContext("holding")
-                  .withContext("environment", "indirect")
                   .build(),
       new VerbBuilder({"id":VERB_NAMES.EXAMINE})
                   .withTrait("transitive")

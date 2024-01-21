@@ -1,7 +1,7 @@
 import { Obj } from "tift-types/src/util/objects"
 import { Verb, VerbTrait, VerbContext, ContextType } from "../verb";
 import { BeforeAction, MainAction, AfterAction } from "../script/phaseaction";
-import { getString } from "../util/objects";
+import { getString, KIND } from "../util/objects";
 import _ from "lodash"
 
 export class VerbBuilder {
@@ -72,7 +72,7 @@ export class VerbBuilder {
 
   build() : Verb {
     return {...this.props,
-             type : "verb",
+             [KIND] : "verb",
              id : this.id, 
              attributes : this.attributes, 
              traits : this.traits,

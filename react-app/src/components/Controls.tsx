@@ -128,7 +128,7 @@ const DIRECTION_GRID : GridCell[] = [
 
 const OPTION_GRID : GridCell[] = [
     cell("__option(restart)__"), cell("__option(colours)__"), cell("__option(clear)__"), space(1),
-    cell("__option(undo)__", 1, "undo"), cell("__option(redo)__", 1, "redo")
+    cell("__option(undo)__", 1, "undo"), cell("__option(redo)__", 1, "redo"), cell("__option(info)__")
 ];
 
 const CustomButtonGrid = ({ words, totalColumns, cells, wordSelected } : CustomButtonGridProps) => {

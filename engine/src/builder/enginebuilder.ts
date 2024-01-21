@@ -16,6 +16,7 @@ import { Config, ConfigValueType } from "../config";
 import { Env } from "tift-types/src/env";
 import { getDefaultVerbs } from "./defaultverbs";
 import { TRAITS } from "./traits/trait";
+import * as Entities from "./entities"
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -32,11 +33,11 @@ export class EngineBuilder {
     withObj(obj : Obj) : EngineBuilder {
         try {
             switch(obj["type"]) {
-                case "room":
+                case Entities.Types.ROOM:
                     this.objs.push(makeRoom(obj));
                     break;
-                case "object":
-                case "item":
+                case Entities.Types.OBJECT:
+                case Entities.Types.ITEM:
                     this.objs.push(makeItem(obj));
                     break;
                 case "verb":

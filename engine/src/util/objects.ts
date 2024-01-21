@@ -5,6 +5,8 @@ export type PropType = string | symbol;
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type Obj = {[key:PropType]:any};
 
+export const KIND = "__kind__";
+
 /**
  * Set an object property using the supplied path.
  * (Used instead of lodash by the historyproxy, as lodash makes a set call on the grandparent in the path)

@@ -236,8 +236,11 @@ test("Test get from closed container", () => {
                 .withObj({id : "ball",
                           name : "ball",
                           type : "item",
+                          verbs : "throw",
                           location : "chest",
-                          tags : ["carryable"]})
+                          tags : ["carryable"],
+    
+                        })
                 .withObj({id : "cube",
                           name : "cube",    
                           type : "item", 
@@ -259,6 +262,104 @@ test("Test get from closed container", () => {
     executeAndTest(["get", "cube"], {});
     executeAndTest(["get", "ball"], {});
     executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball", "cube"]});
+});
+
+/**
+ * Test that you can still get from a container you are holding
+ */
+test("Test get from container you are holding", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "backpack",
+                        name : "backpack",
+                        desc : "An old tattered backpack.",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["container", "carryable"]
+                        })
+            .withObj({id : "ball",
+                        name : "ball",
+                        type : "item",
+                        location : "backpack",
+                        tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["get", "backpack"], {});
+    executeAndTest(["put", "ball", "in", "backpack"], {});
+    executeAndTest(["examine", "backpack"], { expected : ["backpack", "ball"]});
+    executeAndTest(["get", "ball"], {});
+});
+
+/**
+ * Test the isHoldable function returns true if the object is being carried,
+ * but is not in a container
+ */
+test("Test isHolding", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "ball", 
+                        name : "ball",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["carryable"],
+                        verbs : ["throw"],
+                        before : { 
+                            "throw(this)" : {
+                                when : "isHolding(this)",
+                                then : "print('You throw the ball')",
+                                otherwise : "print('You are not holding the ball')" 
+                            },
+                        tags : ["carryable"]}})
+            .withObj({id : "backpack",
+                        name : "backpack",
+                        desc : "An old tattered backpack.",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["container", "carryable"]
+                        })
+            .withObj({id : "throw",
+                        type : "verb",
+                        tags : ["transitive"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["throw", "ball"], { expected : ["You are not holding the ball"]});
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["throw", "ball"], { expected : ["You throw the ball"]});
+    executeAndTest(["put", "ball", "in", "backpack"], {});
+    executeAndTest(["throw", "ball"], { expected : ["You are not holding the ball"]});
+});
+
+test("Test isHolding as verb predicate", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "ball",
+                        name : "ball",
+                        type : "item",  
+                        location : "northRoom",
+                        tags : ["carryable"],
+                        verbs : [{ 
+                            "throw" : "isHolding(this)"
+                        }]})
+            .withObj({id : "backpack",
+                        type : "item",
+                        name : "backpack",
+                        desc : "An old tattered backpack.",
+                        location : "northRoom",
+                        tags : ["container", "carryable"]
+                    })
+            .withObj({id : "throw",
+                        type : "verb",
+                        tags : ["transitive"]});
+                        
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    expectWords([], ["get"], false, ["throw"]);
+    executeAndTest(["get", "ball"], {});
+    expectWords([], ["get", "throw"], false);
+    executeAndTest(["get", "backpack"], {});
+    executeAndTest(["put", "ball", "in", "backpack"], {});
+    expectWords([], [], false, ["throw"]);
 });
 
 /**

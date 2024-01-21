@@ -132,6 +132,11 @@ function Tift() {
         messagesRef.current = [];
         saveMessages([]);
       });
+
+      const getInfo = createSimpleOption( "info", () => {
+        engine.send(Input.getInfo());
+      });
+
       const pauser = Pauser.createPauseFilter(
               async words => WordTree.set(latestWordsRef.current, command, words),
               async words => {getWords(words); setWords(latestWordsRef.current)});
@@ -154,7 +159,8 @@ function Tift() {
                         .insertProxy("optionItems", createStateMachineFilter(
                                                     ["restart", restartMachine],
                                                     ["colours", colourSchemePicker],
-                                                    ["clear", logClearer]))
+                                                    ["clear", logClearer],
+                                                    ["info", getInfo]))
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
 
       // Create the output consumer

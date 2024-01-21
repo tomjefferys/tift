@@ -86,6 +86,10 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
     getFullName : bindParams(["entity"], env => {
                             const entity = Entities.getEntity(env, env.get("entity"));
                             return mkResult(Nameable.getFullName(entity as Nameable));
+                        }),
+    isInContainer : bindParams(["entity"], env => {
+                            const entity = Entities.getEntity(env, env.get("entity"));
+                            return mkResult(Locations.isInContainer(env, entity));
                         })
 }
 

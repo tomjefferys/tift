@@ -13,6 +13,7 @@ import { CommandContext } from "../engine";
 import * as MultiDict from "../util/multidict";
 import * as Logger from "../util/logger";
 import * as Tags from "./tags";
+import * as Verbs from "./verbs";
 
 const logger = Logger.getLogger("behaviour");
 
@@ -58,20 +59,28 @@ class DefaultBehaviour implements Behaviour {
             MultiDict.add(contextEntities, "location", locationEntity);
         }
 
+
         // Get any other entities that are here
-        Locations.findEntities(env, locationEntity)
-            .filter(entity => !Locations.isAtLocation(env, Player.PLAYER, entity))
-            .forEach(entity => MultiDict.add(contextEntities, "environment", entity));
+        const localEntities = Locations.findEntities(env, locationEntity);
+        const nonCarriedEntities = localEntities.filter(entity => !Locations.isAtLocation(env, Player.PLAYER, entity));
+        const carriedEntities = localEntities.filter(entity => Locations.isAtLocation(env, Player.PLAYER, entity));
+
+        // Get environment entities
+        nonCarriedEntities.forEach(entity => MultiDict.add(contextEntities, "environment", entity));
 
         // Get inventory entities
-        env.findObjs(obj => obj?.location === "__INVENTORY__" && Entities.isEntity(obj))
-                .forEach(entity => MultiDict.add(contextEntities, "inventory", entity));
+        const inventoryEntities = carriedEntities.filter(entity => Locations.getLocation(entity) === "__INVENTORY__");
+        inventoryEntities.forEach(entity => MultiDict.add(contextEntities, "inventory", entity));
 
         // Get worn entities
-        env.findObjs(obj => obj?.location === "__WEARING__" && Entities.isEntity(obj))
-                .forEach(entity => MultiDict.add(contextEntities, "wearing", entity));
+        const wornEntities = carriedEntities.filter(entity => Locations.getLocation(entity) === "__WEARING__");
+        wornEntities.forEach(entity => MultiDict.add(contextEntities, "wearing", entity));
 
-        const verbs  = env.findObjs(obj => obj?.type === "verb") as Verb[];
+        // Get entities in a container
+        const containers = localEntities.filter(entity => Locations.isInContainer(env, entity));
+        containers.forEach(entity => MultiDict.add(contextEntities, "container", entity)); 
+
+        const verbs  = env.findObjs(obj => Verbs.isVerb(obj)) as Verb[];
 
         logger.debug(() => MultiDict.values(contextEntities).map(entity => entity.id).join(","));
     
@@ -99,7 +108,7 @@ class DefaultBehaviour implements Behaviour {
     }
         
     private findStartingLocation(env : Env) : string {
-        const startingLocs = env.findObjs(obj => obj["type"] === Entities.ENTITY_TYPE && Entity.hasTag(obj, Tags.START));
+        const startingLocs = env.findObjs(obj => Entities.isEntity(obj) && Entity.hasTag(obj, Tags.START));
         if (startingLocs.length == 0) {
             throw new Error("No starting location defined");
         }

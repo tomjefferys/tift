@@ -3,10 +3,10 @@ import { AfterAction, MainAction, BeforeAction } from "../script/phaseaction";
 import { Obj } from "tift-types/src/util/objects";
 import { VerbMatcher, Entity, PROPS } from "../entity";
 import { MultiDict } from "../util/multidict";
-import { getString, getArray } from "../util/objects";
+import { getString, getArray, KIND } from "../util/objects";
 import { buildVerbMatcher } from "../entity";
 import _ from "lodash";
-import { ENTITY_TYPE } from "./entities";
+import { ENTITY_KIND } from "./entities";
 
 export class EntityBuilder {
   id : string;
@@ -84,7 +84,7 @@ export class EntityBuilder {
   
   build() : Entity {
     return {...this.props,
-            type : ENTITY_TYPE,
+            [KIND] : ENTITY_KIND,
             id : this.id,
             verbs : this.verbs,
             verbModifiers : this.verbModifiers,
