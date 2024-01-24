@@ -265,6 +265,63 @@ test("Test get from closed container", () => {
 });
 
 /**
+ * Test that you can't put an item into a closed container
+ */
+test("Test put into closed container", () => {
+    builder.withObj({...NORTH_ROOM})
+        .withObj({id : "chest",
+                    name : "chest",
+                    type : "item",
+                    location : "northRoom",
+                    desc : "A large chest",
+                    tags : ["container", "openable"]
+                    })
+                .withObj({id : "ball",
+                          name : "ball",
+                          type : "item",
+                          location : "northRoom",
+                          tags : ["carryable"],
+                        });
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["put", "ball", "in", "chest"], { expected : ["the chest is closed"]});
+    executeAndTest(["open", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball"]});
+    executeAndTest(["put", "ball", "in", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"]});
+});
+
+/**
+ * Test that the presence of a closed container does not stop you getting an item not in the container
+ */
+test("Test can get item not in closed container", () => {
+    builder.withObj({...NORTH_ROOM})
+        .withObj({id : "chest",
+                    name : "chest",
+                    type : "item",
+                    location : "northRoom",
+                    desc : "A large chest",
+                    tags : ["container", "openable", "carryable"]
+                    })
+                .withObj({id : "ball",
+                          name : "ball",
+                          type : "item",
+                          location : "northRoom",
+                          tags : ["carryable"],
+                        });
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["ball", "chest"]});
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["look"], { expected : ["chest"], notExpected : ["ball"]});
+})
+
+/**
  * Test that you can still get from a container you are holding
  */
 test("Test get from container you are holding", () => {

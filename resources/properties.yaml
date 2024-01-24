@@ -36,7 +36,12 @@ templates:
   container:
     closed: >
       Can't get {{item}} from {{container}}, {{container}} is closed.
-
+---
+property: put
+templates:
+  container:
+    closed: >
+      Can't put {{item}} into {{container}}, {{container}} is closed.
 ---
 property: wait
 message: Time passes
