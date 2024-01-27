@@ -348,6 +348,33 @@ test("Test get from container you are holding", () => {
     executeAndTest(["get", "ball"], {});
 });
 
+/** 
+ * Test you can't put a container in itself
+ */
+test("Test can't put container in itself", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "backpack",
+                        name : "backpack",
+                        desc : "An old tattered backpack.",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["container", "carryable"]
+                        })
+            .withObj({id : "ball",
+                        name : "ball",
+                        type : "item",
+                        location : "backpack",
+                        tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "backpack"], {} );
+    expectWords([], [], false, ["put"]);
+    executeAndTest(["get", "ball"], {});
+    expectWords([], ["put"], false);
+    expectWords(["put"], ["ball"]);
+});
+
 /**
  * Test the isHoldable function returns true if the object is being carried,
  * but is not in a container

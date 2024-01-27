@@ -88,3 +88,20 @@ export const CHAIR = new EntityBuilder({"id" : "chair", "sat_on" : false})
                   .withVerbMatcher({verb : "sit", condition : parseToThunk("!sat_on") })
                   .withVerbMatcher({verb : "stand", condition : parseToThunk("sat_on") })
                   .build();
+
+export const PUT = new VerbBuilder({"id" : "put"})
+                    .withTrait("transitive")
+                    .withAttribute("in")
+                    .build();
+
+export const BAG = new EntityBuilder({"id" : "bag"})
+                    .withVerb("get")
+                    .withVerb("put")
+                    .withAttributedVerb("put", "in")
+                    .build();
+
+export const BALL = new EntityBuilder({"id" : "ball"})
+                    .withVerb("get")
+                    .withVerb("put")
+                    .build();
+

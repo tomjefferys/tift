@@ -6,7 +6,7 @@ import { createRootEnv } from "../src/env";
 import * as _ from "lodash"
 import { VerbMap } from "../src/types";
 import { EAT, APPLE, STIR, SOUP, SPOON, LOOK, ASK,
-         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP, CHAIR, STAND, SIT } from "./testutils/testentities"
+         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP, CHAIR, STAND, SIT, BALL, BAG, PUT } from "./testutils/testentities"
 
 test("Test empty input", () => {
   const options = getAllCommandIds([], []);
@@ -78,6 +78,12 @@ test("Test look", () => {
     ["go","east"],
     ["look"] ]));
 });
+
+test("Test put", () => {
+    const commands = getAllCommandIds([BALL, BAG], [PUT]);
+    expect(commands).toHaveLength(1);
+    expect(commands).toEqual(expect.arrayContaining([["put", "ball", "in", "bag"]]));
+})
 
 test("Test inventory context", () => {
   let commands = getAllCommandIds({"environment":[APPLE]}, [GET, DROP]);

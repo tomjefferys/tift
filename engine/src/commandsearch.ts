@@ -6,16 +6,16 @@ import * as _ from "lodash"
 import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
 import * as Arrays from "./util/arrays"
-import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable } from "./command"
+import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable, DirectObject } from "./command"
 import { Env } from "tift-types/src/env"
 import * as Logger from "./util/logger"
 import { PartOfSpeech, Word } from "tift-types/src/messages/output"
 
-// verb                                -- intranitive verb
+// verb                                -- intransitive verb
 // verb object                         -- transitive verb
 // verb object (with) object           -- transitive verb with attribute
 // verb direction                      -- intransitive verb with qualifier
-// verb object (to) direction          -- tranistive verb with qualifier
+// verb object (to) direction          -- transitive verb with qualifier
 // verb object direction (with) object -- transitive verb with qual and attr
 
 type SearchFn = (context: SearchContext, state: Command) => Command[]; 
@@ -41,7 +41,7 @@ export function getNextWords(partial : string[], objs : ContextEntities, verbs :
           .map(state => _.last(state.getWords()))
           .filter(Boolean)
           .map(word => word as Word);
-  return _.uniqBy(nextWords, word => word.id);
+  return _.uniqBy(nextWords, word => word.id);  // TODO: do we still need to do this?
 }
 
 export interface SearchContext {
@@ -174,20 +174,23 @@ const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
 }
 
 /**
- * Search entities for matching verbs, discarding any verb atribute matchers, and verbs not in the context
+ * Search entities for matching verbs, discarding any verb attribute matchers, and verbs not in the context
  * @param entities a list of entities 
  * @param verbs a list of verbs
  * @param context the verb-context to limit the search to
  * @returns a list of matching verbs
  */
-const getVerbs = (context : SearchContext, entities : Entity[], verbs : VerbMap, verbContext : string) : Verb[] => 
-    entities.flatMap(entity => (entity.verbs.map(verb => [entity, verb]) ?? []) as [Entity, VerbMatcher][])
+const getVerbs = (context : SearchContext, entities : Entity[], verbs : VerbMap, verbContext : string) : Verb[] => {
+    const allVerbs = entities.flatMap(entity => (entity.verbs.map(verb => [entity, verb]) ?? []) as [Entity, VerbMatcher][])
             .filter(([_entity, matcher]) => !matcher.attribute)
             .filter(([entity, matcher]) => isVerbEnabled(context, entity, matcher))
             .map(([_entity, matcher]) => verbs[matcher.verb])
             .filter(Boolean)
             .filter(verb => verb.contexts.length == 0
                     || verb.contexts.some(([_type, context]) => context === verbContext));
+    // Multiple entities may have the same verbs, so make sure we only return unique instances
+    return _.uniqBy(allVerbs, verb => verb.id);
+  }
 
 const directObjectSearch : SearchFn = (context, state) => {
   const verb = state.getPoS("verb")?.verb;
@@ -206,7 +209,10 @@ const indirectObjectSearch : SearchFn = (context, state) => {
   const preposition = state.getPoS("preposition")?.value;
   
   const objs = verb && preposition ? getIndirectObjects(context, verb, preposition) : [];
-  return objs.map(obj => castIndirectable(state).object(obj));
+  // Don't allow the same object to be used as both direct and indirect
+  const directObj = state.find(part => part.type === "directObject") as DirectObject;
+  return objs.filter(obj => obj.id !== directObj?.entity?.id)
+             .map(obj => castIndirectable(state).object(obj));
 }
 
 const modifierSearch : SearchFn = (context, state) => {
@@ -235,7 +241,8 @@ const doSearch = (context : SearchContext,
   const results : SearchResult[] = [];
   Tree.forEachChild(searchNode, node => {
     const searchFn = Tree.getValue(node);
-    searchFn(context, state).forEach(result => results.push([result, node]));
+    const commands = searchFn(context, state);
+    commands.forEach(result => results.push([result, node]));
   });
   logger.debug(() => `doSearch(${state}) = [${results.map(([sentance,_search]) => "[" + sentance + "]").join(",")}]`)
   return results;
