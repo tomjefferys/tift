@@ -1,6 +1,6 @@
 import { Matcher, attributeMatchBuilder, captureIndirectObject, captureObject, matchAttribute, matchBuilder, matchVerb } from "../../commandmatcher";
 import { Phase, PhaseActionBuilder, PhaseActionType } from "../../script/phaseaction";
-import { EnvFn, mkResult, mkThunk } from "../../script/thunk";
+import { EnvFn, Thunk, mkResult, mkThunk } from "../../script/thunk";
 import * as Tags from "../tags";
 import { TraitProcessor } from "./trait";
 import * as Locations from "../locations";
@@ -11,6 +11,12 @@ import { formatString } from "../../util/mustacheUtils";
 import * as Output from "../output";
 import { VERB_NAMES } from "../defaultverbs";
 import { Obj } from "tift-types/src/util/objects";
+import { Env } from "tift-types/src/env";
+
+const CLOSED_CONTAINER_MESSAGE = "put.templates.container.closed";
+const CONTAINER_IN_ITEM_MESSAGE = "put.templates.container.inItem";
+const PUT_PARTIAL_TEMPLATES = "put.templates.partials"
+const GET_PARTIAL_TEMPLATES = "get.templates.partials"
 
 const PARAM_CONTAINER = "container";
 const PARAM_ITEM = "item";
@@ -21,23 +27,26 @@ export const CONTAINER : TraitProcessor = (_obj, tags, builder) => {
     }
     builder.withAttributedVerb(VERB_NAMES.PUT, "in");
 
-    builder.withAfter(createAction(createMatcher(VERB_NAMES.EXAMINE, "this"), "after", EXAMINE_CONTAINER_FN));
+    builder.withAfter(createAction(createMatcher(VERB_NAMES.EXAMINE, "this"),
+                      createThunk(EXAMINE_CONTAINER_FN), "after"));
 
-    const isOpenable = tags.includes(Tags.OPENABLE) || tags.includes(Tags.CLOSABLE);
-    if (isOpenable) {
-        // Get from container
-        builder.withBefore(createAction(createMatcher(VERB_NAMES.GET, PARAM_ITEM), "before", GET_FROM_CONTAINER_FN));
+    // Get from container
+    builder.withBefore(createAction(createMatcher(VERB_NAMES.GET, PARAM_ITEM), 
+                        createThunk(GET_FROM_CONTAINER_FN), "before"));
 
-        // Put in container
-        const putMatcher = matchBuilder()
-            .withVerb(matchVerb(VERB_NAMES.PUT))
-            .withObject(captureObject(PARAM_ITEM))
-            .withAttribute(attributeMatchBuilder()
-                            .withAttribute(matchAttribute("in"))
-                            .withObject(captureIndirectObject("this")))
-            .build();
-        builder.withBefore(createAction(putMatcher, "before", PUT_IN_CONTAINER_FN));
-    }
+    // Put in container
+    // FIXME: When putting a container inside another container, the before action will be called twice
+    //        it matches both the container and the item. The item first as it's the direct object, then
+    //        the container as it's the indirect object.
+    //        We can check for this in the put function, but it would be better if we could avoid this.
+    const putMatcher = matchBuilder()
+        .withVerb(matchVerb(VERB_NAMES.PUT))
+        .withObject(captureObject(PARAM_ITEM))
+        .withAttribute(attributeMatchBuilder()
+                        .withAttribute(matchAttribute("in"))
+                        .withObject(captureIndirectObject("container")))
+        .build();
+    builder.withBefore(createAction(putMatcher, mkThunk(PUT_IN_CONTAINER_FN), "before"));
 }
 
 function createMatcher(verb : string, obj : string) : Matcher {
@@ -47,12 +56,14 @@ function createMatcher(verb : string, obj : string) : Matcher {
                 .build();
 }
 
-function createAction<T extends Phase>(matcher : Matcher, phase : T, fn : EnvFn) : PhaseActionType<T> {
-    const thunk = mkThunk(env => {
+function createThunk(fn : EnvFn) : Thunk {
+    return mkThunk(env => {
         const childEnv = env.newChild({[PARAM_CONTAINER] : env.get("this")});
         return fn(childEnv);
     });
+}
 
+function createAction<T extends Phase>(matcher : Matcher, thunk : Thunk, phase : T) : PhaseActionType<T> {
     const phaseAction = 
         new PhaseActionBuilder()
                         .withPhase(phase)
@@ -89,15 +100,7 @@ const GET_FROM_CONTAINER_FN : EnvFn = (env) => {
     let canGet = true;
     if(Locations.isAtLocation(env, container.id, item) && isClosable(container)) {
         if (!container.is_open) {
-            const template = Property.getPropertyString(env, "get.templates.container.closed");
-            const partials = Property.getProperty(env, "get.templates.partials", {}) as Record<string,string>;
-            const view = {
-                container : getFullName(container as Nameable),
-                item : getFullName(item as Nameable)
-            }
-            const scope = env.newChild(view);
-            const output = formatString(scope, template, undefined, partials);
-            Output.write(env, output);
+            writeError(env, CLOSED_CONTAINER_MESSAGE, GET_PARTIAL_TEMPLATES, container, item);
             canGet = false;
         }
     }
@@ -108,23 +111,36 @@ const GET_FROM_CONTAINER_FN : EnvFn = (env) => {
 const PUT_IN_CONTAINER_FN : EnvFn = (env) => {
     const item = env.get(PARAM_ITEM);
     const container = env.get(PARAM_CONTAINER);
-    let canPut = true;
-    if(isClosable(container)) {
+    const activeItem = env.get("id");
+    if (container.id !== activeItem) { // Only execute if the container is the active item
+        return mkResult(false);
+    }
+    const containerInsideItem = Locations.isAtLocation(env, item.id, container);
+    if(containerInsideItem) {
+        writeError(env, CONTAINER_IN_ITEM_MESSAGE, PUT_PARTIAL_TEMPLATES, container, item);
+    }
+    let canPut = !containerInsideItem;
+    if(canPut && isClosable(container)) {
         if (!container.is_open) {
-            const template = Property.getPropertyString(env, "put.templates.container.closed");
-            const partials = Property.getProperty(env, "put.templates.partials", {}) as Record<string,string>;
-            const view = {
-                container : getFullName(container as Nameable),
-                item : getFullName(item as Nameable)
-            }
-            const scope = env.newChild(view);
-            const output = formatString(scope, template, undefined, partials);
-            Output.write(env, output);
+            writeError(env, CLOSED_CONTAINER_MESSAGE, PUT_PARTIAL_TEMPLATES, container, item);
             canPut = false;
         }
     }
     return mkResult(!canPut)
 }
+
+function writeError(env : Env, property : string, partialsProperty : string, container : Obj, item : Obj) {
+    const template = Property.getPropertyString(env, property);
+    const partials = Property.getProperty(env, partialsProperty, {}) as Record<string,string>;
+    const view = {
+        container : getFullName(container as Nameable),
+        item : getFullName(item as Nameable)
+    }
+    const scope = env.newChild(view);
+    const output = formatString(scope, template, undefined, partials);
+    Output.write(env, output);
+}
+
 
 function isClosable(entity : Obj) : boolean {
     return Entities.entityHasTag(entity, Tags.CLOSABLE) || Entities.entityHasTag(entity, Tags.OPENABLE);

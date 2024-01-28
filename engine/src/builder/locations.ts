@@ -22,8 +22,10 @@ const ON_ADD_CHILD = "onAddChild";
 export function getLocation(entity : Obj) : string {
     return entity[LOCATION];
 }
+
 export function setLocation(env : Env, entity : Obj, location : string | object) : void {
     const locationEntity = Entities.getEntity(env, location);
+    checkLocationNotDescendent(env, entity, locationEntity);
     const oldLocation = getLocation(entity);
     if (oldLocation) {
         callOnRemoveChild(env, entity, Entities.getEntity(env, oldLocation));
@@ -31,6 +33,15 @@ export function setLocation(env : Env, entity : Obj, location : string | object)
     callOnMove(env, entity, locationEntity);
     entity[LOCATION] = locationEntity.id;
     callOnAddChild(env, entity, locationEntity);
+}
+
+function checkLocationNotDescendent(env : Env, entity : Obj, location : Obj) {
+    const locationId = getLocation(location);
+    if (locationId) {
+        if (locationId === entity.id) {
+            throw new Error(`Cannot move [${entity.id}] to [${location.id}] because it is the same entity or [${location.id}] is inside [${entity.id}]`);
+        }
+    }
 }
 
 function callOnRemoveChild(env : Env, entity : Obj, location : Optional<Obj>) {

@@ -35,13 +35,15 @@ property: get
 templates:
   container:
     closed: >
-      Can't get {{item}} from {{container}}, {{container}} is closed.
+      You can't get {{item}} from {{container}}, {{container}} is closed.
 ---
 property: put
 templates:
   container:
     closed: >
-      Can't put {{item}} into {{container}}, {{container}} is closed.
+      You can't put {{item}} into {{container}}, {{container}} is closed.
+    inItem: >
+      You can't put {{item}} into {{container}}, {{container}} is in {{item}}.
 ---
 property: wait
 message: Time passes

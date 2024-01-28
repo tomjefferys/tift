@@ -376,6 +376,32 @@ test("Test can't put container in itself", () => {
 });
 
 /**
+ * Test you can't indirectly put a container in itself
+ */
+test("Test can't put a container indirectly in itself", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "backpack",
+                        name : "backpack",
+                        desc : "An old tattered backpack.",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["container", "carryable"]
+                        })
+            .withObj({id : "bag",
+                        name : "bag",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["container", "carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "backpack"], {} );
+    executeAndTest(["get", "bag"], {} );
+    executeAndTest(["put", "bag", "in", "backpack"], {});
+    executeAndTest(["put", "backpack", "in", "bag"], { expected : ["can't", "the bag is in the backpack"]});
+});
+
+/**
  * Test the isHoldable function returns true if the object is being carried,
  * but is not in a container
  */
