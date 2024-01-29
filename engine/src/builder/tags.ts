@@ -8,3 +8,4 @@ export const CLOSABLE = "closable";
 export const CARRYABLE = "carryable";
 export const WEARABLE = "wearable";
 export const PUSHABLE = "pushable";
+export const TRANSPARENT = "transparent";

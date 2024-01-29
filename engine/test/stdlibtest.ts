@@ -441,6 +441,53 @@ test("Test overridden examine can still execute original method", () => {
     executeAndTest(["examine", "chest"], { expected : ["You examine the chest, inside is a bat"], notExpected : ["ball"]});
 });
 
+test("Test non-transparent closed container doesn't reveal contents", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "chest",
+                        name : "chest",
+                        type : "item",
+                        location : "northRoom",
+                        desc : "A large chest", 
+                        tags : ["container", "openable"],
+                        })
+            .withObj({id : "ball",
+                        name : "ball",  
+                        type : "item",
+                        location : "chest",
+                        tags : ["carryable"],
+                        });
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball"]});
+    executeAndTest(["open", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"]});
+});
+
+test("Test transparent closed container does reveal contents", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "chest",
+                        name : "chest",
+                        type : "item",
+                        location : "northRoom",
+                        desc : "A large chest", 
+                        tags : ["container", "openable", "transparent"],
+                        })
+            .withObj({id : "ball",
+                        name : "ball",  
+                        type : "item",
+                        location : "chest",
+                        tags : ["carryable"],
+                        });
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"]});
+    executeAndTest(["open", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"]});
+});
+
 /**
  * Test the isHoldable function returns true if the object is being carried,
  * but is not in a container

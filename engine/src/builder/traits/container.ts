@@ -74,6 +74,10 @@ function createAction<T extends Phase>(matcher : Matcher, thunk : Thunk, phase :
 
 const EXAMINE_CONTAINER_FN : EnvFn = (env) => {
     const container = env.get(PARAM_CONTAINER);
+    if(isClosable(container) && !(container.is_open || Entities.entityHasTag(container, Tags.TRANSPARENT))) {
+        return mkResult(false);
+    }
+
     const items = Locations.findEntities(env, container)
                            .filter(Entities.isEntity)
                            .filter(entity => Entities.isEntityVisible(env, true, entity));
