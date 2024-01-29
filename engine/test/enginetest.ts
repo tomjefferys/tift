@@ -397,7 +397,7 @@ test("Test before precedence", () => {
         ...THE_ROOM,
         before : [
             "get(this) => 'cant get a room!'",
-            "get($item) => 'No using wildcard gets here'",
+            "get($item) => if(item.id == 'otherItem2').then(false).else('No using wildcard gets here')",
             "get(anItem) => 'No getting the ordinary item'",
             "get(otherItem) => false",
             "get(otherItem2) => false"]

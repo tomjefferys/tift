@@ -9,7 +9,7 @@ import * as MessageOut from "./builder/output";
 import * as multidict from "./util/multidict";
 import * as _ from "lodash";
 import * as arrays from "./util/arrays";
-import { getBestMatchAction, PhaseAction } from "./script/phaseaction";
+import { PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
 import { InputMessage, Load } from "tift-types/src/messages/input";
 import { EngineBuilder } from "./builder/enginebuilder";
@@ -405,17 +405,30 @@ function searchCommand(env : Env, context : CommandContext, command : string[]) 
  */
 function executeActions(env : Env, context : CommandContext, matchedCommand : SentenceNode, verb? : Verb) {
       // Get ordered list of in scope entities
-      const inScopeEnitites = sortEntities(context, matchedCommand);
+      const inScopeEntities = sortEntities(context, matchedCommand);
 
       // Before actions
-      const handledBefore = inScopeEnitites.some(entity => executeBestMatchAction(entity.before, env, matchedCommand, entity) )
-  
+      // Get ordered list of actions.  There may be multiple actions for each entity
+      const beforeActions = inScopeEntities.flatMap(entity => 
+          getActions(entity.before, entity.id, matchedCommand).map(action => ({entity, action})));
+      
+      const handledBefore = beforeActions.some(entityAction => 
+          executeAction(entityAction.action, env, matchedCommand, entityAction.entity));
+
       // Main action
-      const handledMain = (!handledBefore && verb) ? executeBestMatchAction(verb.actions, env, matchedCommand, verb) : false;
+      let handledMain = false;
+      if (!handledBefore && verb) {
+        const mainActions = getActions(verb.actions, verb.id, matchedCommand)
+                                .map(action => ({verb, action}));
+        handledMain = mainActions.some(verbAction => 
+            executeAction(verbAction.action, env, matchedCommand, verbAction.verb));
+      }
   
       // After actions
       if (handledMain) {
-        inScopeEnitites.some(entity => executeBestMatchAction(entity.after, env, matchedCommand, entity));
+        const afterActions = inScopeEntities.flatMap(entity => 
+          getActions(entity.after, entity.id, matchedCommand).map(action => ({entity, action})));
+        afterActions.some(entityAction => executeAction(entityAction.action, env, matchedCommand, entityAction.entity));
       }
 
 }
@@ -441,17 +454,24 @@ function sortEntities(context : CommandContext, matchedCommand : SentenceNode) :
   return inScopeEnitites;
 }
 
-function executeBestMatchAction(actions : PhaseAction[], env : Env, command : SentenceNode, agent : Obj ) {
-  const action = getBestMatchAction(actions, command, agent.id); // FIXME getBestMatchAction, and action.perform have params in different orders
+/**
+ * Takes a list of actions and sorts them by score
+ */
+function getActions(actions : PhaseAction[], id : string, command : SentenceNode) : PhaseAction[] {
+  const actionScores = actions.map(action => ({action, "score" : action.score(command, id)}));
+
+  return actionScores.sort((a,b) => b.score - a.score)
+                     .map(action => action.action);
+}
+
+function executeAction(action : PhaseAction, env : Env, command : SentenceNode, agent : Obj) : boolean {
   let handled = false;
-  if (action) {
-    const result = action.perform(env, agent, command)?.getValue();
-    if (result) {
-      if (_.isString(result)) {
-        env.execute("write", {"value":result});
-      }
-      handled = true;
+  const result = action.perform(env, agent, command)?.getValue();
+  if (result) {
+    if (_.isString(result)) {
+      env.execute("write", {"value":result});
     }
+    handled = true;
   }
   return handled;
 }

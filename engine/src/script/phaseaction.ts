@@ -5,7 +5,6 @@ import _ from "lodash";
 import { Command } from "../command";
 import { Matcher } from "../commandmatcher";
 import { Env } from "tift-types/src/env";
-import { Optional } from "tift-types/src/util/optional";
 import { evaluateMatchExpression } from "./matchParser";
 import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
@@ -102,20 +101,6 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
 
 export function phaseActionBuilder(objPath? : string) {
     return new PhaseActionBuilder(objPath);
-}
-
-
-export function getBestMatchAction(actions : PhaseAction[], command : Command, objId : string) : Optional<PhaseAction> {
-    let score = 0;
-    let bestMatch = undefined;
-    for(const action of actions) {
-      const actionScore = action.score(command, objId);
-      if (actionScore > score) {
-        score = actionScore;
-        bestMatch = action;
-      }
-    }
-    return bestMatch;
 }
 
 function getMatcherCommand(expression : Expression, info : PhaseActionInfo) : [Matcher, Thunk] {

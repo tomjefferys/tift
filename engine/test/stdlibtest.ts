@@ -401,6 +401,46 @@ test("Test can't put a container indirectly in itself", () => {
     executeAndTest(["put", "backpack", "in", "bag"], { expected : ["can't", "the bag is in the backpack"]});
 });
 
+test("Test overridden examine can still execute original method", () => { 
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "ball",
+                      name : "ball",  
+                      type : "item",
+                      location : "northRoom",
+                      tags : ["carryable"],
+                    })
+            .withObj({id : "bat",
+                      name : "bat", 
+                      type : "item",    
+                      location : "chest",   
+                      tags : ["carryable"]})
+            .withObj({id : "chest",
+                      name : "chest",
+                      type : "item",
+                      location : "northRoom",
+                      desc : "A large chest", 
+                      tags : ["container"],
+                      after : {
+                        "examine(this)" : {
+                            when : "isAtLocation(bat, chest)",  // TODO should be isAtLocation(bat, this)
+                            then : ["print('You examine the chest, inside is a bat')", "return(true)"],
+                            otherwise : "return(false)"
+                        }
+                      }});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["examine", "chest"], { expected : ["You examine the chest, inside is a bat"]});
+    executeAndTest(["get", "bat"], {});
+    executeAndTest(["inventory"], { expected : ["bat"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected: ["You examine the chest, inside is a bat"]});
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["put", "ball", "in", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"]});
+    executeAndTest(["put", "bat", "in", "chest"], {});
+    executeAndTest(["examine", "chest"], { expected : ["You examine the chest, inside is a bat"], notExpected : ["ball"]});
+});
+
 /**
  * Test the isHoldable function returns true if the object is being carried,
  * but is not in a container
