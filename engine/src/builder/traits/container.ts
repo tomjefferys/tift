@@ -21,18 +21,32 @@ const GET_PARTIAL_TEMPLATES = "get.templates.partials"
 const PARAM_CONTAINER = "container";
 const PARAM_ITEM = "item";
 
-export const CONTAINER : TraitProcessor = (_obj, tags, builder) => {
+const REL_LOCATION_PROP = "relativeLocation";
+
+const RELATIVE_LOCATIONS = ["on", "in"] as const;
+
+type RelativeLocation = typeof RELATIVE_LOCATIONS[number];
+
+export const CONTAINER : TraitProcessor = (obj, tags, builder) => {
     if (!tags.includes(Tags.CONTAINER)) {
         return;
     }
-    builder.withAttributedVerb(VERB_NAMES.PUT, "in");
+
+    if (obj[REL_LOCATION_PROP] && !RELATIVE_LOCATIONS.includes(obj[REL_LOCATION_PROP])) {
+        throw new Error(`Invalid relativeLocation [${obj[REL_LOCATION_PROP]}]. ` + 
+                        ` Valid relativeLocations are [${RELATIVE_LOCATIONS.join(", ")}]`);
+    }
+
+    const relLoc = obj[REL_LOCATION_PROP] as RelativeLocation || "in";
+
+    builder.withAttributedVerb(VERB_NAMES.PUT, relLoc)
 
     builder.withAfter(createAction(createMatcher(VERB_NAMES.EXAMINE, "this"),
-                      createThunk(EXAMINE_CONTAINER_FN), "after"));
+                      createThunk(getExamineContainerFn(relLoc)), "after"));
 
     // Get from container
     builder.withBefore(createAction(createMatcher(VERB_NAMES.GET, PARAM_ITEM), 
-                        createThunk(GET_FROM_CONTAINER_FN), "before"));
+                        createThunk(getFromContainerFn(relLoc)), "before"));
 
     // Put in container
     // FIXME: When putting a container inside another container, the before action will be called twice
@@ -43,10 +57,10 @@ export const CONTAINER : TraitProcessor = (_obj, tags, builder) => {
         .withVerb(matchVerb(VERB_NAMES.PUT))
         .withObject(captureObject(PARAM_ITEM))
         .withAttribute(attributeMatchBuilder()
-                        .withAttribute(matchAttribute("in"))
+                        .withAttribute(matchAttribute(relLoc))
                         .withObject(captureIndirectObject("container")))
         .build();
-    builder.withBefore(createAction(putMatcher, mkThunk(PUT_IN_CONTAINER_FN), "before"));
+    builder.withBefore(createAction(putMatcher, mkThunk(getPutInContainerFn(relLoc)), "before"));
 }
 
 function createMatcher(verb : string, obj : string) : Matcher {
@@ -72,65 +86,76 @@ function createAction<T extends Phase>(matcher : Matcher, thunk : Thunk, phase :
 }
 
 
-const EXAMINE_CONTAINER_FN : EnvFn = (env) => {
-    const container = env.get(PARAM_CONTAINER);
-    if(isClosable(container) && !(container.is_open || Entities.entityHasTag(container, Tags.TRANSPARENT))) {
-        return mkResult(false);
-    }
+function getExamineContainerFn(relLoc : RelativeLocation) : EnvFn {
 
-    const items = Locations.findEntities(env, container)
-                           .filter(Entities.isEntity)
-                           .filter(entity => Entities.isEntityVisible(env, true, entity));
-                    
-    const template = Property.getPropertyString(env, "examine.templates.container");
-    const partials = Property.getProperty(env, "examine.templates.partials") as Record<string,string>;
+    return (env) => {
+        const container = env.get(PARAM_CONTAINER);
+        if(isClosable(container) && !(container.is_open || Entities.entityHasTag(container, Tags.TRANSPARENT))) {
+            return mkResult(false);
+        }
 
-    const view = {
-        container : getFullName(container as Nameable),
-        items : items.map((item, index, array) => ({ 
-                        name : getFullName(item as Nameable),
-                        isPenultimate : index === array.length - 2,
-                        isLast : index === array.length - 1 }))
+        const items = Locations.findEntities(env, container)
+                            .filter(Entities.isEntity)
+                            .filter(entity => Entities.isEntityVisible(env, true, entity));
+ 
+        if (items.length === 0) {
+            return mkResult(false);
+        }
+
+        const template = Property.getPropertyString(env, `examine.templates.container.${relLoc}`);
+        const partials = Property.getProperty(env, "examine.templates.partials") as Record<string,string>;
+
+        const view = {
+            container : getFullName(container as Nameable),
+            items : items.map((item, index, array) => ({ 
+                            name : getFullName(item as Nameable),
+                            isPenultimate : index === array.length - 2,
+                            isLast : index === array.length - 1 }))
+        }
+        const scope = env.newChild(view);
+        const output = formatString(scope, template, undefined, partials);
+        Output.write(env, output);
+        return mkResult(true);
     }
-    const scope = env.newChild(view);
-    const output = formatString(scope, template, undefined, partials);
-    Output.write(env, output);
-    return mkResult(true);
 }
 
-const GET_FROM_CONTAINER_FN : EnvFn = (env) => {
-    const item = env.get(PARAM_ITEM);
-    const container = env.get(PARAM_CONTAINER);
-    let canGet = true;
-    if(Locations.isAtLocation(env, container.id, item) && isClosable(container)) {
-        if (!container.is_open) {
-            writeError(env, CLOSED_CONTAINER_MESSAGE, GET_PARTIAL_TEMPLATES, container, item);
-            canGet = false;
+function getFromContainerFn(relLoc : RelativeLocation) : EnvFn {
+    return (env) => {
+        const item = env.get(PARAM_ITEM);
+        const container = env.get(PARAM_CONTAINER);
+        let canGet = true;
+        if(Locations.isAtLocation(env, container.id, item) && isClosable(container)) {
+            if (!container.is_open) {
+                writeError(env, `${CLOSED_CONTAINER_MESSAGE}.${relLoc}`, GET_PARTIAL_TEMPLATES, container, item);
+                canGet = false;
+            }
         }
+        return mkResult(!canGet)
     }
-    return mkResult(!canGet)
 }
 
 
-const PUT_IN_CONTAINER_FN : EnvFn = (env) => {
-    const item = env.get(PARAM_ITEM);
-    const container = env.get(PARAM_CONTAINER);
-    const activeItem = env.get("id");
-    if (container.id !== activeItem) { // Only execute if the container is the active item
-        return mkResult(false);
-    }
-    const containerInsideItem = Locations.isAtLocation(env, item.id, container);
-    if(containerInsideItem) {
-        writeError(env, CONTAINER_IN_ITEM_MESSAGE, PUT_PARTIAL_TEMPLATES, container, item);
-    }
-    let canPut = !containerInsideItem;
-    if(canPut && isClosable(container)) {
-        if (!container.is_open) {
-            writeError(env, CLOSED_CONTAINER_MESSAGE, PUT_PARTIAL_TEMPLATES, container, item);
-            canPut = false;
+function getPutInContainerFn(relLoc : RelativeLocation) : EnvFn { 
+    return (env) => {
+        const item = env.get(PARAM_ITEM);
+        const container = env.get(PARAM_CONTAINER);
+        const activeItem = env.get("id");
+        if (container.id !== activeItem) { // Only execute if the container is the active item
+            return mkResult(false);
         }
+        const containerInsideItem = Locations.isAtLocation(env, item.id, container);
+        if(containerInsideItem) {
+            writeError(env, `${CONTAINER_IN_ITEM_MESSAGE}.${relLoc}`, PUT_PARTIAL_TEMPLATES, container, item);
+        }
+        let canPut = !containerInsideItem;
+        if(canPut && isClosable(container)) {
+            if (!container.is_open) {
+                writeError(env, `${CLOSED_CONTAINER_MESSAGE}.${relLoc}`, PUT_PARTIAL_TEMPLATES, container, item);
+                canPut = false;
+            }
+        }
+        return mkResult(!canPut)
     }
-    return mkResult(!canPut)
 }
 
 function writeError(env : Env, property : string, partialsProperty : string, container : Obj, item : Obj) {

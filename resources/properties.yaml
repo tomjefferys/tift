@@ -23,8 +23,11 @@ templates:
 ---
 property: examine
 templates:
-  container: |
-    Inside {{container}} is {{#items}}{{> item}}{{/items}}.
+  container: 
+    in: |
+      Inside {{container}} is {{#items}}{{> item}}{{/items}}.
+    on: |
+      On {{container}} is {{#items}}{{> item}}{{/items}}.
   partials:
     item: >
        {{name}}
@@ -40,10 +43,16 @@ templates:
 property: put
 templates:
   container:
-    closed: >
-      You can't put {{item}} into {{container}}, {{container}} is closed.
-    inItem: >
-      You can't put {{item}} into {{container}}, {{container}} is in {{item}}.
+    closed: 
+      in: >
+        You can't put {{item}} into {{container}}, {{container}} is closed.
+      on: >
+        You can't put {{item}} onto {{container}}, {{container}} is closed.
+    inItem: 
+      in: >
+        You can't put {{item}} into {{container}}, {{container}} is in {{item}}.
+      on: >
+        You can't put {{item}} onto {{container}}, {{container}} is on {{item}}.
 ---
 property: wait
 message: Time passes

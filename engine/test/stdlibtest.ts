@@ -212,14 +212,28 @@ test("Test container", () => {
     expectWords([], ["put"], false);
     expectWords(["put"], ["ball", "cube"]);
     executeAndTest(["put", "ball", "in", "chest"], {});
-    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"], notExpected : ["cube"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "Inside", "ball"], notExpected : ["cube"]});
     executeAndTest(["put", "cube", "in", "chest"], {});
-    executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball", "cube"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "Inside", "ball", "cube"]});
     executeAndTest(["get", "ball"], {});
-    executeAndTest(["examine", "chest"], { expected : ["A large chest", "cube"], notExpected : ["ball"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "Inside", "cube"], notExpected : ["ball"]});
     executeAndTest(["get", "cube"], {});
-    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball", "cube"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["Inside", "ball", "cube"]});
 })
+
+test("Test container should not show contents if empty", () => {
+    builder.withObj({...NORTH_ROOM})
+        .withObj({id : "chest",
+                    name : "chest",
+                    type : "item",
+                    location : "northRoom",
+                    desc : "A large chest",
+                    tags : ["container"]
+                    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["Inside"]});
+});
 
 /**
  * Test that you can't get an item that is inside a closed container
@@ -399,6 +413,44 @@ test("Test can't put a container indirectly in itself", () => {
     executeAndTest(["get", "bag"], {} );
     executeAndTest(["put", "bag", "in", "backpack"], {});
     executeAndTest(["put", "backpack", "in", "bag"], { expected : ["can't", "the bag is in the backpack"]});
+});
+
+test("Test put on container", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "table",
+                        name : "table",
+                        desc : "A large table.",
+                        type : "item",
+                        location : "northRoom",
+                        relativeLocation : "on",
+                        tags : ["container"]
+                        })
+            .withObj({id : "ball",
+                        name : "ball",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "ball"], {});
+    expectWords(["put", "ball"], ["on"]);
+    executeAndTest(["put", "ball", "on", "table"], {});
+    executeAndTest(["examine", "table"], { expected : ["On the table", "ball"]});
+});
+
+test("Test invalid relativeLocation", () => {
+    expect(() => {
+        builder.withObj({...NORTH_ROOM})
+               .withObj({id : "table",
+                         name : "table",
+                         desc : "A large table.",
+                         type : "item",
+                         location : "northRoom",
+                         relativeLocation : "under",
+                         tags : ["container"]
+                        })
+                    }).toThrow("Invalid relativeLocation");
 });
 
 test("Test overridden examine can still execute original method", () => { 
