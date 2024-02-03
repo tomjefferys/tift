@@ -29,7 +29,7 @@ templates:
     on: |
       On {{container}} is {{#items}}{{> item}}{{/items}}.
   partials:
-    item: >
+    item: >-
        {{name}}
        {{^isLast}}{{^isPenultimate}}, {{/isPenultimate}}{{/isLast}}
        {{#isPenultimate}}and {{/isPenultimate}}
