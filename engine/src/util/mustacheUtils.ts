@@ -33,7 +33,16 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
             incrementCount("secondTime");
             return count === 1;
         },
-        "br" : "\n  \n" // Force a line break
+        "br" : "\n  \n", // Force a line break
+        "sentence" : () => (text : string, render : (str : string) => string) => {
+            let sentence = render(text).trim();
+            if (sentence.length > 0) {
+                sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+                sentence = ['!','?','.'].includes(sentence.charAt(sentence.length - 1))? sentence : sentence + ".";
+            }
+            return sentence;
+        }
+
     };
     
     const scope = env.newChild(specialFunctions)

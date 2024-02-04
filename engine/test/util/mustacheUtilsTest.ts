@@ -158,3 +158,22 @@ test("Test not needlessy updating state", () => {
     messages.length = 0;
 })
 
+test("Test format sentence", () => {
+    const env = createRootEnv({ "FOO" : "foo", 
+                                "BAR" : "Bar",
+                                "QUESTION" : "question?",
+                                "EXCLAMATION" : "exclamation!",
+                                "STOP" : "stop."});
+                    
+    expect(formatString(env, "{{#sentence}}{{FOO}} is a {{BAR}}{{/sentence}}")).toEqual("Foo is a Bar.");
+    expect(formatString(env, "{{#sentence}}{{BAR}} is a {{FOO}}{{/sentence}}")).toEqual("Bar is a foo.");
+    expect(formatString(env, "{{#sentence}}  {{FOO}} is a {{BAR}}  {{/sentence}}")).toEqual("Foo is a Bar.");
+    expect(formatString(env, "{{#sentence}}{{/sentence}}")).toEqual("");
+    expect(formatString(env, "{{#sentence}}{{FOO}} is a {{BAR}}.{{/sentence}}")).toEqual("Foo is a Bar.");
+    expect(formatString(env, "{{#sentence}}{{FOO}} is a {{BAR}}?{{/sentence}}")).toEqual("Foo is a Bar?");
+    expect(formatString(env, "{{#sentence}}{{FOO}} is a {{BAR}}!{{/sentence}}")).toEqual("Foo is a Bar!");
+    expect(formatString(env, "{{#sentence}}{{FOO}} is a {{QUESTION}}{{/sentence}}")).toEqual("Foo is a question?");
+    expect(formatString(env, "{{#sentence}}{{FOO}} is a {{EXCLAMATION}}  {{/sentence}}")).toEqual("Foo is a exclamation!");
+    expect(formatString(env, "{{#sentence}}  {{FOO}} is a {{STOP}} {{/sentence}}")).toEqual("Foo is a stop.");
+});
+
