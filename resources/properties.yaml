@@ -59,6 +59,8 @@ message: Time passes
 ---
 property: open
 message: You open {{name}}
+templates:
+  isLocked: "{{#sentence}} {{item}} is locked {{/sentence}}"
 ---
 property: close
 message: You close {{name}}
@@ -68,3 +70,19 @@ messages:
   leaves: "{{entity}} leaves{{#direction}} {{direction}}{{/direction}}"
   arrives: "{{entity}} enters{{#direction}} from the {{direction}}{{/direction}}"
 ---
+property: unlock
+templates:
+  alreadyUnlocked: "{{#sentence}}{{item}} is already unlocked{{/sentence}}"
+  wrongKey: "{{#sentence}}{{item}} cannot be unlocked with {{key}}{{/sentence}}"
+  isOpen: "{{#sentence}}{{item}} cannot be unlocked whilst it is open{{/sentence}}"
+  success: "{{#sentence}}You unlock {{item}}{{/sentence}}"
+---
+property: lock
+templates:
+  alreadyUnlocked: "{{#sentence}}{{item}} is already locked{{/sentence}}"
+  wrongKey: "{{#sentence}}{{item}} cannot be locked with {{key}}{{/sentence}}"
+  isOpen: "{{#sentence}}{{item}} cannot be locked whilst it is open{{/sentence}}"
+  success: "{{#sentence}}You lock {{item}}{{/sentence}}"
+
+
+

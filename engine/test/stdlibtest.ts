@@ -182,6 +182,41 @@ test("Test open un-openable", () => {
     engine.send(Input.start());
     executeAndTest(["open", "key"], { errors : ["You cannot open key"]});
 })
+
+test("Test lockable", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "door",
+                        type : "item",
+                        location : "northRoom",
+                        desc : "The green door",
+                        key : "brass_key",
+                        tags : ["openable", "lockable", "locked"],
+                        before : {
+                            "examine(this)": {
+                                if: "this.is_open",
+                                then: "print('The door is open')",
+                                else: "print('The door is closed')"
+                            }
+                        }})
+            .withObj({id : "brass_key",
+                        type : "item",
+                        location : "northRoom",
+                        verbs : ["unlock.with", "lock.with"],
+                        tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
+    executeAndTest(["open", "door"], { expected : ["The door is locked"]});
+    executeAndTest(["get","brass_key"], {});
+    executeAndTest(["unlock", "door", "with", "brass_key"], { expected : ["You unlock the door."]});
+    executeAndTest(["open", "door"], {});
+    executeAndTest(["examine", "door"], { expected : ["The door is open"]});
+    executeAndTest(["lock", "door", "with", "brass_key"], { expected : ["The door cannot be locked whilst it is open."]});
+    executeAndTest(["close", "door"], {});
+    executeAndTest(["lock", "door", "with", "brass_key"], { expected : ["You lock the door."]});
+    executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
+
+});
     
 test("Test container", () => {
     builder.withObj({...NORTH_ROOM})

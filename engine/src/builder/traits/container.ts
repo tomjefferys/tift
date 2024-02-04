@@ -1,5 +1,4 @@
-import { Matcher, attributeMatchBuilder, captureIndirectObject, captureObject, matchAttribute, matchBuilder, matchVerb } from "../../commandmatcher";
-import { Phase, PhaseActionBuilder, PhaseActionType } from "../../script/phaseaction";
+import { attributeMatchBuilder, captureIndirectObject, captureObject, matchAttribute, matchBuilder, matchVerb } from "../../commandmatcher";
 import { EnvFn, Thunk, mkResult, mkThunk } from "../../script/thunk";
 import * as Tags from "../tags";
 import { TraitProcessor } from "./trait";
@@ -9,9 +8,10 @@ import * as Property from "../../properties";
 import { Nameable, getFullName } from "../../nameable";
 import { formatString } from "../../util/mustacheUtils";
 import * as Output from "../output";
-import { VERB_NAMES } from "../defaultverbs";
+import * as VERB_NAMES from "../verbnames";
 import { Obj } from "tift-types/src/util/objects";
 import { Env } from "tift-types/src/env";
+import { createMatcher, createAction } from "./traitutils";
 
 const CLOSED_CONTAINER_MESSAGE = "put.templates.container.closed";
 const CONTAINER_IN_ITEM_MESSAGE = "put.templates.container.inItem";
@@ -63,28 +63,12 @@ export const CONTAINER : TraitProcessor = (obj, tags, builder) => {
     builder.withBefore(createAction(putMatcher, mkThunk(getPutInContainerFn(relLoc)), "before"));
 }
 
-function createMatcher(verb : string, obj : string) : Matcher {
-    return matchBuilder()
-                .withVerb(matchVerb(verb))
-                .withObject(captureObject(obj))
-                .build();
-}
-
 function createThunk(fn : EnvFn) : Thunk {
     return mkThunk(env => {
         const childEnv = env.newChild({[PARAM_CONTAINER] : env.get("this")});
         return fn(childEnv);
     });
 }
-
-function createAction<T extends Phase>(matcher : Matcher, thunk : Thunk, phase : T) : PhaseActionType<T> {
-    const phaseAction = 
-        new PhaseActionBuilder()
-                        .withPhase(phase)
-                        .withMatcherOnMatch(matcher, thunk);
-    return phaseAction as unknown as PhaseActionType<T>;  // FIXME get this to work without the cast
-}
-
 
 function getExamineContainerFn(relLoc : RelativeLocation) : EnvFn {
 

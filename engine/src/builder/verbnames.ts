@@ -1,0 +1,11 @@
+export const GET = "get";
+export const DROP = "drop";
+export const PUT = "put";
+export const WEAR = "wear";
+export const REMOVE = "remove";
+export const OPEN = "open";
+export const CLOSE = "close";
+export const PUSH = "push";
+export const EXAMINE = "examine";
+export const UNLOCK = "unlock";
+export const LOCK = "lock";

@@ -1,5 +1,5 @@
 import { Obj } from "../../util/objects";
-import { VERB_NAMES } from "../defaultverbs";
+import * as VERB_NAMES from "../verbnames";
 import { EntityBuilder } from "../entitybuilder";
 import * as Tags from "../tags";
 import _ from "lodash";
@@ -7,6 +7,7 @@ import * as Location from "../locations";
 import * as Entities from "../entities";
 import { CONTAINER } from "./container";
 import { OPENABLE } from "./openable";
+import { LOCKABLE } from "./lockable";
 
 /**
  * A trait processor is a function which takes an object, its tags and an entity builder and adds
@@ -65,5 +66,6 @@ export const TRAITS : TraitProcessor[] = [
     NPC,
     VISIBLE_WHEN_DARK,
     CONTAINER,
-    OPENABLE
+    OPENABLE,
+    LOCKABLE
 ];

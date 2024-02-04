@@ -9,4 +9,5 @@ export const CARRYABLE = "carryable";
 export const WEARABLE = "wearable";
 export const PUSHABLE = "pushable";
 export const TRANSPARENT = "transparent";
-export const SURFACE = "surface";
+export const LOCKABLE = "lockable";
+export const LOCKED = "locked";

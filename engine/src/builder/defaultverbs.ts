@@ -13,19 +13,8 @@ import * as Output from "./output";
 import { IMPLICIT_FUNCTION } from "./functionbuilder";
 import * as Property from "../properties";
 import * as Tags from "./tags";
-
-export const VERB_NAMES = {
-    GET : "get",
-    DROP : "drop",
-    PUT : "put",
-    WEAR : "wear",
-    REMOVE : "remove",
-    OPEN : "open",
-    CLOSE : "close",
-    PUSH : "push",
-    EXAMINE : "examine"
-
-}
+import * as Lockable from "./traits/lockable";
+import * as VERB_NAMES from "./verbnames";
 
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
@@ -319,5 +308,21 @@ const DEFAULT_VERBS = [
                   .withContext("environment")
                   .withContext("location")
                   .withModifier("direction")
-                  .build()
+                  .build(),
+      new VerbBuilder({"id":VERB_NAMES.UNLOCK})
+                  .withTrait("transitive")
+                  .withAction(Lockable.UNLOCK)
+                  .withContext("environment")
+                  .withContext("inventory")
+                  .withContext("holding")
+                  .withAttribute("with")
+                  .build(),   
+      new VerbBuilder({"id":VERB_NAMES.LOCK})
+                    .withTrait("transitive")
+                    .withAction(Lockable.LOCK)
+                    .withContext("environment")
+                    .withContext("inventory")
+                    .withContext("holding")
+                    .withAttribute("with")
+                    .build()
 ];
