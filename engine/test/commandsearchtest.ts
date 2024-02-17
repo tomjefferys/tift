@@ -103,7 +103,7 @@ test("Test partial search", () => {
     env : createRootEnv({})
   }
 
-  let next = search(SearchTerm.fromStrings("*"), context);
+  let next = search(SearchTerm.fromStrings("?"), context);
   expect(getCommandWords(next)).toStrictEqual([["go"], ["push"]]);
 
   next = search(SearchTerm.fromStrings("push", "?"), context);
