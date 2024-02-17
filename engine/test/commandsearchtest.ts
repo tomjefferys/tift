@@ -1,4 +1,4 @@
-import {getAllCommands, ContextEntities, searchNext, searchExact, SearchContext } from "../src/commandsearch";
+import {getAllCommands, ContextEntities, searchExact, SearchContext, search } from "../src/commandsearch";
 import {Command} from "../src/command"
 import { Entity } from "../src/entity";
 import { Verb } from "../src/verb";
@@ -7,6 +7,7 @@ import * as _ from "lodash"
 import { VerbMap } from "../src/types";
 import { EAT, APPLE, STIR, SOUP, SPOON, LOOK, ASK,
          BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP, CHAIR, STAND, SIT, BALL, BAG, PUT } from "./testutils/testentities"
+import * as SearchTerm from "../src/searchterm";
 
 test("Test empty input", () => {
   const options = getAllCommandIds([], []);
@@ -102,13 +103,13 @@ test("Test partial search", () => {
     env : createRootEnv({})
   }
 
-  let next = searchNext([], context);
+  let next = search(SearchTerm.fromStrings("*"), context);
   expect(getCommandWords(next)).toStrictEqual([["go"], ["push"]]);
 
-  next = searchNext(["push"], context);
+  next = search(SearchTerm.fromStrings("push", "?"), context);
   expect(getCommandWords(next)).toStrictEqual([["push", "box"]]);
 
-  next = searchNext(["push", "box"], context);
+  next = search(SearchTerm.fromStrings("push", "box", "?"), context);
   expect(getCommandWords(next)).toEqual(expect.arrayContaining([["push", "box", "north"], ["push", "box", "east"]]));
 });
 
@@ -119,13 +120,13 @@ test("Test partial search with missing indirect object", () => {
     env : createRootEnv({})
   }
 
-  let next = searchNext([], noBeerContext);
+  let next = search(SearchTerm.fromStrings("?"), noBeerContext);
   expect(getCommandWords(next)).toHaveLength(0);
 
-  next = searchNext(["ask"], noBeerContext);
+  next = search(SearchTerm.fromStrings("ask", "?"), noBeerContext);
   expect(getCommandWords(next)).toHaveLength(0);
 
-  next = searchNext(["ask", "barkeep"], noBeerContext);
+  next = search(SearchTerm.fromStrings("ask", "barkeep", "?"), noBeerContext);
   expect(getCommandWords(next)).toHaveLength(0);
 });
 
@@ -159,18 +160,69 @@ test("Test conditional verbs", () => {
     env : createRootEnv({})
   }
 
-  let next = searchNext([], context);
+  let next = search(SearchTerm.fromStrings("?"), context);
   let commands = getCommandWords(next);
   expect(commands).toHaveLength(1);
   expect(commands[0]).toEqual(["sit"]);
 
   chair.sat_on = true;
 
-  next = searchNext([], context);
+  next = search(SearchTerm.fromStrings("?"), context);
   commands = getCommandWords(next);
   expect(commands).toHaveLength(1);
   expect(commands[0]).toEqual(["stand"]);
 });
+
+test("Test wildcard verb search", () => {
+  const context = {
+    objs : {"default" : [APPLE, SOUP]},
+    verbs : createVerbMap([EAT, STIR]),
+    env : createRootEnv({})
+  }
+  const matches = search(SearchTerm.fromStrings("?", "apple"), context);
+  expect(getCommandWords(matches)).toEqual(expect.arrayContaining([["eat", "apple"]]));
+});
+
+test("Test wildcard object search", () => {
+  const context = {
+    objs : {"default" : [APPLE, SOUP]},
+    verbs : createVerbMap([EAT, STIR]),
+    env : createRootEnv({})
+  }
+  const matches = search(SearchTerm.fromStrings("eat", "?"), context);
+  expect(getCommandWords(matches)).toEqual(expect.arrayContaining([["eat", "apple"]]));
+});
+
+test("Test wildcard verb and object search", () => {
+  const context = {
+    objs : {"default" : [APPLE, SOUP]},
+    verbs : createVerbMap([EAT, STIR]),
+    env : createRootEnv({})
+  }
+  const matches = search(SearchTerm.fromStrings("?", "?"), context);
+  expect(getCommandWords(matches)).toEqual(expect.arrayContaining([["eat", "apple"], ["stir", "soup"]]));
+});
+
+test("Test wildcard verb and object search with missing object", () => {
+  const context = {
+    objs : {"default" : [APPLE, SOUP]},
+    verbs : createVerbMap([EAT, STIR]),
+    env : createRootEnv({})
+  }
+  const matches = search(SearchTerm.fromStrings("?", "spoon"), context);
+  expect(getCommandWords(matches)).toHaveLength(0);
+});
+
+test("Test wildcard verb only search", () => {
+  const context = {
+    objs : {"default" : [APPLE, SOUP]},
+    verbs : createVerbMap([EAT, STIR]),
+    env : createRootEnv({})
+  }
+  const matches = search(SearchTerm.fromStrings("?"), context);
+  expect(getCommandWords(matches)).toEqual(expect.arrayContaining([["eat"], ["stir"]]));
+});
+
 
 const createVerbMap = (verbs : Verb[]) : VerbMap => verbs.reduce((obj, verb) => ({...obj, [verb.id] : verb}), {});
 

@@ -10,6 +10,7 @@ import { castDirectable, castIndirectable, castModifiable, castPreopositional, C
 import { Env } from "tift-types/src/env"
 import * as Logger from "./util/logger"
 import { PartOfSpeech, Word } from "tift-types/src/messages/output"
+import * as SearchTerm from "./searchterm";
 
 // verb                                -- intransitive verb
 // verb object                         -- transitive verb
@@ -22,7 +23,10 @@ type SearchFn = (context: SearchContext, state: Command) => Command[];
 type SearchNode = Tree.ValueNode<SearchFn>;
 type SearchResult = [Command, SearchNode];
 
+type SearchTerm = SearchTerm.SearchTerm;
+
 export type ContextEntities = MultiDict<Entity>;
+
 
 const INITIAL_STATE : Command = start();
 
@@ -37,12 +41,14 @@ export function getAllCommands(objs: ContextEntities, verbs: Verb[], env : Env) 
 
 export function getNextWords(partial : string[], objs : ContextEntities, verbs : Verb[], env : Env) : Word[] {
   const context = buildSearchContext(objs, verbs, env);
-  const nextWords = searchNext(partial, context)
+  const searchTerms = [...SearchTerm.fromStrings(...partial), SearchTerm.WILD_CARD]
+  const nextWords = search(searchTerms, context)
           .map(state => _.last(state.getWords()))
           .filter(Boolean)
           .map(word => word as Word);
   return _.uniqBy(nextWords, word => word.id);  // TODO: do we still need to do this?
 }
+
 
 export interface SearchContext {
   objs:  ContextEntities,
@@ -269,24 +275,32 @@ const searchAll = (context : SearchContext,
 /**
  * Takes a partial command and looks for matches
  * 
- * Searches for one word at a time, and checks for a match against the partially provided command
- * Stops searching as soon as we've found an extra word
- * @param partial 
+ * Searches for one word at a time, and checks for a match against the partially provided command.
+ * 
+ * @param terms A list of search terms to match against, may include wild cards
  * @param context 
  * @param searchNode 
  * @param state 
  * @returns 
  */
-export const searchNext = (partial : string[],
-                           context : SearchContext,
-                           searchNode = WORD_PATTERNS,
-                           state = INITIAL_STATE) : Command[] => 
-    doSearch(context, searchNode, state)
-                    .filter(([state, _]) => Arrays.prefixEquals(partial, state.getWords().map(idValue => idValue.id)))
-                    .flatMap(([state, node]) => 
-                                  (state.size() > partial.length) 
-                                        ? isValid(context, node, state)? [state] : []
-                                        : searchNext(partial, context, node, state));
+export const search = (terms : SearchTerm[],
+                       context : SearchContext,
+                       searchNode = WORD_PATTERNS,
+                       state = INITIAL_STATE) : Command[] => {
+    const results = doSearch(context, searchNode, state)
+    const matches = results.filter(([state, _]) => 
+          Arrays.wildcardPrefixEquals(terms, getStateTerms(state), SearchTerm.WILD_CARD))
+    const commands = matches.flatMap(([state, node]) =>
+                                  (state.size() == terms.length) 
+                                        ? isValid(context, node, state) ? [state] : []
+                                        : search(terms, context, node, state));
+    return commands;
+}
+
+export const getStateTerms = (state : Command) : SearchTerm[] => {
+  return SearchTerm.fromStrings(...state.getWords().map(idValue => idValue.id));
+}
+
 
 /**
  * Test if a particular state can lead to a valid sentence
@@ -312,24 +326,11 @@ const isValid = (context : SearchContext,
  * Find an exact match for the provided command
  * @param command 
  * @param context 
- * @param searchNode 
- * @param state 
  * @returns a Command, or undefined if no match could be found
  */
 export const searchExact = (command : string[],
-                            context : SearchContext, 
-                            searchNode = WORD_PATTERNS,
-                            state = INITIAL_STATE) : Command | undefined => 
-    doSearch(context, searchNode, state)
-            .filter(([state, _]) => Arrays.prefixEquals(command, state.getWords().map(idValue => idValue.id)))
-            .map(([state, node]) => {
-              const wordLength = state.size();
-              if (wordLength === command.length && Tree.isTerminal(node)) {
-                return state;
-              } else if (wordLength < command.length) {
-                return searchExact(command, context, node, state);
-              } else {
-                return undefined;
-              }
-            }).find(_ => true);
+                            context : SearchContext) : Command | undefined => {
+    const result = search(SearchTerm.fromStrings(...command), context);
+    return result[0]?.isValid()? result[0] : undefined;
+}
                         

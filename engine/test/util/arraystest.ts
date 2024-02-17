@@ -8,6 +8,25 @@ test("Test prefix equals", () => {
     expect(Arrays.prefixEquals(["eat", "apple"], ["eat", "bread"])).toBe(false);
 });
 
+test("Test wildcard prefix equals", () => {
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], [], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], ["eat"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], ["eat", "apple"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], ["*"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], ["*", "*"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["*", "apple"], ["eat"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["eat", "*"], ["eat", "apple"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["*", "apple"], ["*"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["*", "*"], ["*", "*"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], ["eat", "apple", "carefully"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], ["eat", "apple", "*"], "*")).toBe(true);
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], ["eat", "bread"], "*")).toBe(false);
+    expect(Arrays.wildcardPrefixEquals(["eat", "apple"], ["*", "bread"], "*")).toBe(false);
+    expect(Arrays.wildcardPrefixEquals(["*", "apple"], ["eat", "bread"], "*")).toBe(false);
+    expect(Arrays.wildcardPrefixEquals(["*", "apple"], ["*", "bread"], "*")).toBe(false);
+    expect(Arrays.wildcardPrefixEquals(["eat", "*"], ["eat", "bread"], "*")).toBe(true);
+});
+
 test("Test isPrefixOf", () => {
     expect(Arrays.isPrefixOf([], [])).toBe(true);
     expect(Arrays.isPrefixOf([], ["one"])).toBe(true);

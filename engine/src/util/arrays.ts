@@ -2,6 +2,7 @@
 
 import { Optional } from "tift-types/src/util/optional";
 import { hasValue } from "./optional";
+import _ from "lodash";
 
 /**
  * Checks if two arrays have matching prefixes
@@ -17,6 +18,12 @@ export function prefixEquals<T>(arr1 : T[], arr2 : T[]) : boolean {
     const arr1Slice = arr1.slice(0, arr2.length);
     const arr2Slice = arr2.slice(0, arr1.length);
     return equals(arr1Slice, arr2Slice);
+}
+
+export function wildcardPrefixEquals<T>(arr1 : T[], arr2 : T[], wildcard : T) : boolean {
+    const arr1Slice = arr1.slice(0, arr2.length);
+    const arr2Slice = arr2.slice(0, arr1.length);
+    return wildcardEquals(arr1Slice, arr2Slice, wildcard);
 }
 
 /**
@@ -38,6 +45,16 @@ export function isPrefixOf<T>(arr1 : T[], arr2 : T[]) : boolean {
  */
 export function equals<T>(arr1 : T[], arr2 : T[]) : boolean {
     return arr1.length === arr2.length && arr1.every((entry, index) => entry === arr2[index]);
+}
+
+/**
+ * shallow equals on two arrays, allows for a wildcard value
+ */
+export function wildcardEquals<T>(arr1 : T[], arr2 : T[], wildcard : T) : boolean {
+    return arr1.length === arr2.length 
+            && arr1.every((entry, index) => _.isEqual(entry, wildcard) 
+                                            || _.isEqual(entry, arr2[index])
+                                            || _.isEqual(arr2[index], wildcard));
 }
 
 /**
