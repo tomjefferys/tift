@@ -1,5 +1,5 @@
 import { BasicEngine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage, Word } from "tift-types/src/messages/output";
+import { LogLevel, OutputConsumer, OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
 import { InputMessage } from "tift-types/src/messages/input"
 import { BiConsumer, Consumer } from "tift-types/src/util/functions";
 import * as EngineProxy from "./engineproxy";
@@ -116,7 +116,7 @@ export class OutputConsumerBuilder {
 
   messageConsumer? : Consumer<string>;
   wordsConsumer? : BiConsumer<string[], Word[]>;
-  statusConsumer? : Consumer<string>;
+  statusConsumer? : Consumer<StatusType>;
   logConsumer? : BiConsumer<LogLevel,string>;
   saveConsumer? : Consumer<string>;
   controlConsumer? : Consumer<ControlType>;
@@ -132,7 +132,7 @@ export class OutputConsumerBuilder {
     return this;
   }
 
-  withStatusConsumer(statusConsumer : Consumer<string>) : OutputConsumerBuilder {
+  withStatusConsumer(statusConsumer : Consumer<StatusType>) : OutputConsumerBuilder {
     this.statusConsumer = statusConsumer;
     return this;
   }
@@ -168,7 +168,7 @@ export class OutputConsumerBuilder {
           this.wordsConsumer? this.wordsConsumer(message.command, message.words) : this.defaultConsumer(message);
           break;
         case "Status":
-          this.statusConsumer? this.statusConsumer(message.status.title) : this.defaultConsumer(message);
+          this.statusConsumer? this.statusConsumer(message.status) : this.defaultConsumer(message);
           break;
         case "SaveState": 
           this.saveConsumer? this.saveConsumer(JSON.stringify(message.state)) : this.defaultConsumer(message);
