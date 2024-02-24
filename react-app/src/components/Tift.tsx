@@ -1,8 +1,8 @@
 import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
-import { getEngine, Input, createEngineProxy, createStateMachineFilter } from "tift-engine"
+import { getEngine, Input, createEngineProxy, createStateMachineFilter, OutputConsumerBuilder } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
-import { OutputConsumer, OutputMessage, StatusType, Word, StatusProperties } from "tift-types/src/messages/output";
+import { OutputConsumer, StatusType, Word } from "tift-types/src/messages/output";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
@@ -163,14 +163,14 @@ function Tift() {
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
 
       // Create the output consumer
-      const outputConsumer = getOutputConsumer(
-        message => updateMessages(messagesRef.current, messageEntry(message)), 
-        (command, words) => WordTree.set(latestWordsRef.current, command, words),
-        status => statusRef.current = status,
-        (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
-        saveGame,
-        createControlHandler(pauser)
-      );
+      const outputConsumer = new OutputConsumerBuilder()
+        .withMessageConsumer(message => updateMessages(messagesRef.current, messageEntry(message)))
+        .withWordsConsumer((command, words) => WordTree.set(latestWordsRef.current, command, words))
+        .withStatusConsumer(status => statusRef.current = status)
+        .withSaveConsumer(saveGame)
+        .withLogConsumer((level, message) => updateMessages(messagesRef.current,logEntry(level, message)))
+        .withControlConsumer(createControlHandler(pauser))
+        .build();
 
       engine.setResponseListener(outputConsumer);
   
@@ -260,40 +260,6 @@ function Tift() {
             </Box>
         </React.Fragment>
       );
-}
-
-function getOutputConsumer(messageConsumer : (message : string) => void,
-                           wordsConsumer : (command : string[], words : Word[]) => void,
-                           statusConsumer : (status : StatusType) => void,
-                           logConsumer : (level : LogLevel, message : string) => void,
-                           saveConsumer : (saveData : string) => void,
-                           controlConsumer : (control : ControlType) => void ) : (outputMessage : OutputMessage) => void {
-  return (outputMessage) => {
-    switch(outputMessage.type) {
-      case "Print":
-        messageConsumer(outputMessage.value);
-        break;
-      case "Words":
-        wordsConsumer(outputMessage.command, outputMessage.words);
-        break;
-      case "Status":
-        statusConsumer(outputMessage.status);
-        break;
-      case "SaveState": {
-          const saveData = JSON.stringify(outputMessage.state);
-          saveConsumer(saveData);
-        }
-        break;
-      case "Log":
-        logConsumer(outputMessage.level, outputMessage.message);
-        break;
-      case "Control":
-        controlConsumer(outputMessage.value);
-        break;
-      default:
-        throw new Error("Unsupported OutputMessage Type: " + outputMessage.type);
-    }
-  }
 }
 
 function createControlHandler(pauser : Pauser.Pauser) : (control : ControlType) => void {
