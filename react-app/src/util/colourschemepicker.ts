@@ -23,23 +23,23 @@ export function createColourSchemePicker(schemeChanger : (scheme : string) => vo
         },
         onAction : async (input : InputMessage, forwarder : DecoratedForwarder) => {
             let finished = false;
-            let handler = await handleInput(input)
-                .onCommand([LIGHT], async () => {
+            const handler = handleInput(input);
+            await handler.onCommand([LIGHT], async () => {
                     forwarder.print(CHANGE_MESSAGE(LIGHT));
                     schemeChanger(LIGHT);
                     finished = true;
                 });
-            handler = await handler.onCommand([DARK], async () => {
+            await handler.onCommand([DARK], async () => {
                     forwarder.print(CHANGE_MESSAGE(DARK));
                     schemeChanger(DARK);
                     finished = true;
                 });
-            handler = await handler.onCommand([CANCEL], async () => {
+            await handler.onCommand([CANCEL], async () => {
                     forwarder.print("cancelled");
                     finished = true;
                 })
-            handler = await handler.onAnyCommand(async command => forwarder.warn("Unexpected command: " + command.join(" ")));
-            handler = await handler.onGetWords(async () => forwarder.words([], colourSchemes));
+            await handler.onAnyCommand(async command => forwarder.warn("Unexpected command: " + command.join(" ")));
+            await handler.onGetWords(async () => forwarder.words([], colourSchemes));
             await handler.onAny(async message => forwarder.send(message));
             return finished ? "__TERMINATE__" : undefined;
         }

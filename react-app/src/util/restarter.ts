@@ -26,18 +26,18 @@ export function createRestarter(restartFn : (forwarder : DecoratedForwarder) => 
         },
         onAction : async (input : InputMessage, forwarder : DecoratedForwarder) => {
             let finished = false;
-            let handler = handleInput(input);
-            handler = await handler.onCommand([CONFIRM], async () => {
+            const handler = handleInput(input);
+            await handler.onCommand([CONFIRM], async () => {
                     forwarder.print(RESTARTING_MESSAGE);
                     await restartFn(forwarder);
                     finished = true;
                 });
-            handler = await handler.onCommand([CANCEL], async () => {
+            await handler.onCommand([CANCEL], async () => {
                     forwarder.print(CANCELLED_MESSAGE);
                     finished = true;
                 });
-            handler = await handler.onAnyCommand(async command => forwarder.warn("Unexpected command: " + command.join(" ")));
-            handler = await handler.onGetWords(async () => forwarder.words([], restartOptions));
+            await handler.onAnyCommand(async command => { forwarder.warn("Unexpected command: " + command.join(" "))});
+            await handler.onGetWords(async () => forwarder.words([], restartOptions));
             await handler.onAny(async message => forwarder.send(message));
             return finished ? "__TERMINATE__" : undefined;
         }
