@@ -47,7 +47,7 @@ class DuplexProxyImpl<S,T> implements DuplexProxy<S,T> {
         this.responseFilter(response, this.getForwarder());
     }
 
-    forwardRequest(request : S) {
+    async forwardRequest(request : S) {
         if (this.requestListener) {
             this.requestListener(request);
         } else {

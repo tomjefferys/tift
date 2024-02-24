@@ -2,7 +2,7 @@ import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
-import { OutputConsumer, OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage, StatusType, Word, StatusProperties } from "tift-types/src/messages/output";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
@@ -33,12 +33,11 @@ type WordList = Word[];
 
 function Tift() {
     const [command, setCommand] = useState<WordList>([]);
-    const [words, setWords] = useState<WordTreeType>(WordTree.createRoot());
 
     const [partialWord, setPartialWord] = useState<string>("");
     const { setColorMode } = useColorMode();
 
-    const statusRef = useRef<StatusType>({ title : "", undoable : false, redoable : false});
+    const statusRef = useRef<StatusType>({ title : "", undoable : false, redoable : false, properties : {}});
   
     // Store messages as a ref, as the can be updated multiple times between renders
     // and using a state makes it tricky to get the most up to date values
@@ -46,14 +45,16 @@ function Tift() {
 
     // Store the latest words from the engine as a ref, separate from
     // the word state, as we want to avoid the word state updating unnecessarilly
-    const latestWordsRef = useRef<WordTreeType>(words);
+    //const latestWordsRef = useRef<WordTreeType>(words);
+    const latestWordsRef = useRef<WordTreeType>(WordTree.createRoot());
   
     const engineRef = useRef<Engine | null>(null);
 
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
-    const getWords = async (command : Word[]) : Promise<void> => {
+    const getWords = async (command : Word[]) : Promise<Word[]> => {
       await engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
+      return WordTree.get(latestWordsRef.current, command);
     }
 
     const execute = async (command : Word[]) => await engineRef.current?.send(Input.execute(command.map(word => word.id)));
@@ -82,8 +83,7 @@ function Tift() {
                 engine.send(Input.start((saveData != null)? saveData : undefined));
                 engine.send(Input.getStatus());
 
-                getWords([]);
-                setWords(latestWordsRef.current);
+                engine.send(Input.getNextWords([]));
                 setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
                 setCommand([]);
               })
@@ -122,7 +122,6 @@ function Tift() {
       // Set up Proxies
       // Restart is now running asynchronously, so the thing calling it does not block
       const restartMachine = createRestarter(async forwarder => {
-        setWords(WordTree.createRoot());
         latestWordsRef.current = WordTree.createRoot();
         window.localStorage.removeItem(AUTO_SAVE);
         await loadGame(GAME_FILE, forwarder, null);
@@ -139,7 +138,7 @@ function Tift() {
 
       const pauser = Pauser.createPauseFilter(
               async words => WordTree.set(latestWordsRef.current, command, words),
-              async words => {getWords(words); setWords(latestWordsRef.current)});
+              async words => {getWords(words); /*setWords(latestWordsRef.current)*/});
 
       const undoFn = async () => {
         engine.send(Input.undo());
@@ -160,13 +159,12 @@ function Tift() {
                                                     ["restart", restartMachine],
                                                     ["colours", colourSchemePicker],
                                                     ["clear", logClearer],
-                                                    ["info", getInfo]))
+                                                    ["info", getInfo]));
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
 
       // Create the output consumer
       const outputConsumer = getOutputConsumer(
         message => updateMessages(messagesRef.current, messageEntry(message)), 
-
         (command, words) => WordTree.set(latestWordsRef.current, command, words),
         status => statusRef.current = status,
         (level, message) => updateMessages(messagesRef.current,logEntry(level, message)),
@@ -188,7 +186,7 @@ function Tift() {
     useEffect(() => {
       const handleKeyDown = (e : KeyboardEvent) : void => {
         const result = handleKeyboardInput(partialWord, 
-                WordTree.getWithPrefix(words, command.map(word => word.value).join(" ")), e);
+                WordTree.getWithPrefix(latestWordsRef.current, command.map(word => word.value).join(" ")), e);
         if (result.selected) {
           wordSelected(undefined, result.selected);
         } else {
@@ -208,8 +206,7 @@ function Tift() {
     }, [command]);
 
     const commandUpdated = async () => {
-      await getWords(command);
-      const words = WordTree.get(latestWordsRef.current, command);
+      const words = await getWords(command);
       const engine = engineRef.current;
       const gameWords = words.filter(word => word.type === "word");
       if (engine && command.length && !gameWords.length) {
@@ -226,7 +223,6 @@ function Tift() {
         }
       }
       if (!command.length || gameWords.length) {
-        setWords(latestWordsRef.current);
         setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, command.map(word => word.value).join(" ")));
       }
     }

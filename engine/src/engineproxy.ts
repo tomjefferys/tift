@@ -10,6 +10,7 @@ import { Engine } from "tift-types/src/engine";
 import { StateMachine } from "tift-types/src/util/statemachine";
 import { Optional } from "tift-types/src/util/optional";
 import { MessageForwarder, DecoratedForwarder } from "tift-types/src/engineproxy";
+import * as Arrays from "./util/arrays";
 
 export type EngineProxy = DuplexProxy<InputMessage, OutputMessage>;
 
@@ -58,28 +59,27 @@ export class InputHandler {
         this.message = message;
     }
 
-    async on(predicate : () => boolean, fn : () => Promise<void>) {
+    async on(predicate : () => boolean, fn : () => Promise<void>) : Promise<void> {
         if (!this.matched && predicate()) {
             await fn();
             this.matched = true;
         }
-        return this;
     }
 
-    async onCommand(command : string[], fn : () => Promise<void>) {
-        return await this.on(() => this.message.type === "Execute" && _.isEqual(this.message.command, command), fn);
+    async onCommand(command : string[], fn : () => Promise<void>) : Promise<void> {
+        await this.on(() => this.message.type === "Execute" && Arrays.equals(this.message.command, command), fn);
     }
 
-    async onAnyCommand(fn : (command : string[]) => Promise<void>) {
-        return await this.on(() => this.message.type === "Execute", async () => fn((this.message as Execute).command));
+    async onAnyCommand(fn : (command : string[]) => Promise<void>) : Promise<void> {
+        await this.on(() => this.message.type === "Execute", async () => fn((this.message as Execute).command));
     }
 
-    async onGetWords(fn : (words : string[]) => Promise<void>) {
-        return await this.on(() => this.message.type === "GetWords", async () => fn((this.message as GetWords).command));
+    async onGetWords(fn : (words : string[]) => Promise<void>) : Promise<void> {
+        await this.on(() => this.message.type === "GetWords", async () => fn((this.message as GetWords).command));
     }
 
-    async onAny(fn : (message : InputMessage) => Promise<void>) {
-        return await this.on(() => true, async () => fn(this.message));
+    async onAny(fn : (message : InputMessage) => Promise<void>) : Promise<void> {
+        await this.on(() => true, async () => fn(this.message));
     }
 }
 
