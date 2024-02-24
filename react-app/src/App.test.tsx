@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, cleanup, act, waitForElementToBeRemoved, findByRole, getByTestId } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, act, waitForElementToBeRemoved, findByRole, getByTestId, findAllByTestId, fireEvent } from '@testing-library/react';
 import { rest } from 'msw'
 import {setupServer} from 'msw/node'
 import App from './App';
@@ -65,9 +65,11 @@ test('can change location', async () => {
   const user = userEvent.setup();
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
-  await waitFor(() => screen.getAllByText('cave'));
 
-  expect(screen.getByTestId('status')).toHaveTextContent('cave');
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
 
   await waitFor(() => getButton('go'));
   await act(() => user.click(getButton('go')));
@@ -75,8 +77,10 @@ test('can change location', async () => {
   await waitFor(() => getButton('south'));
   await act(() => user.click(getButton('south')));
 
-  await waitFor(() => screen.getAllByText('forest'));
-  expect(screen.getByTestId('status')).toHaveTextContent('forest');
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
 });
 
 test('can get item', async () => {
@@ -147,7 +151,7 @@ test('keyboard autocomplete', async () => {
   expect(screen.getByTestId('status')).toHaveTextContent('forest');
 })
 
-test.skip('undo/redo', async () => {
+test('undo/redo', async () => {
   const user = userEvent.setup();
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
@@ -159,43 +163,57 @@ test.skip('undo/redo', async () => {
 
   await new Promise(process.nextTick);
 
-  await waitFor(() => getButton('undo'));
-  await waitFor(() => getButton('redo'));
-  await waitFor(() => screen.getByTestId('__option(undo)__'));
-  await waitFor(() => screen.getByTestId('__option(redo)__'));
+  await waitFor(() => {
+    const button = getButton('undo');
+    expect(button).toBeDisabled();
+  });
 
-  expect(getButton('undo')).toBeDisabled();
-  expect(getButton('redo')).toBeDisabled();
+  await waitFor(() => {
+    const button = getButton('redo');
+    expect(button).toBeDisabled();
+  });
 
   // Perform action, and wait to complete
-  await act(() => user.click(getButton('Game', 'tab')));
+  await user.click(getButton('Game', 'tab'));
   await user.keyboard('go south{Enter}');
-  await waitFor(() => screen.getAllByText('forest'));
-  expect(screen.getByTestId('status')).toHaveTextContent('forest');
+
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
 
   // Confirm undo is enabled, and redo is disabled
   await waitFor(() => getButton('Options', 'tab'));
   await user.click(getButton('Options', 'tab'));
+  
+  await waitFor(() => {
+    const button = getButton('undo');
+    expect(button).toBeEnabled();
+  });
+  await waitFor(() => {
+    const button = getButton('redo');
+    expect(button).toBeDisabled();
+  });
 
-  await waitFor(() => getButton('undo'));
-  await waitFor(() => getButton('redo'));
-
-  expect(getButton('undo')).toBeEnabled();
-  expect(getButton('redo')).toBeDisabled();
-
-  await user.click(getButton('undo'));
+  await act(() => user.click(getButton('undo')));
 
   // Confirm action undo is now disabled, and redo is enabled
   await waitFor(() => getButton('Options', 'tab'));
-  await user.click(getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
 
-  await waitFor(() => getButton('undo'));
-  await waitFor(() => getButton('redo'));
+  await waitFor(() => {
+    const button = getButton('undo');
+    expect(button).toBeDisabled();
+  });
+  await waitFor(() => {
+    const button = getButton('redo');
+    expect(button).toBeEnabled();
+  });
 
-  expect(getButton('undo')).toBeDisabled();
-  expect(getButton('redo')).toBeEnabled();
-
-  expect(screen.getByTestId('status')).toHaveTextContent('cave');
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
 
   // Now try redoing
   await act(() => user.click(getButton('redo')));
@@ -203,13 +221,19 @@ test.skip('undo/redo', async () => {
   await waitFor(() => getButton('Options', 'tab'));
   await act(() => user.click(getButton('Options', 'tab')));
 
-  await waitFor(() => getButton('undo'));
-  await waitFor(() => getButton('redo'));
+  await waitFor(() => {
+    const button = getButton('undo');
+    expect(button).toBeEnabled();
+  });
+  await waitFor(() => {
+    const button = getButton('redo');
+    expect(button).toBeDisabled();
+  });
 
-  expect(getButton('undo')).toBeEnabled();
-  expect(getButton('redo')).toBeDisabled();
-
-  expect(screen.getByTestId('status')).toHaveTextContent('forest');
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
 });
 
 function getButton(name : string, role = "button") : HTMLElement {
