@@ -2,12 +2,12 @@ import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter, OutputConsumerBuilder } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
-import { OutputConsumer, StatusType, Word } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
 import Controls from './Controls';
-import { commandEntry, logEntry, LogLevel, messageEntry, OutputEntry } from '../outputentry';
+import { commandEntry, logEntry, messageEntry, OutputEntry } from '../outputentry';
 import { Box, Divider, useColorMode } from '@chakra-ui/react'
 import { createRestarter } from "../util/restarter";
 import { createColourSchemePicker } from "../util/colourschemepicker";
@@ -17,6 +17,8 @@ import { Optional } from "tift-types/src/util/optional";
 import { handleKeyboardInput } from "../util/keyboardhandler";
 import { BACKSPACE, createSimpleOption } from "../util/util";
 import * as WordTree from "../util/wordtree";
+import { DuplexProxy } from "tift-types/src/util/duplexproxy";
+import { InputMessage } from "tift-types/src/messages/input";
 
 type WordTreeType = WordTree.WordTree;
 
@@ -43,9 +45,8 @@ function Tift() {
     // and using a state makes it tricky to get the most up to date values
     const messagesRef = useRef<OutputEntry[]>([]);
 
-    // Store the latest words from the engine as a ref, separate from
-    // the word state, as we want to avoid the word state updating unnecessarilly
-    //const latestWordsRef = useRef<WordTreeType>(words);
+    // Store the latest words from the engine as a ref not a state
+    // as we want to avoid the word state updating unnecessarily
     const latestWordsRef = useRef<WordTreeType>(WordTree.createRoot());
   
     const engineRef = useRef<Engine | null>(null);
@@ -60,36 +61,81 @@ function Tift() {
     const execute = async (command : Word[]) => await engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
     // Load a game file from the `public` folder
-    const loadGame = (name : string, engine : MessageForwarder, saveData : string | null) => 
-            fetch(process.env.PUBLIC_URL + "/" + name)
-              .then((response) => response.text())
-              .then(async data => {
-                if (engine == null) {
-                  throw new Error("Engine has not been initialized");
-                }
-                engine.send(Input.config({"autoLook" : true, "undoLevels" : 10}));
-                engine.send(Input.reset());
+    const loadGame = async (name : string, engine : MessageForwarder, saveData : string | null) => {
+      if (engine == null) {
+        throw new Error("Engine has not been initialized");
+      }
+      engine.send(Input.config({"autoLook" : true, "undoLevels" : 10}));
+      engine.send(Input.reset());
 
-                // Load default behaviour
-                const defaults = await loadDefaults();
-                engine.send(Input.load(defaults));
+      // Load default behaviour
+      const defaults = await loadDefaults();
+      engine.send(Input.load(defaults));
 
-                // Load the standard library
-                const stdlib = await loadStdLib();
-                engine.send(Input.load(stdlib));
+      // Load the standard library
+      const stdlib = await loadStdLib();
+      engine.send(Input.load(stdlib));
 
-                // Load the game data
-                engine.send(Input.load(data));
-                engine.send(Input.start((saveData != null)? saveData : undefined));
-                engine.send(Input.getStatus());
+      // Load the game data
+      const data = await loadGameData(name)
+      engine.send(Input.load(data));
+      engine.send(Input.start((saveData != null)? saveData : undefined));
+      engine.send(Input.getStatus());
 
-                engine.send(Input.getNextWords([]));
-                setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
-                setCommand([]);
-              })
+      engine.send(Input.getNextWords([]));
+      setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
+      setCommand([]);
+    }
   
     const changeColourMode = (newMode : string) => {
         setColorMode(newMode);
+    }
+
+    // Engine creator
+    // Sets up proxies, and returns a new engine
+    const createEngine = (saveMessages : (messages : OutputEntry[]) => void) : DuplexProxy<InputMessage, OutputMessage> => {
+      // Restart is now running asynchronously, so the thing calling it does not block
+      const restartMachine = createRestarter(async forwarder => {
+        latestWordsRef.current = WordTree.createRoot();
+        window.localStorage.removeItem(AUTO_SAVE);
+        await loadGame(GAME_FILE, forwarder, null);
+      });
+
+      // Colour scheme picker
+      const colourSchemePicker = createColourSchemePicker(value => changeColourMode(value));
+
+      // Log clearer
+      const logClearer = createSimpleOption( "clear", () => {
+        messagesRef.current = [];
+        saveMessages([]);
+      });
+
+      const getInfo = createSimpleOption( "info", () => {
+        engine.send(Input.getInfo());
+      });
+
+      const undoFn = async () => {
+        engine.send(Input.undo());
+        engine.send(Input.getStatus());
+        engine.send(Input.getNextWords([]));
+      }
+
+      const redoFn = async () => { 
+        engine.send(Input.redo());
+        engine.send(Input.getStatus());
+        engine.send(Input.getNextWords([]));
+      }
+
+      // Create the engine and attach proxies
+      const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
+                        .insertProxy("undoredo", getUndoRedoFilter(statusRef, undoFn, redoFn))
+                        .insertProxy("optionItems", createStateMachineFilter(
+                                                    ["restart", restartMachine],
+                                                    ["colours", colourSchemePicker],
+                                                    ["clear", logClearer],
+                                                    ["info", getInfo]));
+                        //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
+      return engine;
     }
   
     // Initialization
@@ -119,48 +165,12 @@ function Tift() {
       const savedMessages = window.localStorage.getItem(MESSAGES);
       messagesRef.current = savedMessages? JSON.parse(savedMessages) : [];
 
-      // Set up Proxies
-      // Restart is now running asynchronously, so the thing calling it does not block
-      const restartMachine = createRestarter(async forwarder => {
-        latestWordsRef.current = WordTree.createRoot();
-        window.localStorage.removeItem(AUTO_SAVE);
-        await loadGame(GAME_FILE, forwarder, null);
-      });
-      const colourSchemePicker = createColourSchemePicker(value => changeColourMode(value));
-      const logClearer = createSimpleOption( "clear", () => {
-        messagesRef.current = [];
-        saveMessages([]);
-      });
-
-      const getInfo = createSimpleOption( "info", () => {
-        engine.send(Input.getInfo());
-      });
-
+      // Pauser
       const pauser = Pauser.createPauseFilter(
               async words => WordTree.set(latestWordsRef.current, command, words),
               async words => {getWords(words); /*setWords(latestWordsRef.current)*/});
 
-      const undoFn = async () => {
-        engine.send(Input.undo());
-        engine.send(Input.getStatus());
-        engine.send(Input.getNextWords([]));
-      }
-
-      const redoFn = async () => { 
-        engine.send(Input.redo());
-        engine.send(Input.getStatus());
-        engine.send(Input.getNextWords([]));
-      }
-
-      // Create the engine and attach proxies
-      const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
-                        .insertProxy("undoredo", getUndoRedoFilter(statusRef, undoFn, redoFn))
-                        .insertProxy("optionItems", createStateMachineFilter(
-                                                    ["restart", restartMachine],
-                                                    ["colours", colourSchemePicker],
-                                                    ["clear", logClearer],
-                                                    ["info", getInfo]));
-                        //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
+      const engine = createEngine(saveMessages);
 
       // Create the output consumer
       const outputConsumer = new OutputConsumerBuilder()
@@ -176,7 +186,6 @@ function Tift() {
   
       engineRef.current = engine;
       const saveData = window.localStorage.getItem(AUTO_SAVE);
-      
   
       loadGame(GAME_FILE, engine, saveData);
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,6 +286,11 @@ async function loadDefaults() : Promise<string> {
 
 async function loadStdLib() : Promise<string> {
     return fetch(process.env.PUBLIC_URL + "/" + STDLIB_FILE)
+            .then((response) => response.text());
+}
+
+async function loadGameData(name : string) : Promise<string> {
+    return fetch(process.env.PUBLIC_URL + "/" + name)
             .then((response) => response.text());
 }
 
