@@ -19,6 +19,7 @@ import { BACKSPACE, createSimpleOption } from "../util/util";
 import * as WordTree from "../util/wordtree";
 import { DuplexProxy } from "tift-types/src/util/duplexproxy";
 import { InputMessage } from "tift-types/src/messages/input";
+import { getInventoryFilter } from "../util/inventoryfilter";
 
 type WordTreeType = WordTree.WordTree;
 
@@ -128,6 +129,7 @@ function Tift() {
 
       // Create the engine and attach proxies
       const engine = createEngineProxy((output : OutputConsumer) => getEngine(output))
+                        .insertProxy("inventory", getInventoryFilter())
                         .insertProxy("undoredo", getUndoRedoFilter(statusRef, undoFn, redoFn))
                         .insertProxy("optionItems", createStateMachineFilter(
                                                     ["restart", restartMachine],
@@ -241,6 +243,9 @@ function Tift() {
         setCommand(command.slice(0, -2));
       } else if (word.type === "option") {
         setCommand([word]);
+      } else if (word.type === "word" && word.tags?.includes("inventory")) {
+        const position = word.position - 1;
+        setCommand([{type:"word", partOfSpeech: "verb", id:"?", value:"?", position} ,word]);
       } else {
         if (word.type === "word" && word.tags && word.tags.includes("truncated")) {
             const matchedPhrase = WordTree.matchPhrase(latestWordsRef.current, [...command, word].map(word => word.value).join(" ") );

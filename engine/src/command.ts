@@ -112,22 +112,23 @@ interface Modifiable {
 function getWords(node : SentenceNode) : PartOfSpeech[] {
     let word = undefined;
     const part = node.part;
+    const position = getPosition(node);
     switch(part.type) {
         case "start": 
-            word = makeWord("start", "", part.type);
+            word = makeWord("start", "", part.type, position);
             break;
         case "verb":
-            word = makeWord(part.verb.id, getName(part.verb), part.type);
+            word = makeWord(part.verb.id, getName(part.verb), part.type, position);
             break;
         case "directObject":
         case "indirectObject":
-            word = makeWord(part.entity.id, getName(part.entity), part.type);
+            word = makeWord(part.entity.id, getName(part.entity), part.type, position);
             break;
         case "preposition":
-            word = makeWord(part.value, part.value, part.type);
+            word = makeWord(part.value, part.value, part.type, position);
             break;
         case "modifier":
-            word = makeWord(part.value, part.value, part.type, part.modType);
+            word = makeWord(part.value, part.value, part.type, position, part.modType);
             break;
     }
 
@@ -136,11 +137,15 @@ function getWords(node : SentenceNode) : PartOfSpeech[] {
     return words;
 }
 
-function makeWord(id : string, value : string, partOfSpeech : PoSType, modifierType? : string) : PartOfSpeech {
+function getPosition(node : SentenceNode) : number {
+    return (node.previous)? getPosition(node.previous) + 1 : 0;
+}
+
+export function makeWord(id : string, value : string, partOfSpeech : PoSType, position : number, modifierType? : string) : PartOfSpeech {
     if (partOfSpeech === "modifier" && !modifierType) {
         throw new Error("Can't create modifer without a modifier type");
     }
-    return { id, value, type : "word", partOfSpeech, modifierType };
+    return { id, value, type : "word", partOfSpeech, position, modifierType };
 }
 
 /**

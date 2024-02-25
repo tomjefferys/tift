@@ -1,6 +1,6 @@
 import { History } from "tift-types/src/util/historyproxy";
 import { ControlType } from "tift-types/src/messages/controltype";
-import { OutputMessage, Word, LogLevel, SetVar } from "tift-types/src/messages/output";
+import { OutputMessage, Word, LogLevel, SetVar, StatusProperties } from "tift-types/src/messages/output";
 
 interface Stringable {
     toString : () => string
@@ -26,10 +26,13 @@ export function words(command : string[], words : Word[]) : OutputMessage {
     }
 }
 
-export function status(title : string, undoable : boolean, redoable : boolean) : OutputMessage {
+export function status(title : string,
+                       undoable : boolean,
+                       redoable : boolean,
+                       properties : StatusProperties) : OutputMessage {
     return {
         type : "Status",
-        status : { title, undoable, redoable }
+        status : { title, undoable, redoable, properties }
     }
 }
 

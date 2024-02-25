@@ -1,6 +1,7 @@
 import { Word } from "tift-types/src/messages/output";
 import * as WordTree from "./wordtree"
 
+const DUMMY_POSITION = 0;
 
 test("Test create/set/get", () => {
     const root = WordTree.createRoot();
@@ -47,7 +48,9 @@ test("Test match prefix", () => {
     const matches = WordTree.getWithPrefix(root, "get");
 
     //expect(matches).toStrictEqual(words("get down", "ball", "bag"));
-    expect(matches).toStrictEqual([{...word("get down", "down"), tags : ["truncated"]}, word("ball", "ball"), word("bag", "bag")]);
+    expect(matches).toStrictEqual([{...word("get down", DUMMY_POSITION, "down"), tags : ["truncated"]},
+                                     word("ball", DUMMY_POSITION, "ball"),
+                                     word("bag", DUMMY_POSITION, "bag")]);
 });
 
 test("Test match prefix transitive verb phrase", () => {
@@ -84,7 +87,7 @@ test("Test add leaf", () => {
     WordTree.set(root, words("push", "box"), words("north", "south"));
     WordTree.set(root, words("push", "chair"), words("east", "west"));
 
-    WordTree.addLeaf(root, word("backspace"));
+    WordTree.addLeaf(root, word("backspace", DUMMY_POSITION));
 
     expect(WordTree.get(root, [])).toStrictEqual(words("push"));
     expect(WordTree.get(root, words("push"))).toStrictEqual(words("box", "chair", "backspace"));
@@ -93,9 +96,9 @@ test("Test add leaf", () => {
 });
 
 function words(...wordList : string[]) : Word[] {
-    return wordList.map(w => word(w));
+    return wordList.map((w) => word(w, DUMMY_POSITION));
 }
 
-function word(id : string, value? : string) : Word {
-    return { id, value : value ?? id, type : "word", partOfSpeech : "verb"};
+function word(id : string, position : number, value? : string) : Word {
+    return { id, value : value ?? id, type : "word", partOfSpeech : "verb", position};
 }

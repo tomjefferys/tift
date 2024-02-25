@@ -19,15 +19,17 @@ interface ControlProps {
     wordSelected : WordSelected;
 }
 
+type WordFilter = (words:Word[]) => Word[];
+
 interface WordButtonsProps {
-    wordTypes : WordType[],
+    wordFilter: WordFilter,
     allWords : Word[],
     wordSelected : WordSelected;
 }
 
 interface PanelDefinition {
     name : string;
-    wordTypes : WordType[];
+    wordFilter : WordFilter;
 }
 
 interface SimpleButtonGridProps {
@@ -44,8 +46,11 @@ interface CustomButtonGridProps {
 }
 
 const PANELS : PanelDefinition[] = 
-                [{name : "Game",   wordTypes : ["word", "control"]}, 
-                 {name : "Options", wordTypes : ["option", "select"]}];
+                [{name : "Game",   wordFilter : words => filterWords(words, ["word", "control"])
+                                                            .filter(word => !word.tags?.includes("inventory"))}, 
+                 {name : "Inventory", wordFilter : words => filterWords(words, ["word"])
+                                                              .filter(word => word.tags?.includes("inventory"))},
+                 {name : "Options", wordFilter : words => filterWords(words, ["option", "select"])}];
 
 const Controls = ({ words, wordSelected } : ControlProps) => {
 
@@ -55,7 +60,7 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
 
     // Reset the tabs if the words change
     useEffect(() => {
-        const wordCounts = PANELS.map(panel => filterWords(words, panel.wordTypes).length)
+        const wordCounts = PANELS.map(panel => panel.wordFilter(words).length)
         const firstPanelWithContent = wordCounts.findIndex(count => count > 0);
         if (firstPanelWithContent >= 0) {
             setTabIndex(firstPanelWithContent);
@@ -68,15 +73,15 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
                 <TabList>{PANELS.map(panel => (<Tab key={panel.name}>{panel.name}</Tab>))}</TabList>
                 <TabPanels>{PANELS.map(panel => (
                     <TabPanel key={panel.name}>
-                        <WordButtons wordTypes={panel.wordTypes} allWords={words} wordSelected={wordSelected} />
+                        <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
                     </TabPanel>))}
                 </TabPanels>
             </Tabs>
         </Container>)
 };
 
-const WordButtons = ({ wordTypes, allWords, wordSelected } : WordButtonsProps) => {
-    const words = filterWords(allWords, wordTypes);
+const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) => {
+    const words = wordFilter(allWords);
     let element : JSX.Element;
     if (isDirectionPicker(words)) {
         element = <CustomButtonGrid  words={words} totalColumns={9} cells={DIRECTION_GRID} wordSelected={wordSelected} />
@@ -100,7 +105,7 @@ const isDirectionPicker = (words : Word[]) : boolean => {
     return isAllDirection && words.some(word => DIRECTION_GRID.find(({ wordId }) => wordId === word.id));
 }
 
-const isOptionPicker = (words : Word[]) : boolean => words.every(word => word.type === "option");
+const isOptionPicker = (words : Word[]) : boolean => words.length > 0 && words.every(word => word.type === "option");
 
 
 // Generate a new Id each time space is called
@@ -147,7 +152,11 @@ const CustomButtonGrid = ({ words, totalColumns, cells, wordSelected } : CustomB
                             ? (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>)
                             : ((defaultValue)
                                 ? (<WordButton key={wordId} 
-                                               word={{id : wordId, value : defaultValue, type : "word", partOfSpeech : "modifier" }}
+                                               word={{id : wordId,
+                                                      value : defaultValue,
+                                                      type : "word",
+                                                      partOfSpeech : "modifier",
+                                                      position : 1 }}
                                                disabled={true}
                                                wordSelected={wordSelected}/>)
                                 : (<></>))}

@@ -1,6 +1,6 @@
 import { Env } from "tift-types/src/env";
 import { Obj } from "tift-types/src/util/objects";
-import { OutputConsumer } from "tift-types/src/messages/output";
+import { OutputConsumer, StatusProperties } from "tift-types/src/messages/output";
 import { makeDefaultFunctions } from "./enginedefault";
 import * as Output from "./output";
 import * as Player from "./player";
@@ -14,6 +14,7 @@ import * as MultiDict from "../util/multidict";
 import * as Logger from "../util/logger";
 import * as Tags from "./tags";
 import * as Verbs from "./verbs";
+import { makeWord } from "../command";
 
 const logger = Logger.getLogger("behaviour");
 
@@ -27,6 +28,7 @@ export interface Behaviour {
     reset(env : Env, output : OutputConsumer) : void;
     start(env : Env) : void;
     getStatus(env : Env) : string;
+    getStatusProperties(env : Env) : StatusProperties;
     getContext(env : Env) : CommandContext;
     getOutput(env : Env) : OutputConsumer;
     makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) : void;
@@ -97,6 +99,14 @@ class DefaultBehaviour implements Behaviour {
         throw new Error("Could not find player location");
         }
         return getName(locations[0]);
+    }
+
+    getStatusProperties(env : Env): StatusProperties {
+        const inventoryItems = env.findObjs(obj => obj?.location === Player.INVENTORY && Entities.isEntity(obj));
+        // Convert to part of speech
+        const inventory = inventoryItems.map(item => makeWord(item.id, getName(item as Nameable), "directObject", 2))
+                                        .map(word => ({...word, tags: [...(word.tags ?? []), "inventory"]}));
+        return { inventory };
     }
 
     getOutput(env : Env) : OutputConsumer {

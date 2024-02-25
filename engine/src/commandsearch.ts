@@ -39,9 +39,12 @@ export function getAllCommands(objs: ContextEntities, verbs: Verb[], env : Env) 
           .map(state => state.getWords());
 }
 
+// Should get next words return an array?
 export function getNextWords(partial : string[], objs : ContextEntities, verbs : Verb[], env : Env) : Word[] {
   const context = buildSearchContext(objs, verbs, env);
   const searchTerms = [...SearchTerm.fromStrings(...partial), SearchTerm.WILD_CARD]
+  // This is alway returning the last words (as would be expected when calling this)
+  // But it needs to return the word at the wild card position
   const nextWords = search(searchTerms, context)
           .map(state => _.last(state.getWords()))
           .filter(Boolean)

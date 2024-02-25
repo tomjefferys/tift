@@ -105,7 +105,10 @@ test('can get item', async () => {
   await waitFor(() => getButton('inventory'));
   await act(() => user.click(getButton('inventory')));
 
-  await waitFor(() => screen.getByText('ball'));
+  await waitFor(() => {
+    const balls = screen.getAllByText('ball');
+    expect(balls).toHaveLength(2); // text output, and inventory button
+  })
 
   await waitFor(() => getButton('drop'));
   await act(() => user.click(getButton('drop')));

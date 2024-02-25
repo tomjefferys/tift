@@ -14,10 +14,13 @@ export type PoSType = "start" | "verb" | "directObject" | "preposition" | "indir
 
 type Not<T,R> = R extends T ? never : R;
 
+export type StatusProperties = {[key:string]:any};
+
 export type StatusType = {
     title : string, 
     undoable : boolean,
-    redoable : boolean
+    redoable : boolean,
+    properties : StatusProperties
 }
 
 export type Word = OptionWord | ControlWord | SelectWord | PartOfSpeech;
@@ -36,7 +39,8 @@ export interface SelectWord extends IdValue<string>, Partial<Taggable> {
 
 export interface PartOfSpeech extends IdValue<string>, Partial<Taggable> {
     type : "word";
-    partOfSpeech : PoSType
+    partOfSpeech : PoSType;
+    position : number;
     modifierType? : string;
 }
 

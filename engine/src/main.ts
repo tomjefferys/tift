@@ -180,7 +180,7 @@ export class OutputConsumerBuilder {
           this.controlConsumer? this.controlConsumer(message.value) : this.defaultConsumer(message);
           break;
         default:
-          throw new Error("Unsupported OutputMessage Type2: " + message.type);
+          throw new Error("Unsupported OutputMessage Type: " + message.type);
       }
     }
   }

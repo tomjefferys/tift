@@ -81,4 +81,4 @@ test("Test keyboard handler - test capitalized phrase", () => {
 
 const keyEvent = (key : string) : KeyboardEvent => new KeyboardEvent("KeyDown", { key });
 
-const word = (value : string) : Word => ({id : value, value, type : "word", partOfSpeech : "verb"})
+const word = (value : string) : Word => ({id : value, value, type : "word", partOfSpeech : "verb", position : 1})
