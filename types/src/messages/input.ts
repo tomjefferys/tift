@@ -1,8 +1,10 @@
+import { Word } from "./word";
+
 export type InputMessage = GetWords | Execute | GetStatus | Load | Start | Config | Reset | Undo | Redo | GetInfo;
 
 export interface GetWords {
     type : "GetWords",
-    command : string[]
+    command : Word[]
 }
 
 export interface Execute {

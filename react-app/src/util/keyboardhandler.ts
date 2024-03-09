@@ -1,4 +1,4 @@
-import { Word } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { Optional } from "tift-types/src/util/optional";
 import { BACKSPACE } from "./util";
 

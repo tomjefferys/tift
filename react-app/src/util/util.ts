@@ -1,5 +1,5 @@
 import { createStateMachine } from "tift-engine";
-import { Word } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { InputMessage } from 'tift-types/src/messages/input';
 import { DecoratedForwarder } from "tift-types/src/engineproxy";
 import { StateMachine, MachineOps } from "tift-types/src/util/statemachine";

@@ -1,4 +1,4 @@
-import { Word } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { handleKeyboardInput } from "./keyboardhandler";
 import { BACKSPACE } from "./util";
 

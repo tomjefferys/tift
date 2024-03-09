@@ -1,7 +1,8 @@
 import { OutputConsumerBuilder } from "./main";
 import { Execute, GetWords, InputMessage } from "tift-types/src/messages/input";
 import * as Output from "./messages/output";
-import { OutputMessage, Word } from "tift-types/src/messages/output"
+import { OutputMessage } from "tift-types/src/messages/output"
+import { Word } from "tift-types/src/messages/word"
 import { Consumer} from "tift-types/src/util/functions";
 import { DuplexProxy, Filters, Forwarder } from "tift-types/src/util/duplexproxy";
 import { createDuplexProxy } from "./util/duplexproxy";
@@ -44,7 +45,7 @@ export class DecoratedForwarderImpl implements DecoratedForwarder {
         this.delegate.respond(Output.log("warn", error));
     }
 
-    words(command : string[], words : Word[]) {
+    words(command : Word[], words : Word[]) {
         this.delegate.respond(Output.words(command, words));
     }
 
@@ -74,7 +75,7 @@ export class InputHandler {
         await this.on(() => this.message.type === "Execute", async () => fn((this.message as Execute).command));
     }
 
-    async onGetWords(fn : (words : string[]) => Promise<void>) : Promise<void> {
+    async onGetWords(fn : (words : Word[]) => Promise<void>) : Promise<void> {
         await this.on(() => this.message.type === "GetWords", async () => fn((this.message as GetWords).command));
     }
 
@@ -114,7 +115,7 @@ export function createWordFilter(type : "option" | "control", name : string, act
         requestFilter : async (message, forwarder) => {
             if (message.type === "Execute" && _.last(message.command) === commandId) {
                 action(forwarder);
-            } else if (message.type === "GetWords" && _.last(message.command) === commandId) {
+            } else if (message.type === "GetWords" && _.last(message.command)?.id === commandId) {
                 forwarder.respond(Output.words(message.command, []));
             } else {
                 forwarder.send(message);
@@ -171,7 +172,7 @@ export function createStateMachineFilter(...machines : MachineInfo[] ) : Filters
                     }
                 }
             } else if (message.type === "GetWords") {
-                const command = commands.find(value => value.id === _.last(message.command));
+                const command = commands.find(value => value.id === _.last(message.command)?.id);
                 if (command) {
                     forwarder.respond(Output.words(message.command, []));
                     handled = true;

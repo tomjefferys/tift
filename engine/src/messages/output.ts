@@ -1,6 +1,7 @@
 import { History } from "tift-types/src/util/historyproxy";
 import { ControlType } from "tift-types/src/messages/controltype";
-import { OutputMessage, Word, LogLevel, SetVar, StatusProperties } from "tift-types/src/messages/output";
+import { OutputMessage, LogLevel, SetVar, StatusProperties } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 
 interface Stringable {
     toString : () => string
@@ -18,7 +19,7 @@ export function print(value : Stringable, tag? : string) : OutputMessage {
     }
 }
 
-export function words(command : string[], words : Word[]) : OutputMessage {
+export function words(command : Word[], words : Word[]) : OutputMessage {
     return {
         type : "Words",
         command : command,

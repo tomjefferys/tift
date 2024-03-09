@@ -1,4 +1,5 @@
 import { Log, LogLevel, OutputConsumer, StatusType } from "tift-types/src/messages/output";
+import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { bindParams } from "../../src/script/parser"
 import { createRootEnv } from "../../src/env";
 import { Env, EnvFn } from "tift-types/src/env";
@@ -149,7 +150,13 @@ export type GetWordIdsFn = (partial : string[]) => string[];
 
 export function createGetWordIds(engine : EngineRef, wordsResponse : string[]) : GetWordIdsFn {
     return (partial) => {
-        engine.send(Input.getNextWords(partial));
+        const commandWords = partial.map((word, index) => (
+                { id : word, 
+                  value : word, 
+                  type : "word", 
+                  partOfSpeech : "verb", // FIXME won't always be verbs
+                  position : index + 1} as PartOfSpeech));
+        engine.send(Input.getNextWords(commandWords));
         const words = [...wordsResponse];
         wordsResponse.length = 0;
         return words;
@@ -163,7 +170,8 @@ export type ExpectWordsFn = (command : string[],
 
 export function createExpectWords(getWordIds : GetWordIdsFn) : ExpectWordsFn {
     return (command, expectedNextWords, exactMatch = true, notExpected = []) => {
-        const words = getWordIds((command));
+        const words = getWordIds(command);
+
         if (exactMatch) {
             expect(words).toHaveLength(expectedNextWords.length);
             expect(words).toEqual(expect.arrayContaining(expectedNextWords));

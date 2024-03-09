@@ -1,6 +1,7 @@
 import { OutputConsumerBuilder } from "tift-engine";
 import { InputMessage } from "tift-types/src/messages/input";
-import { OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
+import { OutputMessage, StatusType } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { Filters, Forwarder } from "tift-types/src/util/duplexproxy";
 
 /**
@@ -30,7 +31,7 @@ export function getInventoryFilter() : Filters<InputMessage, OutputMessage> {
             forwarder.respond({ type : "Status", status});
         }
 
-        const injectInventory = (command : string[], words : Word[]) => {
+        const injectInventory = (command : Word[], words : Word[]) => {
             const wordsResponse = (command.length === 0) ? [...words, ...inventory] : words;
             forwarder.respond({ type : "Words", command, words : wordsResponse});
         }

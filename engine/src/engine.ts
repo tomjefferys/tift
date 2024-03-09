@@ -4,6 +4,7 @@ import { Env } from "tift-types/src/env"
 import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
 import { OutputConsumer } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import * as Output from "./messages/output";
 import * as MessageOut from "./builder/output";
 import * as multidict from "./util/multidict";
@@ -264,9 +265,10 @@ export class BasicEngine implements Engine {
     Object.assign(this.config, newConfig);
   } 
 
-  getWords(partial : string[]) : void {
-    const nextWords = getNextWords(partial, this.context.entities, this.context.verbs, this.env);
-    const message = Output.words( partial, nextWords );
+  getWords(words : Word[]) : void {
+    const partialCommand = words.map(word => word.id);
+    const nextWords = getNextWords(partialCommand, this.context.entities, this.context.verbs, this.env);
+    const message = Output.words(words, nextWords );
     this.output(message);
   }
 

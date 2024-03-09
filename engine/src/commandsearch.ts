@@ -9,7 +9,7 @@ import * as Arrays from "./util/arrays"
 import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable, DirectObject } from "./command"
 import { Env } from "tift-types/src/env"
 import * as Logger from "./util/logger"
-import { PartOfSpeech, Word } from "tift-types/src/messages/output"
+import { PartOfSpeech, Word } from "tift-types/src/messages/word"
 import * as SearchTerm from "./searchterm";
 
 // verb                                -- intransitive verb
@@ -39,19 +39,20 @@ export function getAllCommands(objs: ContextEntities, verbs: Verb[], env : Env) 
           .map(state => state.getWords());
 }
 
-// Should get next words return an array?
 export function getNextWords(partial : string[], objs : ContextEntities, verbs : Verb[], env : Env) : Word[] {
   const context = buildSearchContext(objs, verbs, env);
-  const searchTerms = [...SearchTerm.fromStrings(...partial), SearchTerm.WILD_CARD]
-  // This is alway returning the last words (as would be expected when calling this)
-  // But it needs to return the word at the wild card position
+
+  const partialTerms = SearchTerm.fromStrings(...partial);
+  const searchTerms = partialTerms.includes(SearchTerm.WILD_CARD)? partialTerms : [...partialTerms, SearchTerm.WILD_CARD];
+  
+  const wildCardIndex = searchTerms.findIndex(term => term === SearchTerm.WILD_CARD);
+
   const nextWords = search(searchTerms, context)
-          .map(state => _.last(state.getWords()))
-          .filter(Boolean)
+          .map(state => state.getWords())
+          .map(words => words[wildCardIndex])
           .map(word => word as Word);
   return _.uniqBy(nextWords, word => word.id);  // TODO: do we still need to do this?
 }
-
 
 export interface SearchContext {
   objs:  ContextEntities,

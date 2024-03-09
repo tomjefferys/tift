@@ -2,7 +2,8 @@ import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter, OutputConsumerBuilder } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
-import { OutputConsumer, OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage, StatusType } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
@@ -55,7 +56,7 @@ function Tift() {
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
-      await engineRef.current?.send(Input.getNextWords(command.map(word => word.id)));
+      await engineRef.current?.send(Input.getNextWords(command));
       return WordTree.get(latestWordsRef.current, command);
     }
 
@@ -177,7 +178,7 @@ function Tift() {
       // Create the output consumer
       const outputConsumer = new OutputConsumerBuilder()
         .withMessageConsumer(message => updateMessages(messagesRef.current, messageEntry(message)))
-        .withWordsConsumer((command, words) => WordTree.set(latestWordsRef.current, command, words))
+        .withWordsConsumer((command, words) =>  WordTree.set(latestWordsRef.current, command, words))
         .withStatusConsumer(status => statusRef.current = status)
         .withSaveConsumer(saveGame)
         .withLogConsumer((level, message) => updateMessages(messagesRef.current,logEntry(level, message)))

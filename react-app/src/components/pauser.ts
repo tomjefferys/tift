@@ -1,6 +1,7 @@
 import { handleInput, word } from "tift-engine";
 import { InputMessage } from "tift-types/src/messages/input";
-import { OutputMessage, Word } from "tift-types/src/messages/output";
+import { OutputMessage } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { Filters, Forwarder } from "tift-types/src/util/duplexproxy";
 
 /**
@@ -27,7 +28,7 @@ export function createPauseFilter(setWords : (words : Word[]) => void, getWords 
       if (paused) {
         const handler = handleInput(input);
         await handler.onCommand(["continue"], pauser.unpause);
-        await handler.onGetWords( async command => command[0] === "continue" 
+        await handler.onGetWords( async command => command[0]?.id === "continue" 
                                   ? forwarder.respond({ type : "Words", command, words : []})
                                   : forwarder.respond({ type : "Words", command, words : CONTINUE}));
         await handler.onAny(async message => forwarder.send(message));

@@ -1,7 +1,7 @@
 import { Button, IconButton } from "@chakra-ui/react";
 import { ArrowBackIcon } from "@chakra-ui/icons";
 import { WordSelected } from "./Controls";
-import { Word } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 
 const ICONS : {[key:string]:React.ReactElement} = { 
     "__BACKSPACE__" : <ArrowBackIcon/>

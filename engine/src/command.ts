@@ -5,7 +5,7 @@ import { getName } from "./nameable";
 import { matchAll, not } from "./util/functions";
 import { Predicate } from "tift-types/src/util/functions";
 import * as Verb from "./verb"
-import { PoSType, PartOfSpeech } from "tift-types/src/messages/output";
+import { PoSType, PartOfSpeech } from "tift-types/src/messages/word";
 
 type Verb = Verb.Verb;
 

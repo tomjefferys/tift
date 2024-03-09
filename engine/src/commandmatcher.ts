@@ -1,5 +1,5 @@
 import { Command } from "./command";
-import { PoSType } from "tift-types/src/messages/output";
+import { PoSType } from "tift-types/src/messages/word";
 import { Obj } from "tift-types/src/util/objects"
 
 // verb                                -- intranitive verb

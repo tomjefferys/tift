@@ -1,6 +1,7 @@
 import { Forwarder, DuplexProxy } from "./util/duplexproxy";
 import { InputMessage } from "./messages/input";
-import { OutputMessage, Word } from "./messages/output";
+import { OutputMessage } from "./messages/output";
+import { Word } from "./messages/word";
 
 export type MessageForwarder = Forwarder<InputMessage, OutputMessage>;
 
@@ -13,5 +14,5 @@ export interface DecoratedForwarder extends MessageForwarder {
 
     error(error : string) : void;
 
-    words(command : string[], words : Word[]) : void;
+    words(command : Word[], words : Word[]) : void;
 }

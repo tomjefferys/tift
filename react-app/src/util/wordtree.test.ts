@@ -1,4 +1,4 @@
-import { Word } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import * as WordTree from "./wordtree"
 
 const DUMMY_POSITION = 0;
@@ -94,6 +94,30 @@ test("Test add leaf", () => {
     expect(WordTree.get(root, words("push", "box"))).toStrictEqual(words("north", "south", "backspace"));
     expect(WordTree.get(root, words("push", "chair"))).toStrictEqual(words("east", "west", "backspace"));
 });
+
+test("Test set with wildcard at start", () => {
+    const root = WordTree.createRoot();
+    WordTree.set(root, words("?", "ball"), words("drop", "throw"));
+    
+    expect(WordTree.get(root, [])).toStrictEqual(words("drop", "throw"))
+    expect(WordTree.get(root, words("drop"))).toStrictEqual(words("ball"));
+    expect(WordTree.get(root, words("throw"))).toStrictEqual(words("ball"));
+});
+
+test("Test set with wildcard and already populated tree", () => {
+    const root = WordTree.createRoot();
+    WordTree.set(root, words("push"), words("box"));
+    WordTree.set(root, words("?", "ball"), words("drop", "throw", "push"));
+
+    expect(WordTree.get(root, [])).toStrictEqual(words("push", "drop", "throw"));
+    expect(WordTree.get(root, words("drop"))).toStrictEqual(words("ball"));
+    expect(WordTree.get(root, words("throw"))).toStrictEqual(words("ball"));
+    expect(WordTree.get(root, words("push"))).toStrictEqual(words("box", "ball"));
+
+});
+
+
+
 
 function words(...wordList : string[]) : Word[] {
     return wordList.map((w) => word(w, DUMMY_POSITION));

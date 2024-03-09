@@ -72,7 +72,7 @@ test("Test commandproxy", () => {
     expect(output).toEqual(expect.arrayContaining([...STANDARD_VERBS, "restart"]));
     output.length = 0;
 
-    proxy.send(Input.getNextWords(["__option(restart)__"]));
+    proxy.send(Input.getNextWords([{id : "__option(restart)__", value : "restart", type : "option"}]));
     expect(output).toHaveLength(0);
     output.length = 0;
 

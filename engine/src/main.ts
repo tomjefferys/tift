@@ -1,5 +1,6 @@
 import { BasicEngine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
+import { LogLevel, OutputConsumer, OutputMessage, StatusType } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { InputMessage } from "tift-types/src/messages/input"
 import { BiConsumer, Consumer } from "tift-types/src/util/functions";
 import * as EngineProxy from "./engineproxy";
@@ -56,7 +57,7 @@ export function word(id : string, value : string, type : "option" | "control" | 
 }
 
 export namespace Input {
-  export function getNextWords(command : string[]) : InputMessage {
+  export function getNextWords(command : Word[]) : InputMessage {
     return {
         type : "GetWords",
         command : command
@@ -115,7 +116,7 @@ export namespace Input {
 export class OutputConsumerBuilder {
 
   messageConsumer? : Consumer<string>;
-  wordsConsumer? : BiConsumer<string[], Word[]>;
+  wordsConsumer? : BiConsumer<Word[], Word[]>;
   statusConsumer? : Consumer<StatusType>;
   logConsumer? : BiConsumer<LogLevel,string>;
   saveConsumer? : Consumer<string>;
@@ -127,7 +128,7 @@ export class OutputConsumerBuilder {
     return this;
   }
   
-  withWordsConsumer(wordsConsumer : BiConsumer<string[], Word[]>) : OutputConsumerBuilder {
+  withWordsConsumer(wordsConsumer : BiConsumer<Word[], Word[]>) : OutputConsumerBuilder {
     this.wordsConsumer = wordsConsumer;
     return this;
   }

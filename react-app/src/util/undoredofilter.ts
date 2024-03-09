@@ -1,5 +1,6 @@
 import { InputMessage } from "tift-types/src/messages/input";
-import { OutputMessage, StatusType, Word } from "tift-types/src/messages/output";
+import { OutputMessage, StatusType } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { Filters } from "tift-types/src/util/duplexproxy";
 import { OutputConsumerBuilder, handleInput } from "tift-engine";
 import { RefObject } from "react";
@@ -35,7 +36,7 @@ export function getUndoRedoFilter(
     }
 }
 
-function createWords(command : string[], words : Word[]) : OutputMessage {
+function createWords(command : Word[], words : Word[]) : OutputMessage {
     return { type : "Words", command, words };
 }
 

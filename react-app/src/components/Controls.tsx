@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabList, Tab, TabPanels, TabPanel, Container, SimpleGrid, Grid, GridItem} from "@chakra-ui/react";
-import { Word } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { WordType } from "tift-types/src/messages/output";
 import WordButton from "./WordButton";
 

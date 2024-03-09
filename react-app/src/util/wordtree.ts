@@ -2,8 +2,10 @@
  * Holds word objects in a tree form, with words that follow on stored as children
  * Used when processing keyboard input to handle partial word completions
  */
-import { Word } from "tift-types/src/messages/output";
+import { Word } from "tift-types/src/messages/word";
 import { Optional } from "tift-types/src/util/optional";
+
+const WILD_CARD = "?";
 
 const ROOT : Word = { id : "ROOT", value : "", type : "control"}
 
@@ -22,6 +24,17 @@ export function set(tree : WordTree, path : (Word | string)[], words : Word[]) :
     if (path.length > 0) {
         const head = path[0];
         const headId = (typeof head === "string")? head : head.id;
+        if (headId === WILD_CARD) {
+            for(const word of words) {
+                let branch = findBranch(children, word);
+                if (!branch) {
+                    branch = create(word);
+                    children.push(branch);
+                }
+                set(branch, path.slice(1), []);
+            }
+            return;
+        }
         let branch = children.find(([word, _]) => word.id === headId);
         if (!branch) {
            if (typeof head === "string") {
@@ -36,6 +49,10 @@ export function set(tree : WordTree, path : (Word | string)[], words : Word[]) :
                               .map(word => create(word));
         children.push(...newBranch);
     }
+}
+
+function findBranch(branches : WordTree[], word : Word) : Optional<WordTree> {
+    return branches.find(([w, _]) => w.id === word.id);
 }
 
 

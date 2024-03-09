@@ -1,6 +1,6 @@
 import { ControlType } from "./controltype";
-import { IdValue, Taggable } from "../shared";
 import { History } from "../util/historyproxy";
+import { Word } from "./word";
 
 export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control
 
@@ -10,7 +10,6 @@ export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
 
 export type WordType = "word" | "option" | "control" | "select";
 
-export type PoSType = "start" | "verb" | "directObject" | "preposition" | "indirectObject" | "modifier";
 
 type Not<T,R> = R extends T ? never : R;
 
@@ -23,26 +22,6 @@ export type StatusType = {
     properties : StatusProperties
 }
 
-export type Word = OptionWord | ControlWord | SelectWord | PartOfSpeech;
-
-export interface OptionWord extends IdValue<string>, Partial<Taggable> {
-    type : "option";
-}
-
-export interface ControlWord extends IdValue<string>, Partial<Taggable> {
-    type : "control";
-}
-
-export interface SelectWord extends IdValue<string>, Partial<Taggable> {
-    type : "select";
-}
-
-export interface PartOfSpeech extends IdValue<string>, Partial<Taggable> {
-    type : "word";
-    partOfSpeech : PoSType;
-    position : number;
-    modifierType? : string;
-}
 
 export interface Print {
     type : "Print",
@@ -64,7 +43,7 @@ export interface Look {
 
 export interface Words {
     type : "Words",
-    command : string[],
+    command : Word[],
     words : Word[]
 }
 
