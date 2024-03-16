@@ -4,6 +4,7 @@
  */
 import { Word } from "tift-types/src/messages/word";
 import { Optional } from "tift-types/src/util/optional";
+import _ from "lodash";
 
 const WILD_CARD = "?";
 
@@ -31,6 +32,7 @@ export function set(tree : WordTree, path : (Word | string)[], words : Word[]) :
                     branch = create(word);
                     children.push(branch);
                 }
+                // FIXME don't do this if the word is an Option
                 set(branch, path.slice(1), []);
             }
             return;
@@ -69,6 +71,87 @@ export function get(tree : WordTree, path : Word[]) : Word[] {
     return result;
 }
 
+/**
+ * Find all word lists that match
+ * @param tree 
+ * @param path 
+ * @returns 
+ */
+export function getAll(tree : WordTree, path : Word[]) : Word[][] {
+    const [word, children] = tree;
+    const head = path[0];
+    const tail = path.slice(1);
+    let result : Word[][] = []
+    if (word === ROOT) {
+        result = children.flatMap(child => getAll(child, path));
+    } else if (word.id === head.id || head.id === WILD_CARD) {
+        if (tail.length === 0) {
+            result = [[word]];
+        } else {
+            const childResults = children.flatMap(child => getAll(child, tail));
+            result = childResults.map(result => [word, ...result]);
+        }
+    }
+    return result;
+}
+
+/**
+ * Get all wildcard matches
+ * @param tree 
+ * @param path 
+ * @returns a list of lists of words for each wildcard match
+ */
+export function getWildCardMatches(tree : WordTree, path : Word[]) : Word[][] {
+    const sentenceMatches = getAll(tree, path);
+    const wildCardIndexes = getWildCardIndexes(path);
+    const wildCardMatches = wildCardIndexes.map(index => 
+        _.uniqBy(sentenceMatches.map(sentence => sentence[index]), word => word.id));
+    return wildCardMatches;
+}
+
+function getWildCardIndexes(path : Word[]) : number[] {
+    return path.map((word, index) => word.id === WILD_CARD? index : -1)
+               .filter(index => index !== -1);
+}
+
+/**
+ * Returns a tree containing only the items on th given path, 
+ * taking into account any wild cards
+ * @param tree
+ * @param path 
+ */
+export function getSubTree(tree : WordTree, path : Word[]) : WordTree {
+    const sentences = getAll(tree, path);
+    const newTree = createRoot();
+    sentences.forEach(sentence => setSentence(newTree, sentence));
+    return newTree;
+}
+
+/**
+ * Set a sentence in the tree
+ * @param tree 
+ * @param sentence 
+ */
+function setSentence(tree : WordTree, sentence : Word[]) {
+    const [_, children] = tree;
+    if (sentence.length > 0) {
+        const head = sentence[0];
+        let branch = children.find(([word, _]) => word.id === head.id); 
+        if (!branch) {
+            branch = create(head);
+            children.push(branch);
+        }
+        setSentence(branch, sentence.slice(1));
+    }
+}
+
+/**
+ * Takes a string prefix, and returns matches from the tree that start with that prefix
+ * @param tree 
+ * @param prefix 
+ * @param accumulator 
+ * @returns 
+ */
 export function getWithPrefix(tree : WordTree, prefix : string, accumulator = "") : Word[] {
     const [word, children] = tree;
     let result : Word[] = [];

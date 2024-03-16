@@ -57,7 +57,9 @@ function Tift() {
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
       await engineRef.current?.send(Input.getNextWords(command));
-      return WordTree.get(latestWordsRef.current, command);
+      return (command.find(word => word.id === "?") != null)
+          ? WordTree.getWildCardMatches(latestWordsRef.current, command)[0]
+          : WordTree.get(latestWordsRef.current, command);
     }
 
     const execute = async (command : Word[]) => await engineRef.current?.send(Input.execute(command.map(word => word.id)));
@@ -178,7 +180,7 @@ function Tift() {
       // Create the output consumer
       const outputConsumer = new OutputConsumerBuilder()
         .withMessageConsumer(message => updateMessages(messagesRef.current, messageEntry(message)))
-        .withWordsConsumer((command, words) =>  WordTree.set(latestWordsRef.current, command, words))
+        .withWordsConsumer((command, words) => WordTree.set(latestWordsRef.current, command, words))
         .withStatusConsumer(status => statusRef.current = status)
         .withSaveConsumer(saveGame)
         .withLogConsumer((level, message) => updateMessages(messagesRef.current,logEntry(level, message)))
@@ -197,8 +199,8 @@ function Tift() {
     // Add keyboard listener
     useEffect(() => {
       const handleKeyDown = (e : KeyboardEvent) : void => {
-        const result = handleKeyboardInput(partialWord, 
-                WordTree.getWithPrefix(latestWordsRef.current, command.map(word => word.value).join(" ")), e);
+        const nextWords = getPossibleNextWords();
+        const result = handleKeyboardInput(partialWord, nextWords, e);
         if (result.selected) {
           wordSelected(undefined, result.selected);
         } else {
@@ -235,11 +237,35 @@ function Tift() {
         }
       }
       if (!command.length || gameWords.length) {
-        setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, command.map(word => word.value).join(" ")));
+        const words = getPossibleNextWords();
+        setFilteredWords(words);
       }
+    }
+
+    /**
+     * Gets all the next possible words for the current command
+     * If the are wildcards this will be the words at the position of the first wildcard
+     * If there are no wildcards this will be the words that follow the command
+     * Will take into account the current partial word to further filter available words
+     * @returns
+     */
+    const getPossibleNextWords = () => {
+        let tree = latestWordsRef.current;
+        let commandWords = command;
+        const wildCardIndex = command.findIndex(word => word.id === "?");
+        if (wildCardIndex !== -1) {
+          // Limit the tree to only the words that match the command
+          tree = WordTree.getSubTree(tree, command);
+          // Don't including anything after the wildcard for the prefix
+          commandWords = command.slice(0, wildCardIndex);
+        }
+        const words = WordTree.getWithPrefix(tree, commandWords.map(word => word.value).join(" "));
+        return words;
     }
   
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
+      //This should handle wildcards in the command.
+      //The selected word should replace the first wildcard
       if (word === BACKSPACE) {
         setCommand(command.slice(0, -2));
       } else if (word.type === "option") {
@@ -248,7 +274,12 @@ function Tift() {
         const position = word.position - 1;
         setCommand([{type:"word", partOfSpeech: "verb", id:"?", value:"?", position} ,word]);
       } else {
-        if (word.type === "word" && word.tags && word.tags.includes("truncated")) {
+        const wildCardIndex = command.findIndex(word => word.id === "?");
+        if (wildCardIndex !== -1) {
+          setCommand([...command.slice(0, wildCardIndex),
+                      word,
+                      ...command.slice(wildCardIndex + 1)]);
+        } else if (word.type === "word" && word.tags && word.tags.includes("truncated")) {
             const matchedPhrase = WordTree.matchPhrase(latestWordsRef.current, [...command, word].map(word => word.value).join(" ") );
             if (matchedPhrase) { 
               setCommand(matchedPhrase);
@@ -260,8 +291,18 @@ function Tift() {
     }
 
     const getCommand = () : string => {
-      return command.map(word => word.value).join(" ")
-                + ((partialWord.length)? " " + partialWord : "");
+      const wildCardIndex = command.findIndex(word => word.id === "?");
+      const wordStrs = command.map(word => word.value);
+      const partialStr = partialWord.length? partialWord : "";
+      let words = wordStrs;
+      if (wildCardIndex != -1) {
+        words = [...wordStrs.slice(0, wildCardIndex), 
+                       partialStr,
+                       ...wordStrs.slice(wildCardIndex + 1)];
+      } else {
+        words = [...wordStrs, partialStr];
+      }
+      return words.map(word => word).join(" ");
     }
 
     return (
