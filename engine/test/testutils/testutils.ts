@@ -1,5 +1,5 @@
 import { Log, LogLevel, OutputConsumer, StatusType } from "tift-types/src/messages/output";
-import { PartOfSpeech, Word } from "tift-types/src/messages/word";
+import { PartOfSpeech } from "tift-types/src/messages/word";
 import { bindParams } from "../../src/script/parser"
 import { createRootEnv } from "../../src/env";
 import { Env, EnvFn } from "tift-types/src/env";
