@@ -239,6 +239,88 @@ test('undo/redo', async () => {
   });
 });
 
+test('Can use inventory item', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+  await waitFor(() => screen.getAllByText('ball'));
+
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  await waitFor(() => getButton('Inventory', 'tab'));
+  await act(() => user.click(getButton('Inventory', 'tab')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  await waitFor(() => getButton('examine'));
+  await waitFor(() => getButton('drop'));
+  
+  // Check that go and drop aren't available
+  const goButton = screen.queryByRole('button', { name : 'go' } );
+  expect(goButton).toBeNull();
+
+  await act(() => user.click(getButton('examine')));
+  await waitFor(() => screen.getByText('a round ball'));
+});
+
+test('Can use inventory item with keyboard', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+  await waitFor(() => screen.getAllByText('ball'));
+
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  await user.keyboard('ball ');
+
+  await waitFor(() => getButton('examine'));
+  await waitFor(() => getButton('drop'));
+
+  const goButton = screen.queryByRole('button', { name : 'go' } );
+  expect(goButton).toBeNull();
+
+  await user.keyboard('examine{Enter}');
+  
+  await waitFor(() => screen.getByText('a round ball'));
+}); 
+
+test('Can use inventory item with keyboard autocomplete', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+  await waitFor(() => screen.getAllByText('ball'));
+
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  await user.keyboard('ba ');
+
+  await waitFor(() => getButton('examine'));
+  await waitFor(() => getButton('drop'));
+
+  const goButton = screen.queryByRole('button', { name : 'go' } );
+  expect(goButton).toBeNull();
+
+  await user.keyboard('e ');
+  
+  await waitFor(() => screen.getByText('a round ball'));
+});
+
 function getButton(name : string, role = "button") : HTMLElement {
   return screen.getByRole(role, { name });
 }
