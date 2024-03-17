@@ -32,6 +32,12 @@ after:
   drop(this):
     do: print('boing boing')
 ---
+item: box
+desc: a large box
+location: cave
+tags:
+  - pushable
+---
 `
 
 const server = setupServer(
@@ -118,6 +124,111 @@ test('can get item', async () => {
 
   await waitFor(() => screen.getByText('boing boing'));
 })
+
+test('Test backspace', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+  await waitFor(() => screen.getAllByText('ball'));
+
+  // Confirm no backspace button yet
+  let backspaceButton = screen.queryByRole('button', { name : 'backspace' } );
+  expect(backspaceButton).toBeNull();
+
+  await waitFor(() => getButton('get'));
+  await waitFor(() => getButton('go'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  // Check we now have a backspace button
+  await waitFor(() => getButton('backspace'));
+
+  // Click backspace
+  await act(() => user.click(getButton('backspace')));
+  await waitFor(() => getButton('get'));
+  await waitFor(() => getButton('go'));
+
+  const ballButton = screen.queryByRole('button', { name : 'ball' } );
+  expect(ballButton).toBeNull();
+
+  backspaceButton = screen.queryByRole('button', { name : 'backspace' } );
+  expect(backspaceButton).toBeNull();
+});
+
+test('Test backspace only deletes single word', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+  await waitFor(() => screen.getAllByText('box'));
+
+  // Confirm no backspace button yet
+  await waitFor(() => {
+    const backspaceButton = screen.queryByRole('button', { name : 'backspace' } );
+    expect(backspaceButton).toBeNull();
+  });
+
+  await waitFor(() => getButton('push'));
+  await act(() => user.click(getButton('push')));
+
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).toContain("push");
+  })
+
+  await waitFor(() => getButton('box'));
+  await waitFor(() => getButton('backspace'));
+
+  // Click backspace
+  await act(() => user.click(getButton('backspace')));
+  await waitFor(() => getButton('push'));
+
+  // There should be no command
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).not.toContain("push");
+  })
+
+  // There should be no backspace
+  await waitFor(() => {
+    const backspaceButton = screen.queryByRole('button', { name : 'backspace' } );
+    expect(backspaceButton).toBeNull();
+  })
+
+  await act(() => user.click(getButton('push')));
+  await waitFor(() => getButton('box'));
+  await act(() => user.click(getButton('box')));
+
+  await waitFor(() => getButton('south'));
+  await waitFor(() => getButton('backspace'));
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).toContain("push box");
+  })
+
+  // Click backspace
+  await act(() => user.click(getButton('backspace')));
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).toContain("push");
+    expect(command.textContent).not.toContain("push box");
+  })
+
+  await waitFor(() => getButton('box'));
+  await waitFor(() => getButton('backspace'));
+  await act(() => user.click(getButton('backspace')));
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).not.toContain("push");
+  })
+
+  await waitFor(() => {
+    const backspaceButton = screen.queryByRole('button', { name : 'backspace' } );
+    expect(backspaceButton).toBeNull();
+  })
+
+});
 
 test('can change location with keyboard', async () => {
   const user = userEvent.setup();
@@ -260,6 +371,7 @@ test('Can use inventory item', async () => {
 
   await waitFor(() => getButton('examine'));
   await waitFor(() => getButton('drop'));
+  await waitFor(() => getButton('backspace'));
   
   // Check that go and drop aren't available
   const goButton = screen.queryByRole('button', { name : 'go' } );
@@ -286,6 +398,7 @@ test('Can use inventory item with keyboard', async () => {
 
   await waitFor(() => getButton('examine'));
   await waitFor(() => getButton('drop'));
+  await waitFor(() => getButton('backspace'));
 
   const goButton = screen.queryByRole('button', { name : 'go' } );
   expect(goButton).toBeNull();

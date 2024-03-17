@@ -27,7 +27,7 @@ interface LogEntryProps {
 }
 
 const MessageEntry = ({ value } : EntryProps)  => (<ReactMarkdown components={ChakraUIRenderer()}>{value}</ReactMarkdown>)
-const CommandEntry = ({ value } : EntryProps) => (<Text color={"green"}>&gt; {value}</Text>)
+const CommandEntry = ({ value } : EntryProps) => (<Text color={"green"} data-testid="command">&gt; {value}</Text>)
 const LogEntry = ({ logLevel, message } : LogEntryProps) => (<Text color={LEVEL_COLOURS[logLevel]}>{message}</Text>)
 
 const renderMessage = (message : OutputEntry) => {

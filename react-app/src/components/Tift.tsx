@@ -230,14 +230,13 @@ function Tift() {
         latestWordsRef.current = WordTree.createRoot();
         setCommand([]);
         await getWords([]);
-      } else if (engine && command.length && gameWords.length) {
-        // Add in backspace if it's not already there
-        if (!words.includes(BACKSPACE)) {
-          WordTree.addLeaf(latestWordsRef.current, BACKSPACE);
-        }
-      }
+      } 
+
       if (!command.length || gameWords.length) {
         const words = getPossibleNextWords();
+        if (command.length && gameWords.length && !words.includes(BACKSPACE)) {
+          words.push(BACKSPACE);
+        }
         setFilteredWords(words);
       }
     }
@@ -267,7 +266,7 @@ function Tift() {
       //This should handle wildcards in the command.
       //The selected word should replace the first wildcard
       if (word === BACKSPACE) {
-        setCommand(command.slice(0, -2));
+        setCommand(command.slice(0, -1));
       } else if (word.type === "option") {
         setCommand([word]);
       } else if (word.type === "word" && word.tags?.includes("inventory")) {
