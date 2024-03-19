@@ -31,6 +31,7 @@ export type Command = SentenceNode;
 export interface SentenceNode {
     part : Part,
     previous? : SentenceNode,
+    contexts : string[],
     
     getPoS<T extends PoSType>(posType : T) : PoSObjectType<T> | undefined,
     getVerb(verbId : string) : MainVerb | undefined, 
@@ -38,6 +39,8 @@ export interface SentenceNode {
     getPreposition(prepos : string) : Preposition | undefined,
     getModifier(modtype : string, modValue : string) : Modifier | undefined,
     getIndirectObject(entityId : string) : IndirectObject | undefined,
+
+    getContexts() : string[],
 
     find(predicate : (part : Part) => boolean) : Part | undefined,
 
@@ -293,6 +296,7 @@ function makeNode(part : Part, prev? : SentenceNode) : SentenceNode {
     const node : SentenceNode = {
         part : part, 
         previous : prev,
+        contexts : [],
 
         getPoS : <T extends PoSType>(posType : T) => node.find(part => part.type === posType) as PoSObjectType<T>,
 
@@ -305,6 +309,8 @@ function makeNode(part : Part, prev? : SentenceNode) : SentenceNode {
         getModifier : (modtype, modValue) => node.find(part => part.type === "modifier" && part.modType === modtype && part.value === modValue) as Modifier,
 
         getIndirectObject : (entityId : string) => node.find(part => part.type === "indirectObject" && part.entity.id === entityId) as IndirectObject,
+
+        getContexts : () => [...node.contexts, ...(prev?.getContexts() ?? [])],
 
         find : predicate => predicate(part) ? part : prev?.find(predicate),
 

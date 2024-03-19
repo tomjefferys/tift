@@ -116,11 +116,14 @@ test('can get item', async () => {
     expect(balls).toHaveLength(2); // text output, and inventory button
   })
 
-  await waitFor(() => getButton('drop'));
-  await act(() => user.click(getButton('drop')));
-
+  await waitFor(() => getButton('Inventory', 'tab'));
+  await act(() => user.click(getButton('Inventory', 'tab')));
+ 
   await waitFor(() => getButton('ball'));
   await act(() => user.click(getButton('ball')));
+
+  await waitFor(() => getButton('drop'));
+  await act(() => user.click(getButton('drop')));
 
   await waitFor(() => screen.getByText('boing boing'));
 })
@@ -380,6 +383,32 @@ test('Can use inventory item', async () => {
   await act(() => user.click(getButton('examine')));
   await waitFor(() => screen.getByText('a round ball'));
 });
+
+test('Inventory item verb still available for other contexts', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+  await waitFor(() => screen.getAllByText('ball'));
+
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  // Examine should be available
+  await waitFor(() => getButton('examine'));
+
+  await waitFor(() => getButton('Inventory', 'tab'));
+  await act(() => user.click(getButton('Inventory', 'tab')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  // Examine should be available as an inventory verb
+  await waitFor(() => getButton('examine'));
+})
 
 test('Can use inventory item with keyboard', async () => {
   const user = userEvent.setup();

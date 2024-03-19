@@ -48,11 +48,38 @@ export function getNextWords(partial : string[], objs : ContextEntities, verbs :
   const wildCardIndex = searchTerms.findIndex(term => term === SearchTerm.WILD_CARD);
 
   const nextWords = search(searchTerms, context)
-          .map(state => state.getWords())
-          .map(words => words[wildCardIndex])
-          .map(word => word as Word);
-  return _.uniqBy(nextWords, word => word.id);  // TODO: do we still need to do this?
+          .map(state => {
+            const word = state.getWords()[wildCardIndex];
+            const contexts = state.getContexts().map(context => "context:" + context);
+            const tags = [...contexts, ...(word.tags ?? [])];
+            return { ...word, tags };
+          });
+  
+  const uniqueNextWords = getUniqueWords(nextWords);
+  return uniqueNextWords;
 }
+
+/**
+ * Create a list of unique words, merging tags in any duplicates
+ * @param words list of words, possibly with duplicates
+ * @returns list of unique words
+ */
+function getUniqueWords(words : PartOfSpeech[]) : PartOfSpeech[] {
+  const uniqueWords : PartOfSpeech[] = [];
+  for (const word of words) {
+    const index = uniqueWords.findIndex(w => w.id === word.id);
+    if (index !== -1) {
+      const match = uniqueWords[index];
+      const tags = _.uniq([...(match.tags ?? []), ...(word.tags ?? [])]);
+      const mergedWord = { ...match, tags };
+      uniqueWords[index] = mergedWord;
+    } else {
+      uniqueWords.push(word);
+    }
+  }
+  return uniqueWords;
+}
+
 
 export interface SearchContext {
   objs:  ContextEntities,
@@ -176,7 +203,10 @@ const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
       getVerbs(context, entities, context.verbs, verbContext)
         .filter(filter)
         .map(v => castVerbable(state).verb(v))
-        .forEach(state => states.push(state));
+        .forEach(state => {
+          state.contexts.push(verbContext);
+          states.push(state);
+        });
     }
     logger.trace(() => `verb search ${state} = [${states.join(",")}]`);
     return states;

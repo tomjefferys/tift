@@ -21,6 +21,7 @@ import * as WordTree from "../util/wordtree";
 import { DuplexProxy } from "tift-types/src/util/duplexproxy";
 import { InputMessage } from "tift-types/src/messages/input";
 import { getInventoryFilter } from "../util/inventoryfilter";
+import _ from "lodash";
 
 type WordTreeType = WordTree.WordTree;
 
@@ -258,7 +259,12 @@ function Tift() {
           // Don't including anything after the wildcard for the prefix
           commandWords = command.slice(0, wildCardIndex);
         }
-        const words = WordTree.getWithPrefix(tree, commandWords.map(word => word.value).join(" "));
+        let words = WordTree.getWithPrefix(tree, commandWords.map(word => word.value).join(" "));
+        if (!command.length) {
+          // Strip out any words that are only for the inventory context
+          const getContexts = (word : Word) => word.tags?.filter(tag => tag.startsWith("context")) ?? [];
+          words = words.filter(word => !(_.isEqual(getContexts(word), ["context:inventory"])));
+        }
         return words;
     }
   
