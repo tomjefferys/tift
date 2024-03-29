@@ -20,32 +20,19 @@ function create(word : Word) : WordTree {
     return [word, []];
 }
 
-export function set(tree : WordTree, path : (Word | string)[], words : Word[]) : void {
-    const [_, children] = tree;
+export function set(tree : WordTree, path : Word[], words : Word[]) : void {
+    const [_word, children] = tree;
     if (path.length > 0) {
         const head = path[0];
-        const headId = (typeof head === "string")? head : head.id;
-        if (headId === WILD_CARD) {
+        if (head.id === WILD_CARD) {
             for(const word of words) {
-                let branch = findBranch(children, word);
-                if (!branch) {
-                    branch = create(word);
-                    children.push(branch);
-                }
-                // FIXME don't do this if the word is an Option
+                const branch = findAndUpdateBranch(children, word);
                 set(branch, path.slice(1), []);
             }
-            return;
+        } else {
+            const branch = findAndUpdateBranch(children, head);
+            set(branch, path.slice(1), words);
         }
-        let branch = children.find(([word, _]) => word.id === headId);
-        if (!branch) {
-           if (typeof head === "string") {
-              throw new Error(`Trying follow word path: ${headId} but it does not already exit`);
-           }
-           branch = create(head) 
-           children.push(branch);
-        }
-        set(branch, path.slice(1), words);
     } else {
         const newBranch = words.filter(word => !children.find(([child, _]) => child.id === word.id))
                               .map(word => create(word));
@@ -53,8 +40,34 @@ export function set(tree : WordTree, path : (Word | string)[], words : Word[]) :
     }
 }
 
-function findBranch(branches : WordTree[], word : Word) : Optional<WordTree> {
-    return branches.find(([w, _]) => w.id === word.id);
+/**
+ * Locates a branch matching a word, creating it if it does not exist
+ * or replacing it if it not an exact match
+ * @param branches a mutable list of branches
+ * @param word the word to match
+ * @returns the matching or newly created branch
+ */
+function findAndUpdateBranch(branches : WordTree[], word : Word) : WordTree {
+    const branchIndex = findBranchIndex(branches, word);
+    let branch : Optional<WordTree> = undefined;
+    if (branchIndex !== -1) {
+        const [branchWord, _children] = branches[branchIndex];
+        if (_.isEqual(branchWord, word)) {
+            branch = branches[branchIndex];
+        } else  {
+            branches.splice(branchIndex, 1);
+            branch = undefined;
+        }
+    }
+    if (!branch) {
+        branch = create(word);
+        branches.push(branch);
+    }
+    return branch;
+}
+
+function findBranchIndex(branches : WordTree[], word : Word) : number {
+    return branches.findIndex(([w, _]) => w.id === word.id);
 }
 
 

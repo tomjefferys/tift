@@ -3,7 +3,7 @@ import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter, OutputConsumerBuilder } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
 import { OutputConsumer, OutputMessage, StatusType } from "tift-types/src/messages/output";
-import { Word } from "tift-types/src/messages/word";
+import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
@@ -33,6 +33,8 @@ const AUTO_SAVE = "TIFT_AUTO_SAVE";
 const MESSAGES = "TIFT_MESSAGES";
 
 const SCROLL_BACK_ITEMS = 200;
+
+const WILD_CARD : PartOfSpeech = {type:"word", partOfSpeech: "verb", id:"?", value:"?", position:0 };
 
 type WordList = Word[];
 
@@ -225,17 +227,18 @@ function Tift() {
       const engine = engineRef.current;
       const gameWords = words.filter(word => word.type === "word");
       if (engine && command.length && !gameWords.length) {
-        messagesRef.current?.push(commandEntry(command.map(word => word.value).join(" ")))
-        await execute(command);
+        const commandWords = command.filter(word => word.id !== "?");
+        messagesRef.current?.push(commandEntry(commandWords.map(word => word.value).join(" ")))
+        await execute(commandWords);
         engine.send(Input.getStatus());
         latestWordsRef.current = WordTree.createRoot();
-        setCommand([]);
-        await getWords([]);
+        setCommand([WILD_CARD]);
+        await getWords([WILD_CARD]);
       } 
 
       if (!command.length || gameWords.length) {
         const words = getPossibleNextWords();
-        if (command.length && gameWords.length && !words.includes(BACKSPACE)) {
+        if (command.length > 1 && gameWords.length && !words.includes(BACKSPACE)) {
           words.push(BACKSPACE);
         }
         setFilteredWords(words);
@@ -260,8 +263,8 @@ function Tift() {
           commandWords = command.slice(0, wildCardIndex);
         }
         let words = WordTree.getWithPrefix(tree, commandWords.map(word => word.value).join(" "));
-        if (!command.length) {
-          // Strip out any words that are only for the inventory context
+        if (!command.filter(word => word.id !== '?').length) {
+          // Strip out any words that are only for the inventory context 
           const getContexts = (word : Word) => word.tags?.filter(tag => tag.startsWith("context")) ?? [];
           words = words.filter(word => !(_.isEqual(getContexts(word), ["context:inventory"])));
         }
@@ -269,29 +272,38 @@ function Tift() {
     }
   
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
-      //This should handle wildcards in the command.
       //The selected word should replace the first wildcard
       if (word === BACKSPACE) {
-        setCommand(command.slice(0, -1));
+        if (command.length > 1) {
+          let newCommand;
+          if (command[command.length - 1].id === "?") {
+            newCommand = [...command.slice(0, -2), WILD_CARD];
+          } else {
+            newCommand = command.slice(0, -1);
+          }
+          setCommand(newCommand);
+        }
       } else if (word.type === "option") {
         setCommand([word]);
       } else if (word.type === "word" && word.tags?.includes("inventory")) {
         const position = word.position - 1;
-        setCommand([{type:"word", partOfSpeech: "verb", id:"?", value:"?", position} ,word]);
+        setCommand([ {...WILD_CARD, position}, word]);
       } else {
         const wildCardIndex = command.findIndex(word => word.id === "?");
         if (wildCardIndex !== -1) {
           setCommand([...command.slice(0, wildCardIndex),
                       word,
-                      ...command.slice(wildCardIndex + 1)]);
+                      ...command.slice(wildCardIndex + 1),
+                      WILD_CARD]);
         } else if (word.type === "word" && word.tags && word.tags.includes("truncated")) {
+            // TODO not sure if we need this any more
             const matchedPhrase = WordTree.matchPhrase(latestWordsRef.current, [...command, word].map(word => word.value).join(" ") );
             if (matchedPhrase) { 
               setCommand(matchedPhrase);
             }
         } else {
-          setCommand([...command, word]);
-        }
+          setCommand([...command, word, WILD_CARD]);
+        } 
       }
     }
 

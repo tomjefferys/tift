@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabList, Tab, TabPanels, TabPanel, Container, SimpleGrid, Grid, GridItem} from "@chakra-ui/react";
-import { Word } from "tift-types/src/messages/word";
+import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { WordType } from "tift-types/src/messages/output";
 import WordButton from "./WordButton";
 
@@ -100,8 +100,8 @@ const SimpleButtonGrid = ({ words, columns, wordSelected } : SimpleButtonGridPro
 
 
 const isDirectionPicker = (words : Word[]) : boolean => {
-    const isAllDirection = words.filter(word => word.type === "word")
-                                .every(word => word.type === "word" && word.modifierType === "direction");
+    const gameWords = words.filter(word => word.type === "word") as PartOfSpeech[];
+    const isAllDirection = gameWords.length > 0 && gameWords.every(word => word.modifierType === "direction");
     return isAllDirection && words.some(word => DIRECTION_GRID.find(({ wordId }) => wordId === word.id));
 }
 

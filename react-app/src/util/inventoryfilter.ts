@@ -32,7 +32,8 @@ export function getInventoryFilter() : Filters<InputMessage, OutputMessage> {
         }
 
         const injectInventory = (command : Word[], words : Word[]) => {
-            const wordsResponse = (command.length === 0) ? [...words, ...inventory] : words;
+            const commandWords = command.filter(word => word.id !== '?');
+            const wordsResponse = (commandWords.length === 0) ? [...words, ...inventory] : words;
             forwarder.respond({ type : "Words", command, words : wordsResponse});
         }
 

@@ -37,6 +37,7 @@ desc: a large box
 location: cave
 tags:
   - pushable
+  - container
 ---
 `
 
@@ -461,6 +462,84 @@ test('Can use inventory item with keyboard autocomplete', async () => {
   await user.keyboard('e ');
   
   await waitFor(() => screen.getByText('a round ball'));
+});
+
+test("Test backspace works correctly when using inventory item", async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+  await waitFor(() => screen.getAllByText('ball'));
+
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  // Clear
+  await waitFor(() => getButton('Options', 'tab'));
+  await user.click(getButton('Options', 'tab'))
+  await waitFor(() => getButton('clear'));
+  await act(() => user.click(getButton('clear')));
+
+  // Select ball from inventory
+  await waitFor(() => getButton('Inventory', 'tab'));
+  await act(() => user.click(getButton('Inventory', 'tab')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  await waitFor(() => getButton('put'));
+  await waitFor(() => getButton('backspace'));
+
+  await act(() => user.click(getButton('put')));
+
+  // Select 'put', then 'in'
+  await waitFor(() => getButton('in'));
+  await waitFor(() => getButton('backspace'));
+
+  await act(() => user.click(getButton('in')));
+
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).toContain("put ball in");
+  })
+
+  await waitFor(() => getButton('box'));
+  await waitFor(() => getButton('backspace'));
+
+  // Check backspace removes 'in'
+  await act(() => user.click(getButton('backspace')));
+
+  await waitFor(() => getButton('in'));
+  await waitFor(() => getButton('backspace'));
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).toContain("put ball");
+    expect(command.textContent).not.toContain("put ball in");
+  })
+
+  // check backspace removes 'ball'
+  await act(() => user.click(getButton('backspace')));
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).toContain("put");
+    expect(command.textContent).not.toContain("put ball");
+  })
+
+  // Check we can still select 'ball'
+  await waitFor(() => getButton('ball'));
+  await waitFor(() => getButton('backspace'));
+  
+  await act(() => user.click(getButton('ball')));
+  await waitFor(() => getButton('in'));
+  await waitFor(() => getButton('backspace'));
+  await waitFor(() => {
+    const command = screen.getByTestId('command');
+    expect(command.textContent).toContain("put ball");
+    expect(command.textContent).not.toContain("put ball in");
+  })
 });
 
 function getButton(name : string, role = "button") : HTMLElement {

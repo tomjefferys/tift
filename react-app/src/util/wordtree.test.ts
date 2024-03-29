@@ -1,4 +1,3 @@
-import { createWordFilter } from "tift-engine/out/src/engineproxy";
 import { Word } from "tift-types/src/messages/word";
 import * as WordTree from "./wordtree"
 
@@ -114,14 +113,6 @@ test("Test set with wildcard and already populated tree", () => {
     expect(WordTree.get(root, words("drop"))).toStrictEqual(words("ball"));
     expect(WordTree.get(root, words("throw"))).toStrictEqual(words("ball"));
     expect(WordTree.get(root, words("push"))).toStrictEqual(words("box", "ball"));
-});
-
-test.skip("Test get with wildcard", () => {
-    const root = WordTree.createRoot();
-    WordTree.set(root, words("push"), words("box"));
-    WordTree.set(root, words("?", "ball"), words("drop", "throw"));
-    expect(WordTree.get(root, [])).toStrictEqual(words("push", "drop", "throw"));
-    expect(WordTree.get(root, words("?", "ball"))).toStrictEqual(words("drop", "throw"));
 });
 
 test("Test getAll", () => {
