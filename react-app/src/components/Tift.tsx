@@ -8,7 +8,7 @@ import { ControlType } from "tift-types/src/messages/controltype";
 import { MessageForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
 import Controls from './Controls';
-import { commandEntry, logEntry, messageEntry, OutputEntry } from '../outputentry';
+import { commandEntry, logEntry, messageEntry, OutputEntry, Command } from '../outputentry';
 import { Box, Divider, useColorMode } from '@chakra-ui/react'
 import { createRestarter } from "../util/restarter";
 import { createColourSchemePicker } from "../util/colourschemepicker";
@@ -89,9 +89,9 @@ function Tift() {
       engine.send(Input.start((saveData != null)? saveData : undefined));
       engine.send(Input.getStatus());
 
-      engine.send(Input.getNextWords([]));
+      engine.send(Input.getNextWords([WILD_CARD]));
       setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
-      setCommand([]);
+      setCommand([WILD_CARD]);
     }
   
     const changeColourMode = (newMode : string) => {
@@ -228,7 +228,7 @@ function Tift() {
       const gameWords = words.filter(word => word.type === "word");
       if (engine && command.length && !gameWords.length) {
         const commandWords = command.filter(word => word.id !== "?");
-        messagesRef.current?.push(commandEntry(commandWords.map(word => word.value).join(" ")))
+        messagesRef.current?.push(commandEntry(commandWords.map(word => word.value), -1));
         await execute(commandWords);
         engine.send(Input.getStatus());
         latestWordsRef.current = WordTree.createRoot();
@@ -307,7 +307,7 @@ function Tift() {
       }
     }
 
-    const getCommand = () : string => {
+    const getCommand = () : Command => {
       const wildCardIndex = command.findIndex(word => word.id === "?");
       const wordStrs = command.map(word => word.value);
       const partialStr = partialWord.length? partialWord : "";
@@ -319,7 +319,7 @@ function Tift() {
       } else {
         words = [...wordStrs, partialStr];
       }
-      return words.map(word => word).join(" ");
+      return commandEntry(words, wildCardIndex);
     }
 
     return (

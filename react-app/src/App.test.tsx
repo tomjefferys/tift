@@ -208,7 +208,7 @@ test('Test backspace only deletes single word', async () => {
   await waitFor(() => getButton('backspace'));
   await waitFor(() => {
     const command = screen.getByTestId('command');
-    expect(command.textContent).toContain("push box");
+    expect(command.textContent).toMatch(/push\s+box/);
   })
 
   // Click backspace
@@ -216,7 +216,7 @@ test('Test backspace only deletes single word', async () => {
   await waitFor(() => {
     const command = screen.getByTestId('command');
     expect(command.textContent).toContain("push");
-    expect(command.textContent).not.toContain("push box");
+    expect(command.textContent).not.toMatch(/push\s+box/);
   })
 
   await waitFor(() => getButton('box'));
@@ -503,7 +503,7 @@ test("Test backspace works correctly when using inventory item", async () => {
 
   await waitFor(() => {
     const command = screen.getByTestId('command');
-    expect(command.textContent).toContain("put ball in");
+    expect(command.textContent).toMatch(/put\s+ball\s+in/);
   })
 
   await waitFor(() => getButton('box'));
@@ -516,8 +516,8 @@ test("Test backspace works correctly when using inventory item", async () => {
   await waitFor(() => getButton('backspace'));
   await waitFor(() => {
     const command = screen.getByTestId('command');
-    expect(command.textContent).toContain("put ball");
-    expect(command.textContent).not.toContain("put ball in");
+    expect(command.textContent).toMatch(/put\s+ball/);
+    expect(command.textContent).not.toMatch(/put\s+ball\s+in/);
   })
 
   // check backspace removes 'ball'
@@ -525,7 +525,7 @@ test("Test backspace works correctly when using inventory item", async () => {
   await waitFor(() => {
     const command = screen.getByTestId('command');
     expect(command.textContent).toContain("put");
-    expect(command.textContent).not.toContain("put ball");
+    expect(command.textContent).not.toMatch(/put\s+ball/);
   })
 
   // Check we can still select 'ball'
@@ -537,8 +537,8 @@ test("Test backspace works correctly when using inventory item", async () => {
   await waitFor(() => getButton('backspace'));
   await waitFor(() => {
     const command = screen.getByTestId('command');
-    expect(command.textContent).toContain("put ball");
-    expect(command.textContent).not.toContain("put ball in");
+    expect(command.textContent).toMatch(/put\s+ball/);
+    expect(command.textContent).not.toMatch(/put\s+ball\s+in/);
   })
 });
 

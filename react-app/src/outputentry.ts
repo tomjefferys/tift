@@ -9,7 +9,8 @@ export interface Message {
 
 export interface Command {
     type : "command";
-    command : string;
+    command : string[];
+    cursor : number;
 }
 
 export interface Log {
@@ -22,8 +23,8 @@ export function messageEntry(message : string) : OutputEntry {
     return { type : "message", message };
 }
 
-export function commandEntry(command : string) : OutputEntry {
-    return { type : "command", command }
+export function commandEntry(command : string[], cursor : number) : Command {
+    return { type : "command", command, cursor}
 }
 
 export function logEntry(level : LogLevel, message : string) : OutputEntry {

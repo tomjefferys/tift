@@ -19,3 +19,13 @@ code {
   margin: 0;
   position: relative;
 }
+
+.cursor {
+  animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
