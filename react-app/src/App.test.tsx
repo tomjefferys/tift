@@ -542,6 +542,131 @@ test("Test backspace works correctly when using inventory item", async () => {
   })
 });
 
+test("Test can change colour scheme", async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Click Options tab
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  // Check for colours button
+  await waitFor(() => getButton('colours'));
+  await act(() => user.click(getButton('colours')));
+
+  // Check light/dark buttons appear
+  await waitFor(() => getButton('light'));
+  await waitFor(() => getButton('dark'));
+
+  // Select dark theme
+  await act(() => user.click(getButton('dark')));
+  
+  // Check game buttons appear
+  await waitFor(() => getButton('go'));
+  await waitFor(() => getButton('get'));
+
+  // Click Options tab
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  // Check for colours button
+  await waitFor(() => getButton('colours'));
+  await act(() => user.click(getButton('colours')));
+
+  // Check light/dark buttons appear
+  await waitFor(() => getButton('light'));
+  await waitFor(() => getButton('dark'));
+
+  // Select light theme
+  await act(() => user.click(getButton('light')));
+
+  // Check game buttons appear
+  await waitFor(() => getButton('go'));
+  await waitFor(() => getButton('get'));
+});
+
+test("Test can restart game", async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+
+  // get the ball
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  // go south
+  await waitFor(() => getButton('go'));
+  await act(() => user.click(getButton('go')));
+
+  await waitFor(() => getButton('south'));
+  await act(() => user.click(getButton('south')));
+
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
+
+  // Restart and cancel
+  // Click Options tab
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('restart'));
+  await act(() => user.click(getButton('restart')));
+
+  // Wait for restart/cancel
+  await waitFor(() => getButton('restart'));
+  await waitFor(() => getButton('cancel'));
+
+  // Select cancel
+  await act(() => user.click(getButton('cancel')));
+
+  // Confirm no restart
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
+
+  // Click Options tab
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('restart'));
+  await act(() => user.click(getButton('restart')));
+
+  // Wait for restart/cancel
+  await waitFor(() => getButton('restart'));
+  await waitFor(() => getButton('cancel'));
+  
+  // Select restart
+  await act(() => user.click(getButton('restart')));
+
+  // Confirm restart
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+
+  // check we can get the ball again
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+});
+
+
 function getButton(name : string, role = "button") : HTMLElement {
   return screen.getByRole(role, { name });
 }

@@ -226,8 +226,8 @@ function Tift() {
       const words = await getWords(command);
       const engine = engineRef.current;
       const gameWords = words.filter(word => word.type === "word");
-      if (engine && command.length && !gameWords.length) {
-        const commandWords = command.filter(word => word.id !== "?");
+      const commandWords = command.filter(word => word.id !== "?");
+      if (engine && commandWords.length && !gameWords.length) {
         messagesRef.current?.push(commandEntry(commandWords.map(word => word.value), -1));
         await execute(commandWords);
         engine.send(Input.getStatus());
@@ -236,7 +236,7 @@ function Tift() {
         await getWords([WILD_CARD]);
       } 
 
-      if (!command.length || gameWords.length) {
+      if (!commandWords.length || gameWords.length) {
         const words = getPossibleNextWords();
         if (command.length > 1 && gameWords.length && !words.includes(BACKSPACE)) {
           words.push(BACKSPACE);

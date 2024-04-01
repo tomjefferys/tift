@@ -68,7 +68,7 @@ export function buildStateMachine<TIn,TObj>(initialState : StateName, ...states 
         },
         send : async (input : TIn, obj : TObj) => {
             if (status !== "RUNNING") {
-                throw new Error("State machine can't recieve input it is " + status);
+                throw new Error("State machine can't receive input it is " + status);
             }
             if (currentState === undefined) {
                 throw new Error("State machine state is undefined");
