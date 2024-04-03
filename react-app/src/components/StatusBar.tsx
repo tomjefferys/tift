@@ -5,7 +5,9 @@ interface Status {
 }
 
 const StatusBar = ({ status } : Status) => (
-    <Box bg="blue.600" boxShadow="md" p="1" textAlign={"center"}><Heading size="md" data-testid="status">{status}</Heading></Box>
+    <Box w="100%" bg="blue.600" boxShadow="md" p="1" textAlign={"center"}>
+        <Heading size="md" data-testid="status">{status}</Heading>
+    </Box>
 );
 
 export default StatusBar;

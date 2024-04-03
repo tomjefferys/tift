@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, TabList, Tab, TabPanels, TabPanel, Container, SimpleGrid, Grid, GridItem} from "@chakra-ui/react";
+import { Tabs, TabList, Tab, TabPanels, TabPanel, Container, SimpleGrid, Grid, GridItem, Box} from "@chakra-ui/react";
 import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { WordType } from "tift-types/src/messages/output";
 import WordButton from "./WordButton";
@@ -68,11 +68,11 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
     }, [words]);
 
     return (
-        <Container>
-            <Tabs index={tabIndex} onChange={handleTabsChange}>
+        <Container h="100%">
+            <Tabs h="100%" index={tabIndex} onChange={handleTabsChange}>
                 <TabList>{PANELS.map(panel => (<Tab key={panel.name}>{panel.name}</Tab>))}</TabList>
-                <TabPanels>{PANELS.map(panel => (
-                    <TabPanel key={panel.name}>
+                <TabPanels h="100%" >{PANELS.map(panel => (
+                    <TabPanel h="100%" key={panel.name}>
                         <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
                     </TabPanel>))}
                 </TabPanels>
@@ -94,7 +94,7 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
 }
 
 const SimpleButtonGrid = ({ words, columns, wordSelected } : SimpleButtonGridProps) =>
-    <SimpleGrid columns={columns}>
+    <SimpleGrid columns={columns} h="100%" w="100%" overflow={"auto"} overflowY={"scroll"}>
         {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
     </SimpleGrid>
 

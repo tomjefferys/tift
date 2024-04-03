@@ -328,7 +328,7 @@ function Tift() {
               <Output entries={messagesRef.current ?? []} status={statusRef.current.title} command={getCommand()}/>
             </Box>
             <Divider/>
-            <Box position={"relative"} height="30%">
+            <Box position={"relative"} height="25%" width="100%">
               <Controls words={filteredWords ?? []} wordSelected={wordSelected}/>
             </Box>
         </React.Fragment>
