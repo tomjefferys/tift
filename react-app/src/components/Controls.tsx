@@ -93,10 +93,19 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     return element;
 }
 
-const SimpleButtonGrid = ({ words, columns, wordSelected } : SimpleButtonGridProps) =>
-    <SimpleGrid columns={columns} h="100%" w="100%" overflow={"auto"} overflowY={"scroll"}>
-        {words.map(word => <WordButton key={word.id} word={word} wordSelected={wordSelected}/>)}
-    </SimpleGrid>
+const SimpleButtonGrid = ({ words, columns, wordSelected } : SimpleButtonGridProps) => {
+    const cells = words.map(word => (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>));
+    // Pad out with empty cells so we have at least 3 rows to fill up the the grid or 
+    // cells will ve stretched vertically
+    const extraCells = columns * 3 - cells.length;
+    for(let i=0; i<extraCells; i++) {
+        cells.push((<Box key={`__empty__${i}`}></Box>));
+    }
+    return (
+        <SimpleGrid columns={columns} h="100%" w="100%" overflow={"auto"} overflowY={"scroll"} gridAutoRows="1fr">
+            {cells}
+        </SimpleGrid>);
+}
 
 
 const isDirectionPicker = (words : Word[]) : boolean => {
