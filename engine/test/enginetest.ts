@@ -1295,6 +1295,40 @@ test("Test push item", () => {
     executeAndTest(["look"], { expected : ["box"]});
 })
 
+test("Test push item blocked", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        exits : {
+            south : "southRoom"
+        },
+    })
+    builder.withObj({
+        ...SOUTH_ROOM,
+        exits : {
+            north : "northRoom"
+        }
+    })
+    builder.withObj({
+        id : "box",
+        type : "item",
+        location : "northRoom",
+        tags : ["pushable"],
+        before : {
+            "push(this, $direction)" : {
+                do : [
+                    "print('cannot push')",
+                    "print(direction)",
+                    "return(false)"
+                ]
+            }
+        }
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start()); 
+
+    executeAndTest(["push", "box", "south"], { expected : ["cannot push", "south"]});
+});
+
 test("Test dark room", () => {
     builder.withObj({
         ...NORTH_ROOM,

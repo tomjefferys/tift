@@ -548,6 +548,10 @@ test("Test can change colour scheme", async () => {
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
 
+  // FIXME, the test fails without the next two lines, but they shouldn't be needed
+  await waitFor(() => getButton('wait'));
+  await act(() => user.click(getButton('wait')));
+ 
   // Click Options tab
   await waitFor(() => getButton('Options', 'tab'));
   await act(() => user.click(getButton('Options', 'tab')));

@@ -108,6 +108,13 @@ test("Test transitive verb without modifier, modifier supplied", () => {
     expect(messages).toHaveLength(0);
 });
 
+test("Test transitive verb with modifier capture", () => {
+    const command = start().verb(PUSH).object(BOX).modifier("direction", "north");
+    doMatch(command, "push(box, $direction)", "do(write('matched!'), write(direction))");
+    expect(messages).toContain(MATCH_STRING);
+    expect(messages).toContain("north");
+});
+
 function doMatch(command : Command, match : string, onMatch = DEFALT_ONMATCH) {
     const expression = jsep(match);
     const matcher = evaluateMatchExpression(expression);
