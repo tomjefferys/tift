@@ -9,6 +9,10 @@ import * as fs from "fs";
 const TEST_DATA = `
 ---
 game: Test Game
+author: Presto Turnip
+version: 1.0.0
+gameId: Test1234
+foo: bar
 options:
   - useDefaultVerbs
 ---
@@ -668,6 +672,29 @@ test("Test can restart game", async () => {
   await waitFor(() => getButton('ball'));
   await act(() => user.click(getButton('ball')));
 
+});
+
+test("Test get info", async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('info'));
+  await act(() => user.click(getButton('info')));
+
+  await waitFor(() => screen.getByText("name: Test Game"));
+  await waitFor(() => screen.getByText("author: Presto Turnip"));
+  await waitFor(() => screen.getByText("game version: 1.0.0"));
+  await waitFor(() => screen.getByText("game id: Test1234"));
+  await waitFor(() => screen.getByText("foo: bar"));
 });
 
 

@@ -1,5 +1,6 @@
 import { loadAll } from "js-yaml"
 import { Obj } from "./util/objects"
+import * as Metadata from "./builder/metadata"
 
 const prototypes = {
   "room":{"type":"room"},
@@ -24,7 +25,7 @@ export function getObjs(data: string) {
         let newDoc : Obj = Object.assign({"id": doc[name]}, pt, doc);
         delete newDoc[name];
         if (name === "game") {
-          newDoc = {...newDoc, name : doc[name], id : "__metadata__"};
+          newDoc = Metadata.create(newDoc, doc[name]);
         }
         docs.push(newDoc);
       }

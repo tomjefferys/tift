@@ -1,5 +1,5 @@
 import { BasicEngine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage, StatusType } from "tift-types/src/messages/output";
+import { LogLevel, OutputConsumer, OutputMessage, StatusType, Properties } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 import { InputMessage } from "tift-types/src/messages/input"
 import { BiConsumer, Consumer } from "tift-types/src/util/functions";
@@ -121,6 +121,7 @@ export class OutputConsumerBuilder {
   logConsumer? : BiConsumer<LogLevel,string>;
   saveConsumer? : Consumer<string>;
   controlConsumer? : Consumer<ControlType>;
+  infoConsumer? : Consumer<Properties>;
   defaultConsumer : Consumer<OutputMessage> = _message => { /* do nothing */ };
 
   withMessageConsumer(messageConsumer : Consumer<string>) : OutputConsumerBuilder {
@@ -153,11 +154,15 @@ export class OutputConsumerBuilder {
     return this;
   }
 
+  withInfoConsumer(infoConsumer : Consumer<Properties>) {
+    this.infoConsumer = infoConsumer;
+    return this;
+  }
+
   withDefaultConsumer(defaultConsumer : Consumer<OutputMessage>) {
     this.defaultConsumer = defaultConsumer;
     return this;
   }
-
 
   build() : OutputConsumer {
     return message => {
@@ -179,6 +184,9 @@ export class OutputConsumerBuilder {
           break;
         case "Control":
           this.controlConsumer? this.controlConsumer(message.value) : this.defaultConsumer(message);
+          break;
+        case "Info":
+          this.infoConsumer? this.infoConsumer(message.properties) : this.defaultConsumer(message);
           break;
         default:
           throw new Error("Unsupported OutputMessage Type: " + message.type);

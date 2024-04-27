@@ -3,7 +3,7 @@ import { Entity } from "./entity"
 import { Env } from "tift-types/src/env"
 import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { OutputConsumer } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 import * as Output from "./messages/output";
 import * as MessageOut from "./builder/output";
@@ -28,6 +28,8 @@ import { compileFunctions, compileGlobalFunction, compileStrings } from "./build
 import * as Entities from "./builder/entities";
 import { EnvFn } from "./script/thunk";
 import * as Properties from "./properties";
+import * as Version from "./version";
+import * as Metadata from "./builder/metadata"
 
 const DEFAULT_UNDO_LEVELS = 10;
 
@@ -258,7 +260,15 @@ export class BasicEngine implements Engine {
   }
 
   getInfo() {
-    this.output(Output.log("info", "Version: 0.0.2"));
+    const gameObj = Metadata.get(this.env); 
+    let output : OutputMessage;
+    if (gameObj) {
+      const properties = { ...gameObj, [Version.KEY] : Version.get() };
+      output = Output.info(properties);
+    } else {
+      output = Output.log("error", "No game object found");
+    }
+    this.output(output);
   }
 
   setConfig(newConfig : Config) {

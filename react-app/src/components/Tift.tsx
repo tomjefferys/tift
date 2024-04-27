@@ -2,10 +2,10 @@ import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter, OutputConsumerBuilder } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
-import { OutputConsumer, OutputMessage, StatusType } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage, StatusType, Properties } from "tift-types/src/messages/output";
 import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { ControlType } from "tift-types/src/messages/controltype";
-import { MessageForwarder } from "tift-types/src/engineproxy";
+import { DecoratedForwarder, MessageForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
 import Controls from './Controls';
 import { commandEntry, logEntry, messageEntry, OutputEntry, Command } from '../outputentry';
@@ -21,6 +21,7 @@ import * as WordTree from "../util/wordtree";
 import { DuplexProxy } from "tift-types/src/util/duplexproxy";
 import { InputMessage } from "tift-types/src/messages/input";
 import { getInventoryFilter } from "../util/inventoryfilter";
+import * as InfoPrinter from "../util/infoprinter";
 import _ from "lodash";
 
 type WordTreeType = WordTree.WordTree;
@@ -32,9 +33,21 @@ const GAME_FILE = "adventure.yaml";
 const AUTO_SAVE = "TIFT_AUTO_SAVE";
 const MESSAGES = "TIFT_MESSAGES";
 
+
 const SCROLL_BACK_ITEMS = 200;
 
 const WILD_CARD : PartOfSpeech = {type:"word", partOfSpeech: "verb", id:"?", value:"?", position:0 };
+
+const UNKNOWN = "unknown";
+
+const DEFAULT_INFO : Properties = { 
+  name : UNKNOWN, 
+  gameId : UNKNOWN, 
+  engineVersion : UNKNOWN, 
+  gameVersion : UNKNOWN,
+  properties : {}
+};
+
 
 type WordList = Word[];
 
@@ -45,6 +58,8 @@ function Tift() {
     const { setColorMode } = useColorMode();
 
     const statusRef = useRef<StatusType>({ title : "", undoable : false, redoable : false, properties : {}});
+
+    const infoRef = useRef<Properties>(DEFAULT_INFO);
   
     // Store messages as a ref, as the can be updated multiple times between renders
     // and using a state makes it tricky to get the most up to date values
@@ -85,11 +100,12 @@ function Tift() {
 
       // Load the game data
       const data = await loadGameData(name)
-      engine.send(Input.load(data));
-      engine.send(Input.start((saveData != null)? saveData : undefined));
-      engine.send(Input.getStatus());
+      await engine.send(Input.load(data));
+      await engine.send(Input.getInfo());
+      await engine.send(Input.start((saveData != null)? saveData : undefined));
+      await engine.send(Input.getStatus());
 
-      engine.send(Input.getNextWords([WILD_CARD]));
+      await engine.send(Input.getNextWords([WILD_CARD]));
       setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
       setCommand([WILD_CARD]);
     }
@@ -117,8 +133,9 @@ function Tift() {
         saveMessages([]);
       });
 
-      const getInfo = createSimpleOption( "info", () => {
-        engine.send(Input.getInfo());
+      const getInfo = createSimpleOption( "info", async (forwarder : DecoratedForwarder) => {
+        await forwarder.send(Input.getInfo());
+        InfoPrinter.print(forwarder, infoRef.current);
       });
 
       const undoFn = async () => {
@@ -187,6 +204,7 @@ function Tift() {
         .withStatusConsumer(status => statusRef.current = status)
         .withSaveConsumer(saveGame)
         .withLogConsumer((level, message) => updateMessages(messagesRef.current,logEntry(level, message)))
+        .withInfoConsumer(info => infoRef.current = info)
         .withControlConsumer(createControlHandler(pauser))
         .build();
 

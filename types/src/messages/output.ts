@@ -2,7 +2,7 @@ import { ControlType } from "./controltype";
 import { History } from "../util/historyproxy";
 import { Word } from "./word";
 
-export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control
+export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control | Info
 
 export type OutputConsumer = (message : OutputMessage) => void;
 
@@ -13,15 +13,14 @@ export type WordType = "word" | "option" | "control" | "select";
 
 type Not<T,R> = R extends T ? never : R;
 
-export type StatusProperties = {[key:string]:any};
+export type Properties = {[key:string]:any};
 
 export type StatusType = {
     title : string, 
     undoable : boolean,
     redoable : boolean,
-    properties : StatusProperties
+    properties : Properties
 }
-
 
 export interface Print {
     type : "Print",
@@ -69,4 +68,9 @@ export interface Log {
 export interface SaveState {
     type : "SaveState",
     state : History
+}
+
+export interface Info {
+    type : "Info",
+    properties : Properties
 }

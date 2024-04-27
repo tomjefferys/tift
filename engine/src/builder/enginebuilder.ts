@@ -16,7 +16,8 @@ import { Config, ConfigValueType } from "../config";
 import { Env } from "tift-types/src/env";
 import { getDefaultVerbs } from "./defaultverbs";
 import { TRAITS } from "./traits/trait";
-import * as Entities from "./entities"
+import * as Entities from "./entities";
+import * as Metadata from "./metadata";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -91,12 +92,9 @@ export class EngineBuilder {
     addToEnv(env : Env) : Obj[] {
         const objs = [...this.objs];
         const defaults : Obj[] = [];
-        const metadata = objs.find(obj => obj["id"] === "__metadata__");
-        if (metadata) {
-            const options = metadata["options"] ?? [];
-            if (options.includes('useDefaultVerbs')) {
-                defaults.push(...getDefaultVerbs(env));
-            }
+        const metadata = objs.find(obj => obj["id"] === Metadata.KEY);
+        if (metadata && Metadata.hasOption(metadata, "useDefaultVerbs")) {
+            defaults.push(...getDefaultVerbs(env));
         }
         return [...defaults, ...objs];
     }

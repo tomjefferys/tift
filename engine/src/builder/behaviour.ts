@@ -1,6 +1,6 @@
 import { Env } from "tift-types/src/env";
 import { Obj } from "tift-types/src/util/objects";
-import { OutputConsumer, StatusProperties } from "tift-types/src/messages/output";
+import { OutputConsumer, Properties } from "tift-types/src/messages/output";
 import { makeDefaultFunctions } from "./enginedefault";
 import * as Output from "./output";
 import * as Player from "./player";
@@ -28,7 +28,7 @@ export interface Behaviour {
     reset(env : Env, output : OutputConsumer) : void;
     start(env : Env) : void;
     getStatus(env : Env) : string;
-    getStatusProperties(env : Env) : StatusProperties;
+    getStatusProperties(env : Env) : Properties;
     getContext(env : Env) : CommandContext;
     getOutput(env : Env) : OutputConsumer;
     makeOutputConsumer(obj : Obj, outputConsumer : OutputConsumer) : void;
@@ -101,7 +101,7 @@ class DefaultBehaviour implements Behaviour {
         return getName(locations[0]);
     }
 
-    getStatusProperties(env : Env): StatusProperties {
+    getStatusProperties(env : Env): Properties {
         const inventoryItems = env.findObjs(obj => obj?.location === Player.INVENTORY && Entities.isEntity(obj));
         // Convert to part of speech
         const inventory = inventoryItems.map(item => makeWord(item.id, getName(item as Nameable), "directObject", 2))
