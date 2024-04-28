@@ -23,15 +23,14 @@ import { InputMessage } from "tift-types/src/messages/input";
 import { getInventoryFilter } from "../util/inventoryfilter";
 import * as InfoPrinter from "../util/infoprinter";
 import _ from "lodash";
+import * as GameStorage from "../util/gamestorage";
 
 type WordTreeType = WordTree.WordTree;
+type GameStorage = GameStorage.GameStorage;
 
 const DEFAULTS_FILE = "properties.yaml";
 const STDLIB_FILE = "stdlib.yaml";
 const GAME_FILE = "adventure.yaml";
-//const GAME_FILE = "example.yaml";
-const AUTO_SAVE = "TIFT_AUTO_SAVE";
-const MESSAGES = "TIFT_MESSAGES";
 
 
 const SCROLL_BACK_ITEMS = 200;
@@ -71,6 +70,8 @@ function Tift() {
   
     const engineRef = useRef<Engine | null>(null);
 
+    const storageRef = useRef<GameStorage | null>(null);
+
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
@@ -83,7 +84,7 @@ function Tift() {
     const execute = async (command : Word[]) => await engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
     // Load a game file from the `public` folder
-    const loadGame = async (name : string, engine : MessageForwarder, saveData : string | null) => {
+    const loadGame = async (name : string, engine : MessageForwarder) => {
       if (engine == null) {
         throw new Error("Engine has not been initialized");
       }
@@ -102,6 +103,14 @@ function Tift() {
       const data = await loadGameData(name)
       await engine.send(Input.load(data));
       await engine.send(Input.getInfo());
+
+      storageRef.current = GameStorage.createStorage(infoRef.current, 
+                              (level, message) => updateMessages(messagesRef.current, logEntry(level, message)));
+    }
+
+    const startGame = async (engine : MessageForwarder) => {
+      const saveData = storageRef.current?.loadGame() ?? null;
+
       await engine.send(Input.start((saveData != null)? saveData : undefined));
       await engine.send(Input.getStatus());
 
@@ -120,8 +129,9 @@ function Tift() {
       // Restart is now running asynchronously, so the thing calling it does not block
       const restartMachine = createRestarter(async forwarder => {
         latestWordsRef.current = WordTree.createRoot();
-        window.localStorage.removeItem(AUTO_SAVE);
-        await loadGame(GAME_FILE, forwarder, null);
+        storageRef.current?.removeGame();
+        await loadGame(GAME_FILE, forwarder);
+        await startGame(forwarder);
       });
 
       // Colour scheme picker
@@ -163,32 +173,32 @@ function Tift() {
       return engine;
     }
   
+    const saveMessages = (messages : OutputEntry[]) => {
+      storageRef.current?.saveMessages(JSON.stringify(messages));
+    }
+
+    const updateMessages = (messages : OutputEntry[], newMessage : OutputEntry) => {
+      messages.push(newMessage);
+      const deleteCount = messages.length - SCROLL_BACK_ITEMS;
+      if (deleteCount > 0) {
+          messages.splice(0, deleteCount);
+      }
+      saveMessages(messages);
+    }
+
     // Initialization
     useEffect(() => {
+      initialize();
+    }, []);
+
+    const initialize = async () => {
       if (engineRef.current !== null) {
         return;
       }
   
       const saveGame = (saveData : string) => {
-        window.localStorage.setItem(AUTO_SAVE, saveData);
+        storageRef.current?.saveGame(saveData);
       }
-
-      const saveMessages = (messages : OutputEntry[]) => {
-        window.localStorage.setItem(MESSAGES, JSON.stringify(messages));
-      }
-
-      const updateMessages = (messages : OutputEntry[], newMessage : OutputEntry) => {
-        messages.push(newMessage);
-        const deleteCount = messages.length - SCROLL_BACK_ITEMS;
-        if (deleteCount > 0) {
-            messages.splice(0, deleteCount);
-        }
-        saveMessages(messages);
-      }
-  
-      // Load messages
-      const savedMessages = window.localStorage.getItem(MESSAGES);
-      messagesRef.current = savedMessages? JSON.parse(savedMessages) : [];
 
       // Pauser
       const pauser = Pauser.createPauseFilter(
@@ -211,11 +221,17 @@ function Tift() {
       engine.setResponseListener(outputConsumer);
   
       engineRef.current = engine;
-      const saveData = window.localStorage.getItem(AUTO_SAVE);
+      //const saveData = window.localStorage.getItem(AUTO_SAVE);
   
-      loadGame(GAME_FILE, engine, saveData);
+      await loadGame(GAME_FILE, engine);
+
+      // Load messages
+      const savedMessages = storageRef.current?.loadMessages();
+      messagesRef.current = savedMessages? JSON.parse(savedMessages) : [];
+
+      await startGame(engine);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }
   
     // Add keyboard listener
     useEffect(() => {
