@@ -4,7 +4,7 @@ import { defaultOutputConsumer, loadDefaults } from "../testutils/testutils";
 import { EngineBuilder } from "../../src/builder/enginebuilder";
 import { Input } from "../../src/main";
 import _ from "lodash";
-import { GAME_METADATA } from "../testutils/testobjects";
+import { GAME_METADATA, NORTH_ROOM } from "../testutils/testobjects";
 
 test("Test formatEntityString", () => {
     const env = createRootEnv({ "entities" : { "foo" : "bar", "baz" : "qux"}}, [["entities"]]);
@@ -157,6 +157,53 @@ test("Test not needlessy updating state", () => {
     expect(saveData.data.baseHistory).toStrictEqual([]);
     messages.length = 0;
 })
+
+test("Test can call user defined function from mustache", () => {
+    const builder = new EngineBuilder();
+    builder.withObj({ ...NORTH_ROOM })
+           .withObj(GAME_METADATA)
+           .withObj({
+            id : "switch",
+            type : "item",
+            desc : "The switch is {{#isOn}}ON{{/isOn}}{{^isOn}}OFF{{/isOn}}",
+            location : "northRoom",
+            name : "switch",
+            state : "off",
+            "isOn()" : "state == 'on'",
+            verbs : ["toggle"]
+           })
+           .withObj({
+            id : "toggle",
+            type : "verb",
+            tags : ["transitive"],
+            actions : {
+                "toggle($switch)" : {
+                    "if" : "switch.state == 'on'",
+                    "then" : "switch.state = 'off'",
+                    "else" : "switch.state = 'on'"
+                }
+            }
+           });
+
+    const [consumer, messages, _words, _saveData] = defaultOutputConsumer();
+    builder.withOutput(consumer);
+    loadDefaults(builder);
+    const engine = builder.build();
+
+    engine.send(Input.start());
+
+    engine.send(Input.execute(["look"]));
+    engine.send(Input.execute(["examine", "switch"]));
+    expect(messages.join(" ")).toContain("The switch is OFF");
+    expect(messages.join(" ")).not.toContain("The switch is ON");
+    messages.length = 0;
+
+    engine.send(Input.execute(["toggle", "switch"]));
+    engine.send(Input.execute(["examine", "switch"]));
+    expect(messages.join(" ")).toContain("The switch is ON");
+    expect(messages.join(" ")).not.toContain("The switch is OFF");
+
+});
 
 test("Test format sentence", () => {
     const env = createRootEnv({ "FOO" : "foo", 

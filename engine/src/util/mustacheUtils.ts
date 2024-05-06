@@ -6,7 +6,7 @@ import * as _ from "lodash"
 import * as Mustache from "mustache"
 import { getCauseMessage } from "./errors";
 import { Optional } from "tift-types/src/util/optional"
-import { IMPLICIT_FUNCTION } from "../builder/functionbuilder"
+import { IMPLICIT_FUNCTION, EXPLICIT_FUNCTION } from "../builder/functionbuilder"
 
 const COUNT = (name : string) => `__COUNT(${name})__`;
 
@@ -57,7 +57,8 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
             const value = scope.get(key);
             let result = undefined;
             if (value !== undefined && isFound(value)) {
-                result = value[IMPLICIT_FUNCTION]? value(env).getValue() : value;
+                const isFunction = value[IMPLICIT_FUNCTION] || value[EXPLICIT_FUNCTION];
+                result = (isFunction)? value(env).getValue() : value;
             }
             return result;
         }

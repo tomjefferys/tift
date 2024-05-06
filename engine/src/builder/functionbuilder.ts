@@ -9,7 +9,14 @@ import { EnvFn, mkResult } from "../script/thunk";
 import { formatString } from "../util/mustacheUtils";
 
 
+// Use to tag "compiled" strings.  These are strings that contain mustache expressions,
+// and should be evaluated as functions.
 export const IMPLICIT_FUNCTION = "__IMPLICIT_FUNCTION__";
+
+// Use to tag functions defined in configuration, but aren't implicit string functions
+// We need to differentiate these from normal js functions, as they will return
+// Result object (rather then the result directly)
+export const EXPLICIT_FUNCTION = "__EXPLICIT_FUNCTION__";
 
 const SPECIAL_FIELDS = ["before", "actions", "after", "rules"];
 
@@ -113,7 +120,10 @@ const compileFnDef = (fnDef : FnDef, value : unknown, scope : Env, obj : Obj) =>
     }
     return {
         name : fnDef.name, 
-        envFn : bindParams(fnDef.params, envFn, scope)
+        envFn : Object.assign(
+                    bindParams(fnDef.params, envFn, scope),
+                    {[EXPLICIT_FUNCTION] : true}
+        )
     }
 }
 
