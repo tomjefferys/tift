@@ -126,10 +126,6 @@ export class BasicEngine implements Engine {
 
     this.context = this.getContext();
 
-    // Run any plugin actions
-    const actionContext = this.createPluginActionContext(undefined, this.context);
-    this.startActions.forEach(action => action(actionContext));
-
     if (!saveData) {
       // Run any before game rules
       // but only if this is a brand new game
@@ -137,6 +133,10 @@ export class BasicEngine implements Engine {
                                 .map(rule => [rule, rule[BEFORE_GAME]] as [Obj, EnvFn]);
       startupRules.forEach(([obj, rule]) => executeRule(obj, rule, this.env));
     }
+
+    // Run any plugin actions
+    const actionContext = this.createPluginActionContext(undefined, this.context);
+    this.startActions.forEach(action => action(actionContext));
 
     this.started = true;
   }

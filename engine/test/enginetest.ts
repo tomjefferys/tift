@@ -135,6 +135,25 @@ test("Test auto look", () => {
     executeAndTest(["go", "south"], { expected : [ "**The South Room**" ], notExpected : ["The room is light and round"] })
 })
 
+test("Test auto look happens after beforeGame function", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        name : "The North Room",
+        desc : "The room is dark and square",
+        "beforeGame()" : "print('This should come first')"
+    });
+    engine.ref = builder.build();
+    engine.send(Input.config({"autoLook" : true }));
+    engine.send(Input.start());
+
+    const beforeGameIndex = messages.findIndex(message => message.includes("This should come first"));
+    const lookIndex = messages.findIndex(message => message.includes("The room is dark and square"));
+    expect(beforeGameIndex).toBeGreaterThanOrEqual(0);
+    expect(lookIndex).toBeGreaterThanOrEqual(0);
+
+    expect(beforeGameIndex).toBeLessThan(lookIndex);
+});
+
 test("Test auto look with description change", () => {
     builder.withObj({
         ...NORTH_ROOM,
