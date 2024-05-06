@@ -79,6 +79,11 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const atLocation = Locations.isAtLocation(env, locationStr, itemEntity);
                             return mkResult(atLocation);
                         }),
+    moveItemTo : bindParams(["item", "location"],
+                        env => {
+                            Locations.setLocation(env, env.get("item"), env.get("location"));
+                            return mkResult(true);
+                        }),
     getName : bindParams(["entity"], env => {
                             const entity = Entities.getEntity(env, env.get("entity"));
                             return mkResult(Nameable.getFullName(entity as Nameable));
