@@ -1737,22 +1737,45 @@ test("Test mustache in array", () => {
     executeAndTest(["wait"], { expected : ["baz0 bar", "baz1", "qux bar", "quux baz0 bar baz1"]});
 });
 
-//function expectStatus(expected : Partial<StatusType>) {
-//    engine.send(Input.getStatus());
-//    const actual = statuses.at(-1);
-//    expect(actual).not.toBeUndefined();
-//    if (actual) {
-//        for(const [name, value] of Object.entries(expected)) {
-//            expect(actual[name as keyof StatusType]).toBe(value);
-//        }
-//    }
-//    statuses.length = 0;
-//}
+test("Test verb context", () => {
+    builder.withObj({
+        ...NORTH_ROOM
+    });
+    builder.withObj({
+        id : "cloak",
+        type : "item",
+        tags : ["carryable", "wearable"],
+        location : "northRoom",
+        verbs : ["hang"]
+    });
+    builder.withObj({
+        id : "hook",
+        type : "item",
+        location : "northRoom",
+        verbs : ["hang.on"]
+    });
+    builder.withObj({
+        id : "hang",
+        type : "verb",
+        tags : ["transitive"],
+        contexts : ["inventory", "wearing"],
+        attributes : ["on"],
+        actions : {
+            "hang($hangable).on($hanger)" : "moveItemTo(hangable, hanger)"
+        }
+    });
 
+    engine.ref = builder.build();
+    engine.send(Input.start());
 
-//function getWordIds(engine : Engine, partial : string[]) : string[] {
-//    engine.send(Input.getNextWords(partial));
-//    const words = [...wordsResponse];
-//    wordsResponse.length = 0;
-//    return words;
-//}
+    expect(getWordIds([])).not.toContain("hang");
+
+    executeAndTest(["get", "cloak"], {});
+    expect(getWordIds([])).toContain("hang");
+
+    executeAndTest(["wear", "cloak"], {});
+    expect(getWordIds([])).toContain("hang");
+
+    executeAndTest(["hang", "cloak", "on", "hook"], {});
+    expect(getWordIds([])).not.toContain("hang");
+});

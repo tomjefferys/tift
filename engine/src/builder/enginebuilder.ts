@@ -119,6 +119,7 @@ export function makeVerb(obj : Obj) : Verb {
    ifExists(obj["name"], value => builder.withName(getString(value)));
    forEach(obj["modifiers"], modifier => builder.withModifier(getString(modifier)));
    forEach(obj["attributes"], attribute => builder.withAttribute(getString(attribute)));
+   forEach(obj["contexts"], context => builder.withContext(getString(context)));
    forEach(obj["tags"],
         tag => {
             switch(tag) {
