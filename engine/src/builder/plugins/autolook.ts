@@ -5,6 +5,8 @@ import * as MultiDict from "../../util/multidict";
 import * as Player from "../player";
 import * as Output from "../output";
 import * as Hash from "../../util/hash";
+import * as Entities from "../entities";
+import * as Tags from "../tags";
 import { bold } from "../../markdown";
 import { getName } from "../../nameable";
 import _ from "lodash";
@@ -19,7 +21,9 @@ type LocationDescriptionHashes = {[key: string]: string};
 export const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
   const oldLocation = (context.start) ? getLocationFromContext(context.start) : undefined;
   const newLocation = getLocationFromContext(context.end);
-  if (newLocation && oldLocation?.id !== newLocation.id) {
+  if (newLocation && 
+      oldLocation?.id !== newLocation.id && 
+      !Entities.entityHasTag(newLocation, Tags.PSEUDO_ROOM)) {
     const player = Player.getPlayer(context.env);
     Output.write(context.env, bold(getName(newLocation)));
 

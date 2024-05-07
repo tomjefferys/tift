@@ -1,7 +1,7 @@
 import { EngineBuilder } from "../src/builder/enginebuilder";
 import { SaveData, ExecuteAndTestFn, ExpectWordsFn, createEngineTestEnvironment, EngineRef } from "./testutils/testutils";
 import { Input } from "../src/main";
-import { THE_ROOM, NORTH_ROOM } from "./testutils/testobjects";
+import { THE_ROOM, NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
 
 let saveData : SaveData;
 let builder : EngineBuilder;
@@ -683,3 +683,74 @@ test("Test getFullName", () => {
     engine.send(Input.start());
     executeAndTest(["get", "ball"], { expected : ["the large ball is too heavy to lift"]});
 });   
+
+test("Test gameOver", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({id : "ball",
+                     type : "item",
+                     location : "northRoom",
+                     tags : ["carryable"],
+                     before : {
+                        "get(this)" : [ "print('game over')", "gameOver()"]
+                     }});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    expectWords([], ["get", "look", "wait"], false);
+    executeAndTest(["get", "ball"], { expected : ["game over"] });
+    expectWords([], [], true);
+});
+
+test("Test can undo gameOver after instant action", () => {
+    builder.withObj({
+                ...NORTH_ROOM,
+                desc : "The North Room",
+                exits : { south : "southRoom" } })
+           .withObj({
+                ...SOUTH_ROOM,
+                desc : "The South Room",
+                exits : { north : "northRoom" } })
+           .withObj({
+                id : "message",
+                type : "item",
+                desc : "the message",
+                location : "southRoom",
+                before : {
+                    "examine(this)" : [ "print('game over')", "gameOver()"]
+                }
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["go", "south"], {});
+    executeAndTest(["examine", "message"], { expected : [ "game over" ] });
+
+    engine.send(Input.undo());
+    executeAndTest(["look"], { expected : ["The South Room"]});
+});
+
+test("Test can undo gameOver after non-instant action", () => {
+    builder.withObj({
+                ...NORTH_ROOM,
+                desc : "The North Room",
+                exits : { south : "southRoom" } })
+           .withObj({
+                ...SOUTH_ROOM,
+                desc : "The South Room",
+                exits : { north : "northRoom" } })
+           .withObj({
+                id : "ball",
+                type : "item",
+                desc : "the ball",
+                location : "southRoom",
+                tags : ["carryable"],
+                before : {
+                    "get(this)" : [ "print('game over')", "gameOver()"]
+                }
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["go", "south"], {});
+    executeAndTest(["get", "ball"], { expected : [ "game over" ] });
+
+    engine.send(Input.undo());
+    executeAndTest(["look"], { expected : ["The South Room"]});
+});

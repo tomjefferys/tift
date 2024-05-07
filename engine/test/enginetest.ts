@@ -1779,3 +1779,40 @@ test("Test verb context", () => {
     executeAndTest(["hang", "cloak", "on", "hook"], {});
     expect(getWordIds([])).not.toContain("hang");
 });
+
+test("Test ignore context", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start", "pseudoRoom"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    const words = getWordIds([]);
+    expect(words).toHaveLength(0);
+});
+
+test("Test ignore context with location defined verb", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start", "pseudoRoom"],
+        verbs : ["continue"],
+        before : {
+            continue : "print('continuing')"
+        }
+    });
+    builder.withObj({
+        id : "continue",
+        type : "verb",
+        tags : ["intransitive"]
+    })
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    const words = getWordIds([]);
+    expect(words).toHaveLength(1);
+    expect(words).toContain("continue");
+
+    executeAndTest(["continue"], { expected : ["continuing"]});
+
+});

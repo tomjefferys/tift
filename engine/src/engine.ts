@@ -283,6 +283,8 @@ export class BasicEngine implements Engine {
   }
 
   execute(command: string[]): void {
+    this.env.clearTransients();
+
     const [matchedCommand, verb] = searchCommand(this.env, this.context, command);
 
     const isTimePassing = verb && !isInstant(verb);
@@ -304,7 +306,7 @@ export class BasicEngine implements Engine {
     const postExecutionContext = this.createPluginActionContext(oldContext, this.context);
     this.postExecutionActions.forEach(action => action(postExecutionContext));
 
-    if (isTimePassing) {
+    if (isTimePassing || this.env.getTransient("tick")) {
       // Run afterTurn rules
       const contextualRules = this.getContextualRules(AFTER_TURN);
       const globalRules = this.getGlobalRules(AFTER_TURN);

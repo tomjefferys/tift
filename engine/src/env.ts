@@ -32,10 +32,15 @@ export class Env implements Type.Env {
     readonly namespaces : NameSpace[];
     readonly proxyManager : ProxyManager;
 
+    // Space to store temporary variables that won't get saved
+    // Allows inter-action communication without updating save game data
+    readonly transients : Obj;
+
     constructor(properties : Obj, namespaces : NameSpace[] = [], parent? : Env) {
         [this.properties, this.proxyManager] = createProxy(properties);
         this.parent = parent;
         this.namespaces = namespaces;
+        this.transients = {};
     }
 
     getParent() : Type.Env | undefined {
@@ -364,6 +369,32 @@ export class Env implements Type.Env {
             throw Error("Can't create reference to non-extant path: " + JSON.stringify(path));
         }
         return { [REFERENCE] : path};
+    }
+
+    setTransient(name : string, value : any) : void {
+        if (this.parent) {
+            this.parent.setTransient(name, value);
+        } else {
+            this.transients[name] = value;
+        }
+    }
+
+    getTransient(name : string) : any {
+        if (this.parent) {
+            this.parent.getTransient(name);
+        } else {
+            return this.transients[name];
+        }
+    }
+
+    clearTransients() : void {
+        if (this.parent) {
+            this.parent.clearTransients();
+        } else {
+            for (const prop of Object.getOwnPropertyNames(this.transients)) {
+                delete this.transients[prop];
+            }
+        }
     }
 }
 

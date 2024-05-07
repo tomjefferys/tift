@@ -18,6 +18,7 @@ import { getDefaultVerbs } from "./defaultverbs";
 import { TRAITS } from "./traits/trait";
 import * as Entities from "./entities";
 import * as Metadata from "./metadata";
+import * as Tags from "./tags";
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -158,14 +159,17 @@ export function makeRoom(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
     makeEntityVerbs(builder, obj);
     addActions(builder, obj);
-    builder.withVerb("go");
     for(const [dir, dest] of Object.entries(obj["exits"] ?? {})) {
         if (typeof dest !== "string") {
             throw new Error(obj.id + " contains invalid destination for: " + dir);
         }
         builder.withVerbModifier("direction", dir);
     }
-    builder.withVerb("look");
+    const tags = obj?.tags ?? [];
+    if (!tags.includes(Tags.PSEUDO_ROOM)) {
+        builder.withVerb("go");
+        builder.withVerb("look");
+    }
     return builder.build();
 }
 

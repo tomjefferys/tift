@@ -12,6 +12,7 @@ import { EnvFn, mkResult } from "../script/thunk";
 import * as MustacheUtils from "../util/mustacheUtils";
 import * as Properties from "../properties";
 import * as Tags from "./tags";
+import { EntityBuilder } from "./entitybuilder";
 
 export const LOCATION = "location";
 
@@ -172,4 +173,15 @@ export function makeOnMove() : EnvFn {
         }
         return mkResult(true);
     };
+}
+
+export function makeGameEnd(env : Env) : void {
+    const gameEnd = new EntityBuilder({
+        id : "__GAME_END__",
+        name : "Game Over",
+        type : "location",
+        tags : [Tags.PSEUDO_ROOM]
+    }).build();
+    const props = env.properties;
+    props["entities"]["__GAME_END__"] = gameEnd;
 }

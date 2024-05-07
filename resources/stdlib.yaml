@@ -32,4 +32,8 @@ close(item):
   if: isOpenable(item)
   then: item.isOpen = false
   else: error('You cannot close ' + item.id)
+gameOver(): 
+  - move('__PLAYER__').to('__GAME_END__')
+  - tick()
+  - return(true)
 ---

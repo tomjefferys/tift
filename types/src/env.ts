@@ -46,4 +46,8 @@ export interface Env {
     findObjs(predicate: (obj: Obj) => boolean) : Obj[];
     findObjs(predicate: (obj: Obj) => boolean, namespaces : NameSpace[]) : Obj[];
 
+    setTransient(name : string, value : any) : void;
+    getTransient(name : string) : any;
+    clearTransients() : void;
+
 }

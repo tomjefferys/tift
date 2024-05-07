@@ -95,7 +95,8 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
     isInContainer : bindParams(["entity"], env => {
                             const entity = Entities.getEntity(env, env.get("entity"));
                             return mkResult(Locations.isInContainer(env, entity));
-                        })
+                        }),
+    tick : env => env.setTransient("tick", true)
 }
 
 export function makeDefaultFunctions(obj : Obj) {

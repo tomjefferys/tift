@@ -48,6 +48,7 @@ class DefaultBehaviour implements Behaviour {
     start(env : Env) {
         const start = this.findStartingLocation(env);
         Player.makePlayer(env, start);
+        Locations.makeGameEnd(env);
     }
 
     getContext(env : Env) : CommandContext {
@@ -57,30 +58,33 @@ class DefaultBehaviour implements Behaviour {
         // Entity for the current location
         const locationEntity = Player.getLocationEntity(env);
 
+        let searchContext = false;
         if (locationEntity) {
             MultiDict.add(contextEntities, "location", locationEntity);
+            searchContext = !Entities.entityHasTag(locationEntity, Tags.PSEUDO_ROOM);
         }
 
+        if (searchContext) {
+            // Get any other entities that are here
+            const localEntities = Locations.findEntities(env, locationEntity);
+            const nonCarriedEntities = localEntities.filter(entity => !Locations.isAtLocation(env, Player.PLAYER, entity));
+            const carriedEntities = localEntities.filter(entity => Locations.isAtLocation(env, Player.PLAYER, entity));
 
-        // Get any other entities that are here
-        const localEntities = Locations.findEntities(env, locationEntity);
-        const nonCarriedEntities = localEntities.filter(entity => !Locations.isAtLocation(env, Player.PLAYER, entity));
-        const carriedEntities = localEntities.filter(entity => Locations.isAtLocation(env, Player.PLAYER, entity));
+            // Get environment entities
+            nonCarriedEntities.forEach(entity => MultiDict.add(contextEntities, "environment", entity));
 
-        // Get environment entities
-        nonCarriedEntities.forEach(entity => MultiDict.add(contextEntities, "environment", entity));
+            // Get inventory entities
+            const inventoryEntities = carriedEntities.filter(entity => Locations.getLocation(entity) === "__INVENTORY__");
+            inventoryEntities.forEach(entity => MultiDict.add(contextEntities, "inventory", entity));
 
-        // Get inventory entities
-        const inventoryEntities = carriedEntities.filter(entity => Locations.getLocation(entity) === "__INVENTORY__");
-        inventoryEntities.forEach(entity => MultiDict.add(contextEntities, "inventory", entity));
+            // Get worn entities
+            const wornEntities = carriedEntities.filter(entity => Locations.getLocation(entity) === "__WEARING__");
+            wornEntities.forEach(entity => MultiDict.add(contextEntities, "wearing", entity));
 
-        // Get worn entities
-        const wornEntities = carriedEntities.filter(entity => Locations.getLocation(entity) === "__WEARING__");
-        wornEntities.forEach(entity => MultiDict.add(contextEntities, "wearing", entity));
-
-        // Get entities in a container
-        const containers = localEntities.filter(entity => Locations.isInContainer(env, entity));
-        containers.forEach(entity => MultiDict.add(contextEntities, "container", entity)); 
+            // Get entities in a container
+            const containers = localEntities.filter(entity => Locations.isInContainer(env, entity));
+            containers.forEach(entity => MultiDict.add(contextEntities, "container", entity)); 
+        }
 
         const verbs  = env.findObjs(obj => Verbs.isVerb(obj)) as Verb[];
 
