@@ -1,4 +1,0 @@
-=== DarkCave:Room ===
-You enter a large {$? !cave.lit} [unlit] cave
-lit: false
-
