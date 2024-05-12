@@ -106,7 +106,8 @@ class DefaultBehaviour implements Behaviour {
     }
 
     getStatusProperties(env : Env): Properties {
-        const inventoryItems = env.findObjs(obj => obj?.location === Player.INVENTORY && Entities.isEntity(obj));
+        const inventoryItems = env.findObjs(obj => Locations.isAtLocation(env, Player.PLAYER, obj))
+                                  .filter(entity => entity.type !== Entities.Types.SPECIAL);
         // Convert to part of speech
         const inventory = inventoryItems.map(item => makeWord(item.id, getName(item as Nameable), "directObject", 2))
                                         .map(word => ({...word, tags: [...(word.tags ?? []), "inventory"]}));

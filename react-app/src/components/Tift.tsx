@@ -221,7 +221,6 @@ function Tift() {
       engine.setResponseListener(outputConsumer);
   
       engineRef.current = engine;
-      //const saveData = window.localStorage.getItem(AUTO_SAVE);
   
       await loadGame(GAME_FILE, engine);
 
@@ -298,11 +297,18 @@ function Tift() {
         }
         let words = WordTree.getWithPrefix(tree, commandWords.map(word => word.value).join(" "));
         if (!command.filter(word => word.id !== '?').length) {
-          // Strip out any words that are only for the inventory context 
-          const getContexts = (word : Word) => word.tags?.filter(tag => tag.startsWith("context")) ?? [];
-          words = words.filter(word => !(_.isEqual(getContexts(word), ["context:inventory"])));
+          // Strip out any words that are only for the inventory contexts
+          words = words.filter(word => containsNonInventoryContexts(word));
         }
         return words;
+    }
+
+    const containsNonInventoryContexts = (word : Word) : boolean => {
+      const inventoryContexts = ["context:inventory", "context:wearing"];
+      const contexts = word.tags?.filter(tag => tag.startsWith("context")) ?? [];
+      // Check we either have no contexts, or at least 1 no inventory context
+      return contexts.length == 0 || contexts.filter(context => !inventoryContexts.includes(context))
+                                             .length >= 1;
     }
   
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
