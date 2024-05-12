@@ -8,7 +8,7 @@ import { Env } from "tift-types/src/env";
 import { formatString } from "../util/mustacheUtils";
 import { VerbBuilder } from "./verbbuilder";
 import { Obj } from "tift-types/src/util/objects";
-import { getName, Nameable } from "../nameable";
+import { getName, getFullName, Nameable } from "../nameable";
 import * as Output from "./output";
 import { IMPLICIT_FUNCTION } from "./functionbuilder";
 import * as Property from "../properties";
@@ -29,12 +29,19 @@ export const LOOK_FN = (env : Env) => {
                     
     const isDark = Entities.entityHasTag(location, Tags.DARK) && !Locations.isLightSourceAtLocation(env, location);
 
+    const getLocationObj = (locationId : string) => {
+        const entity = Entities.getEntity(env, locationId);
+        const location = getFullName(entity as Nameable);
+        const adposition = entity["adposition"];
+        return { location, adposition } 
+    }
+
     const getItemDescription = (item : Obj) => {
         const itemLocation = Locations.getLocation(item);
         const locationObj = (itemLocation !== location.id) 
-                ? { location : getName(Entities.getEntity(env, itemLocation) as Nameable)}
+                ? getLocationObj(itemLocation)
                 : {};
-        return { name : getName(item as Nameable), ...locationObj };
+        return { name : getFullName(item as Nameable), ...locationObj };
     }
 
     // Desc should have any moustache expressions expanded

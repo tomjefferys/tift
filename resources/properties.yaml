@@ -19,7 +19,14 @@ templates:
     {{/items}}
     {{/isDark}} 
   partials:
-    item: "{{name}}{{#location}} ( in {{.}} ){{/location}}"
+    item: >
+      {{#sentence}}
+        {{name}}
+        {{#location}}
+          ( {{#adposition}}{{.}}{{/adposition}}
+          {{^adposition}}in{{/adposition}} {{.}} )
+        {{/location}}
+      {{/sentence}}
 ---
 property: examine
 templates:

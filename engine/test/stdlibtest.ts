@@ -96,11 +96,11 @@ test("Test hiding/revealing object", () => {
     engine.ref = builder.build();
     engine.send(Input.start());
 
-    executeAndTest(["look"], { expected : ["can", "in rubbish"], notExpected : ["diamond"]});
+    executeAndTest(["look"], { expected : ["can", "in the rubbish"], notExpected : ["diamond"]});
     expectWords(["get"], ["can"]);
 
     executeAndTest(["examine", "rubbish"], { expected : ["You find a diamond"]} );
-    executeAndTest(["look"], { expected : ["can", "diamond", "in rubbish"]});
+    executeAndTest(["look"], { expected : ["can", "diamond", "in the rubbish"]});
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
     executeAndTest(["wait"], {}); // TODO maybe introduce explict save command to force save data to be gnerated
 
@@ -110,7 +110,7 @@ test("Test hiding/revealing object", () => {
 
     expectWords(["get"], ["can", "diamond"]);
     executeAndTest(["get", "diamond"], {});
-    executeAndTest(["look"], { expected : ["can", "in rubbish"], notExpected : ["diamond"]});
+    executeAndTest(["look"], { expected : ["can", "in the rubbish"], notExpected : ["diamond"]});
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
 
     expect(saveData.data.baseHistory.length).toBe(3);

@@ -135,7 +135,7 @@ export function createExecuteAndTest(engine : EngineRef, messages : string[], lo
 
         log.length = 0;
 
-        const joined = messages.join("\n");
+        const joined = messages.join("\n").replace(/\s+/g, ' ');
         expectedStrings.expected?.forEach(str => {
             expect(joined).toContain(str);
         })

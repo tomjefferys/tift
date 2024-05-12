@@ -65,13 +65,25 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
     }
     const proxy = new Proxy({}, handler);
 
+    const normalizedStr = normalizeWhitespace(str);
+
+    const normalizedPartials = partials
+        ?  Object.fromEntries(
+            Object.entries(partials)
+            .map(([key,value]) => ([key, normalizeWhitespace(value)])))
+        : undefined;
+
     try {
-        const result = Mustache.render(str, proxy, partials);
+        const result = Mustache.render(normalizedStr, proxy, normalizedPartials);
         finalizeCount();
         return result;
     } catch(e) {
         throw new Error(`Error formatting: "${str}", ${getCauseMessage(e)}`);
     }
+}
+
+function normalizeWhitespace(str : string) : string {
+    return str.replace(/\s+/g, ' ');
 }
 
 function getCountAndIncrement(str : string, objProp : Optional<ObjProp>) : [number, IncrementFunction, FinalizeFunction] {

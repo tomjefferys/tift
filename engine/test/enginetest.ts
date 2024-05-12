@@ -1096,11 +1096,39 @@ test("Test put item in container", () => {
     engine.ref = builder.build();
     engine.send(Input.start());
 
-    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in the box"] });
     executeAndTest(["get", "ball"], {});
-    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["look"], { notExpected : ["ball", "in the box"] });
     executeAndTest(["put", "ball", "in", "box"], {});
-    executeAndTest(["look"], { expected : ["ball", "in box"] });
+    executeAndTest(["look"], { expected : ["ball", "in the box"] });
+})
+
+test("Test adposition", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                id : "shelf",
+                desc : "A large wooden shelf",
+                location : "northRoom",
+                adposition : "on",
+                type : "item",
+                verbs : ["put.on"]
+           })
+           .withObj({
+                id : "ball",
+                desc : "A small ball",
+                location : "northRoom",
+                type : "item",
+                tags : ["carryable"]
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["on the shelf"] });
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["look"], { notExpected : ["ball", "on the shelf"] });
+    executeAndTest(["put", "ball", "on", "shelf"], {});
+    executeAndTest(["look"], { expected : ["ball", "on the shelf"] });
+
 })
 
 test("Test openable", () => {
@@ -1195,37 +1223,37 @@ test("Test undo", () => {
     engine.send(Input.start());
     expectStatus({undoable : false, redoable : false});
 
-    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in the box"] });
     expectStatus({undoable : false, redoable : false});
 
     executeAndTest(["get", "ball"], {});
     expectStatus({undoable : true, redoable : false});
 
-    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["look"], { notExpected : ["ball", "in the box"] });
     expectStatus({undoable : true, redoable : false});
 
     executeAndTest(["put", "ball", "in", "box"], {});
     expectStatus({undoable : true, redoable : false});
 
-    executeAndTest(["look"], { expected : ["ball", "in box"] });
+    executeAndTest(["look"], { expected : ["ball", "in the box"] });
     expectStatus({undoable : true, redoable : false});
 
     // Try undoing
     engine.send(Input.undo());
-    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["look"], { notExpected : ["ball", "in the box"] });
     expectStatus({undoable : true, redoable : true});
 
     engine.send(Input.undo());
-    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in the box"] });
     expectStatus({undoable : false, redoable : true});
 
     // Try redoing
     engine.send(Input.redo());
-    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["look"], { notExpected : ["ball", "in the box"] });
     expectStatus({undoable : true, redoable : true});
 
     engine.send(Input.redo());
-    executeAndTest(["look"], { expected : ["ball", "in box"] });
+    executeAndTest(["look"], { expected : ["ball", "in the box"] });
     expectStatus({undoable : true, redoable : false});
 })
 
@@ -1248,27 +1276,27 @@ test("Test undo, clear redo on new action", () => {
     engine.ref = builder.build();
     engine.send(Input.start());
 
-    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in the box"] });
     executeAndTest(["get", "ball"], {});
     expectStatus({undoable : true, redoable : false});
 
-    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["look"], { notExpected : ["ball", "in the box"] });
     executeAndTest(["put", "ball", "in", "box"], {});
     expectStatus({undoable : true, redoable : false});
 
-    executeAndTest(["look"], { expected : ["ball", "in box"] });
+    executeAndTest(["look"], { expected : ["ball", "in the box"] });
 
     // Try undoing
     engine.send(Input.undo());
-    executeAndTest(["look"], { notExpected : ["ball", "in box"] });
+    executeAndTest(["look"], { notExpected : ["ball", "in the box"] });
     expectStatus({undoable : true, redoable : true});
     executeAndTest(["drop", "ball"], {});
-    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in the box"] });
     expectStatus({undoable : true, redoable : false});
 
     // Try redoing, nothing should change
     engine.send(Input.redo());
-    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in box"] });
+    executeAndTest(["look"], { expected : ["ball"], notExpected : ["in the box"] });
     expectStatus({undoable : true, redoable : false});
 
 });
