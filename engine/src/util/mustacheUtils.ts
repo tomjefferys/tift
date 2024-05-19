@@ -59,6 +59,10 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
             if (value !== undefined && isFound(value)) {
                 const isFunction = value[IMPLICIT_FUNCTION] || value[EXPLICIT_FUNCTION];
                 result = (isFunction)? value(env).getValue() : value;
+                if (_.isNumber(result)) {
+                    // Convert numbers to string, to avoid 0 being falsy
+                    result = result.toString();
+                }
             }
             return result;
         }

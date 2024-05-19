@@ -9,6 +9,9 @@ import * as Locations from "./locations";
 import * as Player from "./player";
 import * as Output from "./output";
 import * as Nameable from "../nameable";
+import * as Metadata from "./metadata";
+import * as Mustache from "../util/mustacheUtils";
+import * as Properties from "../properties";
 
 type Nameable = Nameable.Nameable;
 
@@ -96,7 +99,22 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const entity = Entities.getEntity(env, env.get("entity"));
                             return mkResult(Locations.isInContainer(env, entity));
                         }),
-    tick : env => env.setTransient("tick", true)
+    tick : env => env.setTransient("tick", true),
+    obj : _env => { return mkResult({}) },
+    getProperty : bindParams(["name", "defaultValue"], env => {
+                            const defaultValue = env.get("defaultValue");
+                            const value = Properties.getProperty(env, env.get("name"), defaultValue);
+                            return mkResult(value);
+                        }),
+    getPlayer : env => mkResult(Player.getPlayer(env)),
+    getMetadata : bindParams(["name"], env => mkResult(Metadata.get(env)[env.get("name")])),
+    format : bindParams(["template", "view"], env => {
+                            const view = env.get("view");
+                            const template = env.get("template");
+                            const scope = env.newChild(view);
+                            const output = Mustache.formatString(scope, template);
+                            return mkResult(output);
+                        })
 }
 
 export function makeDefaultFunctions(obj : Obj) {

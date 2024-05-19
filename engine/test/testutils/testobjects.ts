@@ -1,6 +1,8 @@
 export const GAME_METADATA = {
     "id" : "__metadata__",
     "type" : "metadata",
+    "name" : "unittest",
+    "author" : "Presto Turnip",
     "options" : ["useDefaultVerbs"]
 }; 
 

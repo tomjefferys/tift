@@ -754,3 +754,93 @@ test("Test can undo gameOver after non-instant action", () => {
     engine.send(Input.undo());
     executeAndTest(["look"], { expected : ["The South Room"]});
 });
+
+test("Test score", () => {
+    builder.withObj({ 
+                ...NORTH_ROOM,
+                "afterTurn()" : "print('SCORE = ' + getScore())" })
+           .withObj({
+                id : "ball",
+                type : "item",
+                desc : "the ball",
+                location : "northRoom",
+                tags : ["carryable"],
+                after : {
+                    "get(this)" : "score(1)"
+                }
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["get", "ball"], { expected : ["SCORE = 1"]});
+    executeAndTest(["drop", "ball"], {});
+    executeAndTest(["get", "ball"], { expected : ["SCORE = 2"]});
+})
+
+test("Test score once", () => {
+    builder.withObj({ 
+                ...NORTH_ROOM,
+                "afterTurn()" : "print('SCORE = ' + getScore())" })
+           .withObj({
+                id : "ball",
+                type : "item",
+                desc : "the ball",
+                location : "northRoom",
+                tags : ["carryable"],
+                after : {
+                    "get(this)" : {
+                        "once" : "score(1)"
+                    }
+                }
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["get", "ball"], { expected : ["SCORE = 1"]});
+    executeAndTest(["drop", "ball"], {});
+    executeAndTest(["get", "ball"], { expected : ["SCORE = 1"]});
+})
+
+test("Test getProperty", () => {
+    builder.withObj({ 
+                ...NORTH_ROOM,
+                "afterTurn()" : [
+                    "print('foo.value = ' + getProperty('foo.value', 'baz'))",
+                    "print('qux.value = ' + getProperty('qux.value', 'baz'))",
+                ]})
+           .withObj({
+               id : "foo",
+               type : "property",
+               value : "bar"
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["foo.value = bar", "qux.value = baz"]});
+})
+
+test("Test getMetadata", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        "afterTurn()" : [
+            "print('name = ' + getMetadata('name'))",
+            "print('author = ' + getMetadata('author'))"
+        ]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["name = unittest", "author = Presto Turnip"]});
+})
+
+test("Test format", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        "templates" : {
+            "formatStr" : "foo = {{foo}}, qux = {{qux}}"
+        },
+        "afterTurn()" : [
+            "view = obj()",
+            "view.foo = 'bar'",
+            "view.qux = 'baz'",
+            "print(format(templates.formatStr, view))"
+        ]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["foo = bar, qux = baz"]});
+})

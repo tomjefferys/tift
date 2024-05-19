@@ -6,6 +6,7 @@ import _ from "lodash";
 import { mkResult, mkThunk, Thunk } from "../script/thunk";
 
 const INDEX_NAME = ".index";
+const COUNT_NAME = ".count";
 
 // Diffenent types of method in a componennt rule
 type RuleMethodType = "condition" | "action" | "otherwise";
@@ -139,6 +140,23 @@ const buildRepeat : RuleEvaluator = (rules, path) => {
     return mkThunk(ruleFn);
 }
 
+const buildOnce : RuleEvaluator = (rules, path) => {
+    const thunk = evaluateRule(rules, path);
+    const countPath = (path + COUNT_NAME);
+    const ruleFn = (env : Env) => {
+        let count = env.get(countPath);
+        if (!isFound(count)) {
+            count = 0;
+        }
+        const result = (count === 0)
+                            ? thunk.resolve(env.newChild())
+                            : mkResult(false);
+        env.set(countPath, count + 1);
+        return result;
+    };
+    return mkThunk(ruleFn);
+}
+
 /**
  * Builds an evaluator that will execute an item at random
  */
@@ -165,6 +183,7 @@ const components : {[key:string]:[RuleMethodType, RuleEvaluator]} = {
     switch :    ["action",    buildSwitch],
     repeat :    ["action",    buildRepeat],
     random :    ["action",    buildRandom],
+    once :      ["action",    buildOnce],
     otherwise : ["otherwise", evaluator],
     else :      ["otherwise", evaluator]
 }

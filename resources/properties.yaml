@@ -90,6 +90,16 @@ templates:
   wrongKey: "{{#sentence}}{{item}} cannot be locked with {{key}}{{/sentence}}"
   isOpen: "{{#sentence}}{{item}} cannot be locked whilst it is open{{/sentence}}"
   success: "{{#sentence}}You lock {{item}}{{/sentence}}"
+---
+property: gameOver
+template: >
+  {{#message}}{{.}}{{/message}}
+  {{^message}}Game Over{{/message}}
+  {{br}}
+  {{#score}}
+    Score: {{.}}{{#maxScore}} / {{.}}{{/maxScore}}
+  {{/score}}
+    
 
 
 

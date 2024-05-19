@@ -18,7 +18,7 @@ export const IMPLICIT_FUNCTION = "__IMPLICIT_FUNCTION__";
 // Result object (rather then the result directly)
 export const EXPLICIT_FUNCTION = "__EXPLICIT_FUNCTION__";
 
-const SPECIAL_FIELDS = ["before", "actions", "after", "rules"];
+const SPECIAL_FIELDS = ["before", "actions", "after", "rules", "templates"];
 
 const FN_REGEX = /^(\w+)\(([\w, ]*)\)$/;
 
