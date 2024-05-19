@@ -11,6 +11,8 @@ import { Filters, Forwarder } from "tift-types/src/util/duplexproxy";
 export function getInventoryFilter() : Filters<InputMessage, OutputMessage> {
     let inventory : Word[] = [];
 
+    const HIDDEN_WORDS = ["inventory"];
+
     /**
      * The request filter does nothing
      */
@@ -33,7 +35,9 @@ export function getInventoryFilter() : Filters<InputMessage, OutputMessage> {
 
         const injectInventory = (command : Word[], words : Word[]) => {
             const commandWords = command.filter(word => word.id !== '?');
-            const wordsResponse = (commandWords.length === 0) ? [...words, ...inventory] : words;
+            const wordsResponse = (commandWords.length === 0) ? 
+                [...(words.filter(word => !HIDDEN_WORDS.includes(word.id))),
+                 ...inventory] : words;
             forwarder.respond({ type : "Words", command, words : wordsResponse});
         }
 
