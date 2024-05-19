@@ -8,6 +8,7 @@ import * as Entities from "../entities";
 import { CONTAINER } from "./container";
 import { OPENABLE } from "./openable";
 import { LOCKABLE } from "./lockable";
+import * as Player from "../player";
 
 /**
  * A trait processor is a function which takes an object, its tags and an entity builder and adds
@@ -16,17 +17,24 @@ import { LOCKABLE } from "./lockable";
 export type TraitProcessor = (obj : Obj, tags : string[], entityBuilder : EntityBuilder) => void;
 
 const CARRYABLE : TraitProcessor = (_obj, tags, builder) => {
-    if (tags.includes(Tags.CARRYABLE)) {
+    if (tags.includes(Tags.CARRYABLE) || tags.includes(Tags.CARRIED)) {
         builder.withVerb(VERB_NAMES.GET);
         builder.withVerb(VERB_NAMES.DROP);
         builder.withVerb(VERB_NAMES.PUT);
     }
+    if (tags.includes(Tags.CARRIED)) {
+        builder.withProp(Location.LOCATION, Player.INVENTORY);
+    }
 }
 
+
 const WEARABLE : TraitProcessor = (_obj, tags, builder) => {
-    if (tags.includes(Tags.WEARABLE)) {
+    if (tags.includes(Tags.WEARABLE) || tags.includes(Tags.WORN)) {
         builder.withVerb(VERB_NAMES.WEAR);
         builder.withVerb(VERB_NAMES.REMOVE);
+    }
+    if (tags.includes(Tags.WORN)) {
+        builder.withProp(Location.LOCATION, Player.WEARING);
     }
 }
 
