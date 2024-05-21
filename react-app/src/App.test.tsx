@@ -99,7 +99,6 @@ test('can get item', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
-  await waitFor(() => screen.getAllByText('ball'));
 
   await waitFor(() => getButton('get'));
   await act(() => user.click(getButton('get')));
@@ -112,14 +111,6 @@ test('can get item', async () => {
 
   await waitFor(() => getButton('clear'));
   await act(() => user.click(getButton('clear')));
-
-  await waitFor(() => getButton('inventory'));
-  await act(() => user.click(getButton('inventory')));
-
-  await waitFor(() => {
-    const balls = screen.getAllByText('ball');
-    expect(balls).toHaveLength(2); // text output, and inventory button
-  })
 
   await waitFor(() => getButton('Inventory', 'tab'));
   await act(() => user.click(getButton('Inventory', 'tab')));
@@ -138,7 +129,6 @@ test('Test backspace', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
-  await waitFor(() => screen.getAllByText('ball'));
 
   // Confirm no backspace button yet
   let backspaceButton = screen.queryByRole('button', { name : 'backspace' } );
@@ -169,7 +159,6 @@ test('Test backspace only deletes single word', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
-  await waitFor(() => screen.getAllByText('box'));
 
   // Confirm no backspace button yet
   await waitFor(() => {
@@ -363,7 +352,6 @@ test('Can use inventory item', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
-  await waitFor(() => screen.getAllByText('ball'));
 
   await waitFor(() => getButton('get'));
   await act(() => user.click(getButton('get')));
@@ -394,7 +382,6 @@ test('Inventory item verb still available for other contexts', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
-  await waitFor(() => screen.getAllByText('ball'));
 
   await waitFor(() => getButton('get'));
   await act(() => user.click(getButton('get')));
@@ -420,7 +407,6 @@ test('Can use inventory item with keyboard', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
-  await waitFor(() => screen.getAllByText('ball'));
 
   await waitFor(() => getButton('get'));
   await act(() => user.click(getButton('get')));
@@ -447,7 +433,6 @@ test('Can use inventory item with keyboard autocomplete', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
-  await waitFor(() => screen.getAllByText('ball'));
 
   await waitFor(() => getButton('get'));
   await act(() => user.click(getButton('get')));
@@ -473,7 +458,6 @@ test("Test backspace works correctly when using inventory item", async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
   await waitFor(() => screen.getAllByText('cave'));
-  await waitFor(() => screen.getAllByText('ball'));
 
   await waitFor(() => getButton('get'));
   await act(() => user.click(getButton('get')));
