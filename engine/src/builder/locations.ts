@@ -127,7 +127,7 @@ export function isLightSourceAtLocation(env : Env, location : Obj) : boolean {
 
 export function addExit(env : Env, roomId : string, direction : string, target : string) {
     const room = Entities.getEntity(env, roomId);
-    room.exits[direction] = target;
+    room.exits[direction] = Entities.getEntity(env, target).id;
     MultiDict.add(room.verbModifiers, "direction", direction);
 }
 
