@@ -18,7 +18,7 @@ const SKIP_POPS = ["id", "type", "options"];
  * log the game info, output default properties first, then any remaining ones
  */
 export function print(forwarder : DecoratedForwarder, properties : Properties) {
-    const writeInfo = (label : string, value : any) => 
+    const writeInfo = (label : string, value : unknown) => 
         forwarder.respond({ type : "Log", level : "info", message : `${label}:  ${value}`});
 
     Object.entries(DEFAULT_PROPS)
