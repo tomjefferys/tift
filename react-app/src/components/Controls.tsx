@@ -88,10 +88,25 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     } else if (isOptionPicker(words)) {
         element = <CustomButtonGrid  words={words} totalColumns={4} cells={OPTION_GRID} wordSelected={wordSelected} />
     } else {
-        element = <SimpleButtonGrid words={words} columns={4} wordSelected={wordSelected} />
+        const numColumns = getNumColumns(words);
+        element = <SimpleButtonGrid words={words} columns={numColumns} wordSelected={wordSelected} />
     }
     return element;
 }
+
+// Try to fit the words into 2, 3 or 4 columns depending on the length of the longest word
+const getNumColumns = (words : Word[]) : number => {
+    const maxWordLength = Math.max(...words.map(word => word.value.length));
+    let numColumns = 4;
+    if (screen.availHeight > screen.availWidth) {
+        if (maxWordLength >= 12) {
+            numColumns = 2;
+        } else if (maxWordLength >= 8) {
+            numColumns = 3;
+        }
+    }
+    return numColumns;
+};
 
 const SimpleButtonGrid = ({ words, columns, wordSelected } : SimpleButtonGridProps) => {
     const cells = words.map(word => (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>));
