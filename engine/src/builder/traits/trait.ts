@@ -45,7 +45,7 @@ const PUSHABLE : TraitProcessor = (_obj, tags, builder) => {
 }
 
 const EXAMINABLE : TraitProcessor = (obj, _tags, builder) => {
-    if (_.has(obj, "desc")) {
+    if (_.has(obj, "description")) {
         builder.withVerb("examine");
     }
 }

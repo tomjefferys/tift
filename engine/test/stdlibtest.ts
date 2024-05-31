@@ -85,7 +85,7 @@ test("Test hiding/revealing object", () => {
             })
             .withObj({
                 id : "rubbish",
-                desc: "A pile of stinking rubbish",
+                description: "A pile of stinking rubbish",
                 type : "item",
                 location : "northRoom",
                 after : {
@@ -146,7 +146,7 @@ test("Test open/close", () => {
         .withObj({id : "door",
                   type : "item",
                   location : "northRoom",
-                  desc : "The green door",
+                  description : "The green door",
                   tags : ["openable"],
                   before : {
                     "examine(this)": {
@@ -188,7 +188,7 @@ test("Test lockable", () => {
             .withObj({id : "door",
                         type : "item",
                         location : "northRoom",
-                        desc : "The green door",
+                        description : "The green door",
                         key : "brass_key",
                         tags : ["openable", "lockable", "locked"],
                         before : {
@@ -224,7 +224,7 @@ test("Test container", () => {
                     name : "chest",
                     type : "item",
                     location : "northRoom",
-                    desc : "A large chest",
+                    description : "A large chest",
                     tags : ["container"]
                     })
                 .withObj({id : "ball",
@@ -262,7 +262,7 @@ test("Test container should not show contents if empty", () => {
                     name : "chest",
                     type : "item",
                     location : "northRoom",
-                    desc : "A large chest",
+                    description : "A large chest",
                     tags : ["container"]
                     });
     engine.ref = builder.build();
@@ -279,7 +279,7 @@ test("Test get from closed container", () => {
                     name : "chest",
                     type : "item",
                     location : "northRoom",
-                    desc : "A large chest",
+                    description : "A large chest",
                     tags : ["container", "closable"]
                     })
                 .withObj({id : "ball",
@@ -322,7 +322,7 @@ test("Test put into closed container", () => {
                     name : "chest",
                     type : "item",
                     location : "northRoom",
-                    desc : "A large chest",
+                    description : "A large chest",
                     tags : ["container", "openable"]
                     })
                 .withObj({id : "ball",
@@ -352,7 +352,7 @@ test("Test can get item not in closed container", () => {
                     name : "chest",
                     type : "item",
                     location : "northRoom",
-                    desc : "A large chest",
+                    description : "A large chest",
                     tags : ["container", "openable", "carryable"]
                     })
                 .withObj({id : "ball",
@@ -377,7 +377,7 @@ test("Test get from container you are holding", () => {
     builder.withObj({...NORTH_ROOM})
             .withObj({id : "backpack",
                         name : "backpack",
-                        desc : "An old tattered backpack.",
+                        description : "An old tattered backpack.",
                         type : "item",
                         location : "northRoom",
                         tags : ["container", "carryable"]
@@ -404,7 +404,7 @@ test("Test can't put container in itself", () => {
     builder.withObj({...NORTH_ROOM})
             .withObj({id : "backpack",
                         name : "backpack",
-                        desc : "An old tattered backpack.",
+                        description : "An old tattered backpack.",
                         type : "item",
                         location : "northRoom",
                         tags : ["container", "carryable"]
@@ -431,7 +431,7 @@ test("Test can't put a container indirectly in itself", () => {
     builder.withObj({...NORTH_ROOM})
             .withObj({id : "backpack",
                         name : "backpack",
-                        desc : "An old tattered backpack.",
+                        description : "An old tattered backpack.",
                         type : "item",
                         location : "northRoom",
                         tags : ["container", "carryable"]
@@ -454,7 +454,7 @@ test("Test put on container", () => {
     builder.withObj({...NORTH_ROOM})
             .withObj({id : "table",
                         name : "table",
-                        desc : "A large table.",
+                        description : "A large table.",
                         type : "item",
                         location : "northRoom",
                         relativeLocation : "on",
@@ -479,7 +479,7 @@ test("Test invalid relativeLocation", () => {
         builder.withObj({...NORTH_ROOM})
                .withObj({id : "table",
                          name : "table",
-                         desc : "A large table.",
+                         description : "A large table.",
                          type : "item",
                          location : "northRoom",
                          relativeLocation : "under",
@@ -505,7 +505,7 @@ test("Test overridden examine can still execute original method", () => {
                       name : "chest",
                       type : "item",
                       location : "northRoom",
-                      desc : "A large chest", 
+                      description : "A large chest", 
                       tags : ["container"],
                       after : {
                         "examine(this)" : {
@@ -534,7 +534,7 @@ test("Test non-transparent closed container doesn't reveal contents", () => {
                         name : "chest",
                         type : "item",
                         location : "northRoom",
-                        desc : "A large chest", 
+                        description : "A large chest", 
                         tags : ["container", "openable"],
                         })
             .withObj({id : "ball",
@@ -557,7 +557,7 @@ test("Test transparent closed container does reveal contents", () => {
                         name : "chest",
                         type : "item",
                         location : "northRoom",
-                        desc : "A large chest", 
+                        description : "A large chest", 
                         tags : ["container", "openable", "transparent"],
                         })
             .withObj({id : "ball",
@@ -596,7 +596,7 @@ test("Test isHolding", () => {
                         tags : ["carryable"]}})
             .withObj({id : "backpack",
                         name : "backpack",
-                        desc : "An old tattered backpack.",
+                        description : "An old tattered backpack.",
                         type : "item",
                         location : "northRoom",
                         tags : ["container", "carryable"]
@@ -627,7 +627,7 @@ test("Test isHolding as verb predicate", () => {
             .withObj({id : "backpack",
                         type : "item",
                         name : "backpack",
-                        desc : "An old tattered backpack.",
+                        description : "An old tattered backpack.",
                         location : "northRoom",
                         tags : ["container", "carryable"]
                     })
@@ -703,16 +703,16 @@ test("Test gameOver", () => {
 test("Test can undo gameOver after instant action", () => {
     builder.withObj({
                 ...NORTH_ROOM,
-                desc : "The North Room",
+                description : "The North Room",
                 exits : { south : "southRoom" } })
            .withObj({
                 ...SOUTH_ROOM,
-                desc : "The South Room",
+                description : "The South Room",
                 exits : { north : "northRoom" } })
            .withObj({
                 id : "message",
                 type : "item",
-                desc : "the message",
+                description : "the message",
                 location : "southRoom",
                 before : {
                     "examine(this)" : [ "print('game over')", "gameOver()"]
@@ -730,16 +730,16 @@ test("Test can undo gameOver after instant action", () => {
 test("Test can undo gameOver after non-instant action", () => {
     builder.withObj({
                 ...NORTH_ROOM,
-                desc : "The North Room",
+                description : "The North Room",
                 exits : { south : "southRoom" } })
            .withObj({
                 ...SOUTH_ROOM,
-                desc : "The South Room",
+                description : "The South Room",
                 exits : { north : "northRoom" } })
            .withObj({
                 id : "ball",
                 type : "item",
-                desc : "the ball",
+                description : "the ball",
                 location : "southRoom",
                 tags : ["carryable"],
                 before : {
@@ -762,7 +762,7 @@ test("Test score", () => {
            .withObj({
                 id : "ball",
                 type : "item",
-                desc : "the ball",
+                description : "the ball",
                 location : "northRoom",
                 tags : ["carryable"],
                 after : {
@@ -783,7 +783,7 @@ test("Test score once", () => {
            .withObj({
                 id : "ball",
                 type : "item",
-                desc : "the ball",
+                description : "the ball",
                 location : "northRoom",
                 tags : ["carryable"],
                 after : {

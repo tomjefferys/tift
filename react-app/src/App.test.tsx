@@ -17,18 +17,18 @@ options:
   - useDefaultVerbs
 ---
 room: cave
-desc: A dark dank cave
+description: A dark dank cave
 tags: [start]
 exits:
   south: forest
 ---
 room: forest
-desc: A dense verdant forest
+description: A dense verdant forest
 exits:
   north: cave
 ---
 item: ball
-desc: a round ball
+description: a round ball
 location: cave
 tags:
   - carryable
@@ -37,7 +37,7 @@ after:
     do: print('boing boing')
 ---
 item: box
-desc: a large box
+description: a large box
 location: cave
 tags:
   - pushable

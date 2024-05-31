@@ -169,7 +169,7 @@ const EXAMINE = phaseActionBuilder(VERB_NAMES.EXAMINE)
             matchBuilder().withVerb(matchVerb(VERB_NAMES.EXAMINE)).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                const output = item["desc"] ?? item["name"] ?? item["id"];
+                const output = item["description"] ?? item["name"] ?? item["id"];
                 Output.write(env, output[IMPLICIT_FUNCTION]? output(env).getValue() : output);
                 return mkResult(true);
             }));

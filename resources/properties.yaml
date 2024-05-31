@@ -7,7 +7,7 @@ templates:
     {{/isDark}}
 
     {{^isDark}}
-    {{desc}}{{^desc}}{{name}}{{^name}}{{id}}{{/name}}{{/desc}}
+    {{description}}{{^description}}{{name}}{{^name}}{{id}}{{/name}}{{/description}}
     {{/isDark}} 
   items: |
     {{^isDark}}

@@ -90,13 +90,13 @@ test("Test restart using command proxy", async () => {
           - useDefaultVerbs
         ---
         room: northRoom
-        desc: The north room
+        description: The north room
         exits:
           south: southRoom
         tags: ["start"]
         ---
         room: southRoom
-        desc: The south room
+        description: The south room
         exits:
           north: northRoom
         `);
@@ -153,13 +153,13 @@ test("test restart using state machine proxy", async () => {
           - useDefaultVerbs
         ---
         room: northRoom
-        desc: The north room
+        description: The north room
         exits:
           south: southRoom
         tags: ["start"]
         ---
         room: southRoom
-        desc: The south room
+        description: The south room
         exits:
           north: northRoom
         `);
@@ -286,7 +286,7 @@ function getEngineBuilder() : (output : Consumer<OutputMessage>) => Engine {
 function addRooms(builder : EngineBuilder) {
     builder.withObj({
         ...NORTH_ROOM,
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         exits : {
             south : "southRoom"
         },

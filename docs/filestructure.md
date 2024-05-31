@@ -8,13 +8,13 @@ An example might look like:
 ```yaml
 ---
 room: northRoom,
-desc: The room is dark and square
+description: The room is dark and square
 tags: 
   - start
 ---
 item: ball
 name: The ball
-desc: The ball is red and bouncy
+description: The ball is red and bouncy
 tags:
   - carryable
   - pushable
@@ -27,7 +27,7 @@ YAML has nice syntax for multiline strings, alowing for long descriptions
 ```yaml
 ---
 room: northRoom
-desc: |
+description: |
   The room is dark and square.
   In the middle is a fountain which gurgles with muddy water
 tags:

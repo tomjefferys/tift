@@ -121,7 +121,7 @@ test("Build room", () => {
     const obj = {
         "id": "cave",
         "type": "room",
-        "desc": "A dark dank cave",
+        "description": "A dark dank cave",
         "exits": {
             "north": "entrance",
             "east": "pool"

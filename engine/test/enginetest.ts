@@ -83,7 +83,7 @@ test("Test single room, with two exits", () => {
 test("Test two rooms", () => {
     builder.withObj({
         ...NORTH_ROOM,
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         exits : {
             south : "southRoom"
         },
@@ -110,7 +110,7 @@ test("Test auto look", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         exits : {
             south : "southRoom"
         },
@@ -118,7 +118,7 @@ test("Test auto look", () => {
     builder.withObj({
         ...SOUTH_ROOM,
         name : "The South Room",
-        desc : "The room is light and round",
+        description : "The room is light and round",
         exits : {
             north : "northRoom"
         }
@@ -139,7 +139,7 @@ test("Test auto look happens after beforeGame function", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         "beforeGame()" : "print('This should come first')"
     });
     engine.ref = builder.build();
@@ -158,7 +158,7 @@ test("Test auto look with description change", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         exits : {
             south : "southRoom"
         },
@@ -166,7 +166,7 @@ test("Test auto look with description change", () => {
     builder.withObj({
         ...SOUTH_ROOM,
         name : "The South Room",
-        desc : "The room is light and round",
+        description : "The room is light and round",
         exits : {
             north : "northRoom"
         }
@@ -177,7 +177,7 @@ test("Test auto look with description change", () => {
         location : "southRoom",
         verbs : ["toggle"],
         before : { 
-            "toggle(this)" : "northRoom.desc = 'The room is light and square'"
+            "toggle(this)" : "northRoom.description = 'The room is light and square'"
         }
     })
     builder.withObj({
@@ -205,7 +205,7 @@ test("Test auto look with description change", () => {
 //     type : "item",
 //     location : "theRoom",
 //     fuddled : false,
-//     desc : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
+//     description : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
 //     verbs : ["fuddle"],
 //     before : [
 //        "fuddle(this) => do(this.fuddled = true, 'Fuddled!')"
@@ -289,7 +289,7 @@ test("Test examine", () => {
         id : "teapot",
         type : "item",
         location : "theRoom",
-        desc : "A little teapot, {{dimensions}}",
+        description : "A little teapot, {{dimensions}}",
         dimensions : "short and stout"
     })
     engine.ref = builder.build();
@@ -463,7 +463,7 @@ test("Test open door", () => {
                 id : "door",
                 name : "the door",
                 type : "item",
-                desc : "The door is {{#isOpen}}open{{/isOpen}}{{^isOpen}}closed{{/isOpen}}",
+                description : "The door is {{#isOpen}}open{{/isOpen}}{{^isOpen}}closed{{/isOpen}}",
                 location : "theRoom",
                 isOpen : false,
                 verbs : ["open", "close"],
@@ -548,7 +548,7 @@ test("Test setting 'this' in match action", () => {
                 type : "item",
                 location : "theRoom",
                 fuddled : false,
-                desc : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
+                description : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
                 verbs : ["fuddle"],
                 before : [
                    "fuddle(this) => do(this.fuddled = true, 'Fuddled!')"
@@ -579,7 +579,7 @@ test("Test error when executing", () => {
                 type : "item",
                 location : "theRoom",
                 fuddled : false,
-                desc : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
+                description : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
                 verbs : ["fuddle"],
                 before : [
                    "fuddle(this) => do(this.fuddled.bob = foo, 'Fuddled!')"
@@ -601,7 +601,7 @@ test("Test load save data", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         exits : {
             south : "southRoom"
         },
@@ -609,7 +609,7 @@ test("Test load save data", () => {
     builder.withObj({
         ...SOUTH_ROOM,
         name : "The South Room",
-        desc : "The room is light and round",
+        description : "The room is light and round",
         exits : {
             north : "northRoom"
         }
@@ -719,7 +719,7 @@ test("Test contextual rules", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         myvar : "foo",
         "afterTurn()" : ["print(this.myvar)"],
         exits : {
@@ -729,7 +729,7 @@ test("Test contextual rules", () => {
     builder.withObj({
         ...SOUTH_ROOM,
         name : "The South Room",
-        desc : "The room is light and round",
+        description : "The room is light and round",
         myvar : "bar",
         "afterTurn()" : ["this.myvar"],
         exits : {
@@ -748,7 +748,7 @@ test("Test repeat rule", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         myvar : "foo",
         "afterTurn()" : { "repeat" : ["'foo'", "'bar'", "'baz'"] } 
     });
@@ -764,7 +764,7 @@ test("Test nested repeat rule", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         myvar : "foo",
         "afterTurn()" : { "repeat" : ["'foo'", { "repeat" : ["'bar'", "'baz'"] } , "'qux'"] } 
     });
@@ -783,7 +783,7 @@ test("Test moveTo", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         myvar : "foo",
         exits : {
             south : "southRoom"
@@ -792,7 +792,7 @@ test("Test moveTo", () => {
     builder.withObj({
         ...SOUTH_ROOM,
         name : "The South Room",
-        desc : "The room is light and round",
+        description : "The room is light and round",
         myvar : "bar",
         exits : {
             north : "northRoom"
@@ -827,7 +827,7 @@ test("Test printAt", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         exits : {
             south : "southRoom"
         },
@@ -835,7 +835,7 @@ test("Test printAt", () => {
     builder.withObj({
         ...SOUTH_ROOM,
         name : "The South Room",
-        desc : "The room is light and round",
+        description : "The room is light and round",
         exits : {
             north : "northRoom"
         }
@@ -868,7 +868,7 @@ test("Test scoped rules", () => {
     builder.withObj({
         ...NORTH_ROOM,
         name : "The North Room",
-        desc : "The room is dark and square",
+        description : "The room is dark and square",
         myvar : "foo",
         exits : {
             south : "southRoom"
@@ -877,7 +877,7 @@ test("Test scoped rules", () => {
     builder.withObj({
         ...SOUTH_ROOM,
         name : "The South Room",
-        desc : "The room is light and round",
+        description : "The room is light and round",
         myvar : "bar",
         exits : {
             north : "northRoom"
@@ -906,7 +906,7 @@ test("Test action with repeat", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                id : "rubbish",
-               desc : "A pile of stinking rubbish",
+               description : "A pile of stinking rubbish",
                type : "item",
                location : "northRoom",
                after : {
@@ -949,7 +949,7 @@ test("Test action with nested repeats", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                id : "rubbish",
-               desc : "A pile of stinking rubbish",
+               description : "A pile of stinking rubbish",
                type : "item",
                location : "northRoom",
                after : {
@@ -986,7 +986,7 @@ test("Test property setting in before phase", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                 id : "armchair",
-                desc : "A threadbare armchair.  {{#sat_on}}sitting{{/sat_on}} {{^sat_on}}standing{{/sat_on}}",
+                description : "A threadbare armchair.  {{#sat_on}}sitting{{/sat_on}} {{^sat_on}}standing{{/sat_on}}",
                 type : "item",
                 location : "northRoom",
                 verbs : ["sit"],
@@ -1016,7 +1016,7 @@ test("Test conditional verbs", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                 id : "armchair",
-                desc : "A threadbare armchair.  {{#sat_on}}sitting{{/sat_on}} {{^sat_on}}standing{{/sat_on}}",
+                description : "A threadbare armchair.  {{#sat_on}}sitting{{/sat_on}} {{^sat_on}}standing{{/sat_on}}",
                 type : "item",
                 location : "northRoom",
                 verbs : [{ "sit" : "not(sat_on)"}, { "stand" : "sat_on"}],
@@ -1081,14 +1081,14 @@ test("Test put item in container", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                 id : "box",
-                desc : "A large wooden box",
+                description : "A large wooden box",
                 location : "northRoom",
                 type : "item",
                 verbs : ["put.in"]
            })
            .withObj({
                 id : "ball",
-                desc : "A small ball",
+                description : "A small ball",
                 location : "northRoom",
                 type : "item",
                 tags : ["carryable"]
@@ -1107,7 +1107,7 @@ test("Test adposition", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                 id : "shelf",
-                desc : "A large wooden shelf",
+                description : "A large wooden shelf",
                 location : "northRoom",
                 adposition : "on",
                 type : "item",
@@ -1115,7 +1115,7 @@ test("Test adposition", () => {
            })
            .withObj({
                 id : "ball",
-                desc : "A small ball",
+                description : "A small ball",
                 location : "northRoom",
                 type : "item",
                 tags : ["carryable"]
@@ -1136,7 +1136,7 @@ test("Test openable", () => {
            .withObj({
                 id : "door",
                 location : "northRoom",
-                desc : "An old wooden door",
+                description : "An old wooden door",
                 type : "item",
                 tags : ["openable"],
                 before : {
@@ -1172,7 +1172,7 @@ test("Test closable", () => {
            .withObj({
                 id : "door",
                 location : "northRoom",
-                desc : "An old wooden door",
+                description : "An old wooden door",
                 type : "item",
                 tags : ["closable"],
                 before : {
@@ -1207,14 +1207,14 @@ test("Test undo", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                 id : "box",
-                desc : "A large wooden box",
+                description : "A large wooden box",
                 location : "northRoom",
                 type : "item",
                 verbs : ["put.in"]
            })
            .withObj({
                 id : "ball",
-                desc : "A small ball",
+                description : "A small ball",
                 location : "northRoom",
                 type : "item",
                 tags : ["carryable"]
@@ -1261,14 +1261,14 @@ test("Test undo, clear redo on new action", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                 id : "box",
-                desc : "A large wooden box",
+                description : "A large wooden box",
                 location : "northRoom",
                 type : "item",
                 verbs : ["put.in"]
            })
            .withObj({
                 id : "ball",
-                desc : "A small ball",
+                description : "A small ball",
                 location : "northRoom",
                 type : "item",
                 tags : ["carryable"]
@@ -1483,7 +1483,7 @@ test("Test visibleWhenDarkTag", () => {
         tags : ["carryable"]
     }).withObj({
         id : "stickers",
-        desc : "glow in the dark stickers",
+        description : "glow in the dark stickers",
         type : "item",
         location : "northRoom",
         tags : ["carryable", "visibleWhenDark"]
@@ -1503,7 +1503,7 @@ test("Test visibleWhen function", () => {
         tags : ["start", "dark"]
     }).withObj({
         id : "stickers",
-        desc : "glow in the dark stickers",
+        description : "glow in the dark stickers",
         type : "item",
         location : "northRoom",
         "visibleWhen()" : "hasTag(location, 'dark')",

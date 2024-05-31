@@ -9,7 +9,7 @@ export const GAME_METADATA = {
 export const THE_ROOM = {
     id : "theRoom",
     name : "The Room",
-    desc : "An almost empty room",
+    description : "An almost empty room",
     type : "room",
     tags : [ "start" ]
 };

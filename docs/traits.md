@@ -8,7 +8,7 @@ They can be manipulated with the following verbs `get`, `drop`, `put`
 ```yaml
 item: ball
 name: bouncy ball
-desc: A small rubber super bouncy ball
+description: A small rubber super bouncy ball
 tags: [carryable]
 ```
 
@@ -23,7 +23,7 @@ A contents of a transparent container will always be visible, even if the contai
 ```yaml
 item: backpack
 name: backpack
-desc: An old tattered canvas backpack.
+description: An old tattered canvas backpack.
 tags: [carryable, container]
 ```
 
@@ -36,7 +36,7 @@ Supported values are `in` and `on`.  Containers use `in` by default.
 ```yaml
 item: table
 name: table
-desc: A large wooden table.
+description: A large wooden table.
 relativeLocation: "on"
 tags: [container]
 ```
