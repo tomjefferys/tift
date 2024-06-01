@@ -844,3 +844,27 @@ test("Test format", () => {
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["foo = bar, qux = baz"]});
 })
+
+test("Test setLocation", () => {
+    builder.withObj({
+                ...NORTH_ROOM,
+                description : "The North Room" })
+            .withObj({
+                ...SOUTH_ROOM,
+                description : "The South Room" })
+            .withObj({
+                    id : "teleporter",
+                    type : "item",
+                    description : "the ball",
+                    location : "northRoom",
+                    tags : ["carryable"],
+                    before : {
+                        "get(this)" : "setLocation('southRoom')"
+                    }
+               })
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["The North Room"]});
+    executeAndTest(["get", "teleporter"], {});
+    executeAndTest(["look"], { expected : ["The South Room"]});
+});

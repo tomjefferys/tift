@@ -32,11 +32,10 @@ const moveFn = bindParams(["id"], env => {
 // but the way print and printAt call write depends on this.  Would allow for implicit printAt if we keep it?
 // bindParams third param effectively enables/disabled dynamic scoping
 const DEFAULT_FUNCTIONS : EnvFnMap = {
-    setLocation : env => {
+    setLocation : bindParams(["dest"], env => {
         Locations.doMove(env, Player.getPlayer(env), env.get("dest"));
-    },
-    
-    moveTo : env => DEFAULT_FUNCTIONS.setLocation(env),
+        return mkResult(true);
+    }),
     move : moveFn,
     getLocation : env => Player.getLocation(env),
     write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),

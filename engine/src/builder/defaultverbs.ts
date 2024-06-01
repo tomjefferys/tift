@@ -106,7 +106,8 @@ const GO = phaseActionBuilder("go")
                 const location = Player.getLocationEntity(env);
                 const destination = location?.exits[env.get("direction")];
                 if (destination) {
-                    env.execute("moveTo", {"dest" : destination});
+                    const player = Player.getPlayer(env);
+                    Locations.setLocation(env, player, destination);
                 }
                 return mkResult(true);
             })
