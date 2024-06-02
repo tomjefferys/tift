@@ -34,6 +34,7 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
             return count === 1;
         },
         "br" : "\n  \n", // Force a line break
+        "hr" : "\n---\n", // Force a horizontal rule
         "sentence" : () => (text : string, render : (str : string) => string) => {
             let sentence = render(text).trim();
             if (sentence.length > 0) {
