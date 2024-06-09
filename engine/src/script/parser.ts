@@ -10,6 +10,7 @@ import { Optional } from 'tift-types/src/util/optional';
 import { rethrowCompileError } from '../util/errors';
 import { formatString } from '../util/mustacheUtils';
 import { IMPLICIT_FUNCTION } from '../builder/functionbuilder';
+import { isNotFound } from '../env';
 
 // Configure Jsep
 jsep.plugins.register(jsepAssignment as unknown as IPlugin);
@@ -344,7 +345,18 @@ export function bindParams(params : string[], fn : EnvFn, closureEnv : Optional<
     return env => {
         const args = env.get(ARGS);
         const scope = closureEnv?.newChild() ?? env
+        if (args.length < params.length) {
+            const missingArgs = params.slice(args.length);
+            throw new Error(`Not enough arguments. Missing: ${missingArgs.join(", ")}`); 
+        }
+        if (args.length > params.length) {
+            const extraArgs = args.slice(params.length);
+            throw new Error(`Too many arguments. Extra: ${extraArgs.join(", ")}`);
+        }
         for(let i=0; i<args.length && i<params.length; i++) {
+            if (_.isUndefined(args[i]) || isNotFound(args[i])) {
+                throw new Error(`Parameter ${i} (${params[i]}) is undefined`);
+            }
             scope.def(params[i], args[i]);
         }
         return fn(scope);

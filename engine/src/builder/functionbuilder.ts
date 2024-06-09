@@ -132,7 +132,7 @@ function getFunctionDef(str : string) : Optional<FnDef> {
     let result = undefined;
     if (match) {
         const name = match[1];
-        const params = match[2].split(",").map(param => param.trim());
+        const params = match[2] ? match[2].split(",").map(param => param.trim()) : [];
         result = {name, params};
     }
     return result;

@@ -107,11 +107,9 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                         }),
     getPlayer : env => mkResult(Player.getPlayer(env)),
     getMetadata : bindParams(["name"], env => mkResult(Metadata.get(env)[env.get("name")])),
-    format : bindParams(["template", "view"], env => {
-                            const view = env.get("view");
+    format : bindParams(["template"], env => {
                             const template = env.get("template");
-                            const scope = env.newChild(view);
-                            const output = Mustache.formatString(scope, template);
+                            const output = Mustache.formatString(env, template);
                             return mkResult(output);
                         })
 }

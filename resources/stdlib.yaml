@@ -35,12 +35,11 @@ close(item):
 gameOver(message): 
   - move('__PLAYER__').to('__GAME_END__')
   - tick() 
-  - view = obj()
-  - view.score = getPlayer().score
-  - view.maxScore = getMetadata('maxScore')
-  - view.message = message
-  - template = getProperty("gameOver.template")
-  - output = format(template,view)
+  - score = getPlayer().score
+  - maxScore = getMetadata('maxScore')
+  - message = message
+  - template = getProperty("gameOver.template", 'Game over template not found.')
+  - output = format(template)
   - return(output)
 getPlayer(): getEntity('__PLAYER__')
 score(points):

@@ -691,7 +691,7 @@ test("Test gameOver", () => {
                      location : "northRoom",
                      tags : ["carryable"],
                      before : {
-                        "get(this)" : [ "print('game over')", "gameOver()"]
+                        "get(this)" : [ "gameOver('game over')" ]
                      }});
     engine.ref = builder.build();
     engine.send(Input.start());
@@ -715,7 +715,7 @@ test("Test can undo gameOver after instant action", () => {
                 description : "the message",
                 location : "southRoom",
                 before : {
-                    "examine(this)" : [ "print('game over')", "gameOver()"]
+                    "examine(this)" : ["gameOver('game over')"]
                 }
            });
     engine.ref = builder.build();
@@ -743,7 +743,7 @@ test("Test can undo gameOver after non-instant action", () => {
                 location : "southRoom",
                 tags : ["carryable"],
                 before : {
-                    "get(this)" : [ "print('game over')", "gameOver()"]
+                    "get(this)" : [ "gameOver('game over')" ]
                 }
            });
     engine.ref = builder.build();
@@ -835,15 +835,30 @@ test("Test format", () => {
             "formatStr" : "foo = {{foo}}, qux = {{qux}}"
         },
         "afterTurn()" : [
-            "view = obj()",
-            "view.foo = 'bar'",
-            "view.qux = 'baz'",
-            "print(format(templates.formatStr, view))"
+            "foo = 'bar'",
+            "qux = 'baz'",
+            "print(format(templates.formatStr))"
         ]});
     engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["foo = bar, qux = baz"]});
 })
+
+test("Test format with missing template", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        "templates" : {
+            "formatStr" : "foo = {{foo}}, qux = {{qux}}"
+        },
+        "afterTurn()" : [
+            "foo = 'bar'",
+            "qux = 'baz'",
+            "print(format(formatStr))"
+        ]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], {errors :[ "Parameter 0", "template", "undefined"] });
+});
 
 test("Test setLocation", () => {
     builder.withObj({
