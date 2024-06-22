@@ -1844,3 +1844,36 @@ test("Test ignore context with location defined verb", () => {
     executeAndTest(["continue"], { expected : ["continuing"]});
 
 });
+
+test("Test custom verb modifier", () => {
+    builder.withObj({
+        ...NORTH_ROOM
+    }).withObj({
+        id : "lever",
+        type : "item",
+        location : "northRoom",
+        verbs : ["pull"],
+        modifiers : {
+            lever_dir : [ "up", "down"]
+        },
+        before : {
+            "pull(this, $lever_dir)" : "print('pulling ' + lever_dir)"
+        }
+    }).withObj({
+        id : "pull",
+        type : "verb",
+        tags : ["transitive"],
+        modifiers : ["lever_dir"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    expect(getWordIds([])).toContain("pull");
+    expect(getWordIds(["pull"])).toContain("lever");
+    const lever_dirs = getWordIds(["pull", "lever"]);
+    expect(lever_dirs).toContain("up");
+    expect(lever_dirs).toContain("down");
+    
+    executeAndTest(["pull", "lever", "up"], { expected : ["pulling up"]});
+    executeAndTest(["pull", "lever", "down"], { expected : ["pulling down"]});
+})
