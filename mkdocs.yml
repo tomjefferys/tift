@@ -7,3 +7,5 @@ nav:
   - Expression Language: expressionlanguage.md
   - Entities: entities.md
   - Verbs: verbs.md
+  - Traits: traits.md
+  - Functions: functions.md
