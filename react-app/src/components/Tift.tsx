@@ -104,8 +104,10 @@ function Tift() {
       await engine.send(Input.load(data));
       await engine.send(Input.getInfo());
 
-      storageRef.current = GameStorage.createStorage(infoRef.current, 
-                              (level, message) => updateMessages(messagesRef.current, logEntry(level, message)));
+      if (!infoRef.current["Errored"]) {
+        storageRef.current = GameStorage.createStorage(infoRef.current, 
+                                (level, message) => updateMessages(messagesRef.current, logEntry(level, message)));
+      }
     }
 
     const startGame = async (engine : MessageForwarder) => {
@@ -222,11 +224,11 @@ function Tift() {
   
       engineRef.current = engine;
   
-      await loadGame(GAME_FILE, engine);
-
       // Load messages
       const savedMessages = storageRef.current?.loadMessages();
       messagesRef.current = savedMessages? JSON.parse(savedMessages) : [];
+
+      await loadGame(GAME_FILE, engine);
 
       await startGame(engine);
       // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -12,7 +12,8 @@ import * as _ from "lodash";
 import * as arrays from "./util/arrays";
 import { PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
-import { InputMessage, Load } from "tift-types/src/messages/input";
+import { InputMessage, Load, InputMessageType, ConfigProperties } from "tift-types/src/messages/input";
+import * as Input from "tift-types/src/messages/input";
 import { EngineBuilder } from "./builder/enginebuilder";
 import { Config } from "./config"
 import * as Conf from "./config"
@@ -51,6 +52,11 @@ export interface CommandContext {
 
 type CommandExecutor = (env : Env, context : CommandContext, command : string[]) => void;
 
+type MessageHandler = (message : InputMessage) => void;
+type MessageHandlerMap = {[key in InputMessageType] : MessageHandler};
+
+const NO_OP : MessageHandler = () => { /* do nothing */ };
+
 export interface PluginActionContext {
   start? : CommandContext,
   end : CommandContext,
@@ -84,6 +90,7 @@ export class BasicEngine implements Engine {
   private postExecutionActions : PluginAction[] = [];
   private started = false;
   private gameData : Behaviour;
+  private errored = false;
 
   constructor(gameData : Behaviour, outputConsumer : OutputConsumer, config? : Config) {
     this.gameData = gameData;
@@ -104,6 +111,7 @@ export class BasicEngine implements Engine {
     this.startActions.length = 0;
     this.postExecutionActions.length = 0;
     this.started = false;
+    this.errored = false;
 
     return [this.env, this.context];
   }
@@ -111,6 +119,9 @@ export class BasicEngine implements Engine {
   start(saveData? : string) {
     if (this.started) {
       throw new Error("Engine is already started");
+    }
+    if (this.errored) {
+      throw new Error("Can not start after error");
     }
     this.setupPluginActions();
 
@@ -180,43 +191,43 @@ export class BasicEngine implements Engine {
   getContext() : CommandContext {
     return this.gameData.getContext(this.env);
   }
+ 
+  // Map of handler functions
+  messageHandlers : MessageHandlerMap = {
+    "GetWords" : (m) => this.getWords((m as Input.GetWords).command),  
+    "GetStatus" : () => this.getStatus(),
+    "Execute" :  (m) => this.execute((m as Input.Execute).command),
+    "Load" :     (m) => this.loadData(m as Input.Load),
+    "Start" :    (m) => this.start((m as Input.Start).saveData), 
+    "Config" :   (m) => this.setConfig((m as Input.Config).properties),
+    "Reset" :     () => this.reset(),
+    "Undo" :      () => this.undo(),
+    "Redo" :      () => this.redo(),
+    "GetInfo" :   () => this.getInfo()
+  }
+
+  // Map or error state handler functions
+  errorStateHandlers : MessageHandlerMap = {
+    "GetWords" : (m) => this.output(Output.words((m as Input.GetWords).command,[])),
+    "GetStatus" : () => this.output(Output.status("error", false, false, {})),
+    "Execute" :   NO_OP,
+    "Load" :      NO_OP,
+    "Start" :     NO_OP,
+    "Config" :    NO_OP,
+    "Reset" :     () => this.reset(),
+    "Undo" :      NO_OP,
+    "Redo" :      NO_OP,
+    "GetInfo" :   () => this.getInfo()
+  }
 
   send(message : InputMessage) : Promise<void> {
     const startTime = Date.now();
+    const handlers = (this.errored)? this.errorStateHandlers : this.messageHandlers;
+
     try { 
-      switch(message.type) {
-        case "GetWords":
-          this.getWords(message.command);
-          break;
-        case "GetStatus":
-          this.getStatus();
-          break;
-        case "Execute":
-          this.execute(message.command);
-          break;
-        case "Load": 
-          this.loadData(message);
-          break;
-        case "Start":
-          this.start(message.saveData);
-          break;
-        case "Config":
-          this.setConfig(message.properties);
-          break;
-        case "Reset":
-          this.reset();
-          break;
-        case "Undo":
-          this.undo();
-          break;
-        case "Redo":
-          this.redo();
-          break;
-        case "GetInfo":
-          this.getInfo();
-          break;
-      }
+      handlers[message.type](message);
     } catch (e) {
+      this.errored = true;
       logError(this.output, e);
     }
     logger.debug(() => `${JSON.stringify(message)}: ${Date.now() - startTime}ms`);
@@ -263,7 +274,7 @@ export class BasicEngine implements Engine {
     const gameObj = Metadata.get(this.env); 
     let output : OutputMessage;
     if (gameObj) {
-      const properties = { ...gameObj, [Version.KEY] : Version.get() };
+      const properties = { ...gameObj, [Version.KEY] : Version.get(), "Errored" : this.errored };
       output = Output.info(properties);
     } else {
       output = Output.log("error", "No game object found");
@@ -271,7 +282,7 @@ export class BasicEngine implements Engine {
     this.output(output);
   }
 
-  setConfig(newConfig : Config) {
+  setConfig(newConfig : ConfigProperties) {
     Object.assign(this.config, newConfig);
   } 
 

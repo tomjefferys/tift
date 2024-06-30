@@ -5,12 +5,14 @@ import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN, GAME_METADATA } from "./testutils/testobjects";
 import { STANDARD_VERBS } from "./testutils/testutils";
 import { Log, StatusType } from "tift-types/src/messages/output";
+import { Obj } from "../src/util/objects";
 
 let messages : string[];
 let wordsResponse : string[];
 let statuses : StatusType[]
 let saveData : SaveData;
 let log : Log[];
+let info : Obj;
 let builder : EngineBuilder;
 let engine : EngineRef;
 let executeAndTest : ExecuteAndTestFn;
@@ -27,6 +29,7 @@ beforeEach(() => {
     wordsResponse = testEnvironment.wordsResponse;
     statuses = testEnvironment.statuses;
     log = testEnvironment.log;
+    info = testEnvironment.info;
     executeAndTest = testEnvironment.executeAndTest;
     getWordIds = testEnvironment.getWordsIds;
     expectWords = testEnvironment.expectWords;
@@ -674,7 +677,7 @@ test("Test load save after getting item", () => {
 test("Test reset", () => {
     // Need to recreate the builder later, so store constructions as a lambda
     const getBuilder = () => {
-        const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log));
+        const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log, info));
         builder.withObj(GAME_METADATA);
         builder.withObj(THE_ROOM);
         builder.withObj({

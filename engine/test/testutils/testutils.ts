@@ -11,12 +11,13 @@ import * as fs from "fs"
 import { Engine } from "tift-types/src/engine";
 import { Input } from "../../src/main";
 import { GAME_METADATA } from "./testobjects";
+import { Obj } from "tift-types/src/util/objects";
 
 export const STANDARD_VERBS = ["go", "look", "inventory", "wait"];
 
 export type SaveData = { data : History };
 
-export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData, statuses : StatusType[], log : Log[] ) : OutputConsumer {
+export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData, statuses : StatusType[], log : Log[], info : Obj ) : OutputConsumer {
     return message => {
         switch(message.type) {
             case "Print":
@@ -34,6 +35,9 @@ export function listOutputConsumer(messages : string[], words : string[], saveDa
             case "Status":
                 statuses.push(message.status);
                 break;
+            case "Info":
+                Object.assign(info, message.properties);
+                break;
             default:
                 throw new Error("Can't handle type " + message.type);
         }
@@ -50,7 +54,8 @@ export function defaultOutputConsumer() : [OutputConsumer, string[], string[], S
     const statuses : StatusType[] = [];
     const saveData = { data : getEmptyHistory() }
     const log : Log[] = [];
-    const consumer = listOutputConsumer(messages, words, saveData, statuses, log);
+    const info = {};
+    const consumer = listOutputConsumer(messages, words, saveData, statuses, log, info);
     return [consumer, messages, words, saveData];
 
 }
@@ -61,7 +66,8 @@ export function setUpEnv() : [Env, string[], string[], SaveData] {
     const saveData = { data : getEmptyHistory() }
     const statuses : StatusType[] = [];
     const log : Log[] = [];
-    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages, words, saveData, statuses, log)});
+    const info = {};
+    const env = createRootEnv({"OUTPUT":listOutputConsumer(messages, words, saveData, statuses, log, info)});
     const write : EnvFn = bindParams(["value"], env => {
         const value = env.get("value");
         return env.get("OUTPUT")(print(value));
@@ -208,6 +214,7 @@ export interface TestEnvironment {
     log : Log[],
     builder : EngineBuilder,
     engine : EngineRef,
+    info : Obj,
     executeAndTest : ExecuteAndTestFn,
     getWordsIds : GetWordIdsFn,
     expectWords : ExpectWordsFn,
@@ -222,7 +229,8 @@ export function createEngineTestEnvironment() : TestEnvironment {
     const statuses : StatusType[] = [];
     const saveData = { data : getEmptyHistory() };
     const log : Log[] = [];
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log));
+    const info = {};
+    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log, info));
     const engine = createEngineRef();
     builder.withObj(GAME_METADATA);
     loadDefaults(builder);
@@ -231,7 +239,18 @@ export function createEngineTestEnvironment() : TestEnvironment {
     const expectWords = createExpectWords(getWordsIds);
     const expectStatus = createExpectStatus(engine, statuses);
     return {
-        messages, wordsResponse, statuses, saveData, log, builder, engine, executeAndTest, getWordsIds, expectWords, expectStatus
+        messages,
+        wordsResponse,
+        statuses,
+        saveData,
+        log,
+        builder,
+        engine,
+        info,
+        executeAndTest,
+        getWordsIds,
+        expectWords,
+        expectStatus
     }
 
 }

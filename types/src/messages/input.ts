@@ -2,6 +2,10 @@ import { Word } from "./word";
 
 export type InputMessage = GetWords | Execute | GetStatus | Load | Start | Config | Reset | Undo | Redo | GetInfo;
 
+export type InputMessageType = InputMessage["type"];
+
+export type ConfigProperties = { [key:string]: boolean | number | string };
+
 export interface GetWords {
     type : "GetWords",
     command : Word[]
@@ -35,7 +39,7 @@ export interface Redo {
 
 export interface Config {
     type : "Config",
-    properties : { [key:string]: boolean | number | string }
+    properties : ConfigProperties
 }
 
 export interface Start {
