@@ -9,3 +9,6 @@ nav:
   - Verbs: verbs.md
   - Traits: traits.md
   - Functions: functions.md
+  - Rules: rules.md
+  - Command  Matching: commandmatching.md
+  - Context: context.md
