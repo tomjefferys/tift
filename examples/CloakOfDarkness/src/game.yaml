@@ -1,0 +1,21 @@
+game: Cloak of Darkness
+author: Presto Turnip
+version: 1.0.0
+gameId: 58379ffe-9ec5-4317-bdd2-1b79c171a2ec
+description: >
+  A port of Cloak of Darkness to function as a demonstration of TIFT
+options:
+  - useDefaultVerbs
+introText: > 
+  Hurrying through the damp autumn evening, 
+    thankful to have your favourite cloak to keep the rain off,
+    you finally approach the grand opera house.
+    The streets are are strangely deserted,
+    but this is not really unexpected in a simple demo game.
+    {{br}}
+    **Cloak of Darkness**
+    {{br}}
+    A basic IF demonstration.
+maxScore: 2
+beforeGame():
+  - print(introText)

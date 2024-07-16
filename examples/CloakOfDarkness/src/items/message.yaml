@@ -1,0 +1,19 @@
+item: message
+name: message
+location: bar
+messages:
+  win: >
+    The message, neatly marked in the sawdust, reads...{{br}}
+    You have won.
+  lose: >
+    The message has been carelessly trampled, making it difficult to read.
+    You can just distinguish the words...{{br}}
+    You have lost.
+verbs: ["examine"]
+before:
+  examine(this):
+    when: bar.blunderCount <= 2
+    then: 
+      - once: score(1)
+      - gameOver(messages.win)
+    else: gameOver(messages.lose)

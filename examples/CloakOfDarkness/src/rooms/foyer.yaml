@@ -1,0 +1,16 @@
+room: foyer
+name: Foyer of the Opera House
+description: >
+  You are standing in the foyer of the opera house.
+  The palatial space is lit from above by large chandeliers.
+  The entrance from the street is to the north, there doors to the south and west.
+tags:
+  - start
+exits:
+  south: bar
+  west: cloakroom
+  north: outside
+leaveMessage: >
+  You've only just arrived, and besides, the weather outside seems to be getting worse.
+before:
+  go(north): leaveMessage

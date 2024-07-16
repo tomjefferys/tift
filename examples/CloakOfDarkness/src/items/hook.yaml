@@ -1,0 +1,16 @@
+item: hook
+name: small brass hook
+description: >
+  A small brass hook
+  {{#cloakOnHook}} with a cloak hanging on it.{{/cloakOnHook}}
+  {{^cloakOnHook}} screwed to the wall. {{/cloakOnHook}}
+cloakOnHook(): 
+  - onHook = isAtLocation(cloak, hook)
+  - return(onHook)
+location: cloakroom
+adposition: hanging on
+verbs:
+  -  hang.on
+after:
+  hang(cloak).on(this):
+    once: score(1)

@@ -1,0 +1,11 @@
+verb: hang
+tags:
+  - transitive
+attributes:
+  - "on"
+contexts:
+  - inventory
+  - wearing
+actions:
+  hang($hangable).on($hanger):
+    - moveItemTo(hangable, hanger)

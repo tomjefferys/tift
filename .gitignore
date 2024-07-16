@@ -10,3 +10,4 @@ webapp/dist
 .DS_store
 .VSCodeCounter
 site
+build

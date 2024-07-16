@@ -1,0 +1,14 @@
+item: cloak
+name: velvet cloak
+description: >
+  A cloak of purest black, a little damp from the rain, its darkness seems to suck in all the light.
+tags:
+  - carryable
+  - worn
+verbs:
+  - hang
+dropMessage: >
+  This isn't the best place to leave a smart velvet cloak
+before:
+  drop(this): dropMessage
+  

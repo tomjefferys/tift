@@ -1,0 +1,34 @@
+---
+room: cave
+description: A dark dank cave
+exits:
+  north: entrance
+  south: pool
+tags: [start]
+---
+room: entrance
+description: Sunlight casts a pool of illumination over the rocky and uneven floor
+exits:
+  south: cave
+---
+room: pool
+description: A deep pool of cold clear water exends over the southern end of the chamber
+exits:
+  north: cave
+---
+item: key
+name: rusty key
+description: An old rusty key
+location: pool
+tags: [carryable]
+---
+item: hotRock
+name: hot rock
+description: a burning hot piece of recently solidified lava
+location: entrance
+tags: [carryable]
+before: get(hotRock) => "Ouch!"
+---
+rule: rule1
+run:
+  - if(random(1,2) == 1).then(print("A cold wind runs straight through you"))

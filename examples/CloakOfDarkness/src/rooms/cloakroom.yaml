@@ -1,0 +1,8 @@
+room: cloakroom
+name: Cloakroom
+description: >
+  The small cloakroom has seen better days.
+  Marks on the walls show where hooks used to be attached, now all removed except for one.
+  The exit is a door to the east.
+exits:
+  east: foyer

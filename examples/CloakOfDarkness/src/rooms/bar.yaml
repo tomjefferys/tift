@@ -1,0 +1,28 @@
+room: bar
+name: Bar
+description: >
+  A rough looking bar, It is completely empty except for a layer of sawdust covering the floor.
+  It looks like some sort of message has been written in the sawdust.
+tags:
+  - dark
+exits:
+  north: foyer
+blunderCount: 0
+onAddChild(entity): 
+  when: isAtLocation(cloak, entity)
+  then: 
+    - setTag(this, 'dark')
+    - openExit(bar, 'east', bar)
+    - openExit(bar, 'south', bar)
+    - openExit(bar, 'west', bar)
+  otherwise: 
+    - delTag(this, 'dark')
+    - closeExit(bar, 'east')
+    - closeExit(bar, 'south')
+    - closeExit(bar, 'west')
+before:
+  go($direction):
+    unless: direction == 'north'
+    do: 
+       - print("Blundering around in the dark isn't a good idea!")
+       - blunderCount = blunderCount + 1
