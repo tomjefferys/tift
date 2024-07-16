@@ -11,12 +11,13 @@ templates:
     {{/isDark}} 
   items: |
     {{^isDark}}
-    {{#hasItems}}
-    You can see:
-    {{/hasItems}}
-    {{#items}}
-    - {{> item}}
-    {{/items}}
+      {{#hasItems}}
+        You can see:
+      {{/hasItems}}
+      {{#items}}
+        {{br}}
+        - {{> item}}
+      {{/items}}
     {{/isDark}} 
   partials:
     item: >
