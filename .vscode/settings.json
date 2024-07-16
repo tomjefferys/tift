@@ -1,5 +1,9 @@
 {
     "cSpell.words": [
-        "carryable"
-    ]
+        "carryable",
+        "gameover",
+        "Pauser"
+    ],
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "typescript.tsdk": "engine/node_modules/typescript/lib"
 }
