@@ -9,7 +9,7 @@ import  jsepAssignment, { AssignmentExpression } from '@jsep-plugin/assignment';
 import { Optional } from 'tift-types/src/util/optional';
 import { rethrowCompileError } from '../util/errors';
 import { formatString } from '../util/mustacheUtils';
-import { IMPLICIT_FUNCTION } from '../builder/functionbuilder';
+import { IMPLICIT_FUNCTION } from '../game/functionbuilder';
 import { isNotFound } from '../env';
 
 // Configure Jsep

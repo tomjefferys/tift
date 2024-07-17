@@ -1,4 +1,4 @@
-import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeItem } from "../src/builder/enginebuilder";
+import { makeVerb, makeEntity, makeRoom, loadFromYaml, makeItem } from "../src/game/enginebuilder";
 import * as fs from "fs";
 import _ from "lodash";
 

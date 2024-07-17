@@ -10,7 +10,7 @@ import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
 import { Obj } from "../util/objects"
 import { getCauseMessage } from "../util/errors";
-import * as RuleBuilder from "../builder/rulebuilder";
+import * as RuleBuilder from "../game/rulebuilder";
 
 export type Phase = "before" | "main" | "after";
 

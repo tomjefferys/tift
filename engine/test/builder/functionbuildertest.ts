@@ -1,4 +1,4 @@
-import { compileFunctions } from "../../src/builder/functionbuilder";
+import { compileFunctions } from "../../src/game/functionbuilder";
 import { setUpEnv } from "../testutils/testutils";
 
 test("Build rule", () => {

@@ -1,7 +1,7 @@
 import { formatString } from "../../src/util/mustacheUtils";
 import { createRootEnv } from "../../src/env";
 import { defaultOutputConsumer, loadDefaults } from "../testutils/testutils";
-import { EngineBuilder } from "../../src/builder/enginebuilder";
+import { EngineBuilder } from "../../src/game/enginebuilder";
 import { Input } from "../../src/main";
 import _ from "lodash";
 import { GAME_METADATA, NORTH_ROOM } from "../testutils/testobjects";

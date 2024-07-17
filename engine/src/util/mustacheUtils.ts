@@ -6,7 +6,7 @@ import * as _ from "lodash"
 import * as Mustache from "mustache"
 import { getCauseMessage } from "./errors";
 import { Optional } from "tift-types/src/util/optional"
-import { IMPLICIT_FUNCTION, EXPLICIT_FUNCTION } from "../builder/functionbuilder"
+import { IMPLICIT_FUNCTION, EXPLICIT_FUNCTION } from "../game/functionbuilder"
 
 const COUNT = (name : string) => `__COUNT(${name})__`;
 

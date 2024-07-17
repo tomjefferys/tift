@@ -7,7 +7,7 @@ import * as EngineProxy from "./engineproxy";
 import { Filters } from "tift-types/src/util/duplexproxy";
 import { State, buildStateMachine }  from "./util/statemachine";
 import { ControlType } from "tift-types/out/messages/controltype";
-import { getDefaultGameBehaviour } from "./builder/behaviour";
+import { getDefaultGameBehaviour } from "./game/behaviour";
 import { Engine } from "tift-types/src/engine";
 import { DecoratedForwarder, MessageForwarder } from "tift-types/src/engineproxy";
 import { StateMachine, StateName } from "tift-types/src/util/statemachine";

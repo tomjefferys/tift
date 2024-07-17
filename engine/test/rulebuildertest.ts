@@ -1,6 +1,6 @@
 import { Env } from "tift-types/src/env";
 import { setUpEnv } from "./testutils/testutils";
-import * as RuleBuilder from "../src/builder/rulebuilder";
+import * as RuleBuilder from "../src/game/rulebuilder";
 let env : Env;
 let messages : string[];
 

@@ -1,5 +1,5 @@
 import { Log } from "tift-types/src/messages/output";
-import { EngineBuilder } from "../src/builder/enginebuilder";
+import { EngineBuilder } from "../src/game/enginebuilder";
 import { Input } from "../src/main";
 import { Obj } from "../src/util/objects";
 import { createEngineTestEnvironment, EngineRef, ExpectStatusFn, ExpectWordsFn } from "./testutils/testutils";

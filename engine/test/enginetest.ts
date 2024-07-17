@@ -1,5 +1,5 @@
 import { BasicEngine } from "../src/engine";
-import { EngineBuilder } from "../src/builder/enginebuilder";
+import { EngineBuilder } from "../src/game/enginebuilder";
 import { listOutputConsumer, SaveData, loadDefaults, ExecuteAndTestFn, GetWordIdsFn, ExpectWordsFn, createEngineTestEnvironment, EngineRef, ExpectStatusFn } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN, GAME_METADATA } from "./testutils/testobjects";

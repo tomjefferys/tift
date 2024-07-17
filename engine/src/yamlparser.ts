@@ -1,6 +1,6 @@
 import { loadAll } from "js-yaml"
 import { Obj } from "./util/objects"
-import * as Metadata from "./builder/metadata"
+import * as Metadata from "./game/metadata"
 
 const prototypes = {
   "room":{"type":"room"},

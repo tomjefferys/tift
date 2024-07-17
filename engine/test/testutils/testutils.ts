@@ -5,7 +5,7 @@ import { createRootEnv } from "../../src/env";
 import { Env, EnvFn } from "tift-types/src/env";
 import { print } from "../../src/messages/output"
 import { History } from "tift-types/src/util/historyproxy";
-import { EngineBuilder } from "../../src/builder/enginebuilder";
+import { EngineBuilder } from "../../src/game/enginebuilder";
 import * as YAMLParser from "../../src/yamlparser";
 import * as fs from "fs"
 import { Engine } from "tift-types/src/engine";

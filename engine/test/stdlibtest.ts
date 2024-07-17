@@ -1,4 +1,4 @@
-import { EngineBuilder } from "../src/builder/enginebuilder";
+import { EngineBuilder } from "../src/game/enginebuilder";
 import { SaveData, ExecuteAndTestFn, ExpectWordsFn, createEngineTestEnvironment, EngineRef } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
@@ -842,6 +842,7 @@ test("Test format", () => {
     engine.ref = builder.build();
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["foo = bar, qux = baz"]});
+    // Tidy/commit, maybe add more tests for different way of doing formatting
 })
 
 test("Test format with missing template", () => {
