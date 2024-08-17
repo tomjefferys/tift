@@ -34,7 +34,6 @@ The following fields can be set on most entity types.
 
 ## Rooms/Items
 
-
 ## Room
 
 A room consists of a YAML document with the following properties:
@@ -44,6 +43,10 @@ A room consists of a YAML document with the following properties:
 |`room`|Yes|Unique id|
 |`description`|no|A description|
 |`exits`|no|An array of exits, and the rooms they lead to|
+
+### Tags
+`dark`: This room has no light, any items in this room will not be visible unless the player is carrying a [lightsource](./traits.md#light-sources)
+`pseudoRoom`: This is treated as a special location (eg an endgame room). This room will have no context, and the usual verbs for movement will not be available.
 
 eg
 ```yaml
@@ -60,4 +63,67 @@ exits:
 
 ## Item
 
-An item
+An item is an entity that can be interacted with in some way.
+
+|property| Mandatory | Description |
+|---|---|---|
+|`item`|Yes|Unique id|
+|`description`|no|A description|
+|`verbs`|no|An array of verbs that can be used to interact with the item|
+
+Various [traits](traits.md) can be assigned to an item, these are specified using tags.
+
+### Examples
+```yaml
+item: cloak
+name: velvet cloak
+description: >
+  A cloak of purest black, a little damp from the rain, its darkness seems to suck in all the light.
+tags:
+  - carryable
+  - worn
+verbs:
+  - hang
+```
+
+```yaml
+item: chair
+name: chair
+desc: |
+  Rough and uncomfortable, made of sturdy but unfinished wood.
+  No one has ever wanted to sit on it, the risk of a painful splinter too high.
+location: cellar_south
+sat_on: false
+standing_on: false
+tags:
+  - pushable
+verbs: 
+  - stand: sat_on
+  - sit: not(sat_on) 
+before:
+  go($direction):
+    switch:
+      - when: sat_on
+        do: print("You're not going anywhere whilst sitting down")
+  push(this, $direction):
+     when: or(sat_on)
+     do: print("You need to get off the chair before you push it")
+  sit(this):
+    when: not(sat_on)
+    do: 
+      - print("You sit on the chair")
+      - standing_on = false
+      - sat_on = true
+    otherwise: "'You are already sitting on the chair'"
+  stand:
+    when: sat_on
+    do:
+      - print("You stand up")
+      - sat_on = false
+    otherwise: print("You are already standing")
+after:
+  look:
+    switch:
+      - when: sat_on
+        do: print("You are sitting on the chair")
+```
