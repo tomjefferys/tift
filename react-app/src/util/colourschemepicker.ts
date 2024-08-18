@@ -7,7 +7,7 @@ const LIGHT = "light";
 const DARK = "dark";
 const CANCEL = "cancel";
 
-const CHANGE_MESSAGE = (scheme : string) => `changine to ${scheme} scheme`;
+const CHANGE_MESSAGE = (scheme : string) => `Changing to the ${scheme} scheme.`;
 
 /**
  * Creates the colour scheme picker
