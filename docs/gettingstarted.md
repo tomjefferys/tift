@@ -2,7 +2,7 @@
 
 The easiest way to get started for now is to check out an existing project.
 
-Eg see: https://github.com/tomjefferys/CloakOfDarkness
+Eg see: [https://github.com/tomjefferys/CloakOfDarkness](https://github.com/tomjefferys/CloakOfDarkness)
 
 This should be buildable on any linux/mac, and on windows using WSL.
 

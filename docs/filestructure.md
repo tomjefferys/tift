@@ -23,7 +23,7 @@ tags:
 
 This contains two YAML documents separated by a `---`.  They both describe entities.  `northRoom` is a location, and `ball` is an item.
 
-YAML has nice syntax for multiline strings, alowing for long descriptions
+YAML has nice syntax for multiline strings, allowing for long descriptions
 ```yaml
 ---
 room: northRoom
