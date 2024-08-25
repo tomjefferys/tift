@@ -39,7 +39,10 @@ export const LOCKABLE : TraitProcessor = (obj, tags, builder) => {
         const view = {
             item: getFullName(lockable as Nameable)
         }
-        writeMessage(env, view, "open.templates.isLocked");
+        const isLocked = lockable[IS_LOCKED];
+        if (isLocked) {
+            writeMessage(env, view, "open.templates.isLocked");
+        }
         return mkResult(lockable[IS_LOCKED]);
     });
 

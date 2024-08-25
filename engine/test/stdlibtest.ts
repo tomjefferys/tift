@@ -209,7 +209,7 @@ test("Test lockable", () => {
     executeAndTest(["open", "door"], { expected : ["The door is locked"]});
     executeAndTest(["get","brass_key"], {});
     executeAndTest(["unlock", "door", "with", "brass_key"], { expected : ["You unlock the door."]});
-    executeAndTest(["open", "door"], {});
+    executeAndTest(["open", "door"], { notExpected : ["The door is locked"]});
     executeAndTest(["examine", "door"], { expected : ["The door is open"]});
     executeAndTest(["lock", "door", "with", "brass_key"], { expected : ["The door cannot be locked whilst it is open."]});
     executeAndTest(["close", "door"], {});
