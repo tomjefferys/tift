@@ -125,13 +125,3 @@ export function getType(value : unknown) : string {
 function splitPath(path : PropType[]) : [PropType, PropType[]] {
     return [path[0], path.slice(1)];
 }
-
-/**
- * Adds a label parameter to the object, which can be used when debugging
- * @param obj 
- * @param label 
- * @returns 
- */
-export function label<T>(obj : T, label : string) : T {
-  return Object.assign(obj, {label})
-}

@@ -11,7 +11,6 @@ import { Env } from "tift-types/src/env"
 import * as Logger from "./util/logger"
 import { PartOfSpeech, Word } from "tift-types/src/messages/word"
 import * as SearchTerm from "./searchterm";
-import { label } from "./util/objects"
 
 // verb                                -- intransitive verb
 // verb object                         -- transitive verb
@@ -261,12 +260,12 @@ const modifierSearch : SearchFn = (context, state) => {
     const newModifiers = verb? getVerbModifiers(context, verb) : {};
     return multidict.entries(newModifiers).map(([modType, modValue]) => castModifiable(state).modifier(modType, modValue))}
 
-const TRANS_VERB      = label(getVerbSearch(verb => isTransitive(verb)),   "TRANS_VERB");
-const INTRANS_VERB    = label(getVerbSearch(verb => isIntransitive(verb)), "INTRANS_VERB");
-const DIRECT_OBJECT   = label(directObjectSearch,                          "DIRECT_OBJECT");
-const ATTRIBUTE       = label(attributeSearch,                             "ATTRIBUTE");
-const INDIRECT_OBJECT = label(indirectObjectSearch,                        "INDIRECT_OBJECT");
-const MODIFIER        = label(modifierSearch,                              "MODIFIER");
+const TRANS_VERB      = getVerbSearch(verb => isTransitive(verb));
+const INTRANS_VERB    = getVerbSearch(verb => isIntransitive(verb));
+const DIRECT_OBJECT   = directObjectSearch;
+const ATTRIBUTE       = attributeSearch;
+const INDIRECT_OBJECT = indirectObjectSearch;
+const MODIFIER        = modifierSearch;
 
 // When adding a new word pattern, make sure it is covered by a validator in command.ts
 const WORD_PATTERNS = Tree.fromArrays([
