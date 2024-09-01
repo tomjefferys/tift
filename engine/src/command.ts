@@ -347,7 +347,8 @@ function reject(pos : PoSType) : Predicate<SentenceNode> {
 type SentenceValidator = [Predicate<Verb>[], Predicate<SentenceNode>[]];
 
 const VALIDATORS : SentenceValidator[] = [
-    [[Verb.isIntransitive],                                                [accept("verb"), reject("directObject"), reject("indirectObject")]],
+    [[Verb.isIntransitive, not(Verb.isAttributed)],                        [accept("verb"), reject("directObject"), reject("indirectObject")]],
+    [[Verb.isIntransitive, Verb.isAttributed],                             [accept("verb"), reject("directObject"), accept("preposition"), accept("indirectObject")]],
     [[Verb.isTransitive, not(Verb.isAttributed)],                          [accept("verb"), accept("directObject"), reject("preposition")]],
     [[Verb.isTransitive, Verb.isAttributed, not(Verb.isIndirectOptional)], [accept("verb"), accept("directObject"), accept("preposition"), accept("indirectObject")]],
     [[Verb.isTransitive, Verb.isAttributed, Verb.isIndirectOptional],      [accept("verb"), accept("directObject"), reject("preposition")]],

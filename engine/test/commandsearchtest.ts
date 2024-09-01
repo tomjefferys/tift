@@ -6,7 +6,7 @@ import { createRootEnv } from "../src/env";
 import * as _ from "lodash"
 import { VerbMap } from "../src/types";
 import { EAT, APPLE, STIR, SOUP, SPOON, LOOK, ASK,
-         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP, CHAIR, STAND, SIT, BALL, BAG, PUT } from "./testutils/testentities"
+         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP, CHAIR, STAND, SIT, BALL, BAG, PUT, BED, LIE } from "./testutils/testentities"
 import * as SearchTerm from "../src/searchterm";
 
 test("Test empty input", () => {
@@ -58,6 +58,12 @@ test("Test instransitive verb with modifier", () => {
     ["go"],
     ["go","north"],
     ["go","east"] ]));
+});
+
+test("Test intransitive verb with attribute and object", () => {
+  const command = getAllCommandIds([BED], [LIE]);
+  expect(command).toHaveLength(1);
+  expect(command).toEqual([["lie","on","bed"]]);
 });
 
 test("Test transitive verb with modifier", () => {
@@ -222,7 +228,6 @@ test("Test wildcard verb only search", () => {
   const matches = search(SearchTerm.fromStrings("?"), context);
   expect(getCommandWords(matches)).toEqual(expect.arrayContaining([["eat"], ["stir"]]));
 });
-
 
 const createVerbMap = (verbs : Verb[]) : VerbMap => verbs.reduce((obj, verb) => ({...obj, [verb.id] : verb}), {});
 

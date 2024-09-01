@@ -13,6 +13,15 @@ export const EAT = new VerbBuilder({"id":"eat"})
                      .withTrait("transitive")
                      .build();
 
+export const LIE = new VerbBuilder({"id":"lie"})
+                        .withTrait("intransitive")
+                        .withAttribute("on")
+                        .build();
+
+export const BED = new EntityBuilder({"id" : "bed"})
+                        .withAttributedVerb("lie", "on")
+                        .build();
+
 export const SOUP = new EntityBuilder({"id" : "soup"})
                     .withVerb("stir")
                     .build();
