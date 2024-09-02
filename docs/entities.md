@@ -45,10 +45,16 @@ A room consists of a YAML document with the following properties:
 |`exits`|no|An array of exits, and the rooms they lead to|
 
 ### Tags
-`dark`: This room has no light, any items in this room will not be visible unless the player is carrying a [lightsource](./traits.md#light-sources)
-`pseudoRoom`: This is treated as a special location (eg an endgame room). This room will have no context, and the usual verbs for movement will not be available.
+#### `start`
+This is room that the player starts in.  There should only be one of these
 
-eg
+#### `dark`
+This room has no light, any items in this room will not be visible unless the player is carrying a [lightsource](./traits.md#light-sources)
+
+#### `pseudoRoom`
+This is treated as a special location (eg an endgame room). This room will have no context, and the usual verbs for movement will not be available.
+
+### Example
 ```yaml
 room: squareRoom
 description: |
