@@ -229,11 +229,13 @@ test("Test container", () => {
                     })
                 .withObj({id : "ball",
                           name : "ball",
+                          description : "a round ball",
                           type : "item",
                           location : "northRoom",
                           tags : ["carryable"]})
                 .withObj({id : "cube",
                           name : "cube",    
+                          description : "a square cube",
                           type : "item", 
                           location : "northRoom",
                           tags : ["carryable"]});
@@ -248,6 +250,11 @@ test("Test container", () => {
     expectWords(["put"], ["ball", "cube"]);
     executeAndTest(["put", "ball", "in", "chest"], {});
     executeAndTest(["examine", "chest"], { expected : ["A large chest", "Inside", "ball"], notExpected : ["cube"]});
+
+    // Examining the objects should not show the chest description
+    executeAndTest(["examine", "ball"], { expected : ["a round ball"], notExpected : ["Inside"]});
+    executeAndTest(["examine", "cube"], { expected : ["a square cube"], notExpected : ["Inside"]});
+
     executeAndTest(["put", "cube", "in", "chest"], {});
     executeAndTest(["examine", "chest"], { expected : ["A large chest", "Inside", "ball", "cube"]});
     executeAndTest(["get", "ball"], {});

@@ -11,7 +11,7 @@ import * as Output from "../output";
 import * as VERB_NAMES from "../verbnames";
 import { Obj } from "tift-types/src/util/objects";
 import { Env } from "tift-types/src/env";
-import { createMatcher, createAction } from "./traitutils";
+import { createMatcher, createAction, createThisMatcher } from "./traitutils";
 
 const CLOSED_CONTAINER_MESSAGE = "put.templates.container.closed";
 const CONTAINER_IN_ITEM_MESSAGE = "put.templates.container.inItem";
@@ -41,7 +41,7 @@ export const CONTAINER : TraitProcessor = (obj, tags, builder) => {
 
     builder.withAttributedVerb(VERB_NAMES.PUT, relLoc)
 
-    builder.withAfter(createAction(createMatcher(VERB_NAMES.EXAMINE, "this"),
+    builder.withAfter(createAction(createThisMatcher(VERB_NAMES.EXAMINE),
                       createThunk(getExamineContainerFn(relLoc)), "after"));
 
     // Get from container
