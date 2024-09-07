@@ -200,6 +200,19 @@ test("Test array access", () => {
     expect(messages).toStrictEqual(["bar", "foo"]);
 });
 
+test("Test array access with expression", () => {
+    const [env, messages] = setUpEnv();
+    const fn = parse(`
+        do(
+            set(arr, ["foo", "bar"]),
+            set(index, 1),
+            write(arr[index])
+        )
+    `);
+    fn(env);
+    expect(messages).toStrictEqual(["bar"]);
+});
+
 test("Test object property", () => {
     const [env, messages] = setUpEnv();
     const fn = parse(`

@@ -188,7 +188,9 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
             return mkResult(obj[builtInProperty]);
         }
     } else {
-        const propertyThunk = evaluateName(memberExpression.property);
+        const propertyThunk = memberExpression.computed
+            ? evaluate(memberExpression.property)
+            : evaluateName(memberExpression.property);
         envFn = env => {
             const obj = objThunk.resolve(env).getValue() as {[key:string]:unknown}
             const property = propertyThunk.resolve(env).getValue() as string;
