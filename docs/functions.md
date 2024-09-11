@@ -183,6 +183,17 @@ $ examine white mouse
 ### see also
 - [getName](#getName)
 
+## getInventory
+
+Returns all the items the player is carrying
+
+```js
+getInventory()
+```
+
+### see also
+- [itemsAtLocation](#itemsatlocation)
+
 ## getLocation
 
 Return the id of the players current location
@@ -371,6 +382,16 @@ The open/closed status has no effect on this call
 ### see also
 - [open](#open)
 - [close](#close)
+
+## itemsAtLocation
+
+Returns an array containing all the entities at the specified location
+
+`itemsAtLocation(room)`
+
+### see also
+- [isAtLocation](#isAtLocation)
+- [getInventory](#getInventory)
 
 ## move
 

@@ -94,6 +94,7 @@ export function findEntities(env : Env, location : Obj) : Obj[] {
               .filter(obj => Entities.isEntity(obj))
               .filter(obj => Entities.isEntityVisible(env, canSee, obj))
               .flatMap(obj => [obj, ...findEntities(env, obj)])  // TODO this should check for 'container' tag
+              .filter(obj => obj.type != Entities.Types.SPECIAL)
 }
 
 export function canSeeAtLocation(env : Env, location : Obj) : boolean {

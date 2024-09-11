@@ -74,10 +74,11 @@ export function delEntityTag(obj : Obj, tag : string) : void {
     }
 }
 
-export function makeVisibleWhenDarkFn() : EnvFn {
+export function makeVisibleWhenDarkFn(optScope? : Env) : EnvFn {
     return env => {
-        const locationId = env.get(LOCATION);
-        const location = getEntity(env, locationId);
+        const scope = optScope ?? env;
+        const locationId = scope.get(LOCATION);
+        const location = getEntity(scope, locationId);
         const result = entityHasTag(location, DARK);
         return mkResult(result);
     }

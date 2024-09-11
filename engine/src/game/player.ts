@@ -25,7 +25,7 @@ export function makePlayer(env : Env, start : string) {
       .withTag("container")
       .build();
     props["entities"][PLAYER] = player;
-    player["visibleWhen"] = bindParams([], Entities.makeVisibleWhenDarkFn(), env.newChild(player));
+    player["visibleWhen"] = Entities.makeVisibleWhenDarkFn(env.newChild(player));
 
     // Set up the inventory
     const inventory = new EntityBuilder({

@@ -891,3 +891,26 @@ test("Test setLocation", () => {
     executeAndTest(["get", "teleporter"], {});
     executeAndTest(["look"], { expected : ["The South Room"]});
 });
+
+test("Test getInventory", () => {
+    builder.withObj({ ...NORTH_ROOM,
+                      "after" : {
+                        "wait()" : "print(getInventory().length)"
+                      }
+                    })
+           .withObj({ id : "ball",
+                      type : "item",
+                      location : "northRoom",
+                      tags : ["carryable"]})
+           .withObj({ id : "bat",
+                      type : "item",
+                      location : "northRoom",
+                      tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["0"]});
+    executeAndTest(["get", "ball"], {});
+    executeAndTest(["wait"], { expected : ["1"]});
+    executeAndTest(["get", "bat"], {});
+    executeAndTest(["wait"], { expected : ["2"]});
+});

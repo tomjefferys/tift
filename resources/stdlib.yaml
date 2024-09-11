@@ -23,6 +23,7 @@ delTag(entity, tag):
 return(value): value
 isCarrying(item): isAtLocation(item, '__PLAYER__') 
 isHolding(item): isCarrying(item) && !isInContainer(item)
+getInventory(): itemsAtLocation('__PLAYER__')
 isOpenable(item): hasTag(item, 'openable') || hasTag(item, 'closable')
 open(item):
   if: isOpenable(item)
