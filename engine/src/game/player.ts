@@ -4,7 +4,6 @@ import { Env } from "tift-types/src/env";
 import { Entity } from "../entity";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
-import { bindParams } from "../script/parser";
 
 export const PLAYER = "__PLAYER__";
 export const INVENTORY = "__INVENTORY__";
