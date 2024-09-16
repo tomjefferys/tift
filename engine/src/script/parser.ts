@@ -75,6 +75,7 @@ const BUILTINS : {[key:string]:EnvFn} = {
 const KEYWORD_PROPS = ["then", "else", "case", "default"];
 
 export const ARGS = "__args__"; 
+export const NO_ARGS_LENGTH_CHECK = "__no_arg_len_check__";
 
 export function parseToTree(expression : string, objPath? : string) {
     try {
@@ -351,7 +352,9 @@ export function bindParams(params : string[], fn : EnvFn, closureEnv : Optional<
             const missingArgs = params.slice(args.length);
             throw new Error(`Not enough arguments. Missing: ${missingArgs.join(", ")}`); 
         }
-        if (args.length > params.length) {
+
+        const checkLength = !(env.get(NO_ARGS_LENGTH_CHECK) ?? false);
+        if (checkLength && args.length > params.length) {
             const extraArgs = args.slice(params.length);
             throw new Error(`Too many arguments. Extra: ${extraArgs.join(", ")}`);
         }

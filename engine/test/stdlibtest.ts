@@ -68,6 +68,38 @@ test("Test string functions", () => {
     executeAndTest(["wait"], { expected : ["Time passes", "ello", "11"], notExpected : ["failed"] });
 });
 
+test("Test simple array function", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "arrayFns",
+        type : "rule",
+        "afterTurn()" : [
+            "a = [1,2,3,4,5]",
+            "print(Array.length(a))"
+        ]
+    })
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["Time passes", "5"], notExpected : ["failed"] });
+});
+
+test("Test array function with lambda", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "arrayFns",
+        type : "rule",
+        "square(x)" : "x * x",
+        "afterTurn()" : [
+            "a = [1,2,3,4,5]",
+            "print(Array.map(a, square))"
+        ]
+    })
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["Time passes", "1,4,9,16,25"], notExpected : ["failed"] });
+})
+
 
 test("Test hiding/revealing object", () => {
     builder.withObj({...NORTH_ROOM })

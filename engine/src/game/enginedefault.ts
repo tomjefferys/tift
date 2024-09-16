@@ -1,7 +1,9 @@
-import { EnvFn } from "tift-types/src/env";
+import { Env } from "tift-types/src/env";
+import { EnvFn } from "../script/thunk";
+
 import { control, print, log } from "../messages/output";
 import { mkResult } from "../script/thunk";
-import { ARGS, bindParams } from "../script/parser";
+import { ARGS, bindParams, NO_ARGS_LENGTH_CHECK } from "../script/parser";
 import { Obj } from "../util/objects"
 import _ from "lodash";
 import * as Entities from "./entities";
@@ -37,10 +39,16 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
         return mkResult(true);
     }),
     move : moveFn,
-    getLocation : env => Player.getLocation(env),
-    write : env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message": print(env.get("value"))})),
-    writeMessage : env => Output.getOutput(env)(env.get("message")),
-    clearBuffer : env => Output.clear(env),
+    getLocation : env => mkResult(Player.getLocation(env)),
+    write: env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({ "message": print(env.get("value")) })),
+    writeMessage: env => {
+        Output.getOutput(env)(env.get("message"));
+        return mkResult(true);
+    },
+    clearBuffer : env => {
+        Output.clear(env);
+        return mkResult(true);
+    },
     pause : bindParams(["duration"], env => {
         DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message" : control({ type : "pause", durationMillis : env.get("duration"), interruptable : true})}));
         return mkResult(null);
@@ -105,7 +113,10 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const entity = Entities.getEntity(env, env.get("entity"));
                             return mkResult(Locations.isInContainer(env, entity));
                         }),
-    tick : env => env.setTransient("tick", true),
+    tick : env => {
+        env.setTransient("tick", true);
+        return mkResult(true);
+    },
     obj : _env => { return mkResult({}) },
     getProperty : bindParams(["name", "defaultValue"], env => {
                             const defaultValue = env.get("defaultValue");
@@ -182,7 +193,12 @@ function mapJSFunctions(type : StringConstructor | ArrayConstructor, checkType :
                 const arg0 = args[0];
                 checkType(name, arg0);
 
-                const fnArgs = args.slice(1);
+                const fnArgs = args.slice(1).map(
+                    (arg : unknown) => 
+                        _.isFunction(arg)
+                            ? mapEnvFunctionToJS(env, arg as EnvFn)
+                            : arg
+                )
                 const result = (arg0 as unknown as Obj)[name](...fnArgs);
                 return mkResult(result);
             }
@@ -200,6 +216,19 @@ function mapJSFunctions(type : StringConstructor | ArrayConstructor, checkType :
         }
     }
     return fnMap;
+}
+
+// Wrap a function that is defined in the environment, and make it available in the JS context
+function mapEnvFunctionToJS(env : Env, fn : EnvFn) : unknown {
+    return (...args : unknown[]) => {
+        const childEnv = env.newChild({
+                [ARGS] : args,
+                // Disable arg length checking
+                // Some JS functions eg Array.map, have optional arguments
+                [NO_ARGS_LENGTH_CHECK] : true,
+            });
+        return fn(childEnv).getValue();
+    }
 }
 
 
