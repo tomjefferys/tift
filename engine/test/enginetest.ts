@@ -1880,3 +1880,25 @@ test("Test custom verb modifier", () => {
     executeAndTest(["pull", "lever", "up"], { expected : ["pulling up"]});
     executeAndTest(["pull", "lever", "down"], { expected : ["pulling down"]});
 })
+
+test("Test undefined/defined value as when rule", () => {
+    builder.withObj({...NORTH_ROOM})
+           .withObj({
+                "id" : "numbers",
+                "type" : "item",
+                "location" : "northRoom",
+                "theList" : ["foo", "bar", "baz"],
+                "afterTurn()" : [
+                        "qux = Array.find(theList, fn([item], item == 'qux'))",
+                        {
+                            "when" : "qux",
+                            "then" : "print(qux)",
+                            "else" : "print('NO QUX')"
+                        }
+                    ]
+                }
+           );
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["NO QUX"]});
+});

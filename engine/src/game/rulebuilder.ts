@@ -59,9 +59,12 @@ function evaluateComponentRule(rule : object, path? : string) : Thunk {
 
     const envFn = (env : Env) => {
         const scope = env.newChild();
-        const action = (rules["condition"]?.resolve(scope).getValue() ?? true)
-                            ? rules["action"]
-                            : rules["otherwise"]
+
+        const performAction = rules["condition"]
+                            ? rules["condition"].resolve(scope).getValue()
+                            : true;
+
+        const action = performAction ? rules["action"] : rules["otherwise"]
         return mkResult(action?.resolve(scope).getValue());
     }
     return mkThunk(envFn);
