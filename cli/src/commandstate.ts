@@ -1,10 +1,11 @@
 import { IdValue } from "tift-engine/src/shared";
+import { Word } from "tift-types/src/messages/word";
 import { Display, DisplayState } from "./display";
 import { EngineFacade } from "./enginefacade";
 
 export class CommandState {
     input : string[];
-    command : IdValue<string>[];
+    command : Word[];
     engine : EngineFacade;
     display : Display;
     messages : string[];
@@ -30,7 +31,8 @@ export class CommandState {
     }
 
     update() {
-        const filtered = filterWords(this.engine.getWords(this.command.map(word => word.id)), this.input);
+        const filtered = filterWords(this.engine.getWords(this.command), this.input);
+
         if (filtered.length === 0) {
             this.input.pop();
         } else if (filtered.length === 1) {
@@ -73,12 +75,11 @@ export class CommandState {
 }
 
 function getWords(engine : EngineFacade, state : CommandState) : IdValue<string>[] {
-    const wordIds = state.command.map(word => word.id);
-    const matched = engine.getWords(wordIds);
+    const matched = engine.getWords(state.command);
     return matched;
 }
 
-export function filterWords(words : IdValue<string>[], prefixChars : string[]) {
+export function filterWords(words : Word[], prefixChars : string[]) {
     const prefix = prefixChars.join("");
     return words.filter(word => word.value.startsWith(prefix));
 }

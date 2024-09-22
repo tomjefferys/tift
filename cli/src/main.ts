@@ -8,7 +8,11 @@ readline.emitKeypressEvents(process.stdin);
 
 const display = new Display(process.stdout);
 const engine = createEngine();
-const data = fs.readFileSync("../example/simple.yaml", "utf8");
+const stdlib = fs.readFileSync("../resources/stdlib.yaml", "utf8");
+const props = fs.readFileSync("../resources/properties.yaml", "utf8");
+const data = fs.readFileSync("../examples/CloakOfDarkness/build/adventure.yaml", "utf8");
+engine.load(stdlib);
+engine.load(props);
 engine.load(data);
 engine.configure({ "autoLook" : true });
 

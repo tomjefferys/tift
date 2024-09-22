@@ -1,11 +1,10 @@
 import { getEngine, Input } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
 import * as _ from "lodash"
-import { IdValue } from "tift-engine/src/shared";
 import { OutputMessage } from "tift-types/src/messages/output";
-//import * as Input from "tift-engine/src/messages/input";
+import { Word } from "tift-types/src/messages/word";
 
-type WordCache = [string[], IdValue<string>[]];
+type WordCache = [Word[], Word[]];
 type PrintHandler = (message : string) => void;
 
 export function createEngine() : EngineFacade {
@@ -23,9 +22,9 @@ export class EngineFacade {
         this.messageConsumer = messageConsumer;
     }
 
-    getWords(command : string[] = this.messageConsumer.wordCache[0]) {
+    getWords(command : Word[] = this.messageConsumer.wordCache[0]) : Word[] {
         let [partial, words] = this.messageConsumer.wordCache;
-        if (!_.isEqual(command, partial)) {
+        if (!_.isEqual(command.map(word => word.id), partial.map(word => word.id))) {
             this.engine.send(Input.getNextWords(command));
             [partial, words] = this.messageConsumer.wordCache;
         }
@@ -75,7 +74,7 @@ class MessageConsumer {
                 this.status = message.status["title"];
                 break;
             case "Words":
-                this.wordCache = [message.command, message.words];
+                this.wordCache = [[...message.command], message.words];
                 break;
         }
     }
