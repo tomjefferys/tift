@@ -5,5 +5,6 @@
         "Pauser"
     ],
     "typescript.enablePromptUseWorkspaceTsdk": true,
-    "typescript.tsdk": "engine/node_modules/typescript/lib"
+    "typescript.tsdk": "engine/node_modules/typescript/lib",
+    "makefile.configureOnOpen": false
 }

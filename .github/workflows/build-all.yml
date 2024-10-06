@@ -1,0 +1,16 @@
+name: build-all
+on: [push]
+jobs: 
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '17'
+      - name: install typescript
+        run: npm install -g typescript
+      - name: install jest
+        run: npm install -g jest
+      - name: run make
+        run: make
