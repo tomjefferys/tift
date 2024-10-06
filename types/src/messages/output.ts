@@ -10,9 +10,7 @@ export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";
 
 export type WordType = "word" | "option" | "control" | "select";
 
-
-type Not<T,R> = R extends T ? never : R;
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Properties = {[key:string]:any};
 
 export type StatusType = {

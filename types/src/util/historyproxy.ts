@@ -1,7 +1,6 @@
 import * as objects from "./objects";
 
 type PropType = objects.PropType;
-type Obj = objects.Obj;
 
 export type Action = Set | Del;
 

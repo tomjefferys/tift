@@ -7,9 +7,8 @@ types/out: types/node_modules
 	echo "Building types..."
 	cd types && tsc
 
-# fix linting errors in types first
-#types-lint: types
-#	cd types && npm run lint
+types-lint: types
+	cd types && npm run lint
 
 types: types/out
 
@@ -110,7 +109,7 @@ examples/CloakOfDarkness-clean:
 .PHONY: all test lint install uninstall clean
 compile: types engine cli react-app examples
 test: engine-test react-app-test examples-test
-lint: engine-lint cli-lint
+lint: types-lint engine-lint cli-lint
 install: cli-install
 uninstall: cli-uninstall
 all: compile lint install test
