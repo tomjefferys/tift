@@ -1,4 +1,5 @@
 {
+  "name" : "tift-cli",
   "scripts": {
     "lint": "eslint . --ext .ts"
   },
@@ -13,5 +14,9 @@
     "@typescript-eslint/eslint-plugin": "^5.37.0",
     "@typescript-eslint/parser": "^5.37.0",
     "eslint": "^8.23.1"
+  },
+  "main": "out/src/main.js",
+  "bin": {
+    "tift": "out/src/main.js"
   }
 }

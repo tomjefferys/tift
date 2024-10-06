@@ -50,6 +50,14 @@ cli/out: cli/node_modules
 cli-lint: cli
 	cd cli && npm run lint
 
+cli-install: cli/out
+	echo "Installing cli..."
+	cd cli && npm install -g
+
+cli-uninstall:
+	echo "Uninstalling cli..."
+	cd cli && npm uninstall -g
+
 cli: types engine cli/out
 
 cli-clean:
@@ -78,25 +86,34 @@ react-app-clean:
 	rm -rf react-app/build
 
 # examples
-.PHONY: examples examples-clean
+.PHONY: examples examples-test examples-clean
 examples: examples/CloakOfDarkness
+examples-test: examples/CloakOfDarkness-test
 examples-clean: examples/CloakOfDarkness-clean
 
 ## Cloak of darkness
-.PHONY: examples/CloakOfDarkness examples/CloakOfDarkness-clean
+.PHONY: examples/CloakOfDarkness examples/CloakOfDarkness-test examples/CloakOfDarkness-clean
 examples/CloakOfDarkness: cli react-app
 	echo "Building Cloak of Darkness..."
 	cd examples/CloakOfDarkness && make
+
+examples/CloakOfDarkness-test: examples/CloakOfDarkness cli-install
+	cd examples/CloakOfDarkness && cat test.txt | tift \
+	 build/webapp/stdlib.yaml \
+	 build/webapp/properties.yaml \
+	 build/webapp/adventure.yaml
 
 examples/CloakOfDarkness-clean:
 	cd examples/CloakOfDarkness && make clean
 
 # all
-.PHONY: all test lint clean
+.PHONY: all test lint install uninstall clean
 compile: types engine cli react-app examples
-test: engine-test react-app-test
+test: engine-test react-app-test examples-test
 lint: engine-lint cli-lint
-all: compile lint test
-clean: types-clean engine-clean cli-clean react-app-clean examples-clean
+install: cli-install
+uninstall: cli-uninstall
+all: compile lint install test
+clean: types-clean engine-clean cli-clean cli-uninstall react-app-clean examples-clean
 
 .DEFAULT_GOAL := all

@@ -1,0 +1,22 @@
+# Test script for Cloak of Darkness
+
+Foyer of the Opera House
+
+$ look
+
+$ inventory
+velvet cloak
+
+$ go west
+
+$ hang velvet cloak on small brass hook
+
+# check no longer carrying the cloak
+$ inventory
+! cloak
+
+
+$ go east
+$ go south
+$ examine message
+You have won
