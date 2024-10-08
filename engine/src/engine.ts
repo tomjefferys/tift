@@ -227,6 +227,10 @@ export class BasicEngine implements Engine {
     try { 
       handlers[message.type](message);
     } catch (e) {
+      // Flush any messages
+      MessageOut.flush(this.env);
+
+      // Set to error state
       this.errored = true;
       logError(this.output, e);
     }
