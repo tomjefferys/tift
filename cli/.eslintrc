@@ -19,5 +19,8 @@
         "caughtErrorsIgnorePattern": "^_",
       }
     ]
+  },
+  "parserOptions": {
+    "warnOnUnsupportedTypeScriptVersion": false
   }
 }

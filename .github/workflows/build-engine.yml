@@ -11,21 +11,17 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '17'
-      - name: install typescript
-        run: npm install -g typescript
-      - name: install jest
-        run: npm install -g jest
       - name: install type dependencies
         run: npm install
         working-directory: ./types
       - name: compile types
-        run: tsc
+        run: npx tsc
         working-directory: ./types
       - name: install dependencies
         run: npm install
       - name: compile
-        run: tsc
+        run: npx tsc
       - name: lint
         run: npm run lint
       - name: test
-        run: jest
+        run: npx jest

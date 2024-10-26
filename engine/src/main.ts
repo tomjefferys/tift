@@ -6,7 +6,7 @@ import { BiConsumer, Consumer } from "tift-types/src/util/functions";
 import * as EngineProxy from "./engineproxy";
 import { Filters } from "tift-types/src/util/duplexproxy";
 import { State, buildStateMachine }  from "./util/statemachine";
-import { ControlType } from "tift-types/out/messages/controltype";
+import { ControlType } from "tift-types/src/messages/controltype";
 import { getDefaultGameBehaviour } from "./game/behaviour";
 import { Engine } from "tift-types/src/engine";
 import { DecoratedForwarder, MessageForwarder } from "tift-types/src/engineproxy";

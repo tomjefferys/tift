@@ -5,7 +5,7 @@ types/node_modules:
 
 types/out: types/node_modules
 	echo "Building types..."
-	cd types && tsc
+	cd types && npx tsc
 
 types-lint: types
 	cd types && npm run lint
@@ -23,12 +23,12 @@ engine/node_modules:
 
 engine/out: engine/node_modules
 	echo "Building engine..."
-	cd engine && tsc
+	cd engine && npx tsc
 
 engine: types engine/out
 
 engine-test: engine
-	cd engine && jest
+	cd engine && npx jest
 
 engine-lint: engine
 	cd engine && npm run lint
@@ -44,7 +44,7 @@ cli/node_modules:
 
 cli/out: cli/node_modules
 	echo "Building cli..."
-	cd cli && tsc
+	cd cli && npx tsc
 
 cli-lint: cli
 	cd cli && npm run lint

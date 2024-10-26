@@ -1,6 +1,6 @@
-import { loadAll } from "js-yaml"
 import { Obj } from "./util/objects"
 import * as Metadata from "./game/metadata"
+import * as YAML from "yaml"
 
 const prototypes = {
   "room":{"type":"room"},
@@ -14,23 +14,26 @@ const prototypes = {
 }
 
 export function getObjs(data: string) {
-  const docs : Obj[] = [];
-  loadAll(data, rawDoc => { 
-    const doc = rawDoc as Obj
-    if (!doc) {
-      return;
-    }
-    for(const [name, pt] of Object.entries(prototypes)) {
-      if (doc[name]) {
-        let newDoc : Obj = Object.assign({"id": doc[name]}, pt, doc);
-        delete newDoc[name];
-        if (name === "game") {
-          newDoc = Metadata.create(newDoc, doc[name]);
-        }
-        docs.push(newDoc);
-      }
-    } 
-  });
-  return docs;
+  const yamlDocs = YAML.parseAllDocuments(data);
+  return yamlDocs.map(doc => doc.toJSON())
+                 .filter(doc => doc != null)
+                 .map(doc => applyPrototype(doc));
 }
+
+function applyPrototype(obj : Obj) : Obj {
+  const match = Object.entries(prototypes).find(([name, _pt]) => obj[name])
+  if (!match) {
+    return obj;
+  }
+
+  const [name, pt] = match;
+  let newObj : Obj = Object.assign({"id": obj[name]}, pt, obj);
+  delete newObj[name];
+  if (name === "game") {
+    newObj = Metadata.create(newObj, obj[name]);
+  }
+  return newObj;
+}
+
+
 
