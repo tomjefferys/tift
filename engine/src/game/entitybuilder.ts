@@ -27,6 +27,10 @@ export class EntityBuilder {
     if (props["tags"] && !_.isArray(props["tags"])) {
       throw new Error(`${props["id"]}.tags is not an array`);
     }
+    if (!props["tags"]) {
+      // Create the tags array if it doesn't exist
+      props["tags"] = [];
+    }
     this.props = props;
     this.id = getString(props["id"]);
   }
