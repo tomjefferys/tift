@@ -2,6 +2,10 @@ import _ from "lodash";
 
 import { NameType, PathElement, PathElementType, Path } from "tift-types/src/path"
 
+export type Type = Path;
+
+type PossiblePath = Path | PathElement | PathElementType[] | PathElementType;
+
 export interface Property extends PathElement {
     type : "property",
     name : NameType
@@ -15,14 +19,7 @@ export interface Index extends PathElement {
 export function isPath(obj : unknown) : obj is Path {
     let isValidPath = _.isArray(obj);
     if (isValidPath) {
-        for(const element of (obj as unknown[])) {
-            const pathElement = element as PathElement;
-            isValidPath = (pathElement?.type === "property" && _.has(pathElement, "name")) 
-                            || (pathElement?.type === "index" && _.has(pathElement, "index"));
-            if (!isValidPath) {
-                break;
-            }
-        }
+        isValidPath = (obj as unknown[]).every(isPathElement);
     }
     return isValidPath;
 }
@@ -51,6 +48,22 @@ export function makePath(values : PathElementType[]) : Path {
     return values.map(value => _.isNumber(value)? index(value) : property(value));
 }
 
+export function concat(path1 : PossiblePath, path2 : PossiblePath) : Path {
+    return [...of(path1), ...of(path2)];
+}
+
+export function of(path : PossiblePath) : Path {
+    return _.isArray(path)
+                ? (isPath(path)? path : makePath(path))
+                : (isPathElement(path)? [path] : makePath([path]));
+}
+
+function isPathElement(element : unknown) : element is PathElement {
+    const pathElement = element as PathElement;
+    return (pathElement?.type === "property" && _.has(pathElement, "name")) 
+                        || (pathElement?.type === "index" && _.has(pathElement, "index"));
+}
+
 export function toValueList(path : Path) : PathElementType[] {
     return path.map(e => e.getValue());
 }
@@ -69,4 +82,29 @@ export function pathElementEquals(element1 : PathElement, element2 : PathElement
     return (element1.type === "index")
         ? (element1 as Index).index === (element2 as Index).index
         : (element1 as Property).name === (element2 as Property).name;
+}
+
+export function equals(path1 : Path, path2 : Path) : boolean {
+    if (path1.length !== path2.length) {
+        return false;
+    }
+    return path1.every((element, index) => pathElementEquals(element, path2[index]));
+}
+
+export function toString(path : Path) {
+    return path.map((e, index) => {
+        if (isProperty(e)) {
+            return ((index != 0)? "." : "") + e.name.toString();
+        } else if(isIndex(e)) {
+            return `[${e.index}]`;
+        }
+    }).join("");
+}
+
+function isProperty(element : PathElement) : element is Property {
+    return element.type === "property";
+}
+
+function isIndex(element : PathElement) : element is Index {
+    return element.type === "index";
 }

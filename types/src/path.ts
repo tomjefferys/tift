@@ -10,4 +10,5 @@ export interface PathElement {
     getValue : () => PathElementType,
     toString : () => string
 }
+
 export type Path = PathElement[];
