@@ -1,6 +1,8 @@
 import { Obj } from "./util/objects"
 import * as Metadata from "./game/metadata"
 import * as YAML from "yaml"
+import { LineCounter } from "yaml";
+import * as SourceMap from "./util/yamlsourcemap";
 
 const prototypes = {
   "room":{"type":"room"},
@@ -13,10 +15,15 @@ const prototypes = {
   "global":{"type":"global"}
 }
 
+export const SOURCE_MAP_KEY = "__sourceMap__";
+
 export function getObjs(data: string) {
-  const yamlDocs = YAML.parseAllDocuments(data);
-  return yamlDocs.map(doc => doc.toJSON())
-                 .filter(doc => doc != null)
+  const lc = new LineCounter();
+  const yamlDocs = YAML.parseAllDocuments(data, { lineCounter : lc});
+  return yamlDocs.filter(doc => doc != null)
+                 .map(doc => [doc.toJSON(), SourceMap.getSourceMap(doc, lc)])
+                 .filter(([obj, _sourceMap]) => obj != null)
+                 .map(([obj, sourceMap]) => ({...obj, [SOURCE_MAP_KEY]: sourceMap}))
                  .map(doc => applyPrototype(doc));
 }
 

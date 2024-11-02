@@ -158,3 +158,42 @@ test("test with comments", () => {
     expect(sourceMap["foo"]).toStrictEqual({line: 2, col: 1});
     expect(sourceMap["foo.bar"]).toStrictEqual({line: 3, col: 3});
 });
+
+test("test with file comment", () => {
+    const yaml = dedent(`
+        --- # file:src/foo/bar.yaml
+        foo: bar
+        baz: qux 
+        `)
+
+    const lc =  new YAML.LineCounter();
+    const doc = YAML.parseDocument(yaml, { lineCounter : lc});
+    const sourceMap = getSourceMap(doc, lc);
+
+    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1, file: "src/foo/bar.yaml"});
+    expect(sourceMap["baz"]).toStrictEqual({line: 2, col: 1, file: "src/foo/bar.yaml"});
+});
+
+test("test multiple file comments", () => {
+    const yaml = dedent(`
+        --- # file:src/foo/bar.yaml
+        foo: bar
+        baz: qux 
+        --- # file:  src/foo/baz.yaml
+        corge: grault
+        garply: waldo
+        `)
+    
+    const lc = new YAML.LineCounter();
+    const docs = YAML.parseAllDocuments(yaml, { lineCounter : lc});
+
+    expect(docs.length).toBe(2);
+
+    const sourceMap1 = getSourceMap(docs[0], lc);
+    expect(sourceMap1["foo"]).toStrictEqual({line: 1, col: 1, file: "src/foo/bar.yaml"});
+    expect(sourceMap1["baz"]).toStrictEqual({line: 2, col: 1, file: "src/foo/bar.yaml"});
+
+    const sourceMap2 = getSourceMap(docs[1], lc);
+    expect(sourceMap2["corge"]).toStrictEqual({line: 1, col: 1, file: "src/foo/baz.yaml"});
+    expect(sourceMap2["garply"]).toStrictEqual({line: 2, col: 1, file: "src/foo/baz.yaml"});
+});
