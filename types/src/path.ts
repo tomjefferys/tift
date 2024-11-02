@@ -1,5 +1,5 @@
 
-export type ElementType = "property" | "index"
+export type ElementType = "property" | "index" | "namespace";
 
 export type NameType = string | symbol;
 

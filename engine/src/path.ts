@@ -4,7 +4,7 @@ import { NameType, PathElement, PathElementType, Path } from "tift-types/src/pat
 
 export type Type = Path;
 
-type PossiblePath = Path | PathElement | PathElementType[] | PathElementType;
+type PossiblePath = Path | PathElement | (PathElement | PathElementType)[] | PathElementType;
 
 export interface Property extends PathElement {
     type : "property",
@@ -14,6 +14,11 @@ export interface Property extends PathElement {
 export interface Index extends PathElement {
     type : "index",
     index : number
+}
+
+export interface NameSpace extends PathElement {
+    type : "namespace",
+    namespace : string;
 }
 
 export function isPath(obj : unknown) : obj is Path {
@@ -44,8 +49,26 @@ export function index(num : number) : Index {
     return index;
 }
 
-export function makePath(values : PathElementType[]) : Path {
-    return values.map(value => _.isNumber(value)? index(value) : property(value));
+export function namespace(name : string) : NameSpace {
+    const ns : NameSpace = {
+        type : "namespace",
+        namespace : name,
+        getValue : () => name,
+        toString : () => ns.getValue().toString()
+    }
+    return ns;
+}
+
+export function makePath(values : (PathElement | PathElementType)[]) : Path {
+    return values.map((value,i) => {
+        if (isPathElement(value)) {
+            if (value.type === "namespace" && i > 0) {
+                throw new Error("Namespace must be first element in path");
+            }
+            return value;
+        }
+        return _.isNumber(value)? index(value) : property(value);
+    });
 }
 
 export function concat(path1 : PossiblePath, path2 : PossiblePath) : Path {
@@ -61,7 +84,8 @@ export function of(path : PossiblePath) : Path {
 function isPathElement(element : unknown) : element is PathElement {
     const pathElement = element as PathElement;
     return (pathElement?.type === "property" && _.has(pathElement, "name")) 
-                        || (pathElement?.type === "index" && _.has(pathElement, "index"));
+                        || (pathElement?.type === "index" && _.has(pathElement, "index"))
+                        || (pathElement?.type === "namespace" && _.has(pathElement, "namespace"));
 }
 
 export function toValueList(path : Path) : PathElementType[] {
@@ -97,6 +121,8 @@ export function toString(path : Path) {
             return ((index != 0)? "." : "") + e.name.toString();
         } else if(isIndex(e)) {
             return `[${e.index}]`;
+        } else if (isNameSpace(e)) {
+            return e.namespace.toString();
         }
     }).join("");
 }
@@ -107,4 +133,8 @@ function isProperty(element : PathElement) : element is Property {
 
 function isIndex(element : PathElement) : element is Index {
     return element.type === "index";
+}
+
+function isNameSpace(element : PathElement) : element is NameSpace {
+    return element.type === "namespace";
 }

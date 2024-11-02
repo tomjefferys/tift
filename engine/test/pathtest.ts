@@ -21,6 +21,15 @@ test("Test getPath", () => {
             .toBeTruthy();
 })
 
+test("Test getPath mixed types", () => {
+    const path = Path.of([Path.namespace("myNS"), "foo", Path.index(1), "bar"]);
+    expect(Path.equals( path, [Path.namespace("myNS"), Path.property("foo"), Path.index(1), Path.property("bar")]));
+});
+
+test("Test namespace in wrong place", () => {
+    expect(() => Path.of(["foo", Path.namespace("myNS")])).toThrow();
+});
+
 test("Test concat", () => {
     expect(Path.equals(
                 Path.concat(["foo", 1], ["bar", 2]),
