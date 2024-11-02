@@ -7,6 +7,7 @@ import { getString, getArray, KIND } from "../util/objects";
 import { buildVerbMatcher } from "../entity";
 import _ from "lodash";
 import { ENTITY_KIND } from "./entities";
+import * as Errors from "../util/errors";
 
 export class EntityBuilder {
   id : string;
@@ -19,13 +20,13 @@ export class EntityBuilder {
   
   constructor(props : Obj) {
     if (!props) {
-      throw new Error("An Entity must have properties");
+      Errors.throwErrorWithObj("An Entity must have properties", {}, []);
     }
     if (!props["id"]) {
-      throw new Error("An Entity must have an id property")
+      Errors.throwErrorWithObj("An Entity must have an id property", props, []);
     }
     if (props["tags"] && !_.isArray(props["tags"])) {
-      throw new Error(`${props["id"]}.tags is not an array`);
+      Errors.throwErrorWithObj(`${props["id"]}.tags is not an array`, props, "tags");
     }
     if (!props["tags"]) {
       // Create the tags array if it doesn't exist

@@ -2,6 +2,7 @@ import { Obj } from "tift-types/src/util/objects"
 import { Verb, VerbTrait, VerbContext, ContextType } from "../verb";
 import { BeforeAction, MainAction, AfterAction } from "../script/phaseaction";
 import { getString, KIND } from "../util/objects";
+import * as Errors from "../util/errors";
 import _ from "lodash"
 
 export class VerbBuilder {
@@ -18,13 +19,13 @@ export class VerbBuilder {
 
   constructor(props : Obj) {
     if (!props) {
-      throw new Error("An Entity must have properties");
+      Errors.throwErrorWithObj("An Entity must have properties", {}, []);
     }
     if (!props["id"]) {
-      throw new Error("An Entity must have an id property")
+      Errors.throwErrorWithObj("An Entity must have an id property", props, []);
     }
     if (props["tags"] && !_.isArray(props["tags"])) {
-      throw new Error(`${props["id"]}.tags is not an array`);
+      Errors.throwErrorWithObj(`${props["id"]}.tags is not an array`, props, "tags");
     }
     this.props = props;
     this.id = getString(props["id"]);

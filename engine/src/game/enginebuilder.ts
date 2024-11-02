@@ -19,6 +19,9 @@ import { TRAITS } from "./traits/trait";
 import * as Entities from "./entities";
 import * as Metadata from "./metadata";
 import * as Tags from "./tags";
+import * as Path from "../path";
+import * as Errors from "../util/errors";
+
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
 
@@ -57,7 +60,7 @@ export class EngineBuilder {
                     throw new Error("Unknown object type");
             }
         } catch (e) {
-            throw new Error("Error building '" + obj["id"] + "'\n" + (e as Error).message);
+            Errors.throwError("Error building '" + obj["id"] + "'", e);
         }
         return this;
     }
@@ -188,11 +191,11 @@ function addActions(builder : ActionerBuilder, obj : Obj) {
 function getActionStrings<T extends Phase>(obj : Obj, field : string, phase : T) : PhaseActionType<T>[] {
     const actionData = obj[field];
     let phaseActions : PhaseAction[] = [];
-    const fieldPath = obj.id + "." + field;
-    const fieldActionPath = (index : number) => fieldPath + "[" + index + "]";
+    const pathPrefix = Path.of([obj.id, field]);
+    const fieldActionPath = (index : number) => Path.concat(pathPrefix, index);
     const actionIsString = (value : unknown, index : number) : value is string =>  {
         if (!_.isString(value)) {
-            throw new Error("Non string found whilst parsing: " + fieldPath + "[" + index + "]" + "\n" + JSON.stringify(value));
+            Errors.throwError(`Expecting string whilst parsing actions, but found: ${JSON.stringify(value)}`, [...pathPrefix, index]);
         }
         return true;
     }
@@ -208,7 +211,7 @@ function getActionStrings<T extends Phase>(obj : Obj, field : string, phase : T)
             phaseActions = Object.entries(actionData)
                                  .map(([key,value], index) =>  buildPhaseAction(index).withMatcherAndCommand(key,value));
         } else {
-            throw new Error("'" + fieldPath + "' is an unsupported type:\n" + JSON.stringify(actionData));
+            Errors.throwError(`Unsupported type: ${JSON.stringify(actionData)}`, pathPrefix);
         }
     }
     return phaseActions as PhaseActionType<T>[];
@@ -217,19 +220,19 @@ function getActionStrings<T extends Phase>(obj : Obj, field : string, phase : T)
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
 
     forEach(obj["verbs"], (verbEntry, index) => {
-        const path = `${obj.id}.verbs[${index}]`;
+        const path = Path.of([obj.id,"verbs",index]);
         if (_.isString(verbEntry)) {
             const [verb, attribute] = getString(verbEntry).split(".", 2);
             builder.withVerbMatcher({verb, attribute, condition : undefined});
         } else if (_.isPlainObject(verbEntry)) {
             Object.entries(getObj(verbEntry))
                   .forEach(([key,value]) => {
-                    const condition = RuleBuilder.evaluateRule(value, `${path}.${key}`);
+                    const condition = RuleBuilder.evaluateRule(value, Path.concat(path, key));
                     const [verb,attribute] = getString(key).split(".", 2);
                     builder.withVerbMatcher({verb, attribute, condition});
                   });
         } else {
-            throw new Error(`${path} is not expected type. Must be string or object`);
+            Errors.throwError("Invalid verb entry, must be string or object", path);
         }
     });
     forEachEntry(obj["modifiers"], (type, mods) => {

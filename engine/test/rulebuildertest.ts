@@ -1,6 +1,7 @@
 import { Env } from "tift-types/src/env";
 import { setUpEnv } from "./testutils/testutils";
 import * as RuleBuilder from "../src/game/rulebuilder";
+import * as Path from "../src/path";
 let env : Env;
 let messages : string[];
 
@@ -63,7 +64,7 @@ test("Test when", () => {
         "when" : "foo == 4",
         "repeat" : ["write('foo')", "write('bar')"],
         "otherwise" : "write('qux')"
-    },"myRule");
+    },Path.of("myRule"));
     const ruleEnv = env.newChild({"myRule" : {}});
 
     thunk.resolve(ruleEnv.newChild({"foo" : 3}));

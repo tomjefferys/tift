@@ -11,6 +11,7 @@ import { rethrowCompileError } from '../util/errors';
 import { formatString } from '../util/mustacheUtils';
 import { IMPLICIT_FUNCTION } from '../game/functionbuilder';
 import { isNotFound } from '../env';
+import * as Path from '../path';
 
 // Configure Jsep
 jsep.plugins.register(jsepAssignment as unknown as IPlugin);
@@ -77,7 +78,7 @@ const KEYWORD_PROPS = ["then", "else", "case", "default"];
 export const ARGS = "__args__"; 
 export const NO_ARGS_LENGTH_CHECK = "__no_arg_len_check__";
 
-export function parseToTree(expression : string, objPath? : string) {
+export function parseToTree(expression : string, objPath? : Path.PossiblePath) {
     try {
         return jsep(expression);
     } catch (e) {
@@ -85,12 +86,12 @@ export function parseToTree(expression : string, objPath? : string) {
     }
 }
 
-export function parseToThunk(expression : string, objPath? : string) : Thunk {
+export function parseToThunk(expression : string, objPath? : Path.PossiblePath) : Thunk {
     const parseTree = parseToTree(expression, objPath);
     return evaluate(parseTree);
 }
 
-export function parse(expression : string, objPath? : string) : (env : Env) => unknown {
+export function parse(expression : string, objPath? : Path.PossiblePath) : (env : Env) => unknown {
     const compiledExpression = parseToThunk(expression, objPath);
     return env => compiledExpression.resolve(env).value;
 }

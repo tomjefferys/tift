@@ -31,6 +31,7 @@ import { EnvFn } from "./script/thunk";
 import * as Properties from "./properties";
 import * as Version from "./version";
 import * as Metadata from "./game/metadata"
+import * as Path from "./path";
 
 const DEFAULT_UNDO_LEVELS = 10;
 
@@ -170,7 +171,7 @@ export class BasicEngine implements Engine {
         Object.entries(obj)
               .forEach(([key,value]) => {
                 props[key] = value;
-                compileGlobalFunction(key, value, this.env);
+                compileGlobalFunction(key, value, this.env, Path.of(key));
               })
       } else {
         const kind = obj[KIND] ?? type;
@@ -232,7 +233,7 @@ export class BasicEngine implements Engine {
 
       // Set to error state
       this.errored = true;
-      logError(this.output, e);
+      logError(this.env, this.output, e);
     }
     logger.debug(() => `${JSON.stringify(message)}: ${Date.now() - startTime}ms`);
     return Promise.resolve();

@@ -23,6 +23,7 @@ const SPECIAL_FIELDS = ["before", "actions", "after", "rules", "templates"];
 const FN_REGEX = /^(\w+)\(([\w, ]*)\)$/;
 
 type FnDef = {
+    originalName : string,
     name : string, 
     params : string[]
 }
@@ -35,7 +36,7 @@ type FnImpl = {
 /**
  * Compiles a function (normal or string).  Returns the function name and the function
  */
-type Compiler = (name : string, value : unknown, scope : Env, obj : Obj) => Optional<FnImpl>;
+type Compiler = (name : string, value : unknown, scope : Env, obj : Obj, path : Path.Type) => Optional<FnImpl>;
 
 export function compileFunctions(namespace : Optional<string>, id : string, env : Env) {
     compile(namespace, id, env, compileFunction);
@@ -45,10 +46,10 @@ export function compileStrings(namespace : Optional<string>, id : string, env : 
     compile(namespace, id, env, makeStrFunction);
 }
 
-export function compileGlobalFunction(id : string, value : string, env : Env) {
+export function compileGlobalFunction(id : string, value : string, env : Env, path : Path.Type) {
     const fnDef = getFunctionDef(id);
     if (fnDef) {
-        const result = compileFnDef(fnDef, value, env, {});
+        const result = compileFnDef(fnDef, value, env, path);
         env.set(result.name, result.envFn);
     } else if (_.isObject(value)) {
         compileFunctions(undefined, id, env);
@@ -58,7 +59,7 @@ export function compileGlobalFunction(id : string, value : string, env : Env) {
 function compile(namespace : Optional<string>, id : string, env : Env, compiler : Compiler) {
     const obj = getObj(namespace, id, env);
     const scope = getScope(namespace, obj, env);
-    compileObj(obj, scope, compiler);
+    compileObj(namespace, obj, scope, compiler);
 }
 
 
@@ -72,15 +73,18 @@ function getScope(namespace : Optional<string>, obj : Obj, env : Env) : Env {
     return nsEnv.newChild({"this" : obj}).newChild(obj);
 }
 
-function compileObj(obj : Obj, scope : Env, compiler : Compiler, isInnerObject = false) : void {
+function compileObj(namespace : Optional<string>, obj : Obj, scope : Env, compiler : Compiler, path : Path.Type = []) : void {
+    const pathRoot = (path.length)? path : [...(namespace? [Path.namespace(namespace)] : []), obj["id"]]; 
     Object.entries(obj)
           .forEach(([name, value]) => {
-            if (isInnerObject || !SPECIAL_FIELDS.includes(name)) {
-                const fnImpl = compiler(name, value, scope, obj);
+            if (path.length || !SPECIAL_FIELDS.includes(name)) {
+                const fullPath = Path.concat(pathRoot, name);
+                const fnImpl = compiler(name, value, scope, obj, fullPath);
                 if (fnImpl) {
                     obj[fnImpl.name] = fnImpl.envFn;
                 } else if (_.isObject(value)) {
-                    compileObj(value, scope.newChild(value), compiler, true );
+                    // At this point add the object id ot the path
+                    compileObj(namespace, value, scope.newChild(value), compiler, fullPath);
                 }
             }
           })
@@ -103,19 +107,20 @@ const makeStrFunction : Compiler = (name, value, scope, obj) => {
  * myFunc(): print("hello world")
  * add(var1, var2): var1 + var2
  */
-const compileFunction : Compiler = (name, value, scope, obj) => {
+const compileFunction : Compiler = (name, value, scope, obj, path) => {
+    //const fullPath = Path.concat(obj["id"], path);
     const fnDef = getFunctionDef(name);
-    return fnDef? compileFnDef(fnDef, value, scope, obj) : undefined;
+    return fnDef? compileFnDef(fnDef, value, scope, path) : undefined;
 }
 
-const compileFnDef = (fnDef : FnDef, value : unknown, scope : Env, obj : Obj) => {
+const compileFnDef = (fnDef : FnDef, value : unknown, scope : Env, path : Path.Type) => {
     let envFn : EnvFn;
     if (_.isFunction(value)) {
         // Could be implicitly defined function (no compilation needed)
         envFn = value;
     } else {
         // Else compile the function
-        const thunk = RuleBuilder.evaluateRule(value, obj["id"] + "." + fnDef.name);
+        const thunk = RuleBuilder.evaluateRule(value, path);
         envFn = (env) => thunk.resolve(env);
     }
     return {
@@ -133,7 +138,7 @@ function getFunctionDef(str : string) : Optional<FnDef> {
     if (match) {
         const name = match[1];
         const params = match[2] ? match[2].split(",").map(param => param.trim()) : [];
-        result = {name, params};
+        result = {originalName : str, name, params};
     }
     return result;
 }

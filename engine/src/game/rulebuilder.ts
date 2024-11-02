@@ -4,15 +4,17 @@ import { parseToThunk } from "../script/parser";
 import { Optional } from "tift-types/src/util/optional";
 import _ from "lodash";
 import { mkResult, mkThunk, Thunk } from "../script/thunk";
+import * as Path from "../path";
+import * as Errors from "../util/errors";
 
-const INDEX_NAME = ".index";
-const COUNT_NAME = ".count";
+const INDEX_NAME = "index";
+const COUNT_NAME = "count";
 
 // Diffenent types of method in a componennt rule
 type RuleMethodType = "condition" | "action" | "otherwise";
 
 // A function that can evaluate a rule to a thunk
-type RuleEvaluator = (rule : unknown, path? : string) => Thunk;
+type RuleEvaluator = (rule : unknown, path? : Path.PossiblePath) => Thunk;
 
 /**
  * Parse a rule.  This could be a single string, an array of rules, 
@@ -31,7 +33,7 @@ export const evaluateRule : RuleEvaluator = (rule, path) => {
         ruleFn = buildAll(rule, path);
     }
     if (ruleFn === undefined) {
-        throw new Error("Rule: " + JSON.stringify(rule) + " at " + path + " could not be parsed");
+        Errors.throwError("Rule: " + JSON.stringify(rule) + " could not be parsed", path);
     }
     return ruleFn;
 }
@@ -43,16 +45,16 @@ export const evaluateRule : RuleEvaluator = (rule, path) => {
  * @param path 
  * @returns 
  */
-function evaluateComponentRule(rule : object, path? : string) : Thunk {
+function evaluateComponentRule(rule : object, path? : Path.PossiblePath) : Thunk {
     const rules : {[key in RuleMethodType]?:Thunk} = {};
     for(const [key,value] of Object.entries(rule)) {
         const componentBuilder = components[key];
         if (componentBuilder) {
             const [type, builder] = componentBuilder;
             if (_.has(rules, type)) {
-                throw new Error(`Duplicate ${type} declared for ${path}`);
+                Errors.throwError(`Duplicate ${type} declared}`, path);
             }
-            rules[type] = builder(value, path + "." + key);
+            rules[type] = builder(value, Path.concat(path ?? [], key));
         }
     }
     // TODO warn if no action
@@ -71,9 +73,9 @@ function evaluateComponentRule(rule : object, path? : string) : Thunk {
 }
 
 
-function evaluateRuleList(ruleList : unknown, path? : string) : Thunk[] {
+function evaluateRuleList(ruleList : unknown, path? : Path.PossiblePath) : Thunk[] {
     const rules = _.isArray(ruleList)? ruleList : [ruleList];
-    return rules.map((rule, index) => evaluateRule(rule, path + "[" + index + "]"));
+    return rules.map((rule, index) => evaluateRule(rule, Path.concat(path ?? [], index)));
 }
 
 /**
@@ -127,7 +129,7 @@ const buildSwitch : RuleEvaluator = (rules, path) => {
  */
 const buildRepeat : RuleEvaluator = (rules, path) => {
     const thunks = evaluateRuleList(rules, path);
-    const indexPath = (path + INDEX_NAME);
+    const indexPath = Path.concat(path ?? [], INDEX_NAME);
     const ruleFn = (env : Env) => {
         let index = env.get(indexPath);
         if (!isFound(index)) {
@@ -145,7 +147,7 @@ const buildRepeat : RuleEvaluator = (rules, path) => {
 
 const buildOnce : RuleEvaluator = (rules, path) => {
     const thunk = evaluateRule(rules, path);
-    const countPath = (path + COUNT_NAME);
+    const countPath = Path.concat(path ?? [], COUNT_NAME);
     const ruleFn = (env : Env) => {
         let count = env.get(countPath);
         if (!isFound(count)) {

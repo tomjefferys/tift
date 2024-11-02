@@ -4,7 +4,7 @@ import { NameType, PathElement, PathElementType, Path } from "tift-types/src/pat
 
 export type Type = Path;
 
-type PossiblePath = Path | PathElement | (PathElement | PathElementType)[] | PathElementType;
+export type PossiblePath = Path | PathElement | (PathElement | PathElementType)[] | PathElementType;
 
 export interface Property extends PathElement {
     type : "property",

@@ -9,8 +9,9 @@ import { evaluateMatchExpression } from "./matchParser";
 import { evaluate, parseToTree } from "./parser";
 import { mkResult, Result, Thunk } from "./thunk";
 import { Obj } from "../util/objects"
-import { getCauseMessage } from "../util/errors";
 import * as RuleBuilder from "../game/rulebuilder";
+import * as Path from "../path";
+import * as Errors from "../util/errors";
 
 export type Phase = "before" | "main" | "after";
 
@@ -46,14 +47,14 @@ export type PhaseActionType<T> =
 
 export class PhaseActionBuilder implements Partial<PhaseAction> {
 
-    objPath? : string; // Used to hold error context
+    objPath? : Path.Type; // Used to hold error context
 
     type? : Phase;
     perform? : (env : Env, obj : Obj, command : Command) => Result;
     score? : (command : Command, objId : string) => number;
     isMatch? : (command : Command, objId : string) => boolean
 
-    constructor(objPath? : string) {
+    constructor(objPath? : Path.Type) {
         this.objPath = objPath;
     }
 
@@ -88,7 +89,7 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
                             return mkResult(undefined, {});
                         }
                     } catch (e) {
-                        throw new Error(`Error executing '${(this.objPath? this.objPath : "")}'\n${getCauseMessage(e)}`);
+                        Errors.rethrowExecutionError(`Error executing ${this.type} action`, e, this.objPath);
                     }
                 },
                 score : (command : Command, objId : string) => matcher(command, objId).score,
@@ -99,8 +100,8 @@ export class PhaseActionBuilder implements Partial<PhaseAction> {
     }
 }
 
-export function phaseActionBuilder(objPath? : string) {
-    return new PhaseActionBuilder(objPath);
+export function phaseActionBuilder(objPath? : Path.PossiblePath) {
+    return new PhaseActionBuilder(objPath ? Path.of(objPath) : undefined);
 }
 
 function getMatcherCommand(expression : Expression, info : PhaseActionInfo) : [Matcher, Thunk] {
