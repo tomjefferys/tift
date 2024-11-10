@@ -3,7 +3,7 @@ import { Document, Node, LineCounter, } from 'yaml';
 import { Obj } from 'tift-types/src/util/objects';
 import { Optional } from 'tift-types/src/util/optional';
 import * as Path from "../path";
-import _, { create } from 'lodash';
+import _ from 'lodash';
 
 const FILE_COMMENT = "file:";
 const LINE = "line";
