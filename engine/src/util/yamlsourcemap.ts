@@ -3,15 +3,21 @@ import { Document, Node, LineCounter, } from 'yaml';
 import { Obj } from 'tift-types/src/util/objects';
 import { Optional } from 'tift-types/src/util/optional';
 import * as Path from "../path";
-import _ from 'lodash';
+import _, { create } from 'lodash';
 
 const FILE_COMMENT = "file:";
 const LINE = "line";
 const COL = "col";
 
-export function getSourceMap(doc : Document, lc : LineCounter) : Obj {
-    const walker = createWalker(lc);
-    return walker(doc);
+export type SourceMap = {
+    "file" : string,
+    "map" : Obj
+}
+
+export function getSourceMap(doc : Document, lc : LineCounter) : SourceMap {
+    const builder = createSourceMapBuilder(lc);
+    const sourceMap = builder(doc);
+    return sourceMap;
 }
 
 export interface SourceLocation {
@@ -27,11 +33,13 @@ export function isSourceLocation(location : unknown) : location is SourceLocatio
                 && COL in location;
 }
 
-export function getSourceLocation(sourceMap : Obj, path : Path.Type) : SourceLocation {
-    return _.get(sourceMap, Path.toString(path));
+export function getSourceLocation(sourceMap : Obj, path : Path.PossiblePath) : SourceLocation {
+    const location = _.get(sourceMap?.map, Path.toString(Path.of(path)));
+    const file = sourceMap?.file? { file : sourceMap.file } : {};
+    return {...location, ...file};
 }
 
-function createWalker(lc : LineCounter) {
+function createSourceMapBuilder(lc : LineCounter) : (doc : Document) => SourceMap {
     let currentFile : Optional<string> = undefined;
     let lineOffset = 0;
 
@@ -41,13 +49,13 @@ function createWalker(lc : LineCounter) {
         }
         const location = lc.linePos(node.range[0]) as SourceLocation;
         location.line -= lineOffset
-        if (currentFile) {
-            location.file = currentFile;
-        }
         return location;
     }
 
     const setFileName = (node : Node, fileComment : string) => {
+        if (currentFile) {
+            throw new Error(`Duplicate file comment ${fileComment} found.`);
+        }
         currentFile = fileComment;
         lineOffset = getLineNumber(node).line - 1;
     }
@@ -100,5 +108,10 @@ function createWalker(lc : LineCounter) {
         return sourceMap;
     }
 
-    return walkNodes;
+    const createSourceMap = (doc : Document) : SourceMap => {
+        const sourceMap = walkNodes(doc);
+        return {file : currentFile ?? "unknown", map : sourceMap};
+    }
+
+    return createSourceMap;
 }

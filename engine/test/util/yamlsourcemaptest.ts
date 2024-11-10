@@ -1,4 +1,4 @@
-import { getSourceMap } from "../../src/util/yamlsourcemap";
+import { getSourceMap, getSourceLocation } from "../../src/util/yamlsourcemap";
 import dedent from "dedent-js";
 import * as YAML from "yaml";
 
@@ -13,8 +13,8 @@ test("test simple", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1});
-    expect(sourceMap["baz"]).toStrictEqual({line: 2, col: 1});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 1, col: 1});
+    expect(sourceMap.map["baz"]).toStrictEqual({line: 2, col: 1});
 });
 
 test("test nested", () => {
@@ -28,8 +28,8 @@ test("test nested", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1});
-    expect(sourceMap["foo.bar"]).toStrictEqual({line: 2, col: 3});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 1, col: 1});
+    expect(sourceMap.map["foo.bar"]).toStrictEqual({line: 2, col: 3});
 });
 
 test("test double nested", () =>  {
@@ -44,9 +44,9 @@ test("test double nested", () =>  {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1});
-    expect(sourceMap["foo.bar"]).toStrictEqual({line: 2, col: 3});
-    expect(sourceMap["foo.bar.baz"]).toStrictEqual({line: 3, col: 5});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 1, col: 1});
+    expect(sourceMap.map["foo.bar"]).toStrictEqual({line: 2, col: 3});
+    expect(sourceMap.map["foo.bar.baz"]).toStrictEqual({line: 3, col: 5});
 });
 
 test("test array", () => {
@@ -61,9 +61,9 @@ test("test array", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1});
-    expect(sourceMap["foo.0"]).toStrictEqual({line: 2, col: 5});
-    expect(sourceMap["foo.1"]).toStrictEqual({line: 3, col: 5});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 1, col: 1});
+    expect(sourceMap.map["foo.0"]).toStrictEqual({line: 2, col: 5});
+    expect(sourceMap.map["foo.1"]).toStrictEqual({line: 3, col: 5});
 });
 
 test("test array of objects", () => {
@@ -78,10 +78,10 @@ test("test array of objects", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1});
-    expect(sourceMap["foo.0"]).toStrictEqual({line: 2, col: 5});
-    expect(sourceMap["foo.0.bar"]).toStrictEqual({line: 2, col: 5});
-    expect(sourceMap["foo.0.qux"]).toStrictEqual({line: 3, col: 5});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 1, col: 1});
+    expect(sourceMap.map["foo.0"]).toStrictEqual({line: 2, col: 5});
+    expect(sourceMap.map["foo.0.bar"]).toStrictEqual({line: 2, col: 5});
+    expect(sourceMap.map["foo.0.qux"]).toStrictEqual({line: 3, col: 5});
 });
 
 test("test array of objects with nested objects", () => {
@@ -97,11 +97,11 @@ test("test array of objects with nested objects", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1});
-    expect(sourceMap["foo.0"]).toStrictEqual({line: 2, col: 5});
-    expect(sourceMap["foo.0.bar"]).toStrictEqual({line: 2, col: 5});
-    expect(sourceMap["foo.0.bar.baz"]).toStrictEqual({line: 3, col: 7});
-    expect(sourceMap["foo.0.bar.quux"]).toStrictEqual({line: 4, col: 7});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 1, col: 1});
+    expect(sourceMap.map["foo.0"]).toStrictEqual({line: 2, col: 5});
+    expect(sourceMap.map["foo.0.bar"]).toStrictEqual({line: 2, col: 5});
+    expect(sourceMap.map["foo.0.bar.baz"]).toStrictEqual({line: 3, col: 7});
+    expect(sourceMap.map["foo.0.bar.quux"]).toStrictEqual({line: 4, col: 7});
 });
 
 test("test array of objects with nested objects and arrays", () => {
@@ -119,13 +119,13 @@ test("test array of objects with nested objects and arrays", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1});
-    expect(sourceMap["foo.0"]).toStrictEqual({line: 2, col: 5});
-    expect(sourceMap["foo.0.bar"]).toStrictEqual({line: 2, col: 5});
-    expect(sourceMap["foo.0.bar.baz"]).toStrictEqual({line: 3, col: 7});
-    expect(sourceMap["foo.0.bar.quux"]).toStrictEqual({line: 4, col: 7});
-    expect(sourceMap["foo.0.bar.quux.0"]).toStrictEqual({line: 5, col: 11});
-    expect(sourceMap["foo.0.bar.quux.1"]).toStrictEqual({line: 6, col: 11});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 1, col: 1});
+    expect(sourceMap.map["foo.0"]).toStrictEqual({line: 2, col: 5});
+    expect(sourceMap.map["foo.0.bar"]).toStrictEqual({line: 2, col: 5});
+    expect(sourceMap.map["foo.0.bar.baz"]).toStrictEqual({line: 3, col: 7});
+    expect(sourceMap.map["foo.0.bar.quux"]).toStrictEqual({line: 4, col: 7});
+    expect(sourceMap.map["foo.0.bar.quux.0"]).toStrictEqual({line: 5, col: 11});
+    expect(sourceMap.map["foo.0.bar.quux.1"]).toStrictEqual({line: 6, col: 11});
 });
 
 test("test json style arrays", () => {
@@ -138,9 +138,9 @@ test("test json style arrays", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
     
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1});
-    expect(sourceMap["foo.0"]).toStrictEqual({line: 1, col: 7});
-    expect(sourceMap["foo.1"]).toStrictEqual({line: 1, col: 12});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 1, col: 1});
+    expect(sourceMap.map["foo.0"]).toStrictEqual({line: 1, col: 7});
+    expect(sourceMap.map["foo.1"]).toStrictEqual({line: 1, col: 12});
 });
 
 test("test with comments", () => { 
@@ -155,8 +155,8 @@ test("test with comments", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 2, col: 1});
-    expect(sourceMap["foo.bar"]).toStrictEqual({line: 3, col: 3});
+    expect(sourceMap.map["foo"]).toStrictEqual({line: 2, col: 1});
+    expect(sourceMap.map["foo.bar"]).toStrictEqual({line: 3, col: 3});
 });
 
 test("test with file comment", () => {
@@ -170,8 +170,12 @@ test("test with file comment", () => {
     const doc = YAML.parseDocument(yaml, { lineCounter : lc});
     const sourceMap = getSourceMap(doc, lc);
 
-    expect(sourceMap["foo"]).toStrictEqual({line: 1, col: 1, file: "src/foo/bar.yaml"});
-    expect(sourceMap["baz"]).toStrictEqual({line: 2, col: 1, file: "src/foo/bar.yaml"});
+    expect(getSourceLocation(sourceMap, "foo")).toStrictEqual({line: 1, col: 1, file: "src/foo/bar.yaml"});
+    expect(getSourceLocation(sourceMap, "baz")).toStrictEqual({line: 2, col: 1, file: "src/foo/bar.yaml"});
+
+    //Check we're not storing the file comment in the map
+    expect(sourceMap.map["foo"].file).toBeUndefined();
+    expect(sourceMap.map["baz"].file).toBeUndefined();
 });
 
 test("test multiple file comments", () => {
@@ -190,10 +194,35 @@ test("test multiple file comments", () => {
     expect(docs.length).toBe(2);
 
     const sourceMap1 = getSourceMap(docs[0], lc);
-    expect(sourceMap1["foo"]).toStrictEqual({line: 1, col: 1, file: "src/foo/bar.yaml"});
-    expect(sourceMap1["baz"]).toStrictEqual({line: 2, col: 1, file: "src/foo/bar.yaml"});
+    expect(getSourceLocation(sourceMap1, "foo")).toStrictEqual({line: 1, col: 1, file: "src/foo/bar.yaml"});
+    expect(getSourceLocation(sourceMap1, "baz")).toStrictEqual({line: 2, col: 1, file: "src/foo/bar.yaml"});
+
+    // Check we're not storing the file comment in the map
+    expect(sourceMap1.map["foo"].file).toBeUndefined();
+    expect(sourceMap1.map["baz"].file).toBeUndefined();
 
     const sourceMap2 = getSourceMap(docs[1], lc);
-    expect(sourceMap2["corge"]).toStrictEqual({line: 1, col: 1, file: "src/foo/baz.yaml"});
-    expect(sourceMap2["garply"]).toStrictEqual({line: 2, col: 1, file: "src/foo/baz.yaml"});
+    expect(getSourceLocation(sourceMap2, "corge")).toStrictEqual({line: 1, col: 1, file: "src/foo/baz.yaml"});
+    expect(getSourceLocation(sourceMap2, "garply")).toStrictEqual({line: 2, col: 1, file: "src/foo/baz.yaml"});
+    
+    // Check we're not storing the file comment in the map
+    expect(sourceMap2.map["corge"].file).toBeUndefined();
+    expect(sourceMap2.map["garply"].file).toBeUndefined();
+});
+
+test("Test multiple file comments in same document", () => {
+    const yaml = dedent(`
+        --- # file:src/foo/bar.yaml
+        foo: bar
+        # file: src/foo/baz.yaml[]
+        baz: qux 
+        `);
+
+    const lc = new YAML.LineCounter();
+
+    const docs = YAML.parseAllDocuments(yaml, { lineCounter : lc});
+
+    expect(docs.length).toBe(1);
+
+    expect(() => getSourceMap(docs[0], lc)).toThrowError();
 });
