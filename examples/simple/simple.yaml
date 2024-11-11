@@ -1,4 +1,13 @@
 ---
+game: Simple Game
+author: Presto Turnip
+version: 1.0.0
+gameId: E9085F02-C794-4FFB-8644-0E59ED39EEE7
+description: >
+  A very simple example game.
+options:
+  - useDefaultVerbs
+---
 room: cave
 description: A dark dank cave
 exits:
