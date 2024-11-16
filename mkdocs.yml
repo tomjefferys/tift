@@ -12,3 +12,4 @@ nav:
   - Rules: rules.md
   - Command  Matching: commandmatching.md
   - Context: context.md
+  - Properties: properties.md
