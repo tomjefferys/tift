@@ -20,7 +20,10 @@ function getPropertyByPath<T>(env : Env, path : Path, defaultValue : Optional<T>
     const fullPath : Path = [PROPS_KEY, ...path];
     let value = env.get(fullPath);
     if(isNotFound(value)) {
-        if (defaultValue) {
+        const parent = env.getParent();
+        if (parent) {
+            value = getPropertyByPath(parent, path, defaultValue);
+        } else if (defaultValue) {
             value = defaultValue;
         } else {
             throw new Error(`property ${path} could not be found`);

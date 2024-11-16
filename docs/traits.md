@@ -187,3 +187,6 @@ tags:
   - carryable
   - visibleWhenDark
 ```
+
+## NPC
+Items tagged with `npc` have and implicit onMove function added to them. This automatically prints a message when the npc item moves between locations.
