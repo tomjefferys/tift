@@ -1714,6 +1714,56 @@ test("NPC onMove with custom messages", () => {
     executeAndTest(["wait"], { expected : ["The trolley rolls from south"] });
 });
 
+test("Test moveItemTo with custom messages", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        exits : {
+            south : "southRoom"
+        },
+    });
+    builder.withObj({
+        ...SOUTH_ROOM,
+        exits : {
+            north : "northRoom"
+        },
+    });
+    builder.withObj({
+        id : "trolley",
+        name : "shopping trolley",
+        description : "A battered old shopping trolley",
+        type : "item",
+        location : "northRoom",
+        tags : ["NPC", "container"],
+        properties : {
+            location : {
+                messages : {
+                    leaves : "The trolley rolls {{direction}}",
+                    arrives : "The trolley rolls from {{direction}}"
+                }
+            }
+        }
+    });
+    builder.withObj({
+        id : "banana",
+        name : "banana",
+        type : "item",
+        location : "trolley"
+    });
+    builder.withObj({
+        id : "moveBall",
+        type : "rule",
+        "afterTurn()" : {
+            repeat : ["moveItemTo(trolley,southRoom)", "moveItemTo(trolley,northRoom)"]
+        }
+    })
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["examine", "trolley"], { expected : ["A battered old shopping trolley", "banana"] });
+    executeAndTest(["wait"], { expected : ["The trolley rolls south"] });
+    executeAndTest(["wait"], { expected : ["The trolley rolls from south"] });
+});
+
 test("Test mustache in expression strings", () => {
     builder.withObj({
         ...NORTH_ROOM,

@@ -55,7 +55,7 @@ function callOnAddChild(env : Env, entity : Obj, location : Obj) {
 
 function callOnMove(env : Env, entity : Obj, location : Obj) {
     if (entity[ON_MOVE]) {
-        entity[ON_MOVE](env.newChild({ARGS : [location]}));
+        entity[ON_MOVE](env.newChild({[ARGS] : [location]}));
     }
 }
 
@@ -162,6 +162,9 @@ export function makeOnMove() : EnvFn {
 
         const name = entity["name"] ?? entity["id"];
         const playerLocation = Player.getLocation(env);
+        // This should check for an overridden property on the entity
+        // Print should be location aware.  We shouldn't be checking player location here.
+        // If a tree falls in the forest, and there's no one there to hear it, does it make a sound? YES!
         if (playerLocation === oldLocation) {
             const message = Properties.getPropertyString(env, "location.messages.leaves");
             const messageEnv = env.newChild({ entity : name, direction : leaveDirection});
