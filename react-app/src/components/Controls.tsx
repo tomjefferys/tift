@@ -4,6 +4,8 @@ import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { WordType } from "tift-types/src/messages/output";
 import WordButton from "./WordButton";
 
+import * as BubbleGrid from "./bubbleGrid/BubbleGrid"
+
 export type WordSelected = (event : React.MouseEvent<HTMLButtonElement>, word : Word) => void;
 
 interface GridCell {
@@ -46,7 +48,8 @@ interface CustomButtonGridProps {
 }
 
 const PANELS : PanelDefinition[] = 
-                [{name : "Game",   wordFilter : words => filterWords(words, ["word", "control"])
+                [{name : "Bubbles", wordFilter : words => filterWords(words, ["word", "control"])},
+                 {name : "Game",   wordFilter : words => filterWords(words, ["word", "control"])
                                                             .filter(word => !word.tags?.includes("inventory"))}, 
                  {name : "Inventory", wordFilter : words => filterWords(words, ["word"])
                                                               .filter(word => word.tags?.includes("inventory"))},
@@ -72,8 +75,12 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
             <Tabs h="100%" index={tabIndex} onChange={handleTabsChange}>
                 <TabList>{PANELS.map(panel => (<Tab key={panel.name}>{panel.name}</Tab>))}</TabList>
                 <TabPanels h="100%" >{PANELS.map(panel => (
-                    <TabPanel h="100%" key={panel.name}>
-                        <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
+                    <TabPanel h="100%" key={panel.name}>{
+                        panel.name === "Bubbles" 
+                            ? <WordBubbles wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
+                            : <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
+                        }
+                        {/*<WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />*/}
                     </TabPanel>))}
                 </TabPanels>
             </Tabs>
@@ -94,6 +101,43 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     return element;
 }
 
+const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) => {
+    const words = wordFilter(allWords);
+    const cells = words.map(word => (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>));
+
+//    let element : JSX.Element;
+
+    const items : BubbleGrid.Item[] = cells.map(cell => ({ item : cell }));
+
+    const content : BubbleGrid.Item[][] = [];
+    let row : BubbleGrid.Item[] = [];
+    const MAX_COLUMNS = 4;
+    for(const item of items) {
+        if (row.length >= MAX_COLUMNS) {
+            content.push(row);
+            row = [];
+        }
+        row.push(item);
+    }
+    if (row.length > 0) {
+        content.push(row);
+    }
+
+    const bgContent : BubbleGrid.Content = { content };
+
+    return <BubbleGrid.BubbleGrid content={content}/>
+
+
+    //if (isDirectionPicker(words)) {
+    //    element = <CustomButtonGrid  words={words} totalColumns={9} cells={DIRECTION_GRID} wordSelected={wordSelected} />
+    //} else if (isOptionPicker(words)) {
+    //    element = <CustomButtonGrid  words={words} totalColumns={4} cells={OPTION_GRID} wordSelected={wordSelected} />
+    //} else {
+    //    const numColumns = getNumColumns(words);
+    //    element = <SimpleButtonGrid words={words} columns={numColumns} wordSelected={wordSelected} />
+    //}
+}
+
 // Try to fit the words into 2, 3 or 4 columns depending on the length of the longest word
 const getNumColumns = (words : Word[]) : number => {
     const maxWordLength = Math.max(...words.map(word => word.value.length));
@@ -109,7 +153,7 @@ const getNumColumns = (words : Word[]) : number => {
 };
 
 const SimpleButtonGrid = ({ words, columns, wordSelected } : SimpleButtonGridProps) => {
-    const cells = words.map(word => (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>));
+    const cells: JSX.Element[] = words.map(word => (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>));
     // Pad out with empty cells so we have at least 3 rows to fill up the the grid or 
     // cells will ve stretched vertically
     const extraCells = columns * 3 - cells.length;
