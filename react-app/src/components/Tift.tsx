@@ -300,7 +300,10 @@ function Tift() {
         let words = WordTree.getWithPrefix(tree, commandWords.map(word => word.value).join(" "));
         if (!command.filter(word => word.id !== '?').length) {
           // Strip out any words that are only for the inventory contexts
-          words = words.filter(word => containsNonInventoryContexts(word));
+          //words = words.filter(word => containsNonInventoryContexts(word));
+          // TODO Filter out the inventory contexts later
+          words = words.filter(word => true);
+
         }
         return words;
     }
