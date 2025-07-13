@@ -318,9 +318,8 @@ export const BubbleGrid = ({ content } : Content) => {
             onMouseDown={handleMouseDown}
             role="grid"
             style={{ 
-                //width: '90vw',
-                //maxWidth: '90vw',
-                //height: '25vh',
+                height: '100%',
+                width: '100%',
                 position: 'relative',
                 overflowX: 'auto',
                 overflowY: 'auto',
