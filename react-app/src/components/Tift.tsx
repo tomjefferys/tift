@@ -302,13 +302,13 @@ function Tift() {
           // Strip out any words that are only for the inventory contexts
           //words = words.filter(word => containsNonInventoryContexts(word));
           // TODO Filter out the inventory contexts later
-          words = words.filter(word => true);
+          words = words.filter(_word => true);
 
         }
         return words;
     }
 
-    const containsNonInventoryContexts = (word : Word) : boolean => {
+    const _containsNonInventoryContexts = (word : Word) : boolean => {
       const inventoryContexts = ["context:inventory", "context:wearing"];
       const contexts = word.tags?.filter(tag => tag.startsWith("context")) ?? [];
       // Check we either have no contexts, or at least 1 no inventory context

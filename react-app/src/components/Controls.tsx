@@ -4,7 +4,8 @@ import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { WordType } from "tift-types/src/messages/output";
 import WordButton from "./WordButton";
 
-import * as BubbleGrid from "./bubbleGrid/BubbleGrid"
+import { Axial, HexMap } from "../util/hex";
+import * as BubbleGrid from "./bubbleGrid/BubbleGrid";
 
 export type WordSelected = (event : React.MouseEvent<HTMLButtonElement>, word : Word) => void;
 
@@ -71,6 +72,8 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
     }, [words]);
 
     return (
+        // eslint-disable-next-line
+        // @ts-ignore ignore "Expression produces a union type that is too complex to represent.ts(2590)"
         <Container h="100%">
             <Tabs h="100%" index={tabIndex} onChange={handleTabsChange}>
                 <TabList>{PANELS.map(panel => (<Tab key={panel.name}>{panel.name}</Tab>))}</TabList>
@@ -105,37 +108,11 @@ const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     const words = wordFilter(allWords);
     const cells = words.map(word => (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>));
 
-//    let element : JSX.Element;
-
     const items : BubbleGrid.Item[] = cells.map(cell => ({ item : cell }));
+    const hexMap = HexMap.fromSpiral(Axial.ZERO, items);
+    const rows  = hexMap.toArray();
 
-    const content : BubbleGrid.Item[][] = [];
-    let row : BubbleGrid.Item[] = [];
-    const MAX_COLUMNS = 4;
-    for(const item of items) {
-        if (row.length >= MAX_COLUMNS) {
-            content.push(row);
-            row = [];
-        }
-        row.push(item);
-    }
-    if (row.length > 0) {
-        content.push(row);
-    }
-
-    const bgContent : BubbleGrid.Content = { content };
-
-    return <BubbleGrid.BubbleGrid content={content}/>
-
-
-    //if (isDirectionPicker(words)) {
-    //    element = <CustomButtonGrid  words={words} totalColumns={9} cells={DIRECTION_GRID} wordSelected={wordSelected} />
-    //} else if (isOptionPicker(words)) {
-    //    element = <CustomButtonGrid  words={words} totalColumns={4} cells={OPTION_GRID} wordSelected={wordSelected} />
-    //} else {
-    //    const numColumns = getNumColumns(words);
-    //    element = <SimpleButtonGrid words={words} columns={numColumns} wordSelected={wordSelected} />
-    //}
+    return <BubbleGrid.BubbleGrid content={rows}/>
 }
 
 // Try to fit the words into 2, 3 or 4 columns depending on the length of the longest word
