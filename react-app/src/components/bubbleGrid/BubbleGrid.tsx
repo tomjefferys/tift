@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect, useRef, useCallback, CSSProperties } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer, CSSProperties } from 'react';
 import { getTransform } from './transformBuilder';
 
 type MouseState = "mouseDown" | "dragging" | "mouseUp" | "mouseUpAfterDrag";
@@ -29,8 +29,7 @@ const debounce = (func: Function, wait: number) => {
 
 export const BubbleGrid = ({ content } : Content) => {
 
-    // Keep track of the scroll position to ensure the component re-renders when the user scrolls
-    const [scrollPosition, setScrollPosition] = useState({ scrollTop: 0, scrollLeft: 0 });
+    const [, forceUpdate] = useReducer(x => x + 1, 0);
 
     // State to track if the component has loaded, so we don't show the content before it's ready
     const [isLoaded, setIsLoaded] = useState(false);
@@ -51,17 +50,11 @@ export const BubbleGrid = ({ content } : Content) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const outerDivs = useRef<DOMRect[][]>([]);
 
-    const handleScroll = () => {
+    const debouncedHandleScroll = useCallback(debounce(() => {
         if (containerRef.current) {
-            // Ensure scrolling triggers a re-render
-            setScrollPosition({
-                scrollTop: containerRef.current.scrollTop,
-                scrollLeft: containerRef.current.scrollLeft,
-            });
+            forceUpdate();
         }
-    };
-
-    const debouncedHandleScroll = useCallback(debounce(handleScroll, 1000/60), []);
+    }, 1000/60), []);
 
     useEffect(() => {
         const container = containerRef.current;
