@@ -76,15 +76,52 @@ export const BubbleGrid = ({ content } : Content) => {
     // Set the initial scroll position to the middle of the container on load
     useEffect(() => {
         const container = containerRef.current;
-        if (container) {
-            // Set the initial scroll position to 50%
-            container.scrollTop = container.scrollHeight / 2;
-            container.scrollLeft = container.scrollWidth / 2;
-            setScrollPosition({
-                scrollTop: container.scrollTop,
-                scrollLeft: container.scrollLeft,
-            });
+        if (!container) {
+            return;
         }
+        
+        let lastWidth = 0;
+        let lastHeight = 0;
+        let stableFrames = 0;
+        const STABLE_FRAME_COUNT = 5;
+
+        // Don't set the initial scroll position until the container has a stable size
+        // This seems to be the only way to avoid the initial scroll position being set before the container is fully rendered
+        const pollForStableSize = () => {
+            const containerRect = container.getBoundingClientRect();
+            if (containerRect.width === lastWidth 
+                    && containerRect.height === lastHeight
+                    && containerRect.width > 0 
+                    && containerRect.height > 0) {
+                stableFrames++;
+            } else {
+                stableFrames = 0;
+                lastWidth = containerRect.width;
+                lastHeight = containerRect.height;
+            }
+
+            if (stableFrames >= STABLE_FRAME_COUNT) {
+                // Size is stable, set the initial scroll position
+                const scrollTop = Math.max(container.scrollHeight / 2 - containerRect.height / 2, 0);
+                const scrollLeft = Math.max(container.scrollWidth / 2 - containerRect.width / 2, 0);
+                container.scrollTop = scrollTop;
+                container.scrollLeft = scrollLeft;
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Wait for two frames to ensure the browser has painted the scroll position
+                        setIsLoaded(true);
+                    });
+                });
+            } else {
+                requestAnimationFrame(pollForStableSize);
+            }
+        };
+
+        pollForStableSize();
+        
+        return () => {
+            // No cleanup needed
+        };
     }, []);
 
     // Set the outer div ref to get the size and location of the element,
@@ -276,10 +313,6 @@ export const BubbleGrid = ({ content } : Content) => {
         const cellRect = outerDivs.current[rowIndex][index];
         return getTransform(containerRect, cellRect);
     }
-
-    useEffect(() => {
-        setIsLoaded(true);
-    }, [content, scrollPosition]);
 
     const getCellStyle = (item? : Item ) : CSSProperties => {
         const style = {...baseStyle}
