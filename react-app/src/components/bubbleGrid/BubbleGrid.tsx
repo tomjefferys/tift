@@ -71,6 +71,8 @@ export const BubbleGrid = ({ content } : Content) => {
 
     // Set the initial scroll position to the middle of the container on load
     useEffect(() => {
+        setIsLoaded(false);
+
         const container = containerRef.current;
         if (!container) {
             return;
@@ -118,7 +120,7 @@ export const BubbleGrid = ({ content } : Content) => {
         return () => {
             // No cleanup needed
         };
-    }, []);
+    }, [content]);
 
     // Set the outer div ref to get the size and location of the element,
     // the outer div is not scaled or translated so can be relied on to get the correct size and location
