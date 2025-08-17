@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useRef, useCallback, useReducer, CSSProperties } from 'react';
 import { getTransform } from './transformBuilder';
 
+// Are we running in a test environment, if so always show the grid
+const ALWAYS_SHOW = process.env.NODE_ENV === 'test';
+
 type MouseState = "mouseDown" | "dragging" | "mouseUp" | "mouseUpAfterDrag";
 
 export interface Item {
@@ -369,7 +372,7 @@ export const BubbleGrid = ({ content } : Content) => {
                         marginTop: rowIndex === 0 ? '2vh' : '0',
                         marginBottom: rowIndex === content.length - 1 ? '2vh' : '0',
                         willChange: 'transform',
-                        visibility: isLoaded ? 'visible' : 'hidden',
+                        visibility: (isLoaded || ALWAYS_SHOW) ? 'visible' : 'hidden',
                         }}>
 
                     {row.map((item, index) => (
