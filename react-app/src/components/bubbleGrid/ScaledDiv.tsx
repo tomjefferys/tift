@@ -14,24 +14,51 @@ export const ScaledDiv = ({ _id, children, maxWidth, maxHeight } : ScaledTextPro
 
   useLayoutEffect(() => {
     const el = innerRef.current;
-    if (!el) return;
+    const outer = outerRef.current;
+    if (!el || !outer) {
+      return;
+    }
 
-    const parent = outerRef.current?.parentElement;
+    const parent = outer.parentElement;
     if (!parent) return;
 
-    const pollForSize = () => {
+    const updateScale = () => {
+      const parent = outer.parentElement;
+      if (!parent) return;
       const parentRect = parent.getBoundingClientRect();
       const elWidth = el.scrollWidth;
       if (parentRect.width > 0  && elWidth > 0) {
         const xScale = parentRect.width / elWidth;
         setScale(xScale < 1 ? xScale : 1);
-      } else {
-        requestAnimationFrame(pollForSize);
-      }
+      } 
     }
 
-    pollForSize();
-  }, [children]);
+    updateScale();
+
+    // Observer parent resize
+    const resizeObserver = new ResizeObserver(() => {
+        updateScale();
+    });
+    resizeObserver.observe(parent);
+    resizeObserver.observe(outer);
+
+    // Listen for scroll events
+    const scrollableAncestors: HTMLElement[] = [];
+    let ancestor: HTMLElement | null = outer.parentElement
+    while(ancestor) {
+      ancestor.addEventListener('scroll', updateScale, { passive: true });
+      scrollableAncestors.push(ancestor);
+      ancestor = ancestor.parentElement;
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      scrollableAncestors.forEach(ancestor => {
+        ancestor.removeEventListener('scroll', updateScale);
+      });
+    }
+
+  }, [children, maxWidth, maxHeight]);
 
   return (
     <div
