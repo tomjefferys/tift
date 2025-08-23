@@ -1,0 +1,64 @@
+import { useLayoutEffect, useRef, useState, ReactNode } from 'react';
+
+interface ScaledTextProps {
+  _id : string;
+  children: ReactNode;
+  maxWidth?: string | number;
+  maxHeight?: string | number;
+}
+
+export const ScaledDiv = ({ _id, children, maxWidth, maxHeight } : ScaledTextProps) =>{
+  const outerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+
+    const parent = outerRef.current?.parentElement;
+    if (!parent) return;
+
+    const pollForSize = () => {
+      const parentRect = parent.getBoundingClientRect();
+      const elWidth = el.scrollWidth;
+      if (parentRect.width > 0  && elWidth > 0) {
+        const xScale = parentRect.width / elWidth;
+        setScale(xScale < 1 ? xScale : 1);
+      } else {
+        requestAnimationFrame(pollForSize);
+      }
+    }
+
+    pollForSize();
+  }, [children]);
+
+  return (
+    <div
+      ref={outerRef}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        maxWidth,
+        maxHeight,
+        width: '100%',
+        height: '100%',
+        overflow: 'visible',
+      }}
+    >
+      <div
+        ref={innerRef}
+        style={{
+          display: 'inline-block',
+          transform: `scale(${scale})`,
+          transformOrigin: 'center',
+          width: 'auto',
+          height: 'auto',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}

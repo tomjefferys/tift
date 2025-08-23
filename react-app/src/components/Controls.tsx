@@ -6,6 +6,7 @@ import WordButton from "./WordButton";
 
 import { Axial, HexMap } from "../util/hex";
 import * as BubbleGrid from "./bubbleGrid/BubbleGrid";
+import { ScaledDiv } from "./bubbleGrid/ScaledDiv";
 
 export type WordSelected = (event : React.MouseEvent<HTMLButtonElement>, word : Word) => void;
 
@@ -106,7 +107,11 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
 
 const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) => {
     const words = wordFilter(allWords);
-    const cells = words.map(word => (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>));
+    const cells = words.map(word => (
+        <ScaledDiv key={word.id} _id={word.id} maxWidth={"90%"} maxHeight={"90%"}>
+            <WordButton key={word.id} word={word} wordSelected={wordSelected}/>
+        </ScaledDiv>
+    ));
 
     const items : BubbleGrid.Item[] = cells.map(cell => ({ item : cell }));
     const hexMap = HexMap.fromSpiral(Axial.ZERO, items);
