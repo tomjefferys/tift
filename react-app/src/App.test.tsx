@@ -6,6 +6,14 @@ import App from './App';
 import userEvent from '@testing-library/user-event';
 import * as fs from "fs";
 
+// Mock ResizeObserver as it is not available when running tests.
+class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(global as any).ResizeObserver = ResizeObserver;
+
 const TEST_DATA = `
 ---
 game: Test Game
