@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect, useRef, useCallback, useReducer, CSSProperties } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer, CSSProperties, useLayoutEffect } from 'react';
 import { getTransform } from './transformBuilder';
 
 // Are we running in a test environment, if so always show the grid
@@ -34,6 +34,8 @@ export const BubbleGrid = ({ content } : Content) => {
 
     const [, forceUpdate] = useReducer(x => x + 1, 0);
 
+    const [scrollPosition, setScrollPosition] = useState({ scrollTop: 0, scrollLeft: 0 });
+
     // State to track if the component has loaded, so we don't show the content before it's ready
     const [isLoaded, setIsLoaded] = useState(false);
 
@@ -55,6 +57,10 @@ export const BubbleGrid = ({ content } : Content) => {
 
     const debouncedHandleScroll = useCallback(debounce(() => {
         if (containerRef.current) {
+            setScrollPosition({
+                scrollTop: containerRef.current.scrollTop,
+                scrollLeft: containerRef.current.scrollLeft
+            });
             forceUpdate();
         }
     }, 1000/60), []);
@@ -108,6 +114,7 @@ export const BubbleGrid = ({ content } : Content) => {
                     requestAnimationFrame(() => {
                         // Wait for two frames to ensure the browser has painted the scroll position
                         setIsLoaded(true);
+                        forceUpdate();
                     });
                 });
             } else {
@@ -121,6 +128,22 @@ export const BubbleGrid = ({ content } : Content) => {
             // No cleanup needed
         };
     }, [content]);
+
+    useLayoutEffect(() => {
+        if (!isLoaded) return;
+        // Only run after all refs are set
+        content.forEach((row, rowIndex) => {
+            row.forEach((_, colIndex) => {
+                const cellDiv = document.querySelector(`[data-cell="${rowIndex}-${colIndex}"]`);
+                if (cellDiv && cellDiv instanceof HTMLElement && outerDivs.current[rowIndex] && outerDivs.current[rowIndex][colIndex] && containerRef.current) {
+                    const containerRect = containerRef.current.getBoundingClientRect();
+                    const cellRect = outerDivs.current[rowIndex][colIndex];
+                    const transform = getTransform(containerRect, cellRect);
+                    cellDiv.style.transform = transform;
+                }
+            });
+        });
+    }, [isLoaded, content, scrollPosition]);
 
     // Set the outer div ref to get the size and location of the element,
     // the outer div is not scaled or translated so can be relied on to get the correct size and location
@@ -355,6 +378,8 @@ export const BubbleGrid = ({ content } : Content) => {
                 overflowX: 'auto',
                 overflowY: 'auto',
                 display: 'grid',
+                opacity: isLoaded || ALWAYS_SHOW ? 1 : 0,
+                transition: 'opacity 0.2s',
                 padding: '0vh 15vw',
                 border: '1px solid white',
                 boxSizing: 'border-box',
@@ -382,14 +407,8 @@ export const BubbleGrid = ({ content } : Content) => {
                              ref = {(el) => setOuterDivRef(el, rowIndex, index)}>
                             <div
                                 key={`${rowIndex}-${index}`} 
+                                data-cell={`${rowIndex}-${index}`}
                                 style={getCellStyle(item)}
-                                data-foo="bar"
-                                ref={(el) => {
-                                    if (el) {
-                                        const transform = calculateTransform(rowIndex, index);
-                                        el.style.transform = transform;
-                                    }
-                                }}
                             >
                                 {item?.item}
                             </div>
