@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState, ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, useContext, ReactNode } from 'react';
+import { LayoutReadyContext } from './LayoutReadyContext';
 
 interface ScaledTextProps {
   _id : string;
@@ -8,6 +9,8 @@ interface ScaledTextProps {
 }
 
 export const ScaledDiv = ({ _id, children, maxWidth, maxHeight } : ScaledTextProps) =>{
+  const layoutReady = useContext(LayoutReadyContext);
+
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -25,6 +28,11 @@ export const ScaledDiv = ({ _id, children, maxWidth, maxHeight } : ScaledTextPro
     const updateScale = () => {
       const parent = outer.parentElement;
       if (!parent) return;
+      const parentStyle = window.getComputedStyle(parent);
+      if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden') {
+        return;
+      }
+
       const parentRect = parent.getBoundingClientRect();
       const elWidth = el.scrollWidth;
       if (parentRect.width > 0  && elWidth > 0) {
@@ -33,7 +41,11 @@ export const ScaledDiv = ({ _id, children, maxWidth, maxHeight } : ScaledTextPro
       } 
     }
 
-    updateScale();
+    // Delay measurement until after paint
+    requestAnimationFrame(() => {
+     requestAnimationFrame(() => { 
+        requestAnimationFrame(updateScale)})
+    });
 
     // Observer parent resize
     const resizeObserver = new ResizeObserver(() => {
@@ -58,7 +70,7 @@ export const ScaledDiv = ({ _id, children, maxWidth, maxHeight } : ScaledTextPro
       });
     }
 
-  }, [children, maxWidth, maxHeight]);
+  }, [layoutReady, children, maxWidth, maxHeight]);
 
   return (
     <div
