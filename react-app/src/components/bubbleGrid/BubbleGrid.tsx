@@ -1,7 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef, useCallback, useReducer, CSSProperties, useLayoutEffect } from 'react';
 import { getTransform } from './transformBuilder';
-import { LayoutReadyContext } from './LayoutReadyContext';
 
 // Are we running in a test environment, if so always show the grid
 const ALWAYS_SHOW = process.env.NODE_ENV === 'test';
@@ -35,8 +34,6 @@ export const BubbleGrid = ({ content } : Content) => {
 
     const [, forceUpdate] = useReducer(x => x + 1, 0);
 
-    const layoutReadyRef = useRef(false);
-
     const [scrollPosition, setScrollPosition] = useState({ scrollTop: 0, scrollLeft: 0 });
 
     // State to track if the component has loaded, so we don't show the content before it's ready
@@ -57,6 +54,7 @@ export const BubbleGrid = ({ content } : Content) => {
     // The outer divs are not scaled or translated so can be relied on to get the correct size and location
     const containerRef = useRef<HTMLDivElement>(null);
     const outerDivs = useRef<DOMRect[][]>([]);
+    const contentRefs = useRef<(HTMLDivElement | null)[][]>([]);
 
     const debouncedHandleScroll = useCallback(debounce(() => {
         if (containerRef.current) {
@@ -81,7 +79,6 @@ export const BubbleGrid = ({ content } : Content) => {
     // Set the initial scroll position to the middle of the container on load
     useEffect(() => {
         setIsLoaded(false);
-        layoutReadyRef.current = false;
 
         const container = containerRef.current;
         if (!container) {
@@ -144,14 +141,20 @@ export const BubbleGrid = ({ content } : Content) => {
                     const cellRect = outerDivs.current[rowIndex][colIndex];
                     const transform = getTransform(containerRect, cellRect);
                     cellDiv.style.transform = transform;
+                    
+                    // Scale the content if it doesn't fit
+                    const contentDiv = contentRefs.current[rowIndex][colIndex];
+                    if (contentDiv) {
+                        const contentScrollWidth = contentDiv.scrollWidth;
+                        const cellWidth = cellRect.width;
+                        if (contentScrollWidth > cellWidth) {
+                            const scale = cellWidth / contentScrollWidth;
+                            contentDiv.style.transform = `scale(${scale})`;
+                        }
+                    }
                 }
             });
         });
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                layoutReadyRef.current = true;
-            });
-        })
     }, [isLoaded, content, scrollPosition]);
 
     // Set the outer div ref to get the size and location of the element,
@@ -376,58 +379,61 @@ export const BubbleGrid = ({ content } : Content) => {
     };
 
     return (
-        <LayoutReadyContext.Provider value={layoutReadyRef.current}>
-            <div 
-                ref={containerRef}
-                onMouseDown={handleMouseDown}
-                role="grid"
-                style={{ 
-                    height: '100%',
-                    width: '100%',
-                    position: 'relative',
-                    overflowX: 'auto',
-                    overflowY: 'auto',
-                    display: 'grid',
-                    opacity: isLoaded || ALWAYS_SHOW ? 1 : 0,
-                    transition: 'opacity 0.2s',
-                    padding: '0vh 15vw',
-                    border: '1px solid white',
-                    boxSizing: 'border-box',
-                    cursor: mouseState === "dragging" ? 'grabbing' : 'grab', // Change cursor during dragging
-                }}>
-                {content.map((row, rowIndex) => (
-                    <div key={rowIndex} 
-                        style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: `repeat(${NUM_COLS}, minmax(auto, 100px))`,
-                            marginLeft: rowIndex % 2 === 1 && outerDivs.current[rowIndex]
-                                ? `${outerDivs.current[rowIndex][0]?.width / 2}px`
-                            : '0',
-                            marginRight: rowIndex % 2 === 0 && outerDivs.current[rowIndex]
-                                ? `${outerDivs.current[rowIndex][0]?.width / 2}px`
-                            : '0',
-                            marginTop: rowIndex === 0 ? '2vh' : '0',
-                            marginBottom: rowIndex === content.length - 1 ? '2vh' : '0',
-                            willChange: 'transform',
-                            visibility: (isLoaded || ALWAYS_SHOW) ? 'visible' : 'hidden',
-                            }}>
+        <div 
+            ref={containerRef}
+            onMouseDown={handleMouseDown}
+            role="grid"
+            style={{ 
+                height: '100%',
+                width: '100%',
+                position: 'relative',
+                overflowX: 'auto',
+                overflowY: 'auto',
+                display: 'grid',
+                opacity: isLoaded || ALWAYS_SHOW ? 1 : 0,
+                transition: 'opacity 0.2s',
+                padding: '0vh 15vw',
+                border: '1px solid white',
+                boxSizing: 'border-box',
+                cursor: mouseState === "dragging" ? 'grabbing' : 'grab', // Change cursor during dragging
+            }}>
+            {content.map((row, rowIndex) => (
+                <div key={rowIndex} 
+                    style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: `repeat(${NUM_COLS}, minmax(auto, 100px))`,
+                        marginLeft: rowIndex % 2 === 1 && outerDivs.current[rowIndex]
+                            ? `${outerDivs.current[rowIndex][0]?.width / 2}px`
+                        : '0',
+                        marginRight: rowIndex % 2 === 0 && outerDivs.current[rowIndex]
+                            ? `${outerDivs.current[rowIndex][0]?.width / 2}px`
+                        : '0',
+                    marginTop: rowIndex === 0 ? '2vh' : '0',
+                        marginBottom: rowIndex === content.length - 1 ? '2vh' : '0',
+                        willChange: 'transform',
+                        visibility: (isLoaded || ALWAYS_SHOW) ? 'visible' : 'hidden',
+                        }}>
 
-                        {row.map((item, index) => (
-                            <div key = {`${rowIndex}-${index}_outer`}
-                                ref = {(el) => setOuterDivRef(el, rowIndex, index)}>
-                                <div
-                                    key={`${rowIndex}-${index}`} 
-                                    data-cell={`${rowIndex}-${index}`}
-                                    style={getCellStyle(item)}
-                                >
+                    {row.map((item, index) => (
+                        <div key = {`${rowIndex}-${index}_outer`}
+                            ref = {(el) => setOuterDivRef(el, rowIndex, index)}>
+                            <div
+                                key={`${rowIndex}-${index}`} 
+                                data-cell={`${rowIndex}-${index}`}
+                                style={getCellStyle(item)}
+                            >
+                                <div ref={el => {
+                                    contentRefs.current[rowIndex] = contentRefs.current[rowIndex] || [];
+                                    contentRefs.current[rowIndex][index] = el;
+                                }} className="content">
                                     {item?.item}
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                ))}
-            </div>
-        </LayoutReadyContext.Provider>
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>
     );
 };
 
