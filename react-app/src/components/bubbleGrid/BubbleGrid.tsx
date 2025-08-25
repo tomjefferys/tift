@@ -336,17 +336,6 @@ export const BubbleGrid = ({ content } : Content) => {
         };
     }, [mouseState, handleMouseMove, handleMouseUp, handleClick]);
 
-    // Calculate the transform for each element based on its position in the container
-    // and the scroll position of the container
-    const calculateTransform = (rowIndex: number, index: number) : string => {
-        if (!outerDivs.current || !outerDivs.current[rowIndex] || !outerDivs.current[rowIndex][index] || !containerRef.current) {
-            return '';
-        }
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const cellRect = outerDivs.current[rowIndex][index];
-        return getTransform(containerRect, cellRect);
-    }
-
     const getCellStyle = (item? : Item ) : CSSProperties => {
         const style = {...baseStyle}
         if (item) {
