@@ -1,7 +1,6 @@
 import StatusBar from "./StatusBar";
 import React, { useEffect, useRef, Fragment } from "react";
 import { OutputEntry, Command } from "../outputentry";
-import ChakraUIRenderer from 'chakra-ui-markdown-renderer';
 import ReactMarkdown from "react-markdown";
 import { Box, Container, List, ListItem, Text } from "@chakra-ui/react";
 import { Optional } from "tift-types/src/util/optional";
@@ -34,7 +33,7 @@ interface LogEntryProps {
 
 const CURSOR = (<span key={`__cursor__`} className="cursor">|</span>);
 
-const MessageEntry = ({ value } : EntryProps)  => (<ReactMarkdown components={ChakraUIRenderer()}>{value}</ReactMarkdown>)
+const MessageEntry = ({ value } : EntryProps)  => (<ReactMarkdown>{value}</ReactMarkdown>)
 const CommandEntry = ({ value, cursor } : CommandEntryProps) => {
     const words : JSX.Element[] = [];
     value.forEach((word, index) => {
