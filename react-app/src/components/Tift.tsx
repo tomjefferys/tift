@@ -380,7 +380,9 @@ function Tift() {
                    overflow="auto">
                 <Output entries={messagesRef.current ?? []} command={getCommand()}/>
               </Box>
-              <Divider/>
+              {/*eslint-disable-next-line */}
+              {/* @ts-ignore ignore "Expression produces a union type that is too complex to represent.ts(2590)"*/}
+              <Divider/> 
               <Box position={"relative"}
                    height="40%" 
                    width="100%">
