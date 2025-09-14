@@ -29,3 +29,9 @@ code {
     opacity: 0;
   }
 }
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-left: 1.5em;
+  padding-left: 1.5em;
+}

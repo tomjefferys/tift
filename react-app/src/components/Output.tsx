@@ -33,7 +33,9 @@ interface LogEntryProps {
 
 const CURSOR = (<span key={`__cursor__`} className="cursor">|</span>);
 
-const MessageEntry = ({ value } : EntryProps)  => (<ReactMarkdown>{value}</ReactMarkdown>)
+const MessageEntry = ({ value } : EntryProps)  => (
+    <ReactMarkdown className="markdown-content">{value}</ReactMarkdown>
+)
 const CommandEntry = ({ value, cursor } : CommandEntryProps) => {
     const words : JSX.Element[] = [];
     value.forEach((word, index) => {
