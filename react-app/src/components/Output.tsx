@@ -1,8 +1,7 @@
-import StatusBar from "./StatusBar";
-import React, { useState, useEffect, useRef, Fragment } from "react";
+import React, { useEffect, useRef, Fragment } from "react";
 import { OutputEntry, Command } from "../outputentry";
 import ReactMarkdown from "react-markdown";
-import { Box, Container, List, ListItem, Text } from "@chakra-ui/react";
+import { Container, List, ListItem, Text } from "@chakra-ui/react";
 import { Optional } from "tift-types/src/util/optional";
 
 const LEVEL_COLOURS : Record<string, string> = {
@@ -13,7 +12,6 @@ const LEVEL_COLOURS : Record<string, string> = {
 
 interface OutputProps {
     entries : OutputEntry[];
-    status : string;
     command : Command;
 }
 
@@ -64,18 +62,9 @@ const renderMessage = (message : OutputEntry) => {
     }
 }
 
-const Output = ({ entries, status, command } : OutputProps) => {
+const Output = ({ entries, command } : OutputProps) => {
 
     const entriesEndRef = useRef<HTMLDivElement>(null);
-    const statusBarRef = useRef<HTMLDivElement>(null);
-    const [statusBarHeight, setStatusBarHeight] = useState(0);
-
-    useEffect(() => {
-        if (statusBarRef.current) {
-            const rect = statusBarRef.current.getBoundingClientRect();
-            setStatusBarHeight(rect.height);
-        }
-    }, [statusBarRef.current]);
 
     useEffect(() => {
         entriesEndRef.current?.scrollIntoView({ behavior : "auto"});
