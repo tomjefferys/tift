@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, Fragment } from "react";
 import { OutputEntry, Command } from "../outputentry";
+//import ChakraUIRenderer from 'chakra-ui-markdown-renderer';
 import ReactMarkdown from "react-markdown";
 import { Container, List, ListItem, Text } from "@chakra-ui/react";
 import { Optional } from "tift-types/src/util/optional";
