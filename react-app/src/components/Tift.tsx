@@ -378,7 +378,7 @@ function Tift() {
                    height="55%"
                    width="100%"
                    overflow="auto">
-                <Output entries={messagesRef.current ?? []} status={statusRef.current.title} command={getCommand()}/>
+                <Output entries={messagesRef.current ?? []} command={getCommand()}/>
               </Box>
               <Divider/>
               <Box position={"relative"}
