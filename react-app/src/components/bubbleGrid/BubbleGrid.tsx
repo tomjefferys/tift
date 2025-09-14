@@ -173,7 +173,6 @@ export const BubbleGrid = ({ content } : Content) => {
     };
 
     const definedCellStyle = {
-        border: '1px solid white',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',  
@@ -183,7 +182,6 @@ export const BubbleGrid = ({ content } : Content) => {
         willChange: 'transform',
         borderRadius: '50%',
         overflow: 'hidden', // Clip content inside the div
-        boxShadow: '0 0 5px rgba(0, 0, 0, 0.2)', // Add subtle shadow
         maxWidth: '200px',
         transformOrigin: 'center',
     }
@@ -207,7 +205,7 @@ export const BubbleGrid = ({ content } : Content) => {
                 opacity: isLoaded || ALWAYS_SHOW ? 1 : 0,
                 transition: 'opacity 0.2s',
                 padding: '0vh 15vw',
-                border: '1px solid white',
+                //border: '1px solid white',
                 boxSizing: 'border-box',
                 cursor: mouseState === "dragging" ? 'grabbing' : 'grab', // Change cursor during dragging
             }}>
