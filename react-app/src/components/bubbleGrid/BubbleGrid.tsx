@@ -205,7 +205,6 @@ export const BubbleGrid = ({ content } : Content) => {
                 opacity: isLoaded || ALWAYS_SHOW ? 1 : 0,
                 transition: 'opacity 0.2s',
                 padding: '0vh 15vw',
-                //border: '1px solid white',
                 boxSizing: 'border-box',
                 cursor: mouseState === "dragging" ? 'grabbing' : 'grab', // Change cursor during dragging
             }}>
