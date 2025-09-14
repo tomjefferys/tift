@@ -77,13 +77,12 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
         <Container h="100%">
             <Tabs h="100%" index={tabIndex} onChange={handleTabsChange}>
                 <TabList>{PANELS.map(panel => (<Tab key={panel.name}>{panel.name}</Tab>))}</TabList>
-                <TabPanels h="100%" >{PANELS.map(panel => (
-                    <TabPanel h="100%" key={panel.name}>{
+                <TabPanels h="85%">{PANELS.map(panel => (
+                    <TabPanel h="100%" key={panel.name} padding={0}>{
                         panel.name === "Bubbles" 
                             ? <WordBubbles wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
                             : <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
                         }
-                        {/*<WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />*/}
                     </TabPanel>))}
                 </TabPanels>
             </Tabs>

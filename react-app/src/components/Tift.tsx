@@ -24,6 +24,7 @@ import { getInventoryFilter } from "../util/inventoryfilter";
 import * as InfoPrinter from "../util/infoprinter";
 import _ from "lodash";
 import * as GameStorage from "../util/gamestorage";
+import StatusBar from "./StatusBar";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;
@@ -369,12 +370,22 @@ function Tift() {
 
     return (
         <React.Fragment>
-            <Box position={"relative"} height="69%">
-              <Output entries={messagesRef.current ?? []} status={statusRef.current.title} command={getCommand()}/>
-            </Box>
-            <Divider/>
-            <Box position={"relative"} height="25%" width="100%">
-              <Controls words={filteredWords ?? []} wordSelected={wordSelected}/>
+           <Box height="100%" width="100%">
+              <Box position={"relative"} height="5%">
+                <StatusBar status={statusRef.current.title}/>
+              </Box>
+              <Box position={"relative"}
+                   height="55%"
+                   width="100%"
+                   overflow="auto">
+                <Output entries={messagesRef.current ?? []} status={statusRef.current.title} command={getCommand()}/>
+              </Box>
+              <Divider/>
+              <Box position={"relative"}
+                   height="40%" 
+                   width="100%">
+                <Controls words={filteredWords ?? []} wordSelected={wordSelected}/>
+              </Box>
             </Box>
         </React.Fragment>
       );

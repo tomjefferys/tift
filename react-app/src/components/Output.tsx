@@ -1,5 +1,5 @@
 import StatusBar from "./StatusBar";
-import React, { useEffect, useRef, Fragment } from "react";
+import React, { useState, useEffect, useRef, Fragment } from "react";
 import { OutputEntry, Command } from "../outputentry";
 import ReactMarkdown from "react-markdown";
 import { Box, Container, List, ListItem, Text } from "@chakra-ui/react";
@@ -66,24 +66,32 @@ const Output = ({ entries, status, command } : OutputProps) => {
 
     const entriesEndRef = useRef<HTMLDivElement>(null);
     const statusBarRef = useRef<HTMLDivElement>(null);
+    const [statusBarHeight, setStatusBarHeight] = useState(0);
+
+    useEffect(() => {
+        if (statusBarRef.current) {
+            const rect = statusBarRef.current.getBoundingClientRect();
+            setStatusBarHeight(rect.height);
+        }
+    }, [statusBarRef.current]);
 
     useEffect(() => {
         entriesEndRef.current?.scrollIntoView({ behavior : "auto"});
-        statusBarRef.current?.scrollIntoView({ behavior : "auto" });
     });
 
     return (
         <React.Fragment>
-            <StatusBar status={status}/>
-            <Box overflow={"auto"} h="90%" w="100%" overflowY={"scroll"}>
-                <Container textAlign={"left"}>
+            <Container textAlign={"left"}>
                 <List>
-                    {entries.map((message : OutputEntry, index : number) => (<ListItem key={index}>{renderMessage(message)}</ListItem>))}
-                    <ListItem><CommandEntry value={command.command} cursor={command.cursor}/></ListItem>
+                    {entries.map((message : OutputEntry, index : number) => (
+                        <ListItem key={index}>{renderMessage(message)}</ListItem>
+                        ))}
+                    <ListItem>
+                        <CommandEntry value={command.command} cursor={command.cursor}/>
+                    </ListItem>
                 </List>
                 <div ref={entriesEndRef}/>
-                </Container>
-            </Box>
+            </Container>
         </React.Fragment>
     );
 }
