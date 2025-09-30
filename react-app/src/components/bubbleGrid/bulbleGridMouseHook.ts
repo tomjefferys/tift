@@ -4,7 +4,7 @@ type MouseState = "mouseDown" | "dragging" | "mouseUp" | "mouseUpAfterDrag";
 
 const isUp = (state: MouseState) => state === "mouseUp" || state === "mouseUpAfterDrag";
 
-export function useBubbleGridMouse(containerRef: React.RefObject<HTMLDivElement>) {
+export function useBubbleGridMouse(containerRef: React.RefObject<HTMLDivElement | null>) {
     // State to track if the user is dragging the mouse
     const [mouseState, setMouseState] = useState<MouseState>("mouseUp");
 
