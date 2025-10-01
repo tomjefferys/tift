@@ -52,6 +52,11 @@ export const BubbleGrid = ({ content } : Content) => {
         }
     }, 1000/60), []);
 
+    // Make sure we reset isLoaded as soon as the content changes
+    useLayoutEffect(() => {
+        setIsLoaded(false);
+    }, [content]);
+
     useEffect(() => {
         const container = containerRef.current;
         if (container) {
