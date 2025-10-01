@@ -1,7 +1,7 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef, useCallback, useReducer, CSSProperties, useLayoutEffect } from 'react';
 import { getTransform } from './transformBuilder';
-import { useBubbleGridMouse } from './bulbleGridMouseHook';
+import { useBubbleGridMouse } from './bubbleGridMouseHook';
 
 // Are we running in a test environment, if so always show the grid
 const ALWAYS_SHOW = process.env.NODE_ENV === 'test';
