@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
+const MINIMUM_DRAG_DISTANCE = 5;
+
 type MouseState = "mouseDown" | "dragging" | "mouseUp" | "mouseUpAfterDrag";
 
 const isUp = (state: MouseState) => state === "mouseUp" || state === "mouseUpAfterDrag";
@@ -15,6 +17,12 @@ export function useBubbleGridMouse(containerRef: React.RefObject<HTMLDivElement 
     const velocityRef = useRef({ x: 0, y: 0 });
     const [lastMousePosition, setLastMousePosition] = useState({ x: 0, y: 0 });
     const inertiaRef = useRef<number | null>(null);
+
+    const getDistance : (event : MouseEvent) => number = (event) => {
+        const dx = event.clientX - startMousePosition.x;
+        const dy = event.clientY - startMousePosition.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
 
     const handleMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
 
@@ -46,6 +54,11 @@ export function useBubbleGridMouse(containerRef: React.RefObject<HTMLDivElement 
         // Prevent default behavior to avoid text selection
         event.preventDefault();
 
+        const distance = getDistance(event);
+        if (distance < MINIMUM_DRAG_DISTANCE) {
+            return;
+        }
+
         if (mouseState === "dragging") {
             event.stopImmediatePropagation();
         }
@@ -63,6 +76,12 @@ export function useBubbleGridMouse(containerRef: React.RefObject<HTMLDivElement 
             const newState = mouseState === "dragging" ? "mouseUpAfterDrag" : "mouseUp";
             setMouseState(newState);
         } 
+        
+        // Check how far the mouse has moved since start
+        const distance = getDistance(event);
+        if (distance < MINIMUM_DRAG_DISTANCE) {
+            return;
+        }
         
         event.preventDefault();
         if (mouseState === "dragging") {
