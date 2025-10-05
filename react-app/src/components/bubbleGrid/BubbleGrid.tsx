@@ -138,10 +138,8 @@ export const BubbleGrid = ({ content } : Content) => {
                     if (contentDiv) {
                         const contentScrollWidth = contentDiv.scrollWidth;
                         const cellWidth = cellRect.width;
-                        if (contentScrollWidth > cellWidth) {
-                            const scale = cellWidth / contentScrollWidth;
-                            contentDiv.style.transform = `scale(${scale})`;
-                        }
+                        const scale = Math.min(cellWidth / contentScrollWidth, 1);
+                        contentDiv.style.transform = `scale(${scale})`;
                     }
                 }
             });
