@@ -211,7 +211,7 @@ function addVerbsAndActions(builder : (EntityBuilder & ActionerBuilder), obj : O
     makeEntityVerbs(builder, obj);
     makeEntityVerbModifiers(builder, obj);
     addActions(builder, obj);
-};
+}
 
 function addActions(builder : ActionerBuilder, obj : Obj) {
     getActionStrings(obj, "before", "before")
