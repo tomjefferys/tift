@@ -43,6 +43,16 @@ export function remove<T>(dict : MultiDict<T>, key : KeyType, value : T) {
   }
 }
 
+export function removeIf<T>(dict : MultiDict<T>, key : KeyType, predicate : (value : T) => boolean) {
+  const arr = dict[key];
+  if (arr) {
+    const index = arr.findIndex(predicate);
+    if (index > -1) {
+      arr.splice(index, 1);
+    }
+  }
+}
+
 export function filter<T>(dict : MultiDict<T>, predicate : (key : string, value : T) => boolean) : MultiDict<T> {
   const newDict : MultiDict<T> = {};
   entries(dict).forEach(([key, value]) => {

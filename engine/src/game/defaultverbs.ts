@@ -15,6 +15,7 @@ import * as Property from "../properties";
 import * as Tags from "./tags";
 import * as Lockable from "./traits/lockable";
 import * as VERB_NAMES from "./verbnames";
+import _ from "lodash";
 
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
@@ -104,7 +105,20 @@ const GO = phaseActionBuilder("go")
             matchBuilder().withVerb(matchVerb("go")).withModifier(captureModifier("direction")).build(),
             mkThunk(env => {
                 const location = Player.getLocationEntity(env);
-                const destination = location?.exits[env.get("direction")];
+                let destination;
+                const directionValue = location?.exits[env.get("direction")];
+                if (_.isString(directionValue)) {
+                    destination = directionValue;
+                } else if (_.isPlainObject(directionValue)) {
+                    const entries = Object.entries(directionValue) as [string, string][];
+                    if ( entries.length > 1) {
+                        throw new Error("Multiple conditional exits not supported");
+                    }
+                    const [dest, _condition] = entries[0];
+                    // TODO we should evaluate the condition here
+                    destination = dest;
+                }
+
                 if (destination) {
                     const player = Player.getPlayer(env);
                     Locations.setLocation(env, player, destination);

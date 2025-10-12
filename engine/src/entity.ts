@@ -16,8 +16,8 @@ export enum PROPS {
 
 export interface Entity extends Nameable, ActionSource {
   id : string,
-  verbs : VerbMatcher[],
-  verbModifiers : MultiDict<string>,
+  verbs : VerbMatcher[]
+  verbModifiers : MultiDict<VerbModifier>,
   [props : string]: unknown
 }
 
@@ -32,6 +32,16 @@ export function getType(entity : Entity) : string {
 export function hasTag(entity : Obj, tag : string) : boolean {
     const tags = (entity[PROPS.TAGS] ?? []) as string[];
     return tags.indexOf(tag) != -1;
+}
+
+export interface VerbModifier {
+  readonly modType : string;
+  readonly value : string;
+  readonly condition? : Thunk;
+}
+
+export function buildVerbModifier(modType : string, value : string, condition? : Thunk) : VerbModifier {
+  return { modType, value, condition };
 }
 
 export interface VerbMatcher {

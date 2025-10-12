@@ -13,6 +13,7 @@ import * as MustacheUtils from "../util/mustacheUtils";
 import * as Properties from "../properties";
 import * as Tags from "./tags";
 import { EntityBuilder } from "./entitybuilder";
+import { VerbModifier } from "../entity";
 
 export const LOCATION = "location";
 
@@ -129,13 +130,13 @@ export function isLightSourceAtLocation(env : Env, location : Obj) : boolean {
 export function addExit(env : Env, roomId : string, direction : string, target : string) {
     const room = Entities.getEntity(env, roomId);
     room.exits[direction] = Entities.getEntity(env, target).id;
-    MultiDict.add(room.verbModifiers, "direction", direction);
+    MultiDict.add(room.verbModifiers, "direction", { "modType": "direction", "value": direction });
 }
 
 export function closeExit(env : Env, roomId : string, direction : string) {
     const room = Entities.getEntity(env, roomId);
     delete room.exits[direction];
-    MultiDict.remove(room.verbModifiers, "direction", direction);
+    MultiDict.removeIf(room.verbModifiers, "direction", (entry : VerbModifier) => entry.value === direction);
 }
 
 /**
