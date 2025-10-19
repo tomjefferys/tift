@@ -1,7 +1,7 @@
 
 import { AfterAction, MainAction, BeforeAction } from "../script/phaseaction";
 import { Obj } from "tift-types/src/util/objects";
-import { VerbMatcher, Entity, PROPS } from "../entity";
+import { VerbMatcher, VerbModifier, Entity, PROPS } from "../entity";
 import { MultiDict } from "../util/multidict";
 import { getString, getArray, KIND } from "../util/objects";
 import { buildVerbMatcher } from "../entity";
@@ -13,7 +13,7 @@ export class EntityBuilder {
   id : string;
   props : Obj;
   verbs : VerbMatcher[] = [];
-  verbModifiers : MultiDict<string> = {};
+  verbModifiers : MultiDict<VerbModifier> = {};
   before : BeforeAction[] = [];
   actions : MainAction[] = [];
   after : AfterAction[] = [];
@@ -51,11 +51,11 @@ export class EntityBuilder {
     return this;
   }
 
-  withVerbModifier(modType : string, value : string) {
-    if (!this.verbModifiers[modType]) {
-      this.verbModifiers[modType] = [];
+  withVerbModifier(verbModifier : VerbModifier) {
+    if (!this.verbModifiers[verbModifier.modType]) {
+      this.verbModifiers[verbModifier.modType] = [];
     }
-    this.verbModifiers[modType].push(value);
+    this.verbModifiers[verbModifier.modType].push(verbModifier);
     return this;
   }
 

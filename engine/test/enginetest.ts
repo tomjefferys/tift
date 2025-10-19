@@ -385,6 +385,62 @@ test("Test before and after actions", () => {
     executeAndTest(["look"], { expected : ["hot rock"], notExpected : ["cool rock"]});
 });
 
+test("Test $ string prefix in actions", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "hotRock",
+        name : "hot rock",
+        type : "item",
+        location : "theRoom",
+        before : { "get(this)" : "$ Ouch!" },
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "coolRock",
+        name : "cool rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "  $  nice!" },
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "moneyRock",
+        name : "money rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "$$$$" },
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "quotedRock",
+        name : "quoted rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "'$ Not a special string'" },
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "mustacheRock",
+        name : "mustache rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "  ${{name}}  " },
+        tags : ["carryable"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["hot rock", "cool rock", "money rock", "quoted rock"]});
+    executeAndTest(["get", "hotRock"], { expected : ["Ouch!"]});
+    executeAndTest(["look"], { expected : ["hot rock", "cool rock", "money rock", "quoted rock"]});
+    executeAndTest(["get", "coolRock"], { expected : ["nice!"]});
+    executeAndTest(["look"], { expected : ["hot rock", "money rock", "quoted rock"]});
+    executeAndTest(["get", "moneyRock"], { expected : ["$$$"]});
+    executeAndTest(["look"], { expected : ["hot rock", "quoted rock"]});
+    executeAndTest(["get", "quotedRock"], { expected : ["$ Not a special string"]});
+    executeAndTest(["look"], { expected : ["hot rock"]});
+    executeAndTest(["get", "mustacheRock"], { expected : ["mustache rock"]});
+});
+
 test("Test before and after actions specified as object properties", () => {
     builder.withObj(THE_ROOM);
     builder.withObj({
@@ -1078,6 +1134,102 @@ test("Test conditional verbs", () => {
     executeAndTest(["stand"], { expected : ["You stand up"] });
     executeAndTest(["examine", "armchair"], { expected : ["A threadbare armchair", "standing"], notExpected : ["sitting"]});
 
+});
+
+test("Test multiple exits with one conditional exit", () => {
+    builder.withObj({
+                ...THE_ROOM,
+                description : "There is a rock blocking the south exit",
+                southOpen : false,
+                exits : {
+                    south : {"southRoom" : "this.southOpen"},
+                    north : "northRoom"
+                },
+                "afterTurn()" : "print('southOpen: ' + this.southOpen)"
+            })
+            .withObj({
+                ...NORTH_ROOM,
+                description : "The north room",
+                exits : { "south" : "theRoom" },
+                tags: []
+            })
+            .withObj({
+                ...SOUTH_ROOM,
+                "description" : "The room is light and round",
+                exits : { north : "northRoom" }
+            })
+            .withObj({
+                id : "rock",
+                description : "A large rock",
+                type : "item",
+                location : "theRoom",
+                tags : ["carryable"],
+                after : {
+                    "get(this)" : [
+                        "print('You pick up the rock')", 
+                        //"set('theRoom.southOpen', true)", // TODO why doesn't this work?
+                        "theRoom.southOpen = true",
+                        "theRoom.description = 'The room is now open to the south'"
+                    ]
+                }
+            });
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    // Should not be able to go south initially
+    executeAndTest(["look"], { expected : ["There is a rock blocking the south exit", "rock"]});
+    expectWords([], ["go", "get"], false);
+    expectWords(["go"], ["north"], true, ["south"]);
+    executeAndTest(["get", "rock"], { expected : ["You pick up the rock"]});
+    executeAndTest(["look"], { expected : ["The room is now open to the south"]});
+    
+    // South should now be open
+    expectWords([], ["go"], false);
+    expectWords(["go"], ["north", "south"]);
+    executeAndTest(["go", "south"], {});
+    executeAndTest(["look"], { expected : ["The room is light and round"]});
+});
+
+test("Test single conditional exit", () => {
+    builder.withObj({
+                ...THE_ROOM,
+                southOpen : false,
+                exits : {
+                    south : {"southRoom" : "southOpen"},
+                }
+            })
+            .withObj({
+                ...SOUTH_ROOM,
+                "description" : "The room is light and round",
+                exits : { north : "northRoom" }
+            })
+            .withObj({
+                id : "rock",
+                description : "A large rock",
+                type : "item",
+                location : "theRoom",
+                tags : ["carryable"],
+                after : {
+                    "get(this)" : [
+                        "print('You pick up the rock')", 
+                        "theRoom.southOpen = true",
+                    ]
+                }
+            });
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    // Should not be able to go south initially
+    expectWords([], ["get"], false, ["go"]);
+    executeAndTest(["get", "rock"], { expected : ["You pick up the rock"]});
+    
+    // South should now be open
+    expectWords([], ["go"], false);
+    expectWords(["go"], ["south"]);
+    executeAndTest(["go", "south"], {});
+    executeAndTest(["look"], { expected : ["The room is light and round"]});
 });
 
 test("Test put item in container", () => {
@@ -1980,6 +2132,56 @@ test("Test custom verb modifier", () => {
     executeAndTest(["pull", "lever", "up"], { expected : ["pulling up"]});
     executeAndTest(["pull", "lever", "down"], { expected : ["pulling down"]});
 })
+
+test("Test conditional verb modifier", () => {  
+    builder.withObj({
+        ...NORTH_ROOM
+    }).withObj({
+        id : "lever",
+        type : "item",
+        location : "northRoom",
+        verbs : ["pull"],
+        isLeverUp : false,
+        modifiers : {
+            lever_dir : [ { "up" : "not(isLeverUp)", "down" : "isLeverUp" } ]
+        },
+        before : {
+            "pull(this, $lever_dir)" : [
+                "print('pulling ' + lever_dir)",
+                {
+                    "when" : "lever_dir == 'up'",
+                    "do" : "isLeverUp = true"
+                },
+                {
+                    "when" : "lever_dir == 'down'",
+                    "do" : "isLeverUp = false"
+                },
+                "return(true)"
+            ]
+        }
+    }).withObj({
+        id : "pull",
+        type : "verb",
+        tags : ["transitive"],
+        modifiers : ["lever_dir"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    
+    expect(getWordIds([])).toContain("pull");
+    expect(getWordIds(["pull"])).toContain("lever");
+    const lever_dirs = getWordIds(["pull", "lever"]);
+    expect(lever_dirs).toContain("up");
+    expect(lever_dirs).not.toContain("down");
+
+    executeAndTest(["pull", "lever", "up"], { expected : ["pulling up"]});
+    
+    expect(getWordIds([])).toContain("pull");
+    expect(getWordIds(["pull"])).toContain("lever");
+    const lever_dirs2 = getWordIds(["pull", "lever"]);
+    expect(lever_dirs2).not.toContain("up");
+    expect(lever_dirs2).toContain("down");
+});
 
 test("Test undefined/defined value as when rule", () => {
     builder.withObj({...NORTH_ROOM})

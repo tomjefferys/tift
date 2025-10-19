@@ -6,7 +6,9 @@ import { createRootEnv } from "../src/env";
 import * as _ from "lodash"
 import { VerbMap } from "../src/types";
 import { EAT, APPLE, STIR, SOUP, SPOON, LOOK, ASK,
-         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP, CHAIR, STAND, SIT, BALL, BAG, PUT, BED, LIE } from "./testutils/testentities"
+         BARKEEP, GO, CAVE, PUSH, BOX, GET, DROP, 
+         CHAIR, STAND, SIT, BALL, BAG, PUT, BED,
+         LIE, ROOM_WITH_LOCKED_EXIT } from "./testutils/testentities"
 import * as SearchTerm from "../src/searchterm";
 
 test("Test empty input", () => {
@@ -177,6 +179,25 @@ test("Test conditional verbs", () => {
   commands = getCommandWords(next);
   expect(commands).toHaveLength(1);
   expect(commands[0]).toEqual(["stand"]);
+});
+
+test("Test conditional verb modifier", () => {
+  const room = {...ROOM_WITH_LOCKED_EXIT};
+  const context : SearchContext = {
+    objs : {"default" : [room]},
+    verbs : createVerbMap([GO, LOOK]),
+    env : createRootEnv({})
+  }
+  let next = search(SearchTerm.fromStrings("go", "?"), context);
+  let commands = getCommandWords(next);
+  expect(commands).toEqual(expect.arrayContaining([["go", "east"]]));
+  expect(commands).toEqual(expect.not.arrayContaining([["go", "north"]]));
+
+  room.exit_north_unlocked = true;
+
+  next = search(SearchTerm.fromStrings("go", "?"), context);
+  commands = getCommandWords(next);
+  expect(commands).toEqual(expect.arrayContaining([["go", "east"], ["go", "north"]]));
 });
 
 test("Test wildcard verb search", () => {

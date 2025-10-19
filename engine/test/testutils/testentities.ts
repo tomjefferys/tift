@@ -44,9 +44,17 @@ export const GO = new VerbBuilder({"id":"go"})
 export const CAVE = new EntityBuilder({"id" : "cave"})
                   .withVerb("go")
                   .withVerb("look")
-                  .withVerbModifier("direction","north")
-                  .withVerbModifier("direction","east")
+                  .withVerbModifier(({ "modType":"direction", "value":"north" }))
+                  .withVerbModifier(({ "modType":"direction", "value":"east" }))
                   .build();
+
+export const ROOM_WITH_LOCKED_EXIT = new EntityBuilder({"id" : "room_with_locked_exit"})
+                    .withVerb("go")
+                    .withVerb("look")
+                    .withVerbModifier(({ "modType":"direction", "value":"east" }))
+                    .withVerbModifier(({ "modType":"direction", "value":"north", "condition": parseToThunk("exit_north_unlocked") }))
+                    .withProp("exit_north_unlocked", false)
+                    .build(); 
 
 export const PUSH = new VerbBuilder({"id":"push"})
                     .withTrait("transitive")

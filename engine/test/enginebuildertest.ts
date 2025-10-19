@@ -107,7 +107,10 @@ test("Test entity with verb modifiers", () => {
     expect(entity.id).toEqual("cave");
     expect(entity.verbs).toHaveLength(1);
     expect(entity.verbs).toContainEqual({"verb":"go"});
-    expect(entity.verbModifiers).toStrictEqual({"direction":["north", "east"]});
+
+    expect(entity.verbModifiers["direction"]).toHaveLength(2);
+    expect(entity.verbModifiers["direction"]).toContainEqual({"modType":"direction", "value":"north"});
+    expect(entity.verbModifiers["direction"]).toContainEqual({"modType":"direction", "value":"east"});
 })
 
 test("Test YAML loading", () => {
@@ -133,7 +136,13 @@ test("Build room", () => {
     expect(room.verbs).toHaveLength(2);
     expect(room.verbs).toContainEqual({"verb":"go"});
     expect(room.verbs).toContainEqual({"verb":"look"});
-    expect(room.verbModifiers).toStrictEqual({"direction":["north", "east"]});
+
+    const verbModifiers = room.verbModifiers["direction"];
+    expect(verbModifiers).toHaveLength(2);
+    expect(verbModifiers).toContainEqual({"modType":"direction", "value":"north"});
+    expect(verbModifiers).toContainEqual({"modType":"direction", "value":"east"});
+
+    //expect(room.verbModifiers).toStrictEqual({"direction":["north", "east"]});
 })
 
 test("Build entity - action error", () => {

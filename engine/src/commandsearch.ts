@@ -1,6 +1,6 @@
 import { isIntransitive, isTransitive, Verb, VerbContext } from "./verb"
 import { VerbMap } from "./types"
-import { Entity, VerbMatcher } from "./entity"
+import { Entity, VerbMatcher, VerbModifier } from "./entity"
 import { MultiDict } from "./util/multidict"
 import * as _ from "lodash"
 import * as multidict from "./util/multidict"
@@ -100,7 +100,8 @@ export function buildSearchContext(objs : ContextEntities,
   };
 }
 
-function isVerbEnabled(context : SearchContext, entity : Entity, verbMatcher : VerbMatcher) : boolean {
+// Check if a verb or a verb modifier is enabled in the current context
+function isEnabled(context : SearchContext, entity : Entity, verbMatcher : VerbMatcher | VerbModifier) : boolean {
   let enabled = true;
   if (verbMatcher.condition) {
     const entitiesEnv = context.env.newChild(context.env.createNamespaceReferences(["entities"]));
@@ -108,7 +109,6 @@ function isVerbEnabled(context : SearchContext, entity : Entity, verbMatcher : V
     const thisEnv = entityEnv.newChild({"this" : entity});
     enabled = Boolean(verbMatcher.condition.resolve(thisEnv).getValue());
   }
-
   return enabled;
 }
 
@@ -119,7 +119,7 @@ function getDirectObjects(context : SearchContext, verb : Verb) : Entity[] {
   const directContexts = verb.contexts.filter(([type, _context]) => type === "direct")
                                         .map(([_type, context]) => context);
   const entities = filterEntities(context.objs, directContexts);
-  return entities.filter(entity => entity.verbs.filter(verbMatcher => isVerbEnabled(context, entity, verbMatcher))
+  return entities.filter(entity => entity.verbs.filter(verbMatcher => isEnabled(context, entity, verbMatcher))
                                                .some((verbMatcher) => verbMatcher.verb === verb.id && !verbMatcher.attribute)); }
 
 function filterEntities(entities : ContextEntities, verbContexts : string[]) {
@@ -164,7 +164,7 @@ function getVerbAttributes(context : SearchContext, verb : Verb) : string[] {
   const objs = getIndirectObjects(context, verb);
   return objs.flatMap(entity => 
                 entity.verbs.filter(verbMatcher => verbMatcher.verb === verb.id)
-                            .filter(verbMatcher => isVerbEnabled(context, entity, verbMatcher)))
+                            .filter(verbMatcher => isEnabled(context, entity, verbMatcher)))
              .filter(verbMatcher => verbMatcher.attribute)
              .map(verbMatcher => verbMatcher.attribute as string);
 }
@@ -188,7 +188,12 @@ const getModifierValues = (context : SearchContext, modifier : string, verbConte
     const allContexts = verbContexts.map(([_type, context]) => context);
     const entities = filterEntities(context.objs, allContexts);
       return entities
-              .flatMap(obj => obj.verbModifiers ? multidict.get(obj.verbModifiers, modifier) : []);
+              .flatMap(obj => obj.verbModifiers 
+                                ?  multidict.get(obj.verbModifiers, modifier)
+                                         .map(mod => [obj, mod] as [Entity, VerbModifier])
+                                : [])
+              .filter(([obj,mod]) => isEnabled(context, obj, mod))
+              .map(([_obj, mod]) => mod.value);
 }
 
 /**
@@ -223,7 +228,7 @@ const getVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
 const getVerbs = (context : SearchContext, entities : Entity[], verbs : VerbMap, verbContext : string) : Verb[] => {
     const allVerbs = entities.flatMap(entity => (entity.verbs.map(verb => [entity, verb]) ?? []) as [Entity, VerbMatcher][])
             .filter(([_entity, matcher]) => !matcher.attribute || (verbs[matcher.verb].traits.includes("intransitive")))
-            .filter(([entity, matcher]) => isVerbEnabled(context, entity, matcher))
+            .filter(([entity, matcher]) => isEnabled(context, entity, matcher))
             .map(([_entity, matcher]) => verbs[matcher.verb])
             .filter(Boolean)
             .filter(verb => verb.contexts.length == 0

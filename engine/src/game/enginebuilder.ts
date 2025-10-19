@@ -1,7 +1,7 @@
 import { Verb } from "../verb";
 import { VerbBuilder } from "./verbbuilder";
 import { EntityBuilder } from "./entitybuilder";
-import { Entity } from "../entity";
+import { Entity, buildVerbModifier } from "../entity";
 import { getString, forEach, forEachEntry, ifExists, getObj } from "../util/objects";
 import { BasicEngine, EngineState } from "../engine";
 import { Engine } from "tift-types/src/engine";
@@ -21,6 +21,7 @@ import * as Metadata from "./metadata";
 import * as Tags from "./tags";
 import * as Path from "../path";
 import * as Errors from "../util/errors";
+import { Thunk, mkResult, mkThunk } from "../script/thunk";
 
 
 type ActionerBuilder = VerbBuilder | EntityBuilder;
@@ -143,14 +144,14 @@ export function makeVerb(obj : Obj) : Verb {
 // This is only called from tests
 export function makeEntity(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
-    makeEntityVerbs(builder, obj)
+    makeEntityVerbs(builder, obj);
+    makeEntityVerbModifiers(builder, obj);  
     return builder.build();
 }
 
 export function makeItem(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
-    makeEntityVerbs(builder, obj);
-    addActions(builder, obj);
+    addVerbsAndActions(builder, obj);
     const tags = obj?.tags ?? [] as string[];
 
     TRAITS.forEach(trait => trait(obj, tags, builder));
@@ -160,22 +161,57 @@ export function makeItem(obj : Obj) : Entity {
 
 export function makeRoom(obj : Obj) : Entity {
     const builder = new EntityBuilder(obj);
-    makeEntityVerbs(builder, obj);
-    addActions(builder, obj);
+    addVerbsAndActions(builder, obj);
+    let allExitsConditional = true;
+    const exitConditions : Thunk[] = [];
+
+    // Add the exit directions as verb modifiers
     for(const [dir, dest] of Object.entries(obj["exits"] ?? {})) {
-        if (typeof dest !== "string") {
-            throw new Error(obj.id + " contains invalid destination for: " + dir);
+        const path = Path.of([obj.id, "exits", dir]);
+        if (_.isString(dest)) {
+            builder.withVerbModifier(buildVerbModifier("direction", dir));
+            allExitsConditional = false;
+        } else if (_.isPlainObject(dest)) {
+            Object.entries(getObj(dest))
+                  .forEach(([key,value]) => {
+                    const condition = RuleBuilder.evaluateRule(value, Path.concat(path, key));
+                    exitConditions.push(condition);
+                    builder.withVerbModifier(buildVerbModifier("direction", dir, condition));
+                  });
+        } else {
+            Errors.throwError("Invalid exit entry, must be string or object", path);
         }
-        builder.withVerbModifier("direction", dir);
     }
+
+    // Combine multiple exit conditions into one 'or' condition
+    const combineExitConditions = (thunks : Thunk[]) => {
+        return mkThunk(env => {
+            const result = thunks.reduce(
+                (anyTrue, thunk) => anyTrue || !!thunk.resolve(env).getValue(), false);
+            return mkResult(result);
+        });
+    };
+
+    // Add the 'go' and 'look' verbs
     const tags = obj?.tags ?? [];
     if (!tags.includes(Tags.PSEUDO_ROOM)) {
-        builder.withVerb("go");
+        if (allExitsConditional && exitConditions.length > 0) {
+            const verbCondition = combineExitConditions(exitConditions);
+            builder.withVerbMatcher({ verb: "go", condition: verbCondition });
+        } else {
+            builder.withVerb("go");
+        }
         builder.withVerb("look");
     }
     return builder.build();
 }
 
+
+function addVerbsAndActions(builder : (EntityBuilder & ActionerBuilder), obj : Obj) {
+    makeEntityVerbs(builder, obj);
+    makeEntityVerbModifiers(builder, obj);
+    addActions(builder, obj);
+}
 
 function addActions(builder : ActionerBuilder, obj : Obj) {
     getActionStrings(obj, "before", "before")
@@ -218,7 +254,6 @@ function getActionStrings<T extends Phase>(obj : Obj, field : string, phase : T)
 }
 
 function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
-
     forEach(obj["verbs"], (verbEntry, index) => {
         const path = Path.of([obj.id,"verbs",index]);
         if (_.isString(verbEntry)) {
@@ -235,7 +270,23 @@ function makeEntityVerbs(builder : EntityBuilder, obj : Obj) {
             Errors.throwError("Invalid verb entry, must be string or object", path);
         }
     });
+}
+
+function makeEntityVerbModifiers(builder : EntityBuilder, obj : Obj) {
     forEachEntry(obj["modifiers"], (type, mods) => {
-        forEach(mods, mod => builder.withVerbModifier(type, getString(mod)))
+        forEach(mods, mod => {
+            const path = Path.of([obj.id, "modifiers", type]);
+            if (_.isString(mod)) {
+                builder.withVerbModifier(buildVerbModifier(type, getString(mod)));
+            } else if (_.isPlainObject(mod)) {
+                Object.entries(getObj(mod))
+                      .forEach(([key,value]) => {
+                        const condition = RuleBuilder.evaluateRule(value, Path.concat(path, key));
+                        builder.withVerbModifier(buildVerbModifier(type, key, condition));
+                      });
+            } else {
+                Errors.throwError("Invalid modifier entry, must be string or object", path);
+            }
+        });
     });
 }
