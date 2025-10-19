@@ -385,6 +385,62 @@ test("Test before and after actions", () => {
     executeAndTest(["look"], { expected : ["hot rock"], notExpected : ["cool rock"]});
 });
 
+test("Test $ string prefix in actions", () => {
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "hotRock",
+        name : "hot rock",
+        type : "item",
+        location : "theRoom",
+        before : { "get(this)" : "$ Ouch!" },
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "coolRock",
+        name : "cool rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "  $  nice!" },
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "moneyRock",
+        name : "money rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "$$$$" },
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "quotedRock",
+        name : "quoted rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "'$ Not a special string'" },
+        tags : ["carryable"]
+    });
+    builder.withObj({
+        id : "mustacheRock",
+        name : "mustache rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : "  ${{name}}  " },
+        tags : ["carryable"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["hot rock", "cool rock", "money rock", "quoted rock"]});
+    executeAndTest(["get", "hotRock"], { expected : ["Ouch!"]});
+    executeAndTest(["look"], { expected : ["hot rock", "cool rock", "money rock", "quoted rock"]});
+    executeAndTest(["get", "coolRock"], { expected : ["nice!"]});
+    executeAndTest(["look"], { expected : ["hot rock", "money rock", "quoted rock"]});
+    executeAndTest(["get", "moneyRock"], { expected : ["$$$"]});
+    executeAndTest(["look"], { expected : ["hot rock", "quoted rock"]});
+    executeAndTest(["get", "quotedRock"], { expected : ["$ Not a special string"]});
+    executeAndTest(["look"], { expected : ["hot rock"]});
+    executeAndTest(["get", "mustacheRock"], { expected : ["mustache rock"]});
+});
+
 test("Test before and after actions specified as object properties", () => {
     builder.withObj(THE_ROOM);
     builder.withObj({

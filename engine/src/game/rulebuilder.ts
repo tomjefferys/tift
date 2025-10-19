@@ -6,11 +6,14 @@ import _ from "lodash";
 import { mkResult, mkThunk, Thunk } from "../script/thunk";
 import * as Path from "../path";
 import * as Errors from "../util/errors";
+import { formatString } from "../util/mustacheUtils";
 
 const INDEX_NAME = "index";
 const COUNT_NAME = "count";
 
-// Diffenent types of method in a componennt rule
+const STRING_PREFIX = "$";
+
+// Different types of method in a component rule
 type RuleMethodType = "condition" | "action" | "otherwise";
 
 // A function that can evaluate a rule to a thunk
@@ -26,7 +29,10 @@ type RuleEvaluator = (rule : unknown, path? : Path.PossiblePath) => Thunk;
 export const evaluateRule : RuleEvaluator = (rule, path) => {
     let ruleFn : Optional<Thunk> = undefined;
     if (_.isString(rule)) {
-        ruleFn = parseToThunk(rule, path);
+        const isPrefixedString = rule.trimStart().startsWith(STRING_PREFIX);
+        ruleFn = isPrefixedString
+                    ? handlePrefixedString(rule)
+                    : parseToThunk(rule, path);
     } else if (_.isPlainObject(rule)) {
         ruleFn = evaluateComponentRule(rule as object, path);
     } else if (_.isArray(rule)) {
@@ -38,6 +44,13 @@ export const evaluateRule : RuleEvaluator = (rule, path) => {
     return ruleFn;
 }
 
+// Handle $-prefixed strings.  These should be treated as raw strings, and not parsed as expressions
+function handlePrefixedString(str : string) : Thunk {
+    const trimmed = str.trimStart();
+    const prefixRemoved = trimmed.substring(1).trimStart();
+    const finalString = prefixRemoved.trim();
+    return mkThunk((env : Env) => mkResult(formatString(env, finalString)));
+}
 
 /**
  * Parse a component rule.  This is a rule, that might have separate 'when' and 'repeat' clauses
