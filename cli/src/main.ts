@@ -7,6 +7,7 @@ import { CommandState } from "./commandstate";
 import { Display } from "./display";
 import { createEngine } from "./enginefacade";
 import { isScriptError, ScriptRunner } from "./scriptrunner";
+import { getFileStatePersister, getInMemoryStatePersister } from "./statepersister";
 
 readline.emitKeypressEvents(process.stdin);
 
@@ -17,13 +18,19 @@ const options = {
         short: "s",
         default : false
     },
+    saveFile : {
+        type : "string",
+        short: "f",
+    }
 } as const;
 
 const args = process.argv.slice(2);
 
 const { values, positionals } = parseArgs({args, options, allowPositionals : true });
 
-const engine = createEngine();
+const statePersister = values.saveFile ? getFileStatePersister(values.saveFile) :   getInMemoryStatePersister();
+
+const engine = createEngine(statePersister);
 
 positionals.forEach((positional) => {
     const data = fs.readFileSync(positional, "utf8");
@@ -31,7 +38,7 @@ positionals.forEach((positional) => {
 });
 
 engine.configure({ "autoLook" : true });
-engine.start();
+engine.start(statePersister.loadState());
 
 if (process.stdin.isTTY) {
    runInteractive();

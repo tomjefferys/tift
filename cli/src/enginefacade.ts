@@ -1,14 +1,15 @@
-import { getEngine, Input } from "tift-engine"
+import { getEngine, Input } from "tift-engine";
 import { Engine } from "tift-types/src/engine";
 import * as _ from "lodash"
 import { OutputMessage } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
+import { StatePersister } from "./statepersister";
 
 type WordCache = [Word[], Word[]];
 type PrintHandler = (message : string) => void;
 
-export function createEngine() : EngineFacade {
-    const messageConsumer = new MessageConsumer();
+export function createEngine(StatePersister : StatePersister) : EngineFacade {
+    const messageConsumer = new MessageConsumer(StatePersister);
     return new EngineFacade(messageConsumer, getEngine(message => messageConsumer.consume(message)));
 }
 
@@ -48,8 +49,8 @@ export class EngineFacade {
         this.engine.send(Input.config(properties));
     }
 
-    start() {
-        this.engine.send(Input.start());
+    start(saveData? : string) {
+        this.engine.send(Input.start(saveData));
         this.engine.send(Input.getStatus());
         this.engine.send(Input.getNextWords([]));
     }
@@ -64,6 +65,11 @@ class MessageConsumer {
     printMessages : string[] = [];
     wordCache : WordCache = [[],[]];
     status = "";
+    statePersister? : StatePersister;
+
+    constructor(statePersister? : StatePersister) {
+        this.statePersister = statePersister;
+    }
 
     consume(message : OutputMessage) : void {
         switch(message.type) {
@@ -76,6 +82,8 @@ class MessageConsumer {
             case "Words":
                 this.wordCache = [[...message.command], message.words];
                 break;
+            case "SaveState":
+                this.statePersister?.saveState(JSON.stringify(message.state));
         }
     }
 
