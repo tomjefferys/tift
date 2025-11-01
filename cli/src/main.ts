@@ -97,9 +97,10 @@ function buildCommandState(statePersister : StatePersister, dataFiles : string[]
 }
 
 function updateEngineState(engineState : CommandStateRef, statePersister : StatePersister, dataFiles : string[]) {
+    const oldState = engineState.commandState;
+    oldState.messages.push("--- Game state reloaded due to file change ---");
+    oldState.flush();
     const newState = buildCommandState(statePersister, dataFiles);
-    newState.commandState.messages.push("--- Game state reloaded due to file change ---");
-    newState.commandState.flush();
     engineState.commandState = newState.commandState;
 }
 

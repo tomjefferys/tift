@@ -43,6 +43,28 @@
                 "webpack://?:*/*": "${workspaceFolder}/*",
                 "webpack:///./src/*": "${workspaceFolder}/*",
             }
+        },
+        {
+            "name": "Debug TypeScript CLI",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/cli/src/main.ts",
+            "args": ["--saveFile",
+                     "save.json", 
+                     "../examples/CloakOfDarkness/build/webapp/stdlib.yaml",
+                     "../examples/CloakOfDarkness/build/webapp/properties.yaml",
+                     "../examples/CloakOfDarkness/build/webapp/adventure.yaml"
+            ],
+            "runtimeArgs": ["--import", "tsx"],
+            "cwd": "${workspaceFolder}/cli", 
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "console": "integratedTerminal",
+            "sourceMaps": true,
         }
     ]
 }

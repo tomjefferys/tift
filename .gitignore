@@ -11,3 +11,4 @@ webapp/dist
 .VSCodeCounter
 site
 build
+save.json
