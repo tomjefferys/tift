@@ -1,20 +1,32 @@
 import * as os from "os";
- import { Message, MessageFormatter, DEFAULT_MESSAGE_FORMATTER } from "./message";
+import { Message, MessageFormatter, DEFAULT_MESSAGE_FORMATTER } from "./message";
 
-export interface DisplayState {
-    messages : Message[];
+export interface CommandState  {
     partialCommand : string[];
     partialWord : string[];
     wordChoices : string[];
 }
 
+export interface DisplayState extends CommandState {
+    messages : Message[];
+}
+
+export type CommandFormatter = (state : CommandState) => string;
+export type WordsFormatter = (state : CommandState) => string;
 export class Display {
     private stdout : NodeJS.WriteStream;
     private messageFormatter : MessageFormatter
+    private commandFormatter : CommandFormatter
+    private wordsFormatter : WordsFormatter
 
-    constructor(stdout : NodeJS.WriteStream, messageFormatter : MessageFormatter = DEFAULT_MESSAGE_FORMATTER) {
+    constructor(stdout : NodeJS.WriteStream,
+                messageFormatter : MessageFormatter = DEFAULT_MESSAGE_FORMATTER,
+                commandFormatter : CommandFormatter = (state) => state.partialCommand.join(" ") + state.partialWord.join(""),
+                wordsFormatter : WordsFormatter = (state) => state.wordChoices.join("\t")) {
         this.stdout = stdout;
         this.messageFormatter = messageFormatter;
+        this.commandFormatter = commandFormatter;
+        this.wordsFormatter = wordsFormatter;
     }
 
     update(state : DisplayState) {
@@ -44,12 +56,9 @@ export class Display {
     }
 
     printCommandArea(state : DisplayState) {
-        this.stdout.write(state.partialCommand.join(" "));
-        this.stdout.write(state.partialWord.join(""));
+        this.stdout.write(this.commandFormatter(state));
         this.stdout.write("\n");
-        for(const word of state.wordChoices) {
-            this.stdout.write(word + "\t");
-        }
+        this.stdout.write(this.wordsFormatter(state));
         this.stdout.write("\n");
     }
 }
