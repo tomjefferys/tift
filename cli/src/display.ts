@@ -1,5 +1,8 @@
+import * as os from "os";
+ import { Message, MessageFormatter, DEFAULT_MESSAGE_FORMATTER } from "./message";
+
 export interface DisplayState {
-    messages : string[];
+    messages : Message[];
     partialCommand : string[];
     partialWord : string[];
     wordChoices : string[];
@@ -7,15 +10,22 @@ export interface DisplayState {
 
 export class Display {
     private stdout : NodeJS.WriteStream;
+    private messageFormatter : MessageFormatter
 
-    constructor(stdout : NodeJS.WriteStream) {
+    constructor(stdout : NodeJS.WriteStream, messageFormatter : MessageFormatter = DEFAULT_MESSAGE_FORMATTER) {
         this.stdout = stdout;
+        this.messageFormatter = messageFormatter;
     }
 
     update(state : DisplayState) {
         this.clearCommandArea();
-        state.messages.forEach(message => this.stdout.write(message + "\n"));
+        state.messages.forEach(message => this.printMessage(message));
         this.printCommandArea(state);
+    }
+
+    printMessage(message : Message) {
+        const formatted = this.messageFormatter(message);
+        this.stdout.write(formatted + os.EOL);
     }
 
     clearCommandArea() {

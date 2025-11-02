@@ -5,8 +5,8 @@
   },
   "dependencies": {
     "@types/lodash": "^4.14.182",
-    "jest": "^30.2.0",
     "lodash": "^4.17.21",
+    "picocolors": "^1.1.1",
     "tift-engine": "file:../engine"
   },
   "devDependencies": {
@@ -16,9 +16,11 @@
     "@typescript-eslint/parser": "^5.37.0",
     "esbuild": "0.24.0",
     "eslint": "^8.23.1",
+    "jest": "^30.2.0",
     "tift-types": "file:../types",
+    "ts-jest": "^29.4.5",
     "tsx": "^4.20.6",
-    "typescript": "^5.6.3"
+    "typescript": "^5.9.3"
   },
   "main": "out/src/main.js",
   "bin": {

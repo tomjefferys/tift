@@ -2,6 +2,7 @@ import { createEngine } from "./enginefacade";
 import { StatePersister } from "./statepersister";
 import { Display } from "./display";
 import { CommandState } from "./commandstate";
+import { createMessage } from "./message";
 
 export class StateManager {
 
@@ -36,7 +37,7 @@ export class StateManager {
     }
 
     refresh() {
-        this.commandState.messages.push("--- Game state reloaded due to file change ---");
+        this.commandState.messages.push(createMessage("--- Game state reloaded due to file change ---", "Warning"));
         this.commandState.flush();
         const newState = this.build();
         this.commandState = newState;

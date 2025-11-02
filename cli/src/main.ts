@@ -10,6 +10,7 @@ import { FileWatcher } from "./filewatcher";
 import { StateManager } from "./statemanager";
 import { InteractiveRunner } from "./interactiverunner";
 import { Result } from "./types";
+import { ANSI_MESSAGE_FORMATTER } from "./ansimessageforamtter";
 
 async function main() {
 
@@ -56,7 +57,7 @@ async function runInteractive(statePersister : StatePersister,
         const stateManager = new StateManager(
             statePersister,
             options.dataFiles,
-            () => new Display(process.stdout)
+            () => new Display(process.stdout, ANSI_MESSAGE_FORMATTER)
         );
         watchers = setupFileWatchers(options.dataFiles, () => stateManager.refresh());
         const interactiveRunner = new InteractiveRunner(stateManager);
