@@ -1,7 +1,10 @@
 import { Word } from "tift-types/src/messages/word";
 import { EngineFacade } from "./enginefacade";
+import { Result } from "./types";
 
 export type PrintFn = (message : string) => void;
+
+
 
 export class ScriptError extends Error {
     output : string[];
@@ -26,16 +29,45 @@ export class ScriptRunner {
     messages : string[] = [];
     print : PrintFn;
     engine : EngineFacade;
+    error : PrintFn;
 
-    constructor(engine : EngineFacade, print : PrintFn) {
+    constructor(engine : EngineFacade, print : PrintFn, error : PrintFn = print) {
         this.engine = engine;
         this.print = print;
+        this.error = error;
+    }
+
+    async run(nextLine : () => Promise<string | null>) : Promise<Result> {
+        this.flushOutput();
+        let lineNum = 1;
+        let line : string | null;
+        let result : Result = "SUCCESS";
+        while((line = await nextLine()) !== null) {
+            try {
+                this.executeLine(line);
+            } catch (e) {
+                this.error(`Failed on line ${lineNum}: ${line}`);
+                if (isScriptError(e)) {
+                    this.error("");
+                    if (e.output.length > 0) {
+                        e.output.forEach(message => this.error(message));
+                    }
+                    this.error("");
+                    this.error(`${e.message}`);
+                    result = "FAILURE";
+                } else {
+                    throw e;
+                }
+            }
+            lineNum++;
+        }
+        return result;
     }
 
     // Runs a line of a script
     // Lines starting with a "$" are commands
     // Other lines are expected to be message content.
-    executeLine(input : string) {
+    private executeLine(input : string) {
         const line = input.trim();
         if (line.startsWith("$")) {
             this.print(line);
@@ -60,7 +92,7 @@ export class ScriptRunner {
         }
     }
 
-    flushOutput() {
+    private flushOutput() {
         this.engine.flushMessages(message => {
             this.print(message);
             this.messages.push(message);

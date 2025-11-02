@@ -1,18 +1,20 @@
 import { getEngine, Input } from "tift-engine";
 import { Engine } from "tift-types/src/engine";
 import * as _ from "lodash"
-import { OutputMessage } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 import { StatePersister } from "./statepersister";
+import * as fs from "fs";
+import { MessageConsumer } from "./messageconsumer";
+import { PrintHandler } from "./types";
 
-type WordCache = [Word[], Word[]];
-type PrintHandler = (message : string) => void;
+export type EngineFactory = (statePersister : StatePersister, dataFiles : string[]) => EngineFacade;
 
-export function createEngine(StatePersister : StatePersister) : EngineFacade {
-    const messageConsumer = new MessageConsumer(StatePersister);
-    return new EngineFacade(messageConsumer, getEngine(message => messageConsumer.consume(message)));
+export const createEngine : EngineFactory = (statePersister : StatePersister, dataFiles : string[]) => {
+    const messageConsumer = new MessageConsumer(statePersister);
+    const engine = new EngineFacade(messageConsumer, getEngine(message => messageConsumer.consume(message)));
+    engine.initialize(statePersister, dataFiles);
+    return engine;
 }
-
 export class EngineFacade {
     private engine : Engine;
 
@@ -21,6 +23,16 @@ export class EngineFacade {
     constructor(messageConsumer : MessageConsumer, engine : Engine) {
         this.engine = engine;
         this.messageConsumer = messageConsumer;
+    }
+
+    initialize(statePersister : StatePersister, dataFiles : string[]) {
+        dataFiles.forEach((dataFile) => {
+            const data = fs.readFileSync(dataFile, "utf8");
+            this.load(data);
+        });
+
+        this.configure({ "autoLook" : true });
+        this.start(statePersister.loadState());
     }
 
     getWords(command : Word[] = this.messageConsumer.wordCache[0]) : Word[] {
@@ -58,38 +70,4 @@ export class EngineFacade {
     flushMessages(printHandler : PrintHandler) {
         this.messageConsumer.flushPrintMessages(printHandler);
     }
-}
-
-
-class MessageConsumer {
-    printMessages : string[] = [];
-    wordCache : WordCache = [[],[]];
-    status = "";
-    statePersister? : StatePersister;
-
-    constructor(statePersister? : StatePersister) {
-        this.statePersister = statePersister;
-    }
-
-    consume(message : OutputMessage) : void {
-        switch(message.type) {
-            case "Print":
-                this.printMessages.push(message.value);
-                break;
-            case "Status":
-                this.status = message.status["title"];
-                break;
-            case "Words":
-                this.wordCache = [[...message.command], message.words];
-                break;
-            case "SaveState":
-                this.statePersister?.saveState(JSON.stringify(message.state));
-        }
-    }
-
-    flushPrintMessages(messageHandler : PrintHandler) {
-        this.printMessages.forEach(messageHandler);
-        this.printMessages.length = 0;
-    }
-
 }

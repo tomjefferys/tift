@@ -1,171 +1,91 @@
 #!/usr/bin/env node
 import * as readline from "readline";
-import * as fs from "fs";
 import * as os from "os";
-import { parseArgs } from "node:util";
-import { CommandState } from "./commandstate";
+import { getCommandLineOptions, Options } from "./clioptions";
 import { Display } from "./display";
 import { createEngine, EngineFacade } from "./enginefacade";
-import { isScriptError, ScriptRunner } from "./scriptrunner";
+import { ScriptRunner } from "./scriptrunner";
 import { getFileStatePersister, getInMemoryStatePersister, StatePersister } from "./statepersister";
 import { FileWatcher } from "./filewatcher";
+import { StateManager } from "./statemanager";
+import { InteractiveRunner } from "./interactiverunner";
+import { Result } from "./types";
 
-readline.emitKeypressEvents(process.stdin);
+async function main() {
 
-interface Options {
-    silent : boolean;
-    saveFile : string | undefined;
-    dataFiles : string[];
-}
+    const options = getCommandLineOptions(process.argv.slice(2));
+    const statePersister = options.saveFile ? getFileStatePersister(options.saveFile) :   getInMemoryStatePersister();
 
-interface CommandStateRef {
-    commandState : CommandState;
-}
-
-
-const options = getCommandLineOptions();
-
-const statePersister = options.saveFile ? getFileStatePersister(options.saveFile) :   getInMemoryStatePersister();
-
-const engineBuilder = () => startEngine(statePersister, options.dataFiles);
-
-if (process.stdin.isTTY) {
-   const commandState = buildCommandState(statePersister, options.dataFiles);
-   setupFileWatchers(options.dataFiles, () => updateEngineState(commandState, statePersister, options.dataFiles));
-   runInteractive(commandState);
-} else {
-   runBatch(engineBuilder, options);
-}
-
-
-function getCommandLineOptions() : Options {
-    const options = { 
-        silent : {
-            type : "boolean",
-            short: "s",
-            default : false
-        },
-        saveFile : {
-            type : "string",
-            short: "f",
-        }
-    } as const;
-
-    const args = process.argv.slice(2);
-
-    const { values, positionals } = parseArgs({args, options, allowPositionals : true });
-
-    return {
-        silent : values.silent ?? false,
-        saveFile : values.saveFile,
-        dataFiles : positionals
+    let result = "SUCCESS";
+    if (process.stdin.isTTY) {
+        result = await runInteractive(statePersister, options);
+    } else {
+        const engine = createEngine(statePersister, options.dataFiles);
+        result = await runBatch(engine, options);
     }
+    process.exit(result === "SUCCESS" ? 0 : 1);
 }
 
-function setupFileWatchers(dataFiles : string[], callback : () => void) {
-    dataFiles.forEach((dataFile) => {
+
+function setupFileWatchers(dataFiles : string[], callback : () => void) : FileWatcher[] {
+    return dataFiles.map((dataFile) => {
         const watcher = new FileWatcher(dataFile, () => {
             console.log(`File changed: ${dataFile}`);
             callback();
         });
         watcher.start();
+        return watcher;
     });
 }
 
-function startEngine(statePersister : StatePersister, dataFiles : string[]) : EngineFacade {
-
-    const engine = createEngine(statePersister);
-
-    dataFiles.forEach((dataFile) => {
-        const data = fs.readFileSync(dataFile, "utf8");
-        engine.load(data);
-    });
-
-    engine.configure({ "autoLook" : true });
-    engine.start(statePersister.loadState());
-
-    return engine;
-}
-
-function buildCommandState(statePersister : StatePersister, dataFiles : string[]) : CommandStateRef {
-    const engine = startEngine(statePersister, dataFiles);
-    const display = new Display(process.stdout);
-    const commandState = new CommandState(engine, display); 
-    commandState.flush();
-    commandState.update();
-    return { commandState };
-}
-
-function updateEngineState(engineState : CommandStateRef, statePersister : StatePersister, dataFiles : string[]) {
-    const oldState = engineState.commandState;
-    oldState.messages.push("--- Game state reloaded due to file change ---");
-    oldState.flush();
-    const newState = buildCommandState(statePersister, dataFiles);
-    engineState.commandState = newState.commandState;
-}
-
-function runInteractive(state : CommandStateRef) {
-
-    const stdin = process.stdin;
-
-    // without this, we would only get streams once enter is pressed
-    stdin.setRawMode( true );
-
-    // resume stdin in the parent process (node app won't quit all by itself
-    // unless an error or process.exit() happens)
-    stdin.resume();
-
-    stdin.setEncoding( 'utf8' );
-
-    const letter = /[a-zA-Z]/
-
-    stdin.on( 'keypress', (char, event) => {
-        if (letter.test(char)) {
-            state.commandState.addChar(char);
-        } else if (event.name === "backspace") {
-            state.commandState.backSpace();
-        } else if (event.name === "c" && event.ctrl) {
-            process.exit();
-        }
-        state.commandState.update();
-    })
-}
-
-async function runBatch(engineBuilder : () => EngineFacade, options : Options) {
+async function* createLineGenerator() {
     const rl = readline.createInterface({
         input: process.stdin,
         crlfDelay: Infinity
     });
 
+    for await (const line of rl) {
+        yield line;
+    }
+}
+
+async function runInteractive(statePersister : StatePersister,
+                              options : Options) : Promise<Result> {
+    let watchers : FileWatcher[] = [];
+    try {
+        const stateManager = new StateManager(
+            statePersister,
+            options.dataFiles,
+            () => new Display(process.stdout)
+        );
+        watchers = setupFileWatchers(options.dataFiles, () => stateManager.refresh());
+        const interactiveRunner = new InteractiveRunner(stateManager);
+        const result = await interactiveRunner.run();
+        return result;
+    } finally {
+        // Clean up file watchers
+        watchers.forEach(watcher => watcher.stop());
+    }
+}
+
+async function runBatch(engine : EngineFacade, options : Options) : Promise<Result> {
     const printFn = options.silent
                         ? (_message : string) => { /* do nothing */ } 
                         : (message : string) => process.stdout.write(message + os.EOL);
 
-    const engine = engineBuilder();
+    const errorFn = (message : string) => process.stderr.write(message + os.EOL);
 
-    const scriptRunner = new ScriptRunner(engine, printFn);
-
-    scriptRunner.flushOutput();
-    let lineNum = 1;
-    for await (const line of rl) {
-        try {
-            scriptRunner.executeLine(line);
-        } catch (e) {
-            const err = (message : string) => process.stderr.write(message + os.EOL);
-            err(`Failed on line ${lineNum}: ${line}`);
-            if (isScriptError(e)) {
-                err("");
-                if (e.output.length > 0) {
-                    e.output.forEach(message => err(message));
-                }
-                err("");
-                err(`${e.message}`);
-                process.exit(1);
-            } else {
-                throw e;
-            }
-        }
-        lineNum++;
+    const lineGenerator = createLineGenerator();
+    const getNextLine = async () => {
+        const result = await lineGenerator.next();
+        return result.done ? null : result.value;
     }
-    process.exit(0);
+
+    const scriptRunner = new ScriptRunner(engine, printFn, errorFn);
+    return await scriptRunner.run(getNextLine);
 }
+
+main().catch((error) => {
+    console.error('Error in main:', error);
+    process.exit(1);
+});
