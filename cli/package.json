@@ -7,11 +7,12 @@
     "@types/lodash": "^4.14.182",
     "lodash": "^4.17.21",
     "picocolors": "^1.1.1",
+    "remark": "^15.0.1",
     "tift-engine": "file:../engine"
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
-    "@types/node": "^18.7.18",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^24.10.0",
     "@typescript-eslint/eslint-plugin": "^5.37.0",
     "@typescript-eslint/parser": "^5.37.0",
     "esbuild": "0.24.0",
