@@ -1,13 +1,14 @@
+import { describe, test, expect, beforeEach, afterEach, vi, Mock } from "vitest";
 import { FileWatcher } from "../src/filewatcher";
 import * as fs from "fs";
 
 describe("FileWatcher", () => {
     let fileWatcher : FileWatcher;
     const filePath = "test.txt";
-    let callback : jest.Mock;
+    let callback : Mock;
 
     beforeEach(() => {
-        callback = jest.fn();
+        callback = vi.fn();
         fs.writeFileSync(filePath, "Initial content");
         fileWatcher = new FileWatcher(filePath, callback, 100);
     });

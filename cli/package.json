@@ -16,11 +16,10 @@
     "@typescript-eslint/parser": "^5.37.0",
     "esbuild": "0.24.0",
     "eslint": "^8.23.1",
-    "jest": "^30.2.0",
     "tift-types": "file:../types",
-    "ts-jest": "^29.4.5",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.7"
   },
   "main": "out/src/main.js",
   "bin": {

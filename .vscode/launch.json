@@ -84,6 +84,21 @@
             },
             "console": "integratedTerminal",
             "preLaunchTask": "tsc: build - cli/tsconfig.json"
-        }
+        },
+        {
+            "name": "CLI: Debug Current Vitest Test File",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/cli/node_modules/vitest/vitest.mjs",
+            "args": ["run", "${fileBasename}", "--reporter=verbose"],
+            "cwd": "${workspaceFolder}/cli",
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "env": {
+                "NODE_ENV": "test"
+            }
+        },
     ]
 }

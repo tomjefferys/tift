@@ -64,7 +64,7 @@ cli-uninstall:
 cli: types engine cli/out cli/out/tift.js
 
 cli-test: cli
-	cd cli && npx jest
+	cd cli && npx vitest --run
 
 cli-clean:
 	rm -rf cli/node_modules
