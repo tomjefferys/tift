@@ -1,6 +1,6 @@
 import { remark } from "remark";
 import type { Node } from "mdast";
-import { Format, FormattedToken } from "./types";
+import { Format, FormattedToken } from "./formattedToken";
 
 
 export function parseMarkdown(text : string) : FormattedToken[] {

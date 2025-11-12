@@ -10,8 +10,10 @@ import { FileWatcher } from "./filewatcher";
 import { StateManager } from "./statemanager";
 import { InteractiveRunner } from "./interactiverunner";
 import { Result } from "./types";
-import { ANSI_MESSAGE_FORMATTER } from "./ansimessageforamtter";
-import { ANSI_COMMAND_FORMATTER, ANSI_WORDS_FORMATTER } from "./displayformatters";
+import { getANSIMarkdownMessageFormatter } from "./ansimessageformatter";
+import { getAlignedANSICommandFormatter, ANSI_WORDS_FORMATTER, getAlignedANSIWordsFormatter } from "./displayformatters";
+import { getTokenAligner } from "./textaligner";
+import { ANSI_TOKEN_FORMATTER } from "./tokenformatter";
 
 async function main() {
 
@@ -55,10 +57,16 @@ async function runInteractive(statePersister : StatePersister,
                               options : Options) : Promise<Result> {
     let watchers : FileWatcher[] = [];
     try {
+        const consoleWidth = process.stdout.columns || 80;
+        const tokenListFormatter = getTokenAligner(consoleWidth, 75, ANSI_TOKEN_FORMATTER);
+        const ansiMessageFormatter = getANSIMarkdownMessageFormatter(tokenListFormatter);
+        const commandFormatter = getAlignedANSICommandFormatter(tokenListFormatter);
+        const wordsFormatter = getAlignedANSIWordsFormatter(tokenListFormatter);
+        
         const stateManager = new StateManager(
             statePersister,
             options.dataFiles,
-            () => new Display(process.stdout, ANSI_MESSAGE_FORMATTER, ANSI_COMMAND_FORMATTER, ANSI_WORDS_FORMATTER)
+            () => new Display(process.stdout, ansiMessageFormatter, commandFormatter, wordsFormatter),
         );
         watchers = setupFileWatchers(options.dataFiles, () => stateManager.refresh());
         const interactiveRunner = new InteractiveRunner(stateManager);
