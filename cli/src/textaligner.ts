@@ -192,27 +192,29 @@ class TextAligner {
 
     private formatLines(lines : FormattedToken[][]) : string[] {
         const formattedLines : string[] = [];
-        
+
         for(const lineTokens of lines) {
             let line = '';
             let lineLength = 0;
             for(const token of lineTokens) {
                 const tokenLength = token.text.length;
+                let spaces = "";
                 if (lineLength === 0) {
                     line += this.tokenFormatter(token);
                     lineLength += tokenLength;
                 } else {
                     if (token.space !== "join") {
                         // We still add a space if tabbed to avoid tab length words running into each other
-                        line += ' ';
+                        spaces += ' ';
                         lineLength += 1;
                     }
                     if (token.space === "tab") {
                         const nextTabStop = this.calculateNextTabStop(lineLength);
                         const spacesToAdd = nextTabStop - lineLength;
-                        line += ' '.repeat(spacesToAdd);
+                        spaces += ' '.repeat(spacesToAdd);
                         lineLength += spacesToAdd;
                     }
+                    token.text = spaces + token.text;
                     line += this.tokenFormatter(token);
                     lineLength += tokenLength;
                 }
