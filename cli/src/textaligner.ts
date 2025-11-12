@@ -13,24 +13,25 @@ export const getTokenAligner : GetTokenAligner = (consoleWidth, textWidth, token
 }
 
 class AlignerState {
-    lines : FormattedToken[][];
-    currentLine : FormattedToken[];
+    readonly maxWidth : number;
+    readonly lines : FormattedToken[][];
+    readonly currentLine : FormattedToken[];
     currentLineLength : number;
-    tokenQueue : FormattedToken[];
+    readonly tokenQueue : FormattedToken[];
     longJoin : boolean;
 
-    constructor(tokens : FormattedToken[]) {
+    constructor(tokens : FormattedToken[], maxWidth : number) {
+        this.maxWidth = maxWidth;
         this.lines = [];
         this.currentLine = [];
         this.currentLineLength = 0;
         this.tokenQueue = [...tokens];
-        this.longJoin = false;
+        this.longJoin = false;  // Set to true if joining tokens that exceed line width
     }
 
     addToken(token: FormattedToken, spaceLength: number) : void {
         this.currentLine.push(token);
         this.currentLineLength += token.text.length + spaceLength;
-        //this.currentLineLength += token.text.length;
     }
 
     newLine() : void {
@@ -66,58 +67,10 @@ class TextAligner {
 
     private alignTokens(tokens : FormattedToken[]) : FormattedToken[][] {
         const maxWidth = Math.min(this.textWidth, this.consoleWidth);
-        const state = new AlignerState(tokens);
+        const state = new AlignerState(tokens, maxWidth);
+
         while (state.tokenQueue.length > 0) {
-            const isJoinSet = this.isJoinSet(state.tokenQueue);
-            const [spaceLength, totalLength] = this.getTotalNextTokenLength(state);
-
-            if (state.longJoin && !isJoinSet) {
-                // End long join mode
-                state.longJoin = false;
-            }
-
-            const token = state.tokenQueue.shift();
-            if (!token) {
-                throw new Error("Unexpected missing token");
-            }
-            const tokenLength = token.text.length + spaceLength;
-
-            if (state.currentLineLength + totalLength <= maxWidth) {
-                // Token(s) fit in current line
-                state.addToken(token, spaceLength);
-            } else if (state.longJoin) {
-                // In long join mode, treat the combined tokens as a single string,
-                //  and break as needed
-                if (state.currentLineLength + tokenLength > maxWidth) {
-                    // Need to break the token to fit
-                    const availableSpace = maxWidth - state.currentLineLength;
-                    const startingText = token.text.slice(0, availableSpace);
-                    const remainingText = token.text.slice(availableSpace);
-                    state.currentLine.push({ format: token.format, text: startingText, space: token.space });
-                    state.newLine();
-                    state.tokenQueue.unshift({ format: token.format, text: remainingText, space: token.space });
-                } else {
-                    // Token fits in current line
-                    state.addToken(token, spaceLength);
-                }
-            } else if (state.currentLineLength === 0) {
-                // Token does not fit on an empty line
-                if (state.currentLineLength + tokenLength <= maxWidth) {
-                    // First token in join set fits, so add it.
-                    state.longJoin = true;
-                    state.addToken(token, spaceLength);
-                } else {
-                    // Token itself exceeds max width, break the token so that it fits
-                    const startingText = token.text.slice(0, maxWidth);
-                    const remainingText = token.text.slice(maxWidth);
-                    state.pushLine([{ format: token.format, text: startingText }]);
-                    state.tokenQueue.unshift({ format: token.format, text: remainingText });
-                }
-            } else {
-                // Token(s) don't fit, start a new line\
-                state.newLine();
-                state.tokenQueue.unshift(token);
-            }
+            this.processNextToken(state);
         }
 
         if (state.currentLine.length > 0) {
@@ -125,6 +78,76 @@ class TextAligner {
         }
 
         return state.lines;
+    }
+
+    private processNextToken(state : AlignerState) : void {
+        const isJoinSet = this.isJoinSet(state.tokenQueue);
+        const [spaceLength, totalLength] = this.getTotalNextTokenLength(state);
+
+        if (state.longJoin && !isJoinSet) {
+            // End long join mode
+            state.longJoin = false;
+        }
+
+        const token = state.tokenQueue.shift();
+        if (!token) {
+            throw new Error("Unexpected missing token");
+        }
+        const tokenLength = token.text.length + spaceLength;
+
+        if (state.longJoin) {
+            this.handleLongJoin(state, token, tokenLength, spaceLength);
+            return;
+        }
+
+        if (state.currentLineLength + totalLength <= state.maxWidth) {
+            // Token(s) fit in current line
+            state.addToken(token, spaceLength);
+        } else if (state.currentLineLength === 0) {
+            // Current line is empty, and token(s) don't fit
+            this.handleTokenLongerThanLine(state, token, tokenLength, spaceLength, isJoinSet);
+        } else {
+            // Token(s) don't fit,  start a new line
+            state.newLine();
+            state.tokenQueue.unshift(token);
+        }
+    }
+
+    private handleTokenLongerThanLine(
+                state : AlignerState,
+                token: FormattedToken,
+                tokenLength: number,
+                spaceLength: number,
+                isJoinSet : boolean) : void {
+        // Token does not fit on an empty line
+        if (isJoinSet && state.currentLineLength + tokenLength <= state.maxWidth) {
+            // First token in join set fits, so add it.
+            state.longJoin = true;
+            state.addToken(token, spaceLength);
+        } else {
+            // Token itself exceeds max width, break the token so that it fits
+            const startingText = token.text.slice(0, state.maxWidth);
+            const remainingText = token.text.slice(state.maxWidth);
+            state.pushLine([{ format: token.format, text: startingText }]);
+            state.tokenQueue.unshift({ format: token.format, text: remainingText });
+        }
+    }
+
+    private handleLongJoin(state : AlignerState, token: FormattedToken, tokenLength: number, spaceLength: number) : void {
+        // In long join mode, treat the combined tokens as a single string,
+        //  and break as needed
+        if (state.currentLineLength + tokenLength > state.maxWidth) {
+            // Need to break the token to fit
+            const availableSpace = state.maxWidth - state.currentLineLength;
+            const startingText = token.text.slice(0, availableSpace);
+            const remainingText = token.text.slice(availableSpace);
+            state.currentLine.push({ format: token.format, text: startingText, space: token.space });
+            state.newLine();
+            state.tokenQueue.unshift({ format: token.format, text: remainingText, space: token.space });
+        } else {
+            // Token fits in current line
+            state.addToken(token, spaceLength);
+        }
     }
 
     private getTotalNextTokenLength(state : AlignerState) : [number, number] {
