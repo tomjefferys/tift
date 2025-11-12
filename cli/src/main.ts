@@ -11,7 +11,7 @@ import { StateManager } from "./statemanager";
 import { InteractiveRunner } from "./interactiverunner";
 import { Result } from "./types";
 import { getANSIMarkdownMessageFormatter } from "./ansimessageformatter";
-import { getAlignedANSICommandFormatter, ANSI_WORDS_FORMATTER, getAlignedANSIWordsFormatter } from "./displayformatters";
+import { getAlignedANSICommandFormatter, getAlignedANSIWordsFormatter } from "./displayformatters";
 import { getTokenAligner } from "./textaligner";
 import { ANSI_TOKEN_FORMATTER } from "./tokenformatter";
 

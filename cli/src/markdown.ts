@@ -17,7 +17,7 @@ function isTextNode(node: Node): node is Node & { value: string } {
 }
 
 function hasChildren(node: Node): node is Node & { children: Node[] } {
-    return 'children' in node && Array.isArray((node as any).children);
+    return 'children' in node && Array.isArray(node.children);
 }
 
 function parse(node : Node, currentFormats : Format[], tokens : FormattedToken[]){
@@ -33,16 +33,16 @@ function parse(node : Node, currentFormats : Format[], tokens : FormattedToken[]
     }
     else if (node.type === "strong" && hasChildren(node)) {
         currentFormats.push("bold");
-        node.children.forEach((child : any) => parse(child, currentFormats, tokens));
+        node.children.forEach(child => parse(child, currentFormats, tokens));
         currentFormats.pop();
     }
     else if (node.type === "emphasis" && hasChildren(node)) {
         currentFormats.push("italic");
-        node.children.forEach((child : any) => parse(child, currentFormats, tokens));
+        node.children.forEach(child => parse(child, currentFormats, tokens));
         currentFormats.pop();
     }
     else if (hasChildren(node)) {
-        node.children.forEach((child : any) => parse(child, currentFormats, tokens));
+        node.children.forEach(child => parse(child, currentFormats, tokens));
     }
 }
 

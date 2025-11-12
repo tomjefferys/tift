@@ -76,7 +76,10 @@ class TextAligner {
                 state.longJoin = false;
             }
 
-            const token = state.tokenQueue.shift()!;
+            const token = state.tokenQueue.shift();
+            if (!token) {
+                throw new Error("Unexpected missing token");
+            }
             const tokenLength = token.text.length + spaceLength;
 
             if (state.currentLineLength + totalLength <= maxWidth) {
@@ -168,7 +171,6 @@ class TextAligner {
         const formattedLines : string[] = [];
         
         for(const lineTokens of lines) {
-            const formattedTokens = lineTokens.map(token => this.tokenFormatter(token));
             let line = '';
             let lineLength = 0;
             for(const token of lineTokens) {
