@@ -4,6 +4,11 @@ import { Display, DisplayState } from "./display";
 import { EngineFacade } from "./enginefacade";
 import { Message, createMessage } from "./message";
 
+
+const SPECIAL_PATTERNS : Record<string, string> = {
+    "x": "ex" // Allow "x" to match "ex" as a common shorthand for "examine"
+}
+
 export class CommandState {
     input : string[];
     command : Word[];
@@ -82,6 +87,9 @@ function getWords(engine : EngineFacade, state : CommandState) : IdValue<string>
 }
 
 export function filterWords(words : Word[], prefixChars : string[]) {
-    const prefix = prefixChars.join("");
+    let prefix = prefixChars.join("");
+    if (SPECIAL_PATTERNS[prefix]) {
+        prefix = SPECIAL_PATTERNS[prefix];
+    }
     return words.filter(word => word.value.startsWith(prefix));
 }
