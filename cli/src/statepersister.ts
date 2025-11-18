@@ -4,6 +4,7 @@ import * as fs from "fs";
 export interface StatePersister {
     saveState(state : string) : void;
     loadState() : string | undefined;
+    deleteState() : void;
 }
 
 // In-memory implementation of StatePersister
@@ -16,6 +17,10 @@ export class InMemoryStatePersister implements StatePersister {
 
     loadState() : string | undefined {
         return this.state;
+    }
+
+    deleteState() : void {
+        this.state = undefined;
     }
 }
 
@@ -41,6 +46,12 @@ export class FileStatePersister implements StatePersister {
             return fs.readFileSync(this.filePath, "utf-8");
         } else {
             return undefined;
+        }
+    }
+    
+    deleteState() : void {
+        if (fs.existsSync(this.filePath)) {
+            fs.unlinkSync(this.filePath);
         }
     }
 }

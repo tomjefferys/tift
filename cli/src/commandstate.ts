@@ -3,11 +3,14 @@ import { Word } from "tift-types/src/messages/word";
 import { Display, DisplayState } from "./display";
 import { EngineFacade } from "./enginefacade";
 import { Message, createMessage } from "./message";
+import { createWordFilter } from "./wordfilter";
 
 
 const SPECIAL_PATTERNS : Record<string, string> = {
     "x": "ex" // Allow "x" to match "ex" as a common shorthand for "examine"
 }
+
+const filterWords = createWordFilter(SPECIAL_PATTERNS);
 
 export class CommandState {
     input : string[];
@@ -84,12 +87,4 @@ export class CommandState {
 function getWords(engine : EngineFacade, state : CommandState) : IdValue<string>[] {
     const matched = engine.getWords(state.command);
     return matched;
-}
-
-export function filterWords(words : Word[], prefixChars : string[]) {
-    let prefix = prefixChars.join("");
-    if (SPECIAL_PATTERNS[prefix]) {
-        prefix = SPECIAL_PATTERNS[prefix];
-    }
-    return words.filter(word => word.value.startsWith(prefix));
 }

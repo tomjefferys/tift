@@ -3,6 +3,7 @@ import { StatePersister } from "./statepersister";
 import { Display } from "./display";
 import { CommandState } from "./commandstate";
 import { createMessage } from "./message";
+import { ControlState } from "./controlstate";
 
 export class StateManager {
 
@@ -36,9 +37,22 @@ export class StateManager {
         return this.commandState;
     }
 
+    createControlState(commands: Record<string, () => void>) : ControlState {
+        const display = this.displayBuilder();
+        return new ControlState(display, commands);
+    }
+
     refresh() {
         this.commandState.messages.push(createMessage("--- Game state reloaded due to file change ---", "Warning"));
         this.commandState.flush();
+        const newState = this.build();
+        this.commandState = newState;
+    }
+
+    restart() {
+        this.commandState.messages.push(createMessage("--- Game restarted ---", "Warning"));
+        this.commandState.flush();
+        this.statePersister.deleteState();
         const newState = this.build();
         this.commandState = newState;
     }

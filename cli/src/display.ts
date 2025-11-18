@@ -61,4 +61,8 @@ export class Display {
         this.stdout.write(this.wordsFormatter(state));
         this.stdout.write("\n");
     }
+
+    clearScreen() {
+        this.stdout.write('\x1Bc');
+    }
 }
