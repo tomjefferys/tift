@@ -441,6 +441,29 @@ test("Test $ string prefix in actions", () => {
     executeAndTest(["get", "mustacheRock"], { expected : ["mustache rock"]});
 });
 
+test("Test $ strings in list of actions still get printed", () => { 
+    builder.withObj(THE_ROOM);
+    builder.withObj({
+        id : "strangeRock",
+        name : "strange rock",
+        type : "item",
+        location : "theRoom",
+        after : { "get(this)" : [
+            "$ First message",
+            "print('Second message')",
+            "a = 'Should not be printed'",
+            "'Third message'", // Not a dollar string, so won't get printed
+            "  $  Fourth message  " ] },
+        tags : ["carryable"]
+    });
+
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["strange rock"]});
+    executeAndTest(["get", "strangeRock"], { expected : ["First message", "Second message", "Fourth message"]});
+});
+
+
 test("Test before and after actions specified as object properties", () => {
     builder.withObj(THE_ROOM);
     builder.withObj({

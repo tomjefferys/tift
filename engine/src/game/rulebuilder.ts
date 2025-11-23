@@ -49,7 +49,10 @@ function handlePrefixedString(str : string) : Thunk {
     const trimmed = str.trimStart();
     const prefixRemoved = trimmed.substring(1).trimStart();
     const finalString = prefixRemoved.trim();
-    return mkThunk((env : Env) => mkResult(formatString(env, finalString)));
+    return mkThunk((env : Env) => {
+        const str= formatString(env, finalString);
+        return mkResult(env.execute("write", { "value": str } ));
+    });
 }
 
 /**
