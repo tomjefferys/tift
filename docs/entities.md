@@ -1,4 +1,4 @@
-# Entites
+# Entities
 
 You construct TIFT games using entities.
 
