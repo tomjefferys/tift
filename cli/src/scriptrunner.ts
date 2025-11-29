@@ -94,8 +94,8 @@ export class ScriptRunner {
 
     private flushOutput() {
         this.engine.flushMessages(message => {
-            this.print(message);
-            this.messages.push(message);
+            this.print(message.text);
+            this.messages.push(message.text);
         });
     }
 

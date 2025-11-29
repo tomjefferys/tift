@@ -1,8 +1,4 @@
-export type MessageType = "Normal" | "Command" | "Info" | "Warning" | "Error";
-export interface Message {
-    type : MessageType,
-    text : string
-}
+import { Message, MessageType } from "./types";
 export type MessageFormatter = (message : Message) => string;
 
 export const createMessage = (text : string, type : MessageType = "Normal") : Message => {

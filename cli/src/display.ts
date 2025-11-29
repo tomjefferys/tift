@@ -1,5 +1,6 @@
 import * as os from "os";
-import { Message, MessageFormatter, DEFAULT_MESSAGE_FORMATTER } from "./message";
+import { Message } from "./types";
+import { MessageFormatter, DEFAULT_MESSAGE_FORMATTER } from "./message";
 
 export interface CommandState  {
     partialCommand : string[];

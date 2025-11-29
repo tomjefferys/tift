@@ -2,7 +2,8 @@ import { IdValue } from "tift-engine/src/shared";
 import { Word } from "tift-types/src/messages/word";
 import { Display, DisplayState } from "./display";
 import { EngineFacade } from "./enginefacade";
-import { Message, createMessage } from "./message";
+import { Message } from "./types";
+import { createMessage } from "./message";
 import { createWordFilter } from "./wordfilter";
 
 
@@ -51,7 +52,7 @@ export class CommandState {
                 const commandMessage = createMessage(this.command.map(word => word.value).join(" "), "Command");
                 this.messages.push(commandMessage);
                 this.engine.execute(this.command.map(word => word.id));
-                this.engine.flushMessages(message => this.messages.push(createMessage(message)));
+                this.engine.flushMessages(message => this.messages.push(message));
                 this.command.length = 0;
             }
             this.input.length = 0;
@@ -62,7 +63,7 @@ export class CommandState {
     }
 
     flush() {
-        this.engine.flushMessages(message => this.messages.push(createMessage(message)));
+        this.engine.flushMessages(message => this.messages.push(message));
         this.display.update(this.getDisplayState());
     }
 
