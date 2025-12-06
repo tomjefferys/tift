@@ -1,96 +1,92 @@
 import { StateManager } from "./statemanager";
 import { ControlState } from "./controlstate";
 import { Result } from "./types";
-import { Key } from 'readline';
 import * as readline from "readline";
-import { CommandState } from "./commandstate";
+import { KeypressHandler, KeypressHandlerDependencies } from "./keypresshandler";
 
 type Mode = "GAME" | "CONTROL";
 
 export class InteractiveRunner {
     private stateManager : StateManager;
     private readStream : NodeJS.ReadStream;
+    private keypressHandler: KeypressHandler;
 
     constructor(stateManager : StateManager, readStream : NodeJS.ReadStream = process.stdin) {
         this.stateManager = stateManager;
         this.readStream = readStream;
+        this.keypressHandler = this.createKeypressHandler();
+    }
+
+    private createKeypressHandler(): KeypressHandler {
+        let controlState: ControlState | undefined = undefined;
+
+        const doQuit = () => {
+            this.cleanup();
+        }
+
+        const doRestart = () => {
+            this.stateManager.restart();
+            this.keypressHandler.setMode("GAME");
+            this.stateManager.get().update();
+        }
+
+        const doClear = () => {
+            const display = controlState?.getDisplay();
+            if (display) {
+                display.clearScreen();
+            }
+            this.stateManager.get().update();
+        }
+
+        const getControlState = () : ControlState => {
+            if (!controlState) {
+                const commands : Record<string, () => void> = {
+                    "quit": doQuit,
+                    "restart": doRestart,
+                    "clear": doClear
+                };
+                controlState = this.stateManager.createControlState(commands);
+            }
+            return controlState;
+        }
+
+        const dependencies: KeypressHandlerDependencies = {
+            getGameState: () => this.stateManager.get(),
+            getControlState: getControlState,
+            onQuit: doQuit
+        };
+
+        return new KeypressHandler(dependencies);
     }
 
     async run() : Promise<Result> {
         return new Promise<Result>((resolve) => {
-
-            readline.emitKeypressEvents( this.readStream );
+            readline.emitKeypressEvents(this.readStream);
 
             // without this, we would only get streams once enter is pressed
-            this.readStream.setRawMode( true );
+            this.readStream.setRawMode(true);
 
             // resume stdin in the parent process (node app won't quit all by itself
             // unless an error or process.exit() happens)
             this.readStream.resume();
 
-            this.readStream.setEncoding( 'utf8' );
+            this.readStream.setEncoding('utf8');
 
-            let mode : Mode = "GAME";
+            // Store the resolve function so cleanup can call it
+            this.resolvePromise = resolve;
 
-            const letter = /[a-zA-Z]/
-
-            let controlState : ControlState | undefined = undefined;
-            
-            const doQuit = () => {
-                this.readStream.removeListener('keypress', keypressHandler);
-                this.readStream.setRawMode(false);
-                this.readStream.pause();
-                resolve("SUCCESS");
-            }
-
-            const doRestart = () => {
-                this.stateManager.restart();
-                mode = "GAME";
-                this.stateManager.get().update();
-            }
-
-            const doClear = () => {
-                const display = controlState?.getDisplay();
-                if (display) {
-                    display.clearScreen();
-                }
-                mode = "GAME";
-                this.stateManager.get().update();
-            }
-
-            const getControlState = () : ControlState => {
-                if (!controlState) {
-                    const commands : Record<string, () => void> = {
-                        "quit": doQuit,
-                        "restart": doRestart,
-                        "clear": doClear
-                    };
-                    controlState = this.stateManager.createControlState(commands);
-                }
-                return controlState;
-            }
-
-            const getState : () => ControlState | CommandState = () => {
-                return (mode === "GAME")? this.stateManager.get() : getControlState();
-            }
-
-            const keypressHandler = (char : string, event : Key) => {
-                let state = getState();
-                if (char && letter.test(char)) {
-                    state.addChar(char);
-                } else if (event.name === "backspace") {
-                    state.backSpace();
-                } else if (event.name === "c" && event.ctrl) {
-                    doQuit();
-                    return;
-                } else if (event.name === "tab") {
-                    mode = (mode == "GAME")? "CONTROL" : "GAME";
-                    state = getState();
-                }
-
-                state.update();
-            }
-            this.readStream.on('keypress', keypressHandler);
+            this.readStream.on('keypress', this.keypressHandler.handleKeypress);
         });
+    }
+
+    private resolvePromise?: (value: Result) => void;
+
+    private cleanup() {
+        this.readStream.removeListener('keypress', this.keypressHandler.handleKeypress);
+        this.readStream.setRawMode(false);
+        this.readStream.pause();
+        if (this.resolvePromise) {
+            this.resolvePromise("SUCCESS");
+        }
     }
 }

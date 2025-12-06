@@ -8,6 +8,7 @@ export class ControlState {
     private display : Display;
     private input : string[] = [];
     private commands : Record<string, () => void>;
+    private enterPressed = false;
     
     constructor(display : Display, commands : Record<string, () => void>) {
         this.display = display;
@@ -24,9 +25,14 @@ export class ControlState {
         }
     }
 
+    enter() {
+        this.enterPressed = true;
+    }
+
     update() {
         if (this.input.length > 0) {
-            const commandWords = filterWords(this.getAllWords(), this.input);
+            const exactMatch = this.enterPressed;
+            const commandWords = filterWords(this.getAllWords(), this.input, exactMatch);
             if (commandWords.length === 0) {
                 this.input.pop();
             } else if (commandWords.length === 1) {
@@ -37,6 +43,7 @@ export class ControlState {
         }
         const displayState = this.getDisplayState();
         this.display.update(displayState);
+        this.enterPressed = false;
     }
 
     getDisplay() : Display {

@@ -19,6 +19,7 @@ export class CommandState {
     engine : EngineFacade;
     display : Display;
     messages : Message[];
+    enterPressed = false;
 
     constructor(engine : EngineFacade, display : Display) {
         this.input = [];
@@ -39,9 +40,14 @@ export class CommandState {
             this.command.pop();
         }
     }
+    
+    enter() {
+        this.enterPressed = true;
+    }
 
     update() {
-        const filtered = filterWords(this.engine.getWords(this.command), this.input);
+        const exactMatch = this.enterPressed;
+        const filtered = filterWords(this.engine.getWords(this.command), this.input, exactMatch);
 
         if (filtered.length === 0) {
             this.input.pop();
@@ -60,6 +66,7 @@ export class CommandState {
     
         const displayState = this.getDisplayState();
         this.display.update(displayState);
+        this.enterPressed = false;
     }
 
     flush() {
