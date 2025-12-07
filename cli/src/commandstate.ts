@@ -5,7 +5,7 @@ import { EngineFacade } from "./enginefacade";
 import { Message } from "./types";
 import { createMessage } from "./message";
 import { createWordFilter } from "./wordfilter";
-import { InputHandler, TabMotion } from "./keypresshandler";
+import { BaseInputHandler } from "./baseinputhandler";
 
 const SPECIAL_PATTERNS : Record<string, string> = {
     "x": "ex" // Allow "x" to match "ex" as a common shorthand for "examine"
@@ -13,67 +13,40 @@ const SPECIAL_PATTERNS : Record<string, string> = {
 
 const filterWords = createWordFilter(SPECIAL_PATTERNS);
 
-export class CommandState implements InputHandler{
-    input : string[];
+export class CommandState extends BaseInputHandler {
     command : Word[];
     engine : EngineFacade;
     display : Display;
     messages : Message[];
-    enterPressed = false;
-    selectedWordIndex : number | undefined = undefined;
 
     constructor(engine : EngineFacade, display : Display) {
-        this.input = [];
+        super();
         this.command = [];
         this.engine = engine;
         this.display = display;
         this.messages = [];
     }
 
-    addChar(char : string) {
-        this.input.push(char);
-    }
-
-    backSpace() {
-        if (this.input.length) {
-            this.input.pop();
-            this.selectedWordIndex = undefined;
-        } else if (this.command.length) {
+    protected onBackspaceWithEmptyInput() {
+        if (this.command.length) {
             this.command.pop();
             this.selectedWordIndex = undefined;
         }
     }
-    
-    enter() {
-        this.enterPressed = true;
-    }
 
-    tab(direction: TabMotion) {
-        const words = filterWords(this.engine.getWords(), this.input).map(word => word.value);
-
-        if(words.length === 0) {
-            this.selectedWordIndex = undefined;
-            return;
-        }
-
-        if (this.selectedWordIndex === undefined) {
-            this.selectedWordIndex = (direction === "backward") ? words.length - 1 : 0;
-        } else {
-            const tabIncrement = direction === "forward" ? 1 : -1;
-            const newIndex = this.selectedWordIndex + tabIncrement;
-            this.selectedWordIndex = (newIndex < 0)? words.length - 1 : newIndex % words.length;
-        }
+    protected getAllWords(): Word[] {
+        return this.engine.getWords(this.command);
     }
 
     update() {
         let selectedWords : Word[] = [];
-        if (this.enterPressed && this.selectedWordIndex !== undefined && this.selectedWordIndex >= 0) {
-            const selectedWord = filterWords(this.engine.getWords(), this.input)[this.selectedWordIndex];
+        if (this.enterPressed && this.selectedWordIndex !== undefined) {
+            const selectedWord = this.getFilteredWords()[this.selectedWordIndex];
             selectedWords = [selectedWord];
             this.selectedWordIndex = undefined;
         } else {
             const exactMatch = this.enterPressed;
-            selectedWords = filterWords(this.engine.getWords(this.command), this.input, exactMatch);
+            selectedWords = exactMatch ? this.getFilteredWordsExact() : this.getFilteredWords();
         }
 
         if (selectedWords.length === 0) {
@@ -88,8 +61,7 @@ export class CommandState implements InputHandler{
                 this.engine.flushMessages(message => this.messages.push(message));
                 this.command.length = 0;
             }
-            this.input.length = 0;
-            this.selectedWordIndex = undefined;
+            this.clearInput();
         }
     
         const displayState = this.getDisplayState();
@@ -115,7 +87,7 @@ export class CommandState implements InputHandler{
             messages : messages,
             partialCommand : this.command.map(word => word.value), 
             partialWord : this.input,
-            wordChoices : filterWords(this.engine.getWords(), this.input).map(word => word.value),
+            wordChoices : filterWords(this.engine.getWords(this.command), this.input).map(word => word.value),
             selectedWordIndex
         } 
     }

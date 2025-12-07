@@ -1,48 +1,42 @@
 import { Display, DisplayState } from "./display";
-import { InputHandler, TabMotion } from "./keypresshandler";
-import { createWordFilter } from "./wordfilter";
 import { Word } from "tift-types/src/messages/word";
+import { BaseInputHandler } from "./baseinputhandler";
 
-const filterWords = createWordFilter({});
-
-export class ControlState implements InputHandler {
+export class ControlState extends BaseInputHandler {
     private display : Display;
-    private input : string[] = [];
     private commands : Record<string, () => void>;
-    private enterPressed = false;
     
     constructor(display : Display, commands : Record<string, () => void>) {
+        super();
         this.display = display;
         this.commands = commands;
     }
 
-    addChar(char : string) {
-        this.input.push(char);
+    protected onBackspaceWithEmptyInput() {
+        // No special behavior needed for control state
     }
 
-    backSpace() {
-        if (this.input.length) {
-            this.input.pop();
-        }
-    }
-
-    enter() {
-        this.enterPressed = true;
-    }
-
-    tab(_direction: TabMotion) {
-        //  TODO
+    protected getAllWords() : Word[] {
+        return Object.keys(this.commands).map(key => ({ type : "option", id : key, value: key }));
     }
 
     update() {
+        if (this.enterPressed && this.selectedWordIndex !== undefined) {
+            // User has selected a specific command with tab and pressed enter
+            const selectedWord = this.getFilteredWords()[this.selectedWordIndex];
+            this.commands[selectedWord.value]();
+            this.clearInput();
+            return;
+        }
+
         if (this.input.length > 0) {
             const exactMatch = this.enterPressed;
-            const commandWords = filterWords(this.getAllWords(), this.input, exactMatch);
+            const commandWords = exactMatch ? this.getFilteredWordsExact() : this.getFilteredWords();
             if (commandWords.length === 0) {
                 this.input.pop();
             } else if (commandWords.length === 1) {
                 this.commands[commandWords[0].value]();
-                this.input.length = 0;
+                this.clearInput();
                 return;
             }
         }
@@ -56,16 +50,12 @@ export class ControlState implements InputHandler {
     }
 
     private getDisplayState() : DisplayState {
-        const allWords = this.getAllWords();
         return {
             partialCommand: [],
             partialWord: this.input,
-            wordChoices: filterWords(allWords, this.input).map(word => word.value),
+            wordChoices: this.getFilteredWords().map(word => word.value),
+            selectedWordIndex: this.selectedWordIndex,
             messages: []
         };
-    }
-
-    private getAllWords() : Word[] {
-        return Object.keys(this.commands).map(key => ({ type : "option", id : key, value: key }));
     }
 }
