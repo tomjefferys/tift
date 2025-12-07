@@ -53,8 +53,11 @@ export abstract class BaseInputHandler implements InputHandler {
     update(execute : boolean) {
         let selectedWords : Word[] = [];
         if (this.enterPressed && this.selectedWordIndex !== undefined) {
-            const selectedWord = this.getFilteredWords()[this.selectedWordIndex];
-            selectedWords = [selectedWord];
+            const filteredWords = this.getFilteredWords();
+            if (this.selectedWordIndex >= 0 && this.selectedWordIndex < filteredWords.length) {
+                const selectedWord = filteredWords[this.selectedWordIndex];
+                selectedWords = [selectedWord];
+            }
             this.selectedWordIndex = undefined;
         } else {
             const exactMatch = this.enterPressed;
