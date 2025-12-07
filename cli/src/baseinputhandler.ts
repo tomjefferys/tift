@@ -1,6 +1,7 @@
 import { Word } from "tift-types/src/messages/word";
 import { createWordFilter } from "./wordfilter";
 import { InputHandler, TabMotion } from "./keypresshandler";
+import { Display, DisplayState } from "./display";
 
 const filterWords = createWordFilter({});
 
@@ -44,6 +45,29 @@ export abstract class BaseInputHandler implements InputHandler {
         }
     }
 
+    update(execute : boolean) {
+        let selectedWords : Word[] = [];
+        if (this.enterPressed && this.selectedWordIndex !== undefined) {
+            const selectedWord = this.getFilteredWords()[this.selectedWordIndex];
+            selectedWords = [selectedWord];
+            this.selectedWordIndex = undefined;
+        } else {
+            const exactMatch = this.enterPressed;
+            selectedWords = exactMatch ? this.getFilteredWordsExact() : this.getFilteredWords();
+        }
+
+        let updateDisplay = true;
+        if (execute) {
+            updateDisplay = this.execute(selectedWords);
+        }
+    
+        if (updateDisplay) {
+            const displayState = this.getDisplayState();
+            this.getDisplay().update(displayState);
+        }
+        this.enterPressed = false;
+    }
+
     protected getSelectedWord(): Word | undefined {
         if (this.selectedWordIndex !== undefined) {
             const words = this.getFilteredWords();
@@ -76,5 +100,8 @@ export abstract class BaseInputHandler implements InputHandler {
     // Abstract methods that subclasses must implement
     protected abstract getAllWords(): Word[];
     protected abstract onBackspaceWithEmptyInput(): void;
-    public abstract update(execute : boolean): void;
+    protected abstract execute(selectedWords: Word[]): boolean;
+    protected abstract getDisplayState(): DisplayState;
+    protected abstract getDisplay(): Display;
+
 }

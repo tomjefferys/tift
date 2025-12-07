@@ -20,36 +20,23 @@ export class ControlState extends BaseInputHandler {
         return Object.keys(this.commands).map(key => ({ type : "option", id : key, value: key }));
     }
 
-    update(execute : boolean) {
-        if (this.enterPressed && this.selectedWordIndex !== undefined) {
-            // User has selected a specific command with tab and pressed enter
-            const selectedWord = this.getFilteredWords()[this.selectedWordIndex];
-            this.commands[selectedWord.value]();
+    protected execute(selectedWords : Word[]): boolean {
+        let updateDisplay = true;
+        if (selectedWords.length === 0) {
+            this.input.pop();
+        } else if (selectedWords.length === 1) {
+            this.commands[selectedWords[0].value]();
             this.clearInput();
-            return;
+            updateDisplay = false;
         }
-
-        if (execute && this.input.length > 0) {
-            const exactMatch = this.enterPressed;
-            const commandWords = exactMatch ? this.getFilteredWordsExact() : this.getFilteredWords();
-            if (commandWords.length === 0) {
-                this.input.pop();
-            } else if (commandWords.length === 1) {
-                this.commands[commandWords[0].value]();
-                this.clearInput();
-                return;
-            }
-        }
-        const displayState = this.getDisplayState();
-        this.display.update(displayState);
-        this.enterPressed = false;
+        return updateDisplay;
     }
 
     getDisplay() : Display {
         return this.display;
     }
 
-    private getDisplayState() : DisplayState {
+    protected getDisplayState() : DisplayState {
         return {
             partialCommand: [],
             partialWord: this.input,

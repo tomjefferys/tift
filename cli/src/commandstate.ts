@@ -38,27 +38,7 @@ export class CommandState extends BaseInputHandler {
         return this.engine.getWords(this.command);
     }
 
-    update(execute : boolean) {
-        let selectedWords : Word[] = [];
-        if (this.enterPressed && this.selectedWordIndex !== undefined) {
-            const selectedWord = this.getFilteredWords()[this.selectedWordIndex];
-            selectedWords = [selectedWord];
-            this.selectedWordIndex = undefined;
-        } else {
-            const exactMatch = this.enterPressed;
-            selectedWords = exactMatch ? this.getFilteredWordsExact() : this.getFilteredWords();
-        }
-
-        if (execute) {
-            this.executeCommand(selectedWords);
-        }
-    
-        const displayState = this.getDisplayState();
-        this.display.update(displayState);
-        this.enterPressed = false;
-    }
-
-    private executeCommand(selectedWords : Word[]) {
+    protected execute(selectedWords : Word[]) : boolean{
         if (selectedWords.length === 0) {
             this.input.pop();
         } else if (selectedWords.length === 1) {
@@ -73,6 +53,7 @@ export class CommandState extends BaseInputHandler {
             }
             this.clearInput();
         }
+        return true;
     }
 
     flush() {
@@ -80,9 +61,8 @@ export class CommandState extends BaseInputHandler {
         this.display.update(this.getDisplayState());
     }
 
-    printStatus() {
-        const status = this.engine.getStatus();
-        this.display.printLine(status + "\n");
+    protected getDisplay(): Display {
+        return this.display;
     }
 
     getDisplayState() : DisplayState {
