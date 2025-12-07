@@ -16,14 +16,12 @@ const filterWords = createWordFilter(SPECIAL_PATTERNS);
 export class CommandState extends BaseInputHandler {
     command : Word[];
     engine : EngineFacade;
-    display : Display;
     messages : Message[];
 
     constructor(engine : EngineFacade, display : Display) {
-        super();
+        super(display);
         this.command = [];
         this.engine = engine;
-        this.display = display;
         this.messages = [];
     }
 
@@ -59,10 +57,6 @@ export class CommandState extends BaseInputHandler {
     flush() {
         this.engine.flushMessages(message => this.messages.push(message));
         this.display.update(this.getDisplayState());
-    }
-
-    protected getDisplay(): Display {
-        return this.display;
     }
 
     getDisplayState() : DisplayState {

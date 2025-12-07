@@ -9,6 +9,11 @@ export abstract class BaseInputHandler implements InputHandler {
     protected input: string[] = [];
     protected selectedWordIndex: number | undefined = undefined;
     protected enterPressed = false;
+    protected display: Display;
+
+    constructor(display: Display) {
+        this.display = display;
+    }
 
     addChar(char: string) {
         this.input.push(char);
@@ -68,6 +73,10 @@ export abstract class BaseInputHandler implements InputHandler {
         this.enterPressed = false;
     }
 
+    getDisplay(): Display {
+        return this.display;
+    }
+
     protected getSelectedWord(): Word | undefined {
         if (this.selectedWordIndex !== undefined) {
             const words = this.getFilteredWords();
@@ -102,6 +111,5 @@ export abstract class BaseInputHandler implements InputHandler {
     protected abstract onBackspaceWithEmptyInput(): void;
     protected abstract execute(selectedWords: Word[]): boolean;
     protected abstract getDisplayState(): DisplayState;
-    protected abstract getDisplay(): Display;
 
 }

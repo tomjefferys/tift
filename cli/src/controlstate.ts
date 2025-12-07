@@ -3,12 +3,10 @@ import { Word } from "tift-types/src/messages/word";
 import { BaseInputHandler } from "./baseinputhandler";
 
 export class ControlState extends BaseInputHandler {
-    private display : Display;
     private commands : Record<string, () => void>;
     
     constructor(display : Display, commands : Record<string, () => void>) {
-        super();
-        this.display = display;
+        super(display);
         this.commands = commands;
     }
 
@@ -30,10 +28,6 @@ export class ControlState extends BaseInputHandler {
             updateDisplay = false;
         }
         return updateDisplay;
-    }
-
-    getDisplay() : Display {
-        return this.display;
     }
 
     protected getDisplayState() : DisplayState {
