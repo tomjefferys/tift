@@ -28,7 +28,13 @@ function parse(node : Node, currentFormats : Format[], tokens : FormattedToken[]
             if (word === "") {
                 continue;
             }
-            tokens.push({ format: currentFormat, text: word });
+            const token = { text: word, format: currentFormat} as FormattedToken;
+            // If previous token has same format and it's not plain, set spaceFormat to format_space to preserve formatting on spaces
+            const previousToken = tokens.length > 0 ? tokens[tokens.length - 1] : null;
+            if (previousToken && previousToken.format === currentFormat && currentFormat !== "plain") {
+                token['spaceFormat'] = "format_space";
+            }
+            tokens.push(token);
         }
     }
     else if (node.type === "strong" && hasChildren(node)) {

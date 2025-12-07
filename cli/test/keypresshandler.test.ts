@@ -14,6 +14,7 @@ describe("KeypressHandler", () => {
             addChar: vi.fn(),
             backSpace: vi.fn(),
             enter: vi.fn(),
+            tab: vi.fn(),
             update: vi.fn()
         };
 
@@ -21,6 +22,7 @@ describe("KeypressHandler", () => {
             addChar: vi.fn(),
             backSpace: vi.fn(),
             enter: vi.fn(),
+            tab: vi.fn(),
             update: vi.fn()
         };
 
@@ -47,13 +49,13 @@ describe("KeypressHandler", () => {
             expect(keypressHandler.getCurrentMode()).toBe("GAME");
         });
 
-        test("should toggle mode on tab press", () => {
-            const tabEvent: Key = { name: "tab", ctrl: false, meta: false, shift: false };
+        test("should toggle mode on Ctrl+L press", () => {
+            const ctrlLEvent: Key = { name: "l", ctrl: true, meta: false, shift: false };
             
-            keypressHandler.handleKeypress("", tabEvent);
+            keypressHandler.handleKeypress("", ctrlLEvent);
             expect(keypressHandler.getCurrentMode()).toBe("CONTROL");
 
-            keypressHandler.handleKeypress("", tabEvent);
+            keypressHandler.handleKeypress("", ctrlLEvent);
             expect(keypressHandler.getCurrentMode()).toBe("GAME");
         });
     });
@@ -155,13 +157,23 @@ describe("KeypressHandler", () => {
             expect(mockGameState.addChar).toHaveBeenCalledWith("c");
             expect(mockGameState.update).toHaveBeenCalled();
         });
+
+        test("should handle regular 'l' character (not Ctrl+L)", () => {
+            const event: Key = { name: "l", ctrl: false, meta: false, shift: false };
+            
+            keypressHandler.handleKeypress("l", event);
+            
+            expect(keypressHandler.getCurrentMode()).toBe("GAME"); // Should not change
+            expect(mockGameState.addChar).toHaveBeenCalledWith("l");
+            expect(mockGameState.update).toHaveBeenCalled();
+        });
     });
 
-    describe("Mode Switching with Tab", () => {
+    describe("Mode Switching with Ctrl+L", () => {
         test("should switch from GAME to CONTROL and call correct state", () => {
-            const tabEvent: Key = { name: "tab", ctrl: false, meta: false, shift: false };
+            const ctrlLEvent: Key = { name: "l", ctrl: true, meta: false, shift: false };
             
-            keypressHandler.handleKeypress("", tabEvent);
+            keypressHandler.handleKeypress("", ctrlLEvent);
             
             expect(keypressHandler.getCurrentMode()).toBe("CONTROL");
             expect(mockControlState.update).toHaveBeenCalled();
@@ -169,9 +181,9 @@ describe("KeypressHandler", () => {
 
         test("should switch from CONTROL to GAME and call correct state", () => {
             keypressHandler.setMode("CONTROL");
-            const tabEvent: Key = { name: "tab", ctrl: false, meta: false, shift: false };
+            const ctrlLEvent: Key = { name: "l", ctrl: true, meta: false, shift: false };
             
-            keypressHandler.handleKeypress("", tabEvent);
+            keypressHandler.handleKeypress("", ctrlLEvent);
             
             expect(keypressHandler.getCurrentMode()).toBe("GAME");
             expect(mockGameState.update).toHaveBeenCalled();
@@ -250,8 +262,8 @@ describe("KeypressHandler", () => {
             keypressHandler.handleKeypress("h", { name: "h", ctrl: false, meta: false, shift: false });
             keypressHandler.handleKeypress("i", { name: "i", ctrl: false, meta: false, shift: false });
             
-            // Switch to CONTROL mode
-            keypressHandler.handleKeypress("", { name: "tab", ctrl: false, meta: false, shift: false });
+            // Switch to CONTROL mode with Ctrl+L
+            keypressHandler.handleKeypress("", { name: "l", ctrl: true, meta: false, shift: false });
             
             // Type in CONTROL mode
             keypressHandler.handleKeypress("q", { name: "q", ctrl: false, meta: false, shift: false });
@@ -276,8 +288,8 @@ describe("KeypressHandler", () => {
             keypressHandler.handleKeypress("", { name: "return", ctrl: false, meta: false, shift: false });
             keypressHandler.handleKeypress("", { name: "backspace", ctrl: false, meta: false, shift: false });
             
-            // Switch to CONTROL mode
-            keypressHandler.handleKeypress("", { name: "tab", ctrl: false, meta: false, shift: false });
+            // Switch to CONTROL mode with Ctrl+L
+            keypressHandler.handleKeypress("", { name: "l", ctrl: true, meta: false, shift: false });
             
             // Actions in CONTROL mode
             keypressHandler.handleKeypress("", { name: "return", ctrl: false, meta: false, shift: false });

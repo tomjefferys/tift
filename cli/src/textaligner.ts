@@ -214,8 +214,12 @@ class TextAligner {
                         spaces += ' '.repeat(spacesToAdd);
                         lineLength += spacesToAdd;
                     }
-                    token.text = spaces + token.text;
-                    line += this.tokenFormatter(token);
+
+                    const spaceToken = token.spaceFormat === "format_space"
+                                        ? { text: spaces, format: token.format }
+                                        : { text: spaces };
+                    
+                    line += this.tokenFormatter(spaceToken) + this.tokenFormatter(token);
                     lineLength += tokenLength;
                 }
             }

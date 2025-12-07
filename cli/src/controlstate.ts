@@ -1,10 +1,11 @@
 import { Display, DisplayState } from "./display";
+import { InputHandler, TabMotion } from "./keypresshandler";
 import { createWordFilter } from "./wordfilter";
 import { Word } from "tift-types/src/messages/word";
 
 const filterWords = createWordFilter({});
 
-export class ControlState {
+export class ControlState implements InputHandler {
     private display : Display;
     private input : string[] = [];
     private commands : Record<string, () => void>;
@@ -27,6 +28,10 @@ export class ControlState {
 
     enter() {
         this.enterPressed = true;
+    }
+
+    tab(_direction: TabMotion) {
+        //  TODO
     }
 
     update() {

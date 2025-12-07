@@ -2,11 +2,14 @@ import { Key } from 'readline';
 
 type Mode = "GAME" | "CONTROL";
 
+export type TabMotion = "forward" | "backward";
+
 export interface InputHandler {
     addChar(char: string): void;
     backSpace(): void;
     enter(): void;
     update(): void;
+    tab(direction: TabMotion): void;
 }
 
 export interface KeypressHandlerDependencies {
@@ -37,6 +40,9 @@ export class KeypressHandler {
             this.dependencies.onQuit();
             return;
         } else if (event.name === "tab") {
+            const direction = event.shift ? "backward" : "forward";
+            state.tab(direction);
+        } else if (event.name === "l" && event.ctrl) {
             this.mode = (this.mode === "GAME") ? "CONTROL" : "GAME";
             state = this.getCurrentState();
         }

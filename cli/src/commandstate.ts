@@ -5,7 +5,7 @@ import { EngineFacade } from "./enginefacade";
 import { Message } from "./types";
 import { createMessage } from "./message";
 import { createWordFilter } from "./wordfilter";
-
+import { InputHandler, TabMotion } from "./keypresshandler";
 
 const SPECIAL_PATTERNS : Record<string, string> = {
     "x": "ex" // Allow "x" to match "ex" as a common shorthand for "examine"
@@ -13,13 +13,14 @@ const SPECIAL_PATTERNS : Record<string, string> = {
 
 const filterWords = createWordFilter(SPECIAL_PATTERNS);
 
-export class CommandState {
+export class CommandState implements InputHandler{
     input : string[];
     command : Word[];
     engine : EngineFacade;
     display : Display;
     messages : Message[];
     enterPressed = false;
+    selectedWordIndex : number | undefined = undefined;
 
     constructor(engine : EngineFacade, display : Display) {
         this.input = [];
@@ -36,8 +37,10 @@ export class CommandState {
     backSpace() {
         if (this.input.length) {
             this.input.pop();
+            this.selectedWordIndex = undefined;
         } else if (this.command.length) {
             this.command.pop();
+            this.selectedWordIndex = undefined;
         }
     }
     
@@ -45,14 +48,38 @@ export class CommandState {
         this.enterPressed = true;
     }
 
-    update() {
-        const exactMatch = this.enterPressed;
-        const filtered = filterWords(this.engine.getWords(this.command), this.input, exactMatch);
+    tab(direction: TabMotion) {
+        const words = filterWords(this.engine.getWords(), this.input).map(word => word.value);
 
-        if (filtered.length === 0) {
+        if(words.length === 0) {
+            this.selectedWordIndex = undefined;
+            return;
+        }
+
+        if (this.selectedWordIndex === undefined) {
+            this.selectedWordIndex = (direction === "backward") ? words.length - 1 : 0;
+        } else {
+            const tabIncrement = direction === "forward" ? 1 : -1;
+            const newIndex = this.selectedWordIndex + tabIncrement;
+            this.selectedWordIndex = (newIndex < 0)? words.length - 1 : newIndex % words.length;
+        }
+    }
+
+    update() {
+        let selectedWords : Word[] = [];
+        if (this.enterPressed && this.selectedWordIndex !== undefined && this.selectedWordIndex >= 0) {
+            const selectedWord = filterWords(this.engine.getWords(), this.input)[this.selectedWordIndex];
+            selectedWords = [selectedWord];
+            this.selectedWordIndex = undefined;
+        } else {
+            const exactMatch = this.enterPressed;
+            selectedWords = filterWords(this.engine.getWords(this.command), this.input, exactMatch);
+        }
+
+        if (selectedWords.length === 0) {
             this.input.pop();
-        } else if (filtered.length === 1) {
-            this.command.push(filtered[0]);
+        } else if (selectedWords.length === 1) {
+            this.command.push(selectedWords[0]);
             const words = getWords(this.engine, this);
             if (words.length === 0) {
                 const commandMessage = createMessage(this.command.map(word => word.value).join(" "), "Command");
@@ -62,6 +89,7 @@ export class CommandState {
                 this.command.length = 0;
             }
             this.input.length = 0;
+            this.selectedWordIndex = undefined;
         }
     
         const displayState = this.getDisplayState();
@@ -82,11 +110,13 @@ export class CommandState {
     getDisplayState() : DisplayState {
         const messages = [...this.messages];
         this.messages = [];
+        const selectedWordIndex = this.selectedWordIndex; 
         return {
             messages : messages,
             partialCommand : this.command.map(word => word.value), 
             partialWord : this.input,
-            wordChoices : filterWords(this.engine.getWords(), this.input).map(word => word.value)
+            wordChoices : filterWords(this.engine.getWords(), this.input).map(word => word.value),
+            selectedWordIndex
         } 
     }
      

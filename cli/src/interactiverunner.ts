@@ -4,8 +4,6 @@ import { Result } from "./types";
 import * as readline from "readline";
 import { KeypressHandler, KeypressHandlerDependencies } from "./keypresshandler";
 
-type Mode = "GAME" | "CONTROL";
-
 export class InteractiveRunner {
     private stateManager : StateManager;
     private readStream : NodeJS.ReadStream;

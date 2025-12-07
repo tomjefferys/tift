@@ -20,7 +20,7 @@ describe("Markdown Parser", () => {
         expect(parsed).toEqual([
             { format: "plain", text: "This" },
             { format: "plain", text: "is" },
-            { format: "italic", text: "italic" },
+            { format: "italic", text: "italic" } ,
             { format: "plain", text: "text." }
         ]);
     });
@@ -32,7 +32,7 @@ describe("Markdown Parser", () => {
             { format: "plain", text: "This" },
             { format: "plain", text: "is" },
             { format: "bold-italic", text: "bold" },
-            { format: "bold-italic", text: "italic" },
+            { format: "bold-italic", text: "italic", spaceFormat: "format_space" },
             { format: "plain", text: "text." }
         ]);
     });
@@ -49,7 +49,7 @@ describe("Markdown Parser", () => {
             { format: "plain", text: "," },
             { format: "plain", text: "and" },
             { format: "bold-italic", text: "bold" },
-            { format: "bold-italic", text: "italic" },
+            { format: "bold-italic", text: "italic", spaceFormat: "format_space" },
             { format: "plain", text: "." }
         ]);
     });

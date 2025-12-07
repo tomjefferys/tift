@@ -11,7 +11,10 @@ export type Brightness = typeof BRIGHTNESS_TYPES[number];
 const SPACE_TYPES = ["space", "join", "tab"] as const;
 export type Space = typeof SPACE_TYPES[number];
 
-type ArgType  = Format | Hue | Brightness | Space;
+const SPACE_FORMATS = ["plain_space", "format_space"] as const;
+export type SpaceFormat = typeof SPACE_FORMATS[number];
+
+type ArgType  = Format | Hue | Brightness | Space | SpaceFormat;
 
 export interface Colour {
     hue : Hue;
@@ -23,6 +26,7 @@ export interface FormattedToken {
     format? : Format;
     colour? : Colour;
     space? : Space;
+    spaceFormat? : SpaceFormat;
 }
 
 const DEFAULT_COLOUR : Colour = {
@@ -47,6 +51,8 @@ export function token(text : string, ...args : ArgType[]) : FormattedToken {
             formattedToken.colour.brightness = arg;
         } else if (isSpace(arg)) {
             formattedToken.space = arg;
+        } else if (isSpaceFormat(arg)) {  
+            formattedToken.spaceFormat = arg;
         }
     });
     return formattedToken;
@@ -66,4 +72,8 @@ function isBrightness(arg : ArgType) : arg is Brightness {
 
 function isSpace(arg : ArgType) : arg is Space {
     return SPACE_TYPES.includes(arg as Space);
+}   
+
+function isSpaceFormat(arg : ArgType) : arg is SpaceFormat {
+    return SPACE_FORMATS.includes(arg as SpaceFormat);
 }   
