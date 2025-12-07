@@ -25,7 +25,7 @@ export class InteractiveRunner {
         const doRestart = () => {
             this.stateManager.restart();
             this.keypressHandler.setMode("GAME");
-            this.stateManager.get().update();
+            this.stateManager.get().update(false);
         }
 
         const doClear = () => {
@@ -33,7 +33,7 @@ export class InteractiveRunner {
             if (display) {
                 display.clearScreen();
             }
-            this.stateManager.get().update();
+            this.stateManager.get().update(false);
         }
 
         const getControlState = () : ControlState => {

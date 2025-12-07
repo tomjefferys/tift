@@ -8,7 +8,7 @@ export interface InputHandler {
     addChar(char: string): void;
     backSpace(): void;
     enter(): void;
-    update(): void;
+    update(execute: boolean): void;
     tab(direction: TabMotion): void;
 }
 
@@ -30,24 +30,29 @@ export class KeypressHandler {
     handleKeypress = (char: string, event: Key): void => {
         let state = this.getCurrentState();
         
+        let execute = true;
+
         if (char && this.letter.test(char)) {
             state.addChar(char);
         } else if (event.name === "return") {
             state.enter();  
         } else if (event.name === "backspace") {
             state.backSpace();
+            execute = false;
         } else if (event.name === "c" && event.ctrl) {
             this.dependencies.onQuit();
             return;
         } else if (event.name === "tab") {
             const direction = event.shift ? "backward" : "forward";
             state.tab(direction);
+            execute = false;
         } else if (event.name === "l" && event.ctrl) {
             this.mode = (this.mode === "GAME") ? "CONTROL" : "GAME";
             state = this.getCurrentState();
+            execute = false;
         }
 
-        state.update();
+        state.update(execute);
     }
 
     getCurrentMode(): Mode {

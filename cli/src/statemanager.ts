@@ -29,7 +29,7 @@ export class StateManager {
         const display = this.displayBuilder();
         const commandState = new CommandState(engine, display); 
         commandState.flush();
-        commandState.update();
+        commandState.update(true);
         return commandState;
     }
 

@@ -20,7 +20,7 @@ export class ControlState extends BaseInputHandler {
         return Object.keys(this.commands).map(key => ({ type : "option", id : key, value: key }));
     }
 
-    update() {
+    update(execute : boolean) {
         if (this.enterPressed && this.selectedWordIndex !== undefined) {
             // User has selected a specific command with tab and pressed enter
             const selectedWord = this.getFilteredWords()[this.selectedWordIndex];
@@ -29,7 +29,7 @@ export class ControlState extends BaseInputHandler {
             return;
         }
 
-        if (this.input.length > 0) {
+        if (execute && this.input.length > 0) {
             const exactMatch = this.enterPressed;
             const commandWords = exactMatch ? this.getFilteredWordsExact() : this.getFilteredWords();
             if (commandWords.length === 0) {

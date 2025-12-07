@@ -76,5 +76,5 @@ export abstract class BaseInputHandler implements InputHandler {
     // Abstract methods that subclasses must implement
     protected abstract getAllWords(): Word[];
     protected abstract onBackspaceWithEmptyInput(): void;
-    public abstract update(): void;
+    public abstract update(execute : boolean): void;
 }

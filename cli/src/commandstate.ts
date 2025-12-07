@@ -38,7 +38,7 @@ export class CommandState extends BaseInputHandler {
         return this.engine.getWords(this.command);
     }
 
-    update() {
+    update(execute : boolean) {
         let selectedWords : Word[] = [];
         if (this.enterPressed && this.selectedWordIndex !== undefined) {
             const selectedWord = this.getFilteredWords()[this.selectedWordIndex];
@@ -49,6 +49,16 @@ export class CommandState extends BaseInputHandler {
             selectedWords = exactMatch ? this.getFilteredWordsExact() : this.getFilteredWords();
         }
 
+        if (execute) {
+            this.executeCommand(selectedWords);
+        }
+    
+        const displayState = this.getDisplayState();
+        this.display.update(displayState);
+        this.enterPressed = false;
+    }
+
+    private executeCommand(selectedWords : Word[]) {
         if (selectedWords.length === 0) {
             this.input.pop();
         } else if (selectedWords.length === 1) {
@@ -63,10 +73,6 @@ export class CommandState extends BaseInputHandler {
             }
             this.clearInput();
         }
-    
-        const displayState = this.getDisplayState();
-        this.display.update(displayState);
-        this.enterPressed = false;
     }
 
     flush() {
