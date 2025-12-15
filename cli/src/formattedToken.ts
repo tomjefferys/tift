@@ -1,5 +1,5 @@
 
-const FORMAT_TYPES = ["bold", "italic", "bold-italic", "code", "plain"] as const;
+const FORMAT_TYPES = ["bold", "italic", "bold-italic", "inverse", "code", "plain"] as const;
 export type Format = typeof FORMAT_TYPES[number];
 
 const HUE_TYPES = ["red", "green", "blue", "yellow", "cyan", "magenta", "white", "black"] as const;

@@ -47,6 +47,9 @@ export const ANSI_TOKEN_FORMATTER : TokenFormatter = (token : FormattedToken) : 
         case "bold-italic":
             formattedText = colourFn(pc.bold(pc.italic(token.text)));
             break;
+        case "inverse":
+            formattedText = colourFn(pc.inverse(token.text));
+            break;
         case "code":
             formattedText = colourFn(pc.blue(token.text));
             break;
