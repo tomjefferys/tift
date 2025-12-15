@@ -41,7 +41,7 @@ export const getAlignedANSIWordsFormatter = (textAligner : TokenListFormatter) :
     return (state : CommandState) => {
         const prefix = state.partialWord.join("");
         const highlightedTokens = state.wordChoices.flatMap((word,index) => {
-            const format = (index === state.selectedWordIndex)? "italic" as const : "plain" as const;
+            const format = (index === state.selectedWordIndex)? "inverse" as const : "plain" as const;
             if (word.startsWith(prefix)) {
                 const matchedPart = token(prefix, "tab", "green", format);
                 const nextChar = word.charAt(prefix.length);
