@@ -1,110 +1,101 @@
 #!/usr/bin/env node
 import * as readline from "readline";
-import * as fs from "fs";
 import * as os from "os";
-import { parseArgs } from "node:util";
-import { CommandState } from "./commandstate";
+import { getCommandLineOptions, Options } from "./clioptions";
 import { Display } from "./display";
-import { createEngine } from "./enginefacade";
-import { isScriptError, ScriptRunner } from "./scriptrunner";
+import { createEngine, EngineFacade } from "./enginefacade";
+import { ScriptRunner } from "./scriptrunner";
+import { getFileStatePersister, getInMemoryStatePersister, StatePersister } from "./statepersister";
+import { FileWatcher } from "./filewatcher";
+import { StateManager } from "./statemanager";
+import { InteractiveRunner } from "./interactiverunner";
+import { Result } from "./types";
+import { getANSIMarkdownMessageFormatter } from "./ansimessageformatter";
+import { getAlignedANSICommandFormatter, getAlignedANSIWordsFormatter } from "./displayformatters";
+import { getTokenAligner } from "./textaligner";
+import { ANSI_TOKEN_FORMATTER } from "./tokenformatter";
 
-readline.emitKeypressEvents(process.stdin);
+async function main() {
 
+    const options = getCommandLineOptions(process.argv.slice(2));
+    const statePersister = options.saveFile ? getFileStatePersister(options.saveFile) :   getInMemoryStatePersister();
 
-const options = { 
-    silent : {
-        type : "boolean",
-        short: "s",
-        default : false
-    },
-} as const;
-
-const args = process.argv.slice(2);
-
-const { values, positionals } = parseArgs({args, options, allowPositionals : true });
-
-const engine = createEngine();
-
-positionals.forEach((positional) => {
-    const data = fs.readFileSync(positional, "utf8");
-    engine.load(data);
-});
-
-engine.configure({ "autoLook" : true });
-engine.start();
-
-if (process.stdin.isTTY) {
-   runInteractive();
-} else {
-   runBatch();
+    let result = "SUCCESS";
+    if (process.stdin.isTTY) {
+        result = await runInteractive(statePersister, options);
+    } else {
+        const engine = createEngine(statePersister, options.dataFiles);
+        result = await runBatch(engine, options);
+    }
+    process.exit(result === "SUCCESS" ? 0 : 1);
 }
 
 
-function runInteractive() {
-    const display = new Display(process.stdout);
-    const commandState = new CommandState(engine, display); 
-
-    const stdin = process.stdin;
-
-    // without this, we would only get streams once enter is pressed
-    stdin.setRawMode( true );
-
-    // resume stdin in the parent process (node app won't quit all by itself
-    // unless an error or process.exit() happens)
-    stdin.resume();
-
-    stdin.setEncoding( 'utf8' );
-
-    commandState.flush();
-    commandState.update();
-
-    const letter = /[a-zA-Z]/
-
-    stdin.on( 'keypress', (char, event) => {
-        if (letter.test(char)) {
-            commandState.addChar(char);
-        } else if (event.name === "backspace") {
-            commandState.backSpace();
-        } else if (event.name === "c" && event.ctrl) {
-            process.exit();
-        }
-        commandState.update();
-    })
+function setupFileWatchers(dataFiles : string[], callback : () => void) : FileWatcher[] {
+    return dataFiles.map((dataFile) => {
+        const watcher = new FileWatcher(dataFile, () => {
+            console.log(`File changed: ${dataFile}`);
+            callback();
+        });
+        watcher.start();
+        return watcher;
+    });
 }
 
-async function runBatch() {
+async function* createLineGenerator() {
     const rl = readline.createInterface({
         input: process.stdin,
         crlfDelay: Infinity
     });
 
-    const printFn = values.silent
+    for await (const line of rl) {
+        yield line;
+    }
+}
+
+async function runInteractive(statePersister : StatePersister,
+                              options : Options) : Promise<Result> {
+    let watchers : FileWatcher[] = [];
+    try {
+        const consoleWidth = process.stdout.columns || 80;
+        const tokenListFormatter = getTokenAligner(consoleWidth, 75, ANSI_TOKEN_FORMATTER);
+        const ansiMessageFormatter = getANSIMarkdownMessageFormatter(tokenListFormatter);
+        const commandFormatter = getAlignedANSICommandFormatter(tokenListFormatter);
+        const wordsFormatter = getAlignedANSIWordsFormatter(tokenListFormatter);
+        
+        const stateManager = new StateManager(
+            statePersister,
+            options.dataFiles,
+            () => new Display(process.stdout, ansiMessageFormatter, commandFormatter, wordsFormatter),
+        );
+        watchers = setupFileWatchers(options.dataFiles, () => stateManager.refresh());
+        const interactiveRunner = new InteractiveRunner(stateManager);
+        const result = await interactiveRunner.run();
+        return result;
+    } finally {
+        // Clean up file watchers
+        watchers.forEach(watcher => watcher.stop());
+    }
+}
+
+async function runBatch(engine : EngineFacade, options : Options) : Promise<Result> {
+    const printFn = options.silent
                         ? (_message : string) => { /* do nothing */ } 
                         : (message : string) => process.stdout.write(message + os.EOL);
 
-    const scriptRunner = new ScriptRunner(engine, printFn);
+    const errorFn = (message : string) => process.stderr.write(message + os.EOL);
 
-    scriptRunner.flushOutput();
-    let lineNum = 1;
-    for await (const line of rl) {
-        try {
-            scriptRunner.executeLine(line);
-        } catch (e) {
-            const err = (message : string) => process.stderr.write(message + os.EOL);
-            err(`Failed on line ${lineNum}: ${line}`);
-            if (isScriptError(e)) {
-                err("");
-                if (e.output.length > 0) {
-                    e.output.forEach(message => err(message));
-                }
-                err("");
-                err(`${e.message}`);
-                process.exit(1);
-            } else {
-                throw e;
-            }
-        }
-        lineNum++;
+    const lineGenerator = createLineGenerator();
+    const getNextLine = async () => {
+        const result = await lineGenerator.next();
+        return result.done ? null : result.value;
     }
-    process.exit(0);
+
+    const scriptRunner = new ScriptRunner(engine, printFn, errorFn);
+    return await scriptRunner.run(getNextLine);
 }
+
+main().catch((error) => {
+    console.error('Error in main:', error);
+    process.exit(1);
+});

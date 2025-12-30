@@ -43,6 +43,62 @@
                 "webpack://?:*/*": "${workspaceFolder}/*",
                 "webpack:///./src/*": "${workspaceFolder}/*",
             }
-        }
+        },
+        {
+            "name": "Debug TypeScript CLI",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/cli/src/main.ts",
+            "args": ["--saveFile",
+                     "save.json", 
+                     "../examples/CloakOfDarkness/build/webapp/stdlib.yaml",
+                     "../examples/CloakOfDarkness/build/webapp/properties.yaml",
+                     "../examples/CloakOfDarkness/build/webapp/adventure.yaml"
+            ],
+            "runtimeArgs": ["--import", "tsx"],
+            "cwd": "${workspaceFolder}/cli", 
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "console": "integratedTerminal",
+            "sourceMaps": true,
+        },
+        {
+            "name": "Run CLI (Compiled)",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/cli/out/src/main.js",
+            "args": [
+                "--saveFile",
+                "save.json", 
+                "../examples/CloakOfDarkness/build/webapp/stdlib.yaml",
+                "../examples/CloakOfDarkness/build/webapp/properties.yaml",
+                "../examples/CloakOfDarkness/build/webapp/adventure.yaml"
+            ],
+            "cwd": "${workspaceFolder}/cli",
+            "env": {
+                "NODE_ENV": "production"
+            },
+            "console": "integratedTerminal",
+            "preLaunchTask": "tsc: build - cli/tsconfig.json"
+        },
+        {
+            "name": "CLI: Debug Current Vitest Test File",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/cli/node_modules/vitest/vitest.mjs",
+            "args": ["run", "${fileBasename}", "--reporter=verbose"],
+            "cwd": "${workspaceFolder}/cli",
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "env": {
+                "NODE_ENV": "test"
+            }
+        },
     ]
 }

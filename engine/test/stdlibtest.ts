@@ -249,7 +249,43 @@ test("Test lockable", () => {
     executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
 
 });
-    
+
+test("Test two openable object, 1 lockable", () => { 
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "door",
+                        type : "item",
+                        location : "northRoom",
+                        description : "The green door",
+                        tags : ["openable", "lockable", "locked"],
+                        before : {
+                            "examine(this)": {
+                                if: "this.is_open",
+                                then: "print('The door is open')",
+                                else: "print('The door is closed')"
+                            }
+                        }})
+            .withObj({id : "window",
+                        type : "item",
+                        location : "northRoom",
+                        description : "The closed window",
+                        tags : ["openable"],
+                        before : {
+                            "examine(this)": {
+                                if: "this.is_open",
+                                then: "print('The window is open')",
+                                else: "print('The window is closed')"
+                            }
+                        }});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["examine", "door"], { expected : ["The door is closed"]});
+    executeAndTest(["examine", "window"], { expected : ["The window is closed"]});
+    executeAndTest(["open", "window"], { });
+    executeAndTest(["examine", "window"], { expected : ["The window is open"]});
+    executeAndTest(["close", "window"], { });
+    executeAndTest(["examine", "window"], { expected : ["The window is closed"]});
+});
+
 test("Test container", () => {
     builder.withObj({...NORTH_ROOM})
         .withObj({id : "chest",
@@ -319,7 +355,7 @@ test("Test get from closed container", () => {
                     type : "item",
                     location : "northRoom",
                     description : "A large chest",
-                    tags : ["container", "closable"]
+                    tags : ["container", "closable", "transparent"]
                     })
                 .withObj({id : "ball",
                           name : "ball",
@@ -574,7 +610,7 @@ test("Test non-transparent closed container doesn't reveal contents", () => {
                         type : "item",
                         location : "northRoom",
                         description : "A large chest", 
-                        tags : ["container", "openable"],
+                        tags : ["container", "openable", "pushable"],
                         })
             .withObj({id : "ball",
                         name : "ball",  
@@ -585,9 +621,11 @@ test("Test non-transparent closed container doesn't reveal contents", () => {
 
     engine.ref = builder.build();
     engine.send(Input.start());
+    executeAndTest(["look"], { expected : ["The chest"], notExpected : ["ball"]});
     executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["ball"]});
     executeAndTest(["open", "chest"], {});
     executeAndTest(["examine", "chest"], { expected : ["A large chest", "ball"]});
+    executeAndTest(["look"], { expected : ["The chest", "ball"]});
 });
 
 test("Test transparent closed container does reveal contents", () => {

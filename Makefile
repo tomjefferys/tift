@@ -63,6 +63,9 @@ cli-uninstall:
 
 cli: types engine cli/out cli/out/tift.js
 
+cli-test: cli
+	cd cli && npx vitest --run
+
 cli-clean:
 	rm -rf cli/node_modules
 	rm -rf cli/out
@@ -112,7 +115,7 @@ examples/CloakOfDarkness-clean:
 # all
 .PHONY: all test lint install uninstall clean
 compile: types engine cli react-app examples
-test: engine-test react-app-test examples-test
+test: engine-test cli-test react-app-test examples-test
 lint: types-lint engine-lint cli-lint
 install: cli-install
 uninstall: cli-uninstall

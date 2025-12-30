@@ -11,7 +11,7 @@ import { formatString } from "../../util/mustacheUtils";
 import { Obj } from "tift-types/src/util/objects";
 import { Nameable, getFullName } from "../../nameable";
 import { Env } from "tift-types/src/env";
-import { createMatcher, createAction } from "./traitutils";
+import { createAction, createThisMatcher } from "./traitutils";
 
 const IS_LOCKED = "is_locked";
 const KEY = "key";
@@ -32,8 +32,8 @@ export const LOCKABLE : TraitProcessor = (obj, tags, builder) => {
         condition : mkThunk(env => mkResult(!env.get(IS_LOCKED)))
     });
 
-    const openMatcher = createMatcher(VERB_NAMES.OPEN, "this");
-    const closeMatcher = createMatcher(VERB_NAMES.CLOSE, "this");
+    const openMatcher = createThisMatcher(VERB_NAMES.OPEN);
+    const closeMatcher = createThisMatcher(VERB_NAMES.CLOSE);
     const isLockedThunk = mkThunk(env => {
         const lockable = env.get("this");
         const view = {

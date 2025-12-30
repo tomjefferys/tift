@@ -8,6 +8,8 @@ import _ from "lodash";
 import { LOCATION } from "./locations";
 import { DARK } from "./tags";
 import { EnvFn, mkResult } from "../script/thunk";
+import * as Openable from "./traits/openable";
+import * as Tags from "./tags"; 
 
 // Utility functions pertaining to an entity
 export const ENTITY_KIND = "entity";
@@ -36,7 +38,32 @@ export function isEntity(obj : Obj) : boolean {
 }
 
 export function isEntityVisible(env : Env, canSee : boolean, obj : Obj) : boolean {
-    return (obj["visibleWhen"] ? obj["visibleWhen"](env) : canSee) && !entityHasTag(obj, "hidden");
+    const isVisible = (obj["visibleWhen"] ? obj["visibleWhen"](env) : canSee) && !entityHasTag(obj, "hidden");
+    const isVisibleInContainer = isEntityVisibleInContainer(env, obj);
+    return isVisible && isVisibleInContainer;
+}
+
+function isEntityVisibleInContainer(env : Env, obj : Obj) : boolean {
+    let isVisible = true;
+    const locationId = obj[LOCATION];
+    if (locationId) {
+        const location = getEntity(env, locationId);
+        if (isEntityContainer(location)) {
+            isVisible = !Openable.isClosable(location)
+                        || Openable.isOpen(location)
+                        || (entityHasTag(location, Tags.TRANSPARENT));
+            if (isVisible) {
+                // Check if the container is itself in a container
+                isVisible = isEntityVisibleInContainer(env, location);
+            }
+        }
+    }
+    return isVisible;
+}   
+
+
+export function isEntityContainer(obj : Obj) : boolean {
+    return entityHasTag(obj, "container");
 }
 
 export function isEntityMovable(obj : Obj) : boolean {

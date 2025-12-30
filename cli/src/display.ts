@@ -1,45 +1,74 @@
-export interface DisplayState {
-    messages : string[];
+import * as os from "os";
+import { Message } from "./types";
+import { MessageFormatter, DEFAULT_MESSAGE_FORMATTER } from "./message";
+
+export interface CommandState  {
     partialCommand : string[];
     partialWord : string[];
     wordChoices : string[];
+    selectedWordIndex? : number;
 }
 
+export interface DisplayState extends CommandState {
+    messages : Message[];
+}
+
+export type CommandFormatter = (state : CommandState) => string[];
+export type WordsFormatter = (state : CommandState) => string[];
 export class Display {
     private stdout : NodeJS.WriteStream;
+    private messageFormatter : MessageFormatter
+    private commandFormatter : CommandFormatter
+    private wordsFormatter : WordsFormatter
+    private commandAreaLines = 0;
 
-    constructor(stdout : NodeJS.WriteStream) {
+    constructor(stdout : NodeJS.WriteStream,
+                messageFormatter : MessageFormatter = DEFAULT_MESSAGE_FORMATTER,
+                commandFormatter : CommandFormatter = (state) => [state.partialCommand.join(" ") + state.partialWord.join("")],
+                wordsFormatter : WordsFormatter = (state) => [state.wordChoices.join("\t")]) {
         this.stdout = stdout;
+        this.messageFormatter = messageFormatter;
+        this.commandFormatter = commandFormatter;
+        this.wordsFormatter = wordsFormatter;
     }
 
     update(state : DisplayState) {
         this.clearCommandArea();
-        state.messages.forEach(message => this.stdout.write(message + "\n"));
+        state.messages.forEach(message => this.printMessage(message));
         this.printCommandArea(state);
     }
 
+    printMessage(message : Message) {
+        const formatted = this.messageFormatter(message);
+        this.stdout.write(formatted + os.EOL);
+    }
+
     clearCommandArea() {
-        this.stdout.moveCursor(0,-1);
-        this.stdout.clearLine(1);
-        this.stdout.moveCursor(0,-1);
-        this.stdout.clearLine(1);
+        for(let i = 0; i < this.commandAreaLines; i++) {
+            this.stdout.moveCursor(0,-1);
+            this.stdout.clearLine(1);
+        }
+        this.commandAreaLines = 0;
     }
 
     printLine(str : string) {
-        this.stdout.write(str + "\n");
+        this.stdout.write(str + os.EOL);
     }
 
-    print(words : string[], seperator = " ") {
-        this.stdout.write(words.join(seperator) + "\n");
+    print(words : string[], separator = " ") {
+        this.stdout.write(words.join(separator) + os.EOL);
     }
 
     printCommandArea(state : DisplayState) {
-        this.stdout.write(state.partialCommand.join(" "));
-        this.stdout.write(state.partialWord.join(""));
-        this.stdout.write("\n");
-        for(const word of state.wordChoices) {
-            this.stdout.write(word + "\t");
-        }
-        this.stdout.write("\n");
+        const commandLines = this.commandFormatter(state);
+        const wordsLines = this.wordsFormatter(state);
+        const allLines = [...commandLines, ...wordsLines];
+        this.stdout.write(allLines.join(os.EOL) + os.EOL);
+
+        this.commandAreaLines = allLines.length;
+    }
+
+    clearScreen() {
+        this.stdout.write('\x1Bc');
     }
 }
