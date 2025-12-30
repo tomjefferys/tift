@@ -42,30 +42,42 @@ export const BubbleGrid = ({ content } : Content) => {
     const outerDivs = useRef<DOMRect[][]>([]);
     const contentRefs = useRef<(HTMLDivElement | null)[][]>([]);
 
-    const debouncedHandleScroll = useCallback(debounce(() => {
-        if (containerRef.current) {
-            setScrollPosition({
-                scrollTop: containerRef.current.scrollTop,
-                scrollLeft: containerRef.current.scrollLeft
+    // Keep track of request animation frame for scroll handling to avoid duplicate rAFs
+    const rafRef = useRef<number | null>(null);
+
+    const handleScroll = useCallback(() => {
+        if (!rafRef.current) { // Only request a new frame if one is not already requested
+            rafRef.current = requestAnimationFrame(() => {
+                if (containerRef.current) {
+                    setScrollPosition({
+                        scrollTop: containerRef.current.scrollTop,
+                        scrollLeft: containerRef.current.scrollLeft
+                    });
+                    forceUpdate();
+                }
+                rafRef.current = null;
             });
-            forceUpdate();
         }
-    }, 1000/60), []);
+    }, []);
+
+    // Update on every scroll events
+    useEffect(() => {
+        const container = containerRef.current;
+        if (container) {
+            container.addEventListener('scroll', handleScroll, { passive: true });
+            return () => {
+                container.removeEventListener('scroll', handleScroll);
+                if (rafRef.current) {
+                    cancelAnimationFrame(rafRef.current);
+                }
+            };
+        }
+    }, [handleScroll]);
 
     // Make sure we reset isLoaded as soon as the content changes
     useLayoutEffect(() => {
         setIsLoaded(false);
     }, [content]);
-
-    useEffect(() => {
-        const container = containerRef.current;
-        if (container) {
-            container.addEventListener('scroll', debouncedHandleScroll);
-            return () => {
-                container.removeEventListener('scroll', debouncedHandleScroll);
-            };
-        }
-    }, [debouncedHandleScroll]);
 
     // Set the initial scroll position to the middle of the container on load
     useEffect(() => {
@@ -131,7 +143,7 @@ export const BubbleGrid = ({ content } : Content) => {
                     const containerRect = containerRef.current.getBoundingClientRect();
                     const cellRect = outerDivs.current[rowIndex][colIndex];
                     const transform = getTransform(containerRect, cellRect);
-                    cellDiv.style.transform = transform;
+                    cellDiv.style.transform = transform + ' translate3d(0,0,0)'; // Force GPU acceleration;
                     
                     // Scale the content if it doesn't fit
                     const contentDiv = contentRefs.current[rowIndex][colIndex];
@@ -139,7 +151,7 @@ export const BubbleGrid = ({ content } : Content) => {
                         const contentScrollWidth = contentDiv.scrollWidth;
                         const cellWidth = cellRect.width;
                         const scale = Math.min(cellWidth / contentScrollWidth, 1);
-                        contentDiv.style.transform = `scale(${scale})`;
+                        contentDiv.style.transform = `scale3d(${scale}, ${scale}, 1)`; // Force GPU acceleration
                     }
                 }
             });
@@ -187,6 +199,8 @@ export const BubbleGrid = ({ content } : Content) => {
         overflow: 'hidden', // Clip content inside the div
         maxWidth: '200px',
         transformOrigin: 'center',
+        //backfaceVisibility: 'hidden', // Improve performance during transforms
+        //perspective: '1000px', // Improve performance during transforms
     }
 
     const baseStyle = {
