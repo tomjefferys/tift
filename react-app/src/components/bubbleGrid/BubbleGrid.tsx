@@ -17,16 +17,6 @@ export interface Content {
 
 const NUM_COLS = 10;
 
-// Debounce function to limit the rate at which a function can fire
-// eslint -disable-next-line
-const debounce = (func: Function, wait: number) => {
-    let timeout: NodeJS.Timeout;
-    return (...args: any[]) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), wait);
-    };
-};
-
 export const BubbleGrid = ({ content } : Content) => {
 
     const [, forceUpdate] = useReducer(x => x + 1, 0);
@@ -199,8 +189,6 @@ export const BubbleGrid = ({ content } : Content) => {
         overflow: 'hidden', // Clip content inside the div
         maxWidth: '200px',
         transformOrigin: 'center',
-        //backfaceVisibility: 'hidden', // Improve performance during transforms
-        //perspective: '1000px', // Improve performance during transforms
     }
 
     const baseStyle = {
