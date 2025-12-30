@@ -181,8 +181,8 @@ export const BubbleGrid = ({ content } : Content) => {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',  
-        padding: '10px',
-        margin: '1px',
+        padding: '0px',
+        margin: '0px',
         position: 'relative',
         willChange: 'transform',
         borderRadius: '50%',
@@ -192,7 +192,7 @@ export const BubbleGrid = ({ content } : Content) => {
     }
 
     const baseStyle = {
-        minWidth: '100px'
+        minWidth: '100px',
     };
 
     return (
@@ -206,7 +206,9 @@ export const BubbleGrid = ({ content } : Content) => {
                 position: 'relative',
                 overflowX: 'auto',
                 overflowY: 'auto',
-                display: 'grid',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
                 opacity: isLoaded || ALWAYS_SHOW ? 1 : 0,
                 transition: 'opacity 0.2s',
                 padding: '0vh 15vw',

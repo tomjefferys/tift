@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, TabList, Tab, TabPanels, TabPanel, Container, SimpleGrid, Grid, GridItem, Box} from "@chakra-ui/react";
+import { Tabs, TabList, Tab, TabPanels, TabPanel, Container, SimpleGrid, Grid, GridItem, Box, useColorModeValue, useToken} from "@chakra-ui/react";
 import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { WordType } from "tift-types/src/messages/output";
 import WordButton from "./WordButton";
@@ -104,13 +104,29 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
 }
 
 const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) => {
+    const borderColourToken = useColorModeValue('gray.200', 'gray.700');
+    const [borderColour] = useToken('colors', [borderColourToken]);
     const words = wordFilter(allWords);
     const cells = words.map(word => (
         <WordButton key={word.id} word={word} wordSelected={wordSelected}/>
     ));
 
-    const items : BubbleGrid.Item[] = cells.map(cell => ({ item : cell }));
+
+    const style : React.CSSProperties = { 
+        border : `1px solid ${borderColour}`,
+        minHeight : "60px",
+        maxHeight : "60px",
+    };
+
+    const items : BubbleGrid.Item[] = cells.map(cell => ({ item : cell, style  }));
     const hexMap = HexMap.fromSpiral(Axial.ZERO, items);
+    
+    // Fill out the hex map with blank cells so it looks better
+    const blankCell = { item : (<div></div>), style };
+
+    const populatedRadius = hexMap.getRadius(Axial.ZERO);  
+    hexMap.fillHex(Axial.ZERO, populatedRadius, blankCell);
+
     const rows  = hexMap.toArray();
 
     return <BubbleGrid.BubbleGrid content={rows}/>

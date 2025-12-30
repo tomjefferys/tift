@@ -191,6 +191,34 @@ export class HexMap<V> {
         });
     }
 
+    // Fill a spiral area with the given value, only setting hexes that are undefined
+    fillRing(centre: HexCoord, size: number, value: V): void {
+        const ringCoords = getRingCoords(centre, size);
+        ringCoords.forEach(hex => {
+            if (this.get(hex) === undefined) {
+                this.set(hex, value);
+            }
+        });
+    }
+
+    fillHex(centre: HexCoord, radius: number, value: V): void {
+        for (let r = 0; r < radius; r++) {
+            this.fillRing(centre, r, value);
+        }
+    }
+
+    // Get the radius of the hex populated area around the centre hex
+    getRadius(centre: HexCoord): number {
+        let i=0;
+        let hasValues = true;
+        while(hasValues) {
+            const ringCoords = getRingCoords(centre, i);
+            hasValues = ringCoords.some(hex => this.get(hex) !== undefined);
+            i++;
+        }
+        return i - 1;
+    } 
+
     getSpiral(centre: HexCoord, size: number): V[] {
         const spiralCoords = getSpiralCoords(centre, size);
         return spiralCoords.map(hex => this.get(hex))
@@ -205,6 +233,9 @@ export class HexMap<V> {
             }
         });
     }
+
+
+
 
     // Convert the hex grid to a 2D array.
     // We first translate the hexes so that the minimum row is even,
