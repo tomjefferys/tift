@@ -12,6 +12,7 @@ import { commandEntry, logEntry, messageEntry, OutputEntry, Command } from '../o
 import { Box, Divider, useColorMode } from '@chakra-ui/react'
 import { createRestarter } from "../util/restarter";
 import { createColourSchemePicker } from "../util/colourschemepicker";
+import { createUISchemePicker } from "../util/uischemepicker";
 import * as Pauser from './pauser';
 import { getUndoRedoFilter } from "../util/undoredofilter";
 import { Optional } from "tift-types/src/util/optional";
@@ -25,6 +26,7 @@ import * as InfoPrinter from "../util/infoprinter";
 import _ from "lodash";
 import * as GameStorage from "../util/gamestorage";
 import StatusBar from "./StatusBar";
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, Settings, UIType } from "../util/settings";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;
@@ -74,6 +76,8 @@ function Tift() {
     const storageRef = useRef<GameStorage | null>(null);
 
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
+
+    const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
       await engineRef.current?.send(Input.getNextWords(command));
@@ -140,6 +144,13 @@ function Tift() {
       // Colour scheme picker
       const colourSchemePicker = createColourSchemePicker(value => changeColourMode(value));
 
+      const uiSchemePicker = createUISchemePicker((uiScheme : UIType) => {
+        settingsRef.current.uiType = uiScheme;
+        if (storageRef.current) {
+          saveSettings(settingsRef.current);
+        }
+      });
+
       // Log clearer
       const logClearer = createSimpleOption( "clear", () => {
         messagesRef.current = [];
@@ -171,7 +182,8 @@ function Tift() {
                                                     ["restart", restartMachine],
                                                     ["colours", colourSchemePicker],
                                                     ["clear", logClearer],
-                                                    ["info", getInfo]));
+                                                    ["info", getInfo],
+                                                    ["ui type", uiSchemePicker]));
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
       return engine;
     }
@@ -198,6 +210,8 @@ function Tift() {
       if (engineRef.current !== null) {
         return;
       }
+
+      settingsRef.current = loadSettings();
   
       const saveGame = (saveData : string) => {
         storageRef.current?.saveGame(saveData);
@@ -368,6 +382,8 @@ function Tift() {
       return commandEntry(words, wildCardIndex);
     }
 
+    const panelIds = (settingsRef.current.uiType === "bubble") ? ["bubbles", "inventory", "options"] : ["normal", "inventory", "options"];
+
     return (
         <React.Fragment>
            <Box height="100%" width="100%">
@@ -386,7 +402,7 @@ function Tift() {
               <Box position={"relative"}
                    height="40%" 
                    width="100%">
-                <Controls words={filteredWords ?? []} wordSelected={wordSelected}/>
+                <Controls words={filteredWords ?? []} wordSelected={wordSelected} panelIds={panelIds}/>
               </Box>
             </Box>
         </React.Fragment>
