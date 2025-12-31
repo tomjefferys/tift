@@ -51,25 +51,21 @@ export function useBubbleGridMouse(containerRef: React.RefObject<HTMLDivElement 
     
     const handleClick = useCallback((event: MouseEvent) => {
 
-        // Prevent default behavior to avoid text selection
-        event.preventDefault();
-
         const distance = getDistance(event);
+
         if (distance < MINIMUM_DRAG_DISTANCE) {
             return;
         }
 
-        if (mouseState === "dragging") {
+        if (mouseState === "dragging" || mouseState === "mouseUpAfterDrag") {
+            // Prevent default behavior to avoid text selection
+            event.preventDefault();
             event.stopImmediatePropagation();
-        }
-
-        // Stop propagation for the click after dragging
-        // This bit is essential to stop the click event from propagating
-        // to the child element when dragging
-        if (mouseState === "mouseUpAfterDrag") {
-            event.stopImmediatePropagation();
-        }
-    }, [mouseState]);
+            if (mouseState === "mouseUpAfterDrag") {
+                setMouseState("mouseUp");
+            }
+        } 
+    }, [mouseState, startMousePosition]);
 
     const handleMouseUp = useCallback((event: MouseEvent) => {
         if (!isUp(mouseState)) {
@@ -90,13 +86,14 @@ export function useBubbleGridMouse(containerRef: React.RefObject<HTMLDivElement 
         // Stop propagation for the mouseup after dragging
         if (mouseState === "mouseUpAfterDrag") {
             event.stopImmediatePropagation();
+            setMouseState("mouseUp");
         }
 
         // Start inertia effect
         if (velocityRef.current.x !== 0 || velocityRef.current.y !== 0) {
             inertiaRef.current = requestAnimationFrame(applyInertia);
         }
-    }, [mouseState]);
+    }, [mouseState, startMousePosition]);
 
     const handleMouseMove = useCallback((event: MouseEvent) => {
         if (!isUp(mouseState) && containerRef.current) {
@@ -199,6 +196,20 @@ export function useBubbleGridMouse(containerRef: React.RefObject<HTMLDivElement 
             document.removeEventListener('click', handleClick, true);
         };
     }, [mouseState, handleMouseMove, handleMouseUp, handleClick]);
+
+    // Add cleanup effect
+    useEffect(() => {
+        return () => {
+            // Cleanup on unmount
+            document.removeEventListener('mousemove', handleMouseMove, true);
+            document.removeEventListener('mouseup', handleMouseUp, true);
+            document.removeEventListener('click', handleClick, true);
+            if (inertiaRef.current) {
+                cancelAnimationFrame(inertiaRef.current);
+                inertiaRef.current = null;
+            }
+        };
+    }, []);
 
     return {
         handleMouseDown,
