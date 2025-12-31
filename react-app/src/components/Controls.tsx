@@ -20,6 +20,7 @@ const cell = (wordId : string, columns = 1, defaultValue? : string) : GridCell =
 interface ControlProps {
     words : Word[];
     wordSelected : WordSelected;
+    panelIds : string[];
 }
 
 type WordFilter = (words:Word[]) => Word[];
@@ -31,6 +32,7 @@ interface WordButtonsProps {
 }
 
 interface PanelDefinition {
+    id : string;
     name : string;
     wordFilter : WordFilter;
 }
@@ -49,24 +51,27 @@ interface CustomButtonGridProps {
 }
 
 const PANELS : PanelDefinition[] = 
-                [{name : "Bubbles", wordFilter : words => filterWords(words, ["word", "control"])},
-                 {name : "Game",   wordFilter : words => filterWords(words, ["word", "control"])
+                [{id : "bubbles", name : "Game", wordFilter : words => filterWords(words, ["word", "control"])},
+                 {id : "normal", name : "Game",   wordFilter : words => filterWords(words, ["word", "control"])
                                                             .filter(word => !word.tags?.includes("inventory"))}, 
-                 {name : "Inventory", wordFilter : words => filterWords(words, ["word"])
+                 {id : "inventory", name : "Inventory", wordFilter : words => filterWords(words, ["word"])
                                                               .filter(word => word.tags?.includes("inventory"))},
-                 {name : "Options", wordFilter : words => filterWords(words, ["option", "select"])}];
+                 {id : "options", name : "Options", wordFilter : words => filterWords(words, ["option", "select"])}];
 
-const Controls = ({ words, wordSelected } : ControlProps) => {
+const Controls = ({ words, wordSelected, panelIds } : ControlProps) => {
 
     const [tabIndex, setTabIndex] = useState(0);
 
     const handleTabsChange = (index : number) => setTabIndex(index);
 
+    const activePanels = PANELS.filter(panel => panelIds.includes(panel.id));
+
     // Reset the tabs if the words change
     useEffect(() => {
-        const wordCounts = PANELS.map(panel => panel.wordFilter(words).length)
+        const wordCounts = activePanels.map(panel => panel.wordFilter(words).length)
         const firstPanelWithContent = wordCounts.findIndex(count => count > 0);
         if (firstPanelWithContent >= 0) {
+            console.log("Setting tab index to ", firstPanelWithContent);
             setTabIndex(firstPanelWithContent);
         }
     }, [words]);
@@ -76,10 +81,10 @@ const Controls = ({ words, wordSelected } : ControlProps) => {
         // @ts-ignore ignore "Expression produces a union type that is too complex to represent.ts(2590)"
         <Container h="100%">
             <Tabs h="100%" index={tabIndex} onChange={handleTabsChange}>
-                <TabList>{PANELS.map(panel => (<Tab key={panel.name}>{panel.name}</Tab>))}</TabList>
-                <TabPanels h="85%">{PANELS.map(panel => (
-                    <TabPanel h="100%" key={panel.name} padding={0}>{
-                        panel.name === "Bubbles" 
+                <TabList>{activePanels.map(panel => (<Tab key={panel.id}>{panel.name}</Tab>))}</TabList>
+                <TabPanels h="85%">{activePanels.map(panel => (
+                    <TabPanel h="100%" key={panel.id} padding={0}>{
+                        panel.id === "bubbles" 
                             ? <WordBubbles wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
                             : <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
                         }
