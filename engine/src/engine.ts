@@ -280,6 +280,12 @@ export class BasicEngine implements Engine {
     let output : OutputMessage;
     if (gameObj) {
       const properties = { ...gameObj, [Version.KEY] : Version.get(), "Errored" : this.errored };
+      // Remove any properties that are objects/arrays/functions
+      Object.entries(properties).forEach(([key, value]) => {
+        if (typeof value === "object" || typeof value === "function") {
+          delete properties[key];
+        }
+      });
       output = Output.info(properties);
     } else {
       output = Output.log("error", "No game object found");

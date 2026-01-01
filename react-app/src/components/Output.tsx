@@ -1,15 +1,16 @@
 import React, { useEffect, useRef, Fragment } from "react";
 import { OutputEntry, Command } from "../outputentry";
-//import ChakraUIRenderer from 'chakra-ui-markdown-renderer';
 import ReactMarkdown from "react-markdown";
-import { Container, List, ListItem, Text } from "@chakra-ui/react";
+import { Container, List, ListItem, Text, useColorModeValue, useToken } from "@chakra-ui/react";
 import { Optional } from "tift-types/src/util/optional";
 
-const LEVEL_COLOURS : Record<string, string> = {
-    "info" : "blue",
-    "warn" : "yellow",
-    "error" : "red"
+const LEVEL_COLOURS : Record<string, [string, string]> = {
+    "info" : ["blue.700", "blue.400"],
+    "warn" : ["yellow.500", "yellow.300"],
+    "error" : ["red.700", "red.600"]
 }
+
+const PROMPT_COLOURS : [string, string] = ["green.700", "green.400"];
 
 interface OutputProps {
     entries : OutputEntry[];
@@ -30,6 +31,19 @@ interface LogEntryProps {
     message : string
 }
 
+const getLevelColour = (logLevel : string) : string => {
+    const colours = LEVEL_COLOURS[logLevel];
+    const colourToken =  useColorModeValue(colours[0], colours[1]);
+    const [colour] = useToken("colors", [colourToken]);
+    return colour;
+}
+
+const getPromptColour = () : string => {
+    const colourToken =  useColorModeValue(PROMPT_COLOURS[0], PROMPT_COLOURS[1]);
+    const [colour] = useToken("colors", [colourToken]);
+    return colour;
+}   
+
 const CURSOR = (<span key={`__cursor__`} className="cursor">|</span>);
 
 const MessageEntry = ({ value } : EntryProps)  => (
@@ -47,9 +61,9 @@ const CommandEntry = ({ value, cursor } : CommandEntryProps) => {
     if (words.length === 0) {
         words.push(CURSOR);
     }
-   return (<Text color={"green"} data-testid="command">&gt; {words}</Text>);
+   return (<Text color={getPromptColour()} data-testid="command">&gt; {words}</Text>);
 }
-const LogEntry = ({ logLevel, message } : LogEntryProps) => (<Text color={LEVEL_COLOURS[logLevel]}>{message}</Text>)
+const LogEntry = ({ logLevel, message } : LogEntryProps) => (<Text color={getLevelColour(logLevel)}>{message}</Text>)
 
 const renderMessage = (message : OutputEntry) => {
     switch(message.type) {
