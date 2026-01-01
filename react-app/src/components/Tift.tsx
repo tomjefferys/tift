@@ -257,7 +257,7 @@ function Tift() {
         if (result.selected) {
           wordSelected(undefined, result.selected);
         } else {
-          setFilteredWords(result.filtered);
+          setFilteredWords([...result.filtered, BACKSPACE]);
         }
         setPartialWord(result.partial);
         return;
@@ -334,7 +334,11 @@ function Tift() {
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
       //The selected word should replace the first wildcard
       if (word === BACKSPACE) {
-        if (command.length > 1) {
+        if (partialWord.length) {
+          // If we've clicked the backspace *button* clear out the partial word.
+          setPartialWord("");
+          commandUpdated();
+        } else if (command.length > 1) {
           let newCommand;
           if (command[command.length - 1].id === "?") {
             newCommand = [...command.slice(0, -2), WILD_CARD];
