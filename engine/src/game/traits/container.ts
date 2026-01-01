@@ -21,32 +21,32 @@ const GET_PARTIAL_TEMPLATES = "get.templates.partials"
 const PARAM_CONTAINER = "container";
 const PARAM_ITEM = "item";
 
-const REL_LOCATION_PROP = "relativeLocation";
+const ADPOSITION_PROP = "adposition";
 
-const RELATIVE_LOCATIONS = ["on", "in"] as const;
+const ADPOSITIONS = ["on", "in", "under"] as const;
 
-type RelativeLocation = typeof RELATIVE_LOCATIONS[number];
+type Adposition = typeof ADPOSITIONS[number];
 
 export const CONTAINER : TraitProcessor = (obj, tags, builder) => {
     if (!tags.includes(Tags.CONTAINER)) {
         return;
     }
 
-    if (obj[REL_LOCATION_PROP] && !RELATIVE_LOCATIONS.includes(obj[REL_LOCATION_PROP])) {
-        throw new Error(`Invalid relativeLocation [${obj[REL_LOCATION_PROP]}]. ` + 
-                        ` Valid relativeLocations are [${RELATIVE_LOCATIONS.join(", ")}]`);
+    if (obj[ADPOSITION_PROP] && !ADPOSITIONS.includes(obj[ADPOSITION_PROP])) {
+        throw new Error(`Invalid adposition [${obj[ADPOSITION_PROP]}]. ` + 
+                        ` Valid adpositions are [${ADPOSITIONS.join(", ")}]`);
     }
 
-    const relLoc = obj[REL_LOCATION_PROP] as RelativeLocation || "in";
+    const adposition = obj[ADPOSITION_PROP] as Adposition || "in";
 
-    builder.withAttributedVerb(VERB_NAMES.PUT, relLoc)
+    builder.withAttributedVerb(VERB_NAMES.PUT, adposition)
 
     builder.withAfter(createAction(createThisMatcher(VERB_NAMES.EXAMINE),
-                      createThunk(getExamineContainerFn(relLoc)), "after"));
+                      createThunk(getExamineContainerFn(adposition)), "after"));
 
     // Get from container
     builder.withBefore(createAction(createMatcher(VERB_NAMES.GET, PARAM_ITEM), 
-                        createThunk(getFromContainerFn(relLoc)), "before"));
+                        createThunk(getFromContainerFn(adposition)), "before"));
 
     // Put in container
     // FIXME: When putting a container inside another container, the before action will be called twice
@@ -57,10 +57,10 @@ export const CONTAINER : TraitProcessor = (obj, tags, builder) => {
         .withVerb(matchVerb(VERB_NAMES.PUT))
         .withObject(captureObject(PARAM_ITEM))
         .withAttribute(attributeMatchBuilder()
-                        .withAttribute(matchAttribute(relLoc))
+                        .withAttribute(matchAttribute(adposition))
                         .withObject(captureIndirectObject("container")))
         .build();
-    builder.withBefore(createAction(putMatcher, mkThunk(getPutInContainerFn(relLoc)), "before"));
+    builder.withBefore(createAction(putMatcher, mkThunk(getPutInContainerFn(adposition)), "before"));
 }
 
 function createThunk(fn : EnvFn) : Thunk {
@@ -70,7 +70,7 @@ function createThunk(fn : EnvFn) : Thunk {
     });
 }
 
-function getExamineContainerFn(relLoc : RelativeLocation) : EnvFn {
+function getExamineContainerFn(relLoc : Adposition) : EnvFn {
 
     return (env) => {
         const container = env.get(PARAM_CONTAINER);
@@ -103,7 +103,7 @@ function getExamineContainerFn(relLoc : RelativeLocation) : EnvFn {
     }
 }
 
-function getFromContainerFn(relLoc : RelativeLocation) : EnvFn {
+function getFromContainerFn(relLoc : Adposition) : EnvFn {
     return (env) => {
         const item = env.get(PARAM_ITEM);
         const container = env.get(PARAM_CONTAINER);
@@ -119,7 +119,7 @@ function getFromContainerFn(relLoc : RelativeLocation) : EnvFn {
 }
 
 
-function getPutInContainerFn(relLoc : RelativeLocation) : EnvFn { 
+function getPutInContainerFn(relLoc : Adposition) : EnvFn { 
     return (env) => {
         const item = env.get(PARAM_ITEM);
         const container = env.get(PARAM_CONTAINER);
