@@ -532,7 +532,7 @@ test("Test put on container", () => {
                         description : "A large table.",
                         type : "item",
                         location : "northRoom",
-                        relativeLocation : "on",
+                        adposition : "on",
                         tags : ["container"]
                         })
             .withObj({id : "ball",
@@ -549,7 +549,7 @@ test("Test put on container", () => {
     executeAndTest(["examine", "table"], { expected : ["On the table", "ball"]});
 });
 
-test("Test invalid relativeLocation", () => {
+test("Test invalid container adposition", () => {
     expect(() => {
         builder.withObj({...NORTH_ROOM})
                .withObj({id : "table",
@@ -557,10 +557,10 @@ test("Test invalid relativeLocation", () => {
                          description : "A large table.",
                          type : "item",
                          location : "northRoom",
-                         relativeLocation : "under",
+                         adposition : "beside",
                          tags : ["container"]
                         })
-                    }).toThrow("Invalid relativeLocation");
+                    }).toThrow("Invalid adposition");
 });
 
 test("Test overridden examine can still execute original method", () => { 
