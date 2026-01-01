@@ -6,6 +6,7 @@ import WordButton from "./WordButton";
 
 import { Axial, HexMap } from "../util/hex";
 import * as BubbleGrid from "./bubbleGrid/BubbleGrid";
+import { BACKSPACE } from "../util/util";
 
 export type WordSelected = (event : React.MouseEvent<HTMLButtonElement>, word : Word) => void;
 
@@ -71,7 +72,6 @@ const Controls = ({ words, wordSelected, panelIds } : ControlProps) => {
         const wordCounts = activePanels.map(panel => panel.wordFilter(words).length)
         const firstPanelWithContent = wordCounts.findIndex(count => count > 0);
         if (firstPanelWithContent >= 0) {
-            console.log("Setting tab index to ", firstPanelWithContent);
             setTabIndex(firstPanelWithContent);
         }
     }, [words]);
@@ -111,11 +111,23 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
 const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) => {
     const borderColourToken = useColorModeValue('gray.200', 'gray.700');
     const [borderColour] = useToken('colors', [borderColourToken]);
-    const words = wordFilter(allWords);
-    const cells = words.map(word => (
-        <WordButton key={word.id} word={word} wordSelected={wordSelected}/>
-    ));
+    const words : (Word | undefined)[] = wordFilter(allWords);
 
+    // Ensure backspace is always in the same location
+    const backspaceIndex = words.findIndex(word => word === BACKSPACE);
+    if (backspaceIndex !== -1) {
+        const [backspaceWord] = words.splice(backspaceIndex, 1);
+        while (words.length < 4) {
+            words.push(undefined);
+        }
+        words.splice(4,0,backspaceWord);
+    }
+
+    const BLANK_CELL = (<div></div>);
+
+    const cells = words.map(word => word? (
+        <WordButton key={word.id} word={word} wordSelected={wordSelected}/>
+    ) : BLANK_CELL);
 
     const style : React.CSSProperties = { 
         border : `1px solid ${borderColour}`,
@@ -127,7 +139,7 @@ const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     const hexMap = HexMap.fromSpiral(Axial.ZERO, items);
     
     // Fill out the hex map with blank cells so it looks better
-    const blankCell = { item : (<div></div>), style };
+    const blankCell = { item : (BLANK_CELL), style };
 
     const populatedRadius = hexMap.getRadius(Axial.ZERO);  
     hexMap.fillHex(Axial.ZERO, populatedRadius, blankCell);
