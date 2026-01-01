@@ -19,6 +19,9 @@ const NUM_COLS = 10;
 
 export const BubbleGrid = ({ content } : Content) => {
 
+    // Detect if we are on Mobile Safari (for scroll bar fix)
+    const isMobileSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
+
     const [, forceUpdate] = useReducer(x => x + 1, 0);
 
     const [scrollPosition, setScrollPosition] = useState({ scrollTop: 0, scrollLeft: 0 });
@@ -213,6 +216,10 @@ export const BubbleGrid = ({ content } : Content) => {
                 padding: '0vh 15vw',
                 boxSizing: 'border-box',
                 cursor: mouseState === "dragging" ? 'grabbing' : 'grab', // Change cursor during dragging
+                ...(isMobileSafari && {
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                }),
             }}>
             {content.map((row, rowIndex) => (
                 <div key={rowIndex} 
