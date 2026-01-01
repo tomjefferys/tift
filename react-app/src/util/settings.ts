@@ -1,5 +1,3 @@
-import { GameStorage } from "./gamestorage";
-
 const SETTINGS_KEY = "TIFT_SETTINGS";
 
 export type UIType = "bubble" | "normal";
