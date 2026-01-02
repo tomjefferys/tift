@@ -17,6 +17,8 @@ import * as Lockable from "./traits/lockable";
 import * as VERB_NAMES from "./verbnames";
 import _ from "lodash";
 
+export const SPATIAL_PREPOSITIONS = ["in", "on", "under", "above", "beside", "behind"];
+
 export const LOOK_FN = (env : Env) => {
     const location = Player.getLocationEntity(env);
 
@@ -148,12 +150,13 @@ const DROP = phaseActionBuilder(VERB_NAMES.DROP)
                 return mkResult(true);
             }));
 
-const PUT_IN = phaseActionBuilder(VERB_NAMES.PUT)
+const PUT_ACTIONS = SPATIAL_PREPOSITIONS.map(prep => 
+    phaseActionBuilder(VERB_NAMES.PUT)
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb(VERB_NAMES.PUT))
                           .withObject(captureObject("item"))
-                          .withAttribute(attributeMatchBuilder().withAttribute(matchAttribute("in"))
+                          .withAttribute(attributeMatchBuilder().withAttribute(matchAttribute(prep))
                                                                 .withObject(captureIndirectObject("container")))
                           .build(),
             mkThunk(env => {
@@ -161,22 +164,8 @@ const PUT_IN = phaseActionBuilder(VERB_NAMES.PUT)
                 const container = env.get("container");
                 Locations.setLocation(env, item, container);
                 return mkResult(true);
-            }));
-
-const PUT_ON = phaseActionBuilder(VERB_NAMES.PUT)
-        .withPhase("main")
-        .withMatcherOnMatch(
-            matchBuilder().withVerb(matchVerb(VERB_NAMES.PUT))
-                          .withObject(captureObject("item"))
-                          .withAttribute(attributeMatchBuilder().withAttribute(matchAttribute("on"))
-                                                                .withObject(captureIndirectObject("container")))
-                          .build(),
-            mkThunk(env => {
-                const item = env.get("item");
-                const container = env.get("container");
-                Locations.setLocation(env, item, container);
-                return mkResult(true);
-            }));
+            }))
+       );
 
 const EXAMINE = phaseActionBuilder(VERB_NAMES.EXAMINE)
         .withPhase("main")
@@ -294,10 +283,8 @@ const DEFAULT_VERBS = [
                   .build(),
       new VerbBuilder({"id":VERB_NAMES.PUT})
                   .withTrait("transitive")
-                  .withAction(PUT_IN)
-                  .withAction(PUT_ON)
-                  .withAttribute("in")
-                  .withAttribute("on")
+                  .withActions(PUT_ACTIONS)
+                  .withAttributes(SPATIAL_PREPOSITIONS)
                   .withContext("inventory")
                   .withContext("holding")
                   .build(),

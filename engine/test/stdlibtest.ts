@@ -317,18 +317,18 @@ test("Test container", () => {
     expectWords([], ["put"], false);
     expectWords(["put"], ["ball", "cube"]);
     executeAndTest(["put", "ball", "in", "chest"], {});
-    executeAndTest(["examine", "chest"], { expected : ["A large chest", "Inside", "ball"], notExpected : ["cube"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "In", "ball"], notExpected : ["cube"]});
 
     // Examining the objects should not show the chest description
     executeAndTest(["examine", "ball"], { expected : ["a round ball"], notExpected : ["Inside"]});
     executeAndTest(["examine", "cube"], { expected : ["a square cube"], notExpected : ["Inside"]});
 
     executeAndTest(["put", "cube", "in", "chest"], {});
-    executeAndTest(["examine", "chest"], { expected : ["A large chest", "Inside", "ball", "cube"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "In", "ball", "cube"]});
     executeAndTest(["get", "ball"], {});
-    executeAndTest(["examine", "chest"], { expected : ["A large chest", "Inside", "cube"], notExpected : ["ball"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest", "In", "cube"], notExpected : ["ball"]});
     executeAndTest(["get", "cube"], {});
-    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["Inside", "ball", "cube"]});
+    executeAndTest(["examine", "chest"], { expected : ["A large chest"], notExpected : ["In", "ball", "cube"]});
 })
 
 test("Test container should not show contents if empty", () => {
@@ -549,18 +549,53 @@ test("Test put on container", () => {
     executeAndTest(["examine", "table"], { expected : ["On the table", "ball"]});
 });
 
-test("Test invalid container adposition", () => {
-    expect(() => {
-        builder.withObj({...NORTH_ROOM})
-               .withObj({id : "table",
-                         name : "table",
-                         description : "A large table.",
-                         type : "item",
-                         location : "northRoom",
-                         adposition : "beside",
-                         tags : ["container"]
+test("Test put under container", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "table",
+                        name : "table",
+                        description : "A large table.",
+                        type : "item",
+                        location : "northRoom",
+                        adposition : "under",
+                        tags : ["container"]
                         })
-                    }).toThrow("Invalid adposition");
+            .withObj({id : "ball",
+                        name : "ball",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "ball"], {});
+    expectWords(["put", "ball"], ["under"]);
+    executeAndTest(["put", "ball", "under", "table"], {});
+    executeAndTest(["examine", "table"], { expected : ["Under the table", "ball"]});
+});
+
+test("Test put with non standard adposition", () => {
+    builder.withObj({...NORTH_ROOM})
+            .withObj({id : "table",
+                        name : "table",
+                        description : "A large table.",
+                        type : "item",
+                        location : "northRoom",
+                        adposition : "beneath",
+                        putAttribute : "under",
+                        tags : ["container"]
+                        })
+            .withObj({id : "ball",
+                        name : "ball",
+                        type : "item",
+                        location : "northRoom",
+                        tags : ["carryable"]});
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "ball"], {});
+    expectWords(["put", "ball"], ["under"]);
+    executeAndTest(["put", "ball", "under", "table"], {});
+    executeAndTest(["examine", "table"], { expected : ["Beneath the table", "ball"]});
 });
 
 test("Test overridden examine can still execute original method", () => { 

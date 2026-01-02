@@ -31,12 +31,11 @@ templates:
 ---
 property: examine
 templates:
-  container: 
-    in: |
-      Inside {{container}} is {{#items}}{{> item}}{{/items}}.
-    on: |
-      On {{container}} is {{#items}}{{> item}}{{/items}}.
+  container: >
+    {{#sentence}}{{> position}} {{container}} is {{#items}}{{> item}}{{/items}}.{{/sentence}}
   partials:
+    position: >
+      {{#adposition}}{{.}}{{/adposition}}{{^adposition}}in{{/adposition}}
     item: >-
        {{name}}
        {{^isLast}}{{^isPenultimate}}, {{/isPenultimate}}{{/isLast}}
@@ -51,16 +50,10 @@ templates:
 property: put
 templates:
   container:
-    closed: 
-      in: >
-        You can't put {{item}} into {{container}}, {{container}} is closed.
-      on: >
-        You can't put {{item}} onto {{container}}, {{container}} is closed.
-    inItem: 
-      in: >
-        You can't put {{item}} into {{container}}, {{container}} is in {{item}}.
-      on: >
-        You can't put {{item}} onto {{container}}, {{container}} is on {{item}}.
+    closed: >
+      You can't put {{item}} {{adposition}} {{container}}, {{container}} is closed.
+    inItem: >
+      You can't put {{item}} {{adposition}} {{container}}, {{container}} is {{adposition}} {{item}}.
 ---
 property: wait
 message: Time passes

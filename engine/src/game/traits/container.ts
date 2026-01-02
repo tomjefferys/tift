@@ -12,6 +12,8 @@ import * as VERB_NAMES from "../verbnames";
 import { Obj } from "tift-types/src/util/objects";
 import { Env } from "tift-types/src/env";
 import { createMatcher, createAction, createThisMatcher } from "./traitutils";
+import { SPATIAL_PREPOSITIONS } from "../defaultverbs";
+import { getLogger } from "../../util/logger";
 
 const CLOSED_CONTAINER_MESSAGE = "put.templates.container.closed";
 const CONTAINER_IN_ITEM_MESSAGE = "put.templates.container.inItem";
@@ -22,24 +24,28 @@ const PARAM_CONTAINER = "container";
 const PARAM_ITEM = "item";
 
 const ADPOSITION_PROP = "adposition";
+const PUT_ATTR_PROP = "putAttribute";
 
-const ADPOSITIONS = ["on", "in", "under"] as const;
-
-type Adposition = typeof ADPOSITIONS[number];
+const logger = getLogger("game.traits.container");
 
 export const CONTAINER : TraitProcessor = (obj, tags, builder) => {
     if (!tags.includes(Tags.CONTAINER)) {
         return;
     }
 
-    if (obj[ADPOSITION_PROP] && !ADPOSITIONS.includes(obj[ADPOSITION_PROP])) {
-        throw new Error(`Invalid adposition [${obj[ADPOSITION_PROP]}]. ` + 
-                        ` Valid adpositions are [${ADPOSITIONS.join(", ")}]`);
+    const adposition = obj[ADPOSITION_PROP] as string ?? "in";
+
+    let putAttribute = adposition;
+    if (!SPATIAL_PREPOSITIONS.includes(adposition)) {
+        if (obj[PUT_ATTR_PROP] && SPATIAL_PREPOSITIONS.includes(obj[PUT_ATTR_PROP] as string)) {
+            putAttribute = obj[PUT_ATTR_PROP] as string;
+        } else {
+            logger.warn(() => `Invalid or missing adposition [${adposition}] for container [${obj["id"]}]. Defaulting to 'in'`);
+            putAttribute = "in";
+        }
     }
 
-    const adposition = obj[ADPOSITION_PROP] as Adposition || "in";
-
-    builder.withAttributedVerb(VERB_NAMES.PUT, adposition)
+    builder.withAttributedVerb(VERB_NAMES.PUT, putAttribute)
 
     builder.withAfter(createAction(createThisMatcher(VERB_NAMES.EXAMINE),
                       createThunk(getExamineContainerFn(adposition)), "after"));
@@ -70,7 +76,7 @@ function createThunk(fn : EnvFn) : Thunk {
     });
 }
 
-function getExamineContainerFn(relLoc : Adposition) : EnvFn {
+function getExamineContainerFn(adposition : string) : EnvFn {
 
     return (env) => {
         const container = env.get(PARAM_CONTAINER);
@@ -86,10 +92,11 @@ function getExamineContainerFn(relLoc : Adposition) : EnvFn {
             return mkResult(false);
         }
 
-        const template = Property.getPropertyString(env, `examine.templates.container.${relLoc}`);
+        const template = Property.getPropertyString(env, `examine.templates.container`);
         const partials = Property.getProperty(env, "examine.templates.partials") as Record<string,string>;
 
         const view = {
+            adposition,
             container : getFullName(container as Nameable),
             items : items.map((item, index, array) => ({ 
                             name : getFullName(item as Nameable),
@@ -103,14 +110,14 @@ function getExamineContainerFn(relLoc : Adposition) : EnvFn {
     }
 }
 
-function getFromContainerFn(relLoc : Adposition) : EnvFn {
+function getFromContainerFn(adposition : string) : EnvFn {
     return (env) => {
         const item = env.get(PARAM_ITEM);
         const container = env.get(PARAM_CONTAINER);
         let canGet = true;
         if(Locations.isAtLocation(env, container.id, item) && isClosable(container)) {
             if (!container.is_open) {
-                writeError(env, `${CLOSED_CONTAINER_MESSAGE}.${relLoc}`, GET_PARTIAL_TEMPLATES, container, item);
+                writeError(env, `${CLOSED_CONTAINER_MESSAGE}`, GET_PARTIAL_TEMPLATES, container, item, adposition);
                 canGet = false;
             }
         }
@@ -119,7 +126,7 @@ function getFromContainerFn(relLoc : Adposition) : EnvFn {
 }
 
 
-function getPutInContainerFn(relLoc : Adposition) : EnvFn { 
+function getPutInContainerFn(adposition : string) : EnvFn {
     return (env) => {
         const item = env.get(PARAM_ITEM);
         const container = env.get(PARAM_CONTAINER);
@@ -129,12 +136,12 @@ function getPutInContainerFn(relLoc : Adposition) : EnvFn {
         }
         const containerInsideItem = Locations.isAtLocation(env, item.id, container);
         if(containerInsideItem) {
-            writeError(env, `${CONTAINER_IN_ITEM_MESSAGE}.${relLoc}`, PUT_PARTIAL_TEMPLATES, container, item);
+            writeError(env, `${CONTAINER_IN_ITEM_MESSAGE}`, PUT_PARTIAL_TEMPLATES, container, item, adposition);
         }
         let canPut = !containerInsideItem;
         if(canPut && isClosable(container)) {
             if (!container.is_open) {
-                writeError(env, `${CLOSED_CONTAINER_MESSAGE}.${relLoc}`, PUT_PARTIAL_TEMPLATES, container, item);
+                writeError(env, `${CLOSED_CONTAINER_MESSAGE}`, PUT_PARTIAL_TEMPLATES, container, item, adposition);
                 canPut = false;
             }
         }
@@ -142,10 +149,11 @@ function getPutInContainerFn(relLoc : Adposition) : EnvFn {
     }
 }
 
-function writeError(env : Env, property : string, partialsProperty : string, container : Obj, item : Obj) {
+function writeError(env : Env, property : string, partialsProperty : string, container : Obj, item : Obj, adposition : string) {
     const template = Property.getPropertyString(env, property);
     const partials = Property.getProperty(env, partialsProperty, {}) as Record<string,string>;
     const view = {
+        adposition,
         container : getFullName(container as Nameable),
         item : getFullName(item as Nameable)
     }

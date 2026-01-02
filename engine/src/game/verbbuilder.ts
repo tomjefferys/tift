@@ -41,6 +41,11 @@ export class VerbBuilder {
     return this;
   }
 
+  withAttributes(attributes : string[]) : VerbBuilder {
+    this.attributes.push(...attributes);
+    return this;
+  }
+
   withTrait(trait : VerbTrait) : VerbBuilder {
     this.traits.push(trait);
     return this;
@@ -58,6 +63,11 @@ export class VerbBuilder {
   
   withAction(action : MainAction) : VerbBuilder {
     this.actions.push(action);
+    return this;
+  }
+  
+  withActions(actions : MainAction[]) : VerbBuilder {
+    this.actions.push(...actions);
     return this;
   }
 
