@@ -4,10 +4,12 @@ export type UIType = "bubble" | "normal";
 
 export interface Settings {
     uiType : UIType;
+    enableDevMode : boolean;
 }
 
 export const DEFAULT_SETTINGS : Settings = {
-    uiType : "bubble"
+    uiType : "bubble",
+    enableDevMode : false
 };
 
 export function saveSettings(settings : Settings)  {

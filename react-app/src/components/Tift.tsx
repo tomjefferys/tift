@@ -23,10 +23,10 @@ import { DuplexProxy } from "tift-types/src/util/duplexproxy";
 import { InputMessage } from "tift-types/src/messages/input";
 import { getInventoryFilter } from "../util/inventoryfilter";
 import * as InfoPrinter from "../util/infoprinter";
-import _ from "lodash";
 import * as GameStorage from "../util/gamestorage";
 import StatusBar from "./StatusBar";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, Settings, UIType } from "../util/settings";
+import { createDevModePicker } from "../util/devmodepicker";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;
@@ -151,6 +151,13 @@ function Tift() {
         }
       });
 
+      const devModePicker = createDevModePicker((enableDebug : boolean) => {
+        settingsRef.current.enableDevMode = enableDebug;
+        if (storageRef.current) {
+          saveSettings(settingsRef.current);
+        }
+      });
+
       // Log clearer
       const logClearer = createSimpleOption( "clear", () => {
         messagesRef.current = [];
@@ -183,7 +190,8 @@ function Tift() {
                                                     ["colours", colourSchemePicker],
                                                     ["clear", logClearer],
                                                     ["info", getInfo],
-                                                    ["ui type", uiSchemePicker]));
+                                                    ["ui type", uiSchemePicker],
+                                                    ["developer", devModePicker]));
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
       return engine;
     }
@@ -257,7 +265,7 @@ function Tift() {
         if (result.selected) {
           wordSelected(undefined, result.selected);
         } else {
-          setFilteredWords([...result.filtered, BACKSPACE]);
+          setFilteredWords([...result.filtered, getBackspace(command)]);
         }
         setPartialWord(result.partial);
         return;
@@ -288,8 +296,8 @@ function Tift() {
 
       if (!commandWords.length || gameWords.length) {
         const words = getPossibleNextWords();
-        if (command.length > 1 && gameWords.length && !words.includes(BACKSPACE)) {
-          words.push(BACKSPACE);
+        if (command.length > 1 && gameWords.length && words.every(word => word.id !== BACKSPACE.id)) {
+          words.push(getBackspace(command));
         }
         setFilteredWords(words);
       }
@@ -317,7 +325,7 @@ function Tift() {
           // Strip out any words that are only for the inventory contexts
           //words = words.filter(word => containsNonInventoryContexts(word));
           // TODO Filter out the inventory contexts later
-          words = words.filter(_word => true);
+         words = words.filter(_word => true);
 
         }
         return words;
@@ -333,7 +341,7 @@ function Tift() {
   
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
       //The selected word should replace the first wildcard
-      if (word === BACKSPACE) {
+      if (word.id === BACKSPACE.id) {
         if (partialWord.length) {
           // If we've clicked the backspace *button* clear out the partial word.
           setPartialWord("");
@@ -386,7 +394,12 @@ function Tift() {
       return commandEntry(words, wildCardIndex);
     }
 
-    const panelIds = (settingsRef.current.uiType === "bubble") ? ["bubbles", "inventory", "options"] : ["normal", "inventory", "options"];
+    const panelIds = [
+      "game",
+      "inventory",
+      "options",
+      ...(settingsRef.current.enableDevMode ? ["developer"] : []),
+    ];
 
     return (
         <React.Fragment>
@@ -406,11 +419,19 @@ function Tift() {
               <Box position={"relative"}
                    height="40%" 
                    width="100%">
-                <Controls words={filteredWords ?? []} wordSelected={wordSelected} panelIds={panelIds}/>
+                <Controls words={filteredWords ?? []}
+                          wordSelected={wordSelected}
+                          panelIds={panelIds}
+                          useBubbles={settingsRef.current.uiType === "bubble"}/>
               </Box>
             </Box>
         </React.Fragment>
       );
+}
+
+// Helper to return the correct backspace word
+function getBackspace(command : Word[]) : Word {
+  return command.find(word => word.tags?.includes("debug")) ? {...BACKSPACE, tags: ["debug"]} : BACKSPACE;
 }
 
 function createControlHandler(pauser : Pauser.Pauser) : (control : ControlType) => void {

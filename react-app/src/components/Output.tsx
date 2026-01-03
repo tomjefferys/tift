@@ -5,6 +5,8 @@ import { Container, List, ListItem, Text, useColorModeValue, useToken } from "@c
 import { Optional } from "tift-types/src/util/optional";
 
 const LEVEL_COLOURS : Record<string, [string, string]> = {
+    "trace" : ["blue.700", "blue.400"],
+    "debug" : ["blue.700", "blue.400"],
     "info" : ["blue.700", "blue.400"],
     "warn" : ["yellow.500", "yellow.300"],
     "error" : ["red.700", "red.600"]

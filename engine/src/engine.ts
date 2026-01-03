@@ -32,6 +32,7 @@ import * as Properties from "./properties";
 import * as Version from "./version";
 import * as Metadata from "./game/metadata"
 import * as Path from "./path";
+import { executeDebugCommand, getDebugCommands } from "./debug"
 
 const DEFAULT_UNDO_LEVELS = 10;
 
@@ -300,11 +301,16 @@ export class BasicEngine implements Engine {
   getWords(words : Word[]) : void {
     const partialCommand = words.map(word => word.id);
     const nextWords = getNextWords(partialCommand, this.context.entities, this.context.verbs, this.env);
+    nextWords.push(...getDebugCommands(this.env, words));
     const message = Output.words(words, nextWords );
     this.output(message);
   }
 
   execute(command: string[]): void {
+    if (executeDebugCommand(this.env, this.output, command)) {
+      return;
+    }
+    
     this.env.clearTransients();
 
     const [matchedCommand, verb] = searchCommand(this.env, this.context, command);

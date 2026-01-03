@@ -22,6 +22,7 @@ interface ControlProps {
     words : Word[];
     wordSelected : WordSelected;
     panelIds : string[];
+    useBubbles: boolean;
 }
 
 type WordFilter = (words:Word[]) => Word[];
@@ -52,27 +53,55 @@ interface CustomButtonGridProps {
 }
 
 const PANELS : PanelDefinition[] = 
-                [{id : "bubbles", name : "Game", wordFilter : words => filterWords(words, ["word", "control"])},
-                 {id : "normal", name : "Game",   wordFilter : words => filterWords(words, ["word", "control"])
-                                                            .filter(word => !word.tags?.includes("inventory"))}, 
-                 {id : "inventory", name : "Inventory", wordFilter : words => filterWords(words, ["word"])
-                                                              .filter(word => word.tags?.includes("inventory"))},
-                 {id : "options", name : "Options", wordFilter : words => filterWords(words, ["option", "select"])}];
+                [{
+                    id : "game",
+                    name : "Game",
+                    wordFilter : words => filterWords(words, ["word", "control"])
+                                            .filter(word => !word.tags?.includes("debug"))
+                 },
+                 {
+                    id : "inventory",
+                    name : "Inventory",
+                    wordFilter : words => filterWords(words, ["word"])
+                                            .filter(word => word.tags?.includes("inventory"))
+                 },
+                 {
+                    id : "developer",
+                    name : "Developer",
+                    wordFilter : words => filterWords(words, ["word", "control"])
+                                            .filter(word => word.tags?.includes("debug"))
+                 },
+                 {
+                    id : "options", name : "Options",
+                    wordFilter : words => filterWords(words, ["option", "select"])
+                }];
 
-const Controls = ({ words, wordSelected, panelIds } : ControlProps) => {
+const Controls = ({ words, wordSelected, panelIds, useBubbles } : ControlProps) => {
 
     const [tabIndex, setTabIndex] = useState(0);
 
     const handleTabsChange = (index : number) => setTabIndex(index);
 
-    const activePanels = PANELS.filter(panel => panelIds.includes(panel.id));
+    const activePanels = panelIds.map(id => {
+        const panel = PANELS.find(panel => panel.id === id);
+        if (!panel) {
+            throw new Error(`Invalid panel ID: ${id}`);
+        }
+        return panel;
+    });
 
     // Reset the tabs if the words change
     useEffect(() => {
         const wordCounts = activePanels.map(panel => panel.wordFilter(words).length)
-        const firstPanelWithContent = wordCounts.findIndex(count => count > 0);
-        if (firstPanelWithContent >= 0) {
-            setTabIndex(firstPanelWithContent);
+        const firstNonOptionsPanelWithContent = wordCounts.findIndex((count, index) => 
+                count > 0 && activePanels[index].id !== "options");
+        if (firstNonOptionsPanelWithContent >= 0) {
+            setTabIndex(firstNonOptionsPanelWithContent);
+        } else {
+            const firstPanelWithContent = wordCounts.findIndex(count => count > 0);
+            if (firstPanelWithContent >= 0) {
+                setTabIndex(firstPanelWithContent);
+            }
         }
     }, [words]);
 
@@ -84,9 +113,9 @@ const Controls = ({ words, wordSelected, panelIds } : ControlProps) => {
                 <TabList>{activePanels.map(panel => (<Tab key={panel.id}>{panel.name}</Tab>))}</TabList>
                 <TabPanels h="85%">{activePanels.map(panel => (
                     <TabPanel h="100%" key={panel.id} padding={0}>{
-                        panel.id === "bubbles" 
-                            ? <WordBubbles wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
-                            : <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
+                        (useBubbles && panel.id !== "options")
+                           ? <WordBubbles wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
+                           : <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
                         }
                     </TabPanel>))}
                 </TabPanels>
@@ -114,7 +143,7 @@ const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     const words : (Word | undefined)[] = wordFilter(allWords);
 
     // Ensure backspace is always in the same location
-    const backspaceIndex = words.findIndex(word => word === BACKSPACE);
+    const backspaceIndex = words.findIndex(word => word?.id === BACKSPACE.id);
     if (backspaceIndex !== -1) {
         const [backspaceWord] = words.splice(backspaceIndex, 1);
         while (words.length < 4) {
@@ -142,7 +171,8 @@ const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     const blankCell = { item : (BLANK_CELL), style };
 
     const populatedRadius = hexMap.getRadius(Axial.ZERO);  
-    hexMap.fillHex(Axial.ZERO, populatedRadius, blankCell);
+    const fillRadius = populatedRadius < 3 ? populatedRadius + 1 : populatedRadius;
+    hexMap.fillHex(Axial.ZERO, fillRadius, blankCell);
 
     const rows  = hexMap.toArray();
 
