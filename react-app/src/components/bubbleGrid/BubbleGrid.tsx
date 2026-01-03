@@ -15,8 +15,6 @@ export interface Content {
     content : (Item | undefined)[][];
 }
 
-const NUM_COLS = 10;
-
 export const BubbleGrid = ({ content } : Content) => {
 
     // Detect if we are on Mobile Safari (for scroll bar fix)
@@ -210,7 +208,6 @@ export const BubbleGrid = ({ content } : Content) => {
                 overflowX: 'auto',
                 overflowY: 'auto',
                 display: 'grid',
-                alignContent: 'center',
                 opacity: isLoaded || ALWAYS_SHOW ? 1 : 0,
                 transition: 'opacity 0.2s',
                 padding: '0vh 15vw',
@@ -225,7 +222,7 @@ export const BubbleGrid = ({ content } : Content) => {
                 <div key={rowIndex} 
                     style={{ 
                         display: 'grid', 
-                        gridTemplateColumns: `repeat(${NUM_COLS}, minmax(auto, 100px))`,
+                        gridTemplateColumns: `repeat(${row.length}, minmax(auto, 100px))`,
                         marginLeft: rowIndex % 2 === 1 && outerDivs.current[rowIndex]
                             ? `${outerDivs.current[rowIndex][0]?.width / 2}px`
                         : '0',
