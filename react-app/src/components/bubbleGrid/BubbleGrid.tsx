@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect, useRef, useCallback, useReducer, CSSProperties, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer, CSSProperties, useLayoutEffect, useMemo } from 'react';
 import { getTransform } from './transformBuilder';
 import { useBubbleGridMouse } from './bubbleGridMouseHook';
 
@@ -16,6 +16,8 @@ export interface Content {
 }
 
 export const BubbleGrid = ({ content } : Content) => {
+    // Generate a unique ID for this instance
+    const instanceId = useMemo(() => Math.random().toString(36).substr(2, 9), []);
 
     // Detect if we are on Mobile Safari (for scroll bar fix)
     const isMobileSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
@@ -129,7 +131,7 @@ export const BubbleGrid = ({ content } : Content) => {
         // Only run after all refs are set
         content.forEach((row, rowIndex) => {
             row.forEach((_, colIndex) => {
-                const cellDiv = document.querySelector(`[data-cell="${rowIndex}-${colIndex}"]`);
+                const cellDiv = document.querySelector(`[data-cell="${instanceId}-${rowIndex}-${colIndex}"]`);
                 if (cellDiv && cellDiv instanceof HTMLElement && outerDivs.current[rowIndex] && outerDivs.current[rowIndex][colIndex] && containerRef.current) {
                     const containerRect = containerRef.current.getBoundingClientRect();
                     const cellRect = outerDivs.current[rowIndex][colIndex];
@@ -147,7 +149,7 @@ export const BubbleGrid = ({ content } : Content) => {
                 }
             });
         });
-    }, [isLoaded, content, scrollPosition]);
+    }, [isLoaded, content, scrollPosition, instanceId]);
 
     // Set the outer div ref to get the size and location of the element,
     // the outer div is not scaled or translated so can be relied on to get the correct size and location
@@ -240,7 +242,7 @@ export const BubbleGrid = ({ content } : Content) => {
                             ref = {(el) => setOuterDivRef(el, rowIndex, index)}>
                             <div
                                 key={`${rowIndex}-${index}`} 
-                                data-cell={`${rowIndex}-${index}`}
+                                data-cell={`${instanceId}-${rowIndex}-${index}`}
                                 style={getCellStyle(item)}
                             >
                                 <div ref={el => {
