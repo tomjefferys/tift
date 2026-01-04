@@ -83,3 +83,7 @@ export function entries<T>(dict : MultiDict<T>) : [KeyType,T][] {
 export function values<T>(dict : MultiDict<T>) : T[] {
   return Object.entries(dict).flatMap(entry => entry[1]);
 }
+
+export function keys<T>(dict : MultiDict<T>) : KeyType[] {
+  return Object.keys(dict);
+}

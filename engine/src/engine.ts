@@ -301,13 +301,13 @@ export class BasicEngine implements Engine {
   getWords(words : Word[]) : void {
     const partialCommand = words.map(word => word.id);
     const nextWords = getNextWords(partialCommand, this.context.entities, this.context.verbs, this.env);
-    nextWords.push(...getDebugCommands(this.env, words));
+    nextWords.push(...getDebugCommands(this.env, this.gameData, this.output, words));
     const message = Output.words(words, nextWords );
     this.output(message);
   }
 
   execute(command: string[]): void {
-    if (executeDebugCommand(this.env, this.output, command)) {
+    if (executeDebugCommand(this.env, this.gameData,this.output, command)) {
       return;
     }
     
