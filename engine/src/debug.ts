@@ -7,10 +7,15 @@ import { Behaviour } from "./game/behaviour";
 import * as MultiDict from "./util/multidict";
 import { Obj } from "./util/objects";
 import * as _ from "lodash";
+import * as Locations from "./game/locations";
+import * as Player from "./game/player";
 
 const COMMANDS = {
     INSPECT : "debug.inspect",
     LIST : "debug.list",
+    GET : "debug.get",
+    DROP : "debug.drop",
+    TELEPORT : "debug.teleport",
 } as const;
 
 // Simple flag to disable debug commands during tests
@@ -36,21 +41,30 @@ type GetWordHandler = (env : Env, behaviour : Behaviour, words : Word[]) => Word
 type ExecuteHandler = (env : Env, behaviour : Behaviour, outputConsumer : OutputConsumer, command : string[]) => void;
 
 const DEBUG_COMMANDS : Word[] = [
-    debugCommand(COMMANDS.LIST, "List"),
-    debugCommand(COMMANDS.INSPECT, "Inspect"),
+    debugCommand(COMMANDS.LIST, "list"),
+    debugCommand(COMMANDS.INSPECT, "inspect"),
+    debugCommand(COMMANDS.GET, "get"),
+    debugCommand(COMMANDS.DROP, "drop"),
+    debugCommand(COMMANDS.TELEPORT, "teleport")
 ];
  
 const GET_WORD_HANDLERS : Record<string, GetWordHandler> = {
     [COMMANDS.INSPECT] : getInspectOptions,
-    [COMMANDS.LIST] : getListOptions
+    [COMMANDS.LIST] : getListOptions,
+    [COMMANDS.GET] : getGetOptions,
+    [COMMANDS.DROP] : getDropOptions,
+    [COMMANDS.TELEPORT] : getTeleportOptions
 }
 
 const EXECUTE_HANDLERS : Record<string, ExecuteHandler> = {
     [COMMANDS.INSPECT] : executeInspect,
-    [COMMANDS.LIST] : executeList
+    [COMMANDS.LIST] : executeList,
+    [COMMANDS.GET] : executeGet,
+    [COMMANDS.DROP] : executeDrop,
+    [COMMANDS.TELEPORT] : executeTeleport
 };
 
-// Other commands: teleport, get, trace, items in context
+// TODO add trace debug command
 
 // Get possible debug commands based on input words
 export function getDebugCommands(env : Env, behaviour : Behaviour, outputConsumer : OutputConsumer, words : Word[]) : Word[] {
@@ -226,6 +240,87 @@ function listContexts(env : Env, behaviour : Behaviour, outputConsumer : OutputC
     contexts.forEach(ctxId => {
         log(outputConsumer, `${ctxId}`);
     });
+}
+
+function getGetOptions(env : Env, _behaviour : Behaviour, command : Word[]) : Word[] {
+    const options = [];
+    if (command.length === 1 ) {
+        options.push(...getItems(env));
+    }
+    return options;
+}
+
+function executeGet(env : Env, _behaviour : Behaviour, outputConsumer : OutputConsumer, command : string[]) {
+    if (command.length < 2) {
+        throw new Error("Get command requires item");
+    }
+
+    const itemId = command[1];
+    const items = env.findObjs(obj => obj["type"] === "item" && obj.id === itemId, [["entities"]]);
+    if (items.length === 0) {
+        throw new Error(`No item found with id: ${itemId}`);
+    }
+
+    const item = items[0];
+    Locations.setLocation(env, item, Player.INVENTORY);
+    log(outputConsumer, `Item ${itemId} added to player inventory.`);
+}
+
+function getDropOptions(env : Env, _behaviour : Behaviour, command : Word[]) : Word[] {
+    const options = [];
+    if (command.length === 1 ) {
+        options.push(...getItems(env));
+    }
+    return options;
+}
+
+function executeDrop(env : Env, _behaviour : Behaviour, outputConsumer : OutputConsumer, command : string[]) {
+    if (command.length < 2) {
+        throw new Error("Drop command requires item");
+    }
+
+    const itemId = command[1];
+    const items = env.findObjs(obj => obj["type"] === "item" && obj.id === itemId, [["entities"]]);
+    if (items.length === 0) {
+        throw new Error(`No item found with id: ${itemId}`);
+    }
+
+    const item = items[0];
+    Locations.setLocation(env, item, Player.getLocation(env));
+    log(outputConsumer, `Item ${itemId} dropped in current location.`);
+}
+
+function getTeleportOptions(env : Env, _behaviour : Behaviour, command : Word[]) : Word[] {
+    const options = [];
+    if (command.length === 1 ) {
+        const locations = env.findObjs(obj => obj["type"] === "room", [["entities"]]);
+        const words =  locations.map(loc => debugCommand(loc.id, loc.id));
+        options.push(...words);
+    }
+    return options;
+}
+
+function executeTeleport(env : Env, _behaviour : Behaviour, outputConsumer : OutputConsumer, command : string[]) {
+    if (command.length < 2) {
+        throw new Error("Teleport command requires location");
+    }
+    
+    const locationId = command[1];
+    const locations = env.findObjs(obj => obj["type"] === "room" && obj.id === locationId, [["entities"]]); 
+    if (locations.length === 0) {
+        throw new Error(`No location found with id: ${locationId}`);
+    }
+    
+    const location = locations[0];
+    const player = Player.getPlayer(env);
+    Locations.setLocation(env, player, location.id);
+    log(outputConsumer, `Player teleported to location ${locationId}.`);
+}
+
+function getItems(env : Env) : Word[] {
+    const items = env.findObjs(obj => obj["type"] === "item", [["entities"]]);
+    const words = items.map(item => debugCommand(item.id, item.id));
+    return words;
 }
 
 function getContexts(env : Env, behaviour : Behaviour) : string[] {

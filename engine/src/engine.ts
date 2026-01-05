@@ -308,6 +308,8 @@ export class BasicEngine implements Engine {
 
   execute(command: string[]): void {
     if (executeDebugCommand(this.env, this.gameData,this.output, command)) {
+      // World model may have changed, so refresh context
+      this.context = this.getContext();
       return;
     }
     
