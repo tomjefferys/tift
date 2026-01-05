@@ -16,7 +16,7 @@ export class CommandState extends BaseInputHandler {
     command : Word[];
     engine : EngineFacade;
     messages : Message[];
-    debugMode : boolean = false;
+    debugMode = false;
 
     constructor(engine : EngineFacade, display : Display) {
         super(display);
@@ -28,7 +28,6 @@ export class CommandState extends BaseInputHandler {
     control(char: string) {
         if (char === "d") {
             this.debugMode = !this.debugMode;
-            const modeMessage = this.debugMode ? "Debug mode enabled." : "Debug mode disabled.";
         }
     }
 
@@ -39,14 +38,16 @@ export class CommandState extends BaseInputHandler {
         }
     }
 
-    protected getAllWords(): Word[] {
+    // FIXME should be protected
+    getAllWords(): Word[] {
         const allWords =  this.engine.getWords(this.command);
         const debugFiltered = allWords.filter(
             word => this.debugMode ? word.tags?.includes("debug") : !word.tags?.includes("debug"));
         return debugFiltered;
     }
 
-    protected execute(selectedWords : Word[]) : boolean{
+    // FIXME should be protected
+    execute(selectedWords : Word[]) : boolean{
         if (selectedWords.length === 0) {
             this.input.pop();
         } else if (selectedWords.length === 1) {

@@ -403,13 +403,13 @@ describe("CommandState", () => {
         test("should filter debug words in getAllWords() based on debugMode", () => {
             // Test disabled debug mode - should exclude debug words
             commandState.debugMode = false;
-            const wordsDisabled = (commandState as any).getAllWords();
+            const wordsDisabled = commandState.getAllWords();
             expect(wordsDisabled).toHaveLength(2);
             expect(wordsDisabled.map((w: Word) => w.value)).toEqual(["look", "take"]);
 
             // Test enabled debug mode - should only include debug words
             commandState.debugMode = true;
-            const wordsEnabled = (commandState as any).getAllWords();
+            const wordsEnabled = commandState.getAllWords();
             expect(wordsEnabled).toHaveLength(2);
             expect(wordsEnabled.map((w: Word) => w.value)).toEqual(["debug", "info"]);
         });
@@ -424,7 +424,7 @@ describe("CommandState", () => {
             vi.mocked(mockEngine.getWords).mockReturnValue([]);
             
             // Manually trigger the execute path that resets debugMode
-            const result = (commandState as any).execute([{ type: "word", id: "north", value: "north", partOfSpeech: "verb", position: 0 }]);
+            const result = commandState.execute([{ type: "word", id: "north", value: "north", partOfSpeech: "verb", position: 0 }]);
             
             expect(result).toBe(true);
             expect(commandState.debugMode).toBe(false);
@@ -487,7 +487,7 @@ describe("CommandState", () => {
             commandState.command.push({ type: "word", id: "look", value: "look", partOfSpeech: "verb", position: 0 });
             vi.mocked(mockEngine.getWords).mockReturnValue([]);
             
-            const result = (commandState as any).execute([{ type: "word", id: "north", value: "north", partOfSpeech: "verb", position: 0 }]);
+            const result = commandState.execute([{ type: "word", id: "north", value: "north", partOfSpeech: "verb", position: 0 }]);
             
             expect(result).toBe(true);
             expect(commandState.debugMode).toBe(false);

@@ -20,7 +20,7 @@ export abstract class BaseInputHandler implements InputHandler {
         this.selectedWordIndex = undefined; // Clear selection when typing
     }
 
-    control(char: string) {
+    control(_char: string) {
         // No special behavior needed for base input handler
     }
 
