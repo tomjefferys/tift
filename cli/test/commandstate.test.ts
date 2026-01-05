@@ -341,4 +341,156 @@ describe("CommandState", () => {
             expect(() => commandState.update(true)).not.toThrow();
         });
     });
+
+    describe("Debug Mode", () => {
+        const debugWords: Word[] = [
+            { type: "word", id: "debug-cmd", value: "debug", partOfSpeech: "verb", position: 0, tags: ["debug"] },
+            { type: "word", id: "info", value: "info", partOfSpeech: "verb", position: 0, tags: ["debug"] }
+        ];
+
+        const normalWords: Word[] = [
+            { type: "word", id: "look", value: "look", partOfSpeech: "verb", position: 0 },
+            { type: "word", id: "take", value: "take", partOfSpeech: "verb", position: 0 }
+        ];
+
+        const mixedWords: Word[] = [...normalWords, ...debugWords];
+
+        beforeEach(() => {
+            vi.mocked(mockEngine.getWords).mockReturnValue(mixedWords);
+        });
+
+        test("should initialize with debugMode disabled", () => {
+            expect(commandState.debugMode).toBe(false);
+        });
+
+        test("should toggle debugMode when control('d') is called", () => {
+            expect(commandState.debugMode).toBe(false);
+            
+            commandState.control("d");
+            expect(commandState.debugMode).toBe(true);
+            
+            commandState.control("d");
+            expect(commandState.debugMode).toBe(false);
+        });
+
+        test("should not affect debugMode for other control characters", () => {
+            commandState.control("a");
+            expect(commandState.debugMode).toBe(false);
+            
+            commandState.control("x");
+            expect(commandState.debugMode).toBe(false);
+            
+            commandState.control("z");
+            expect(commandState.debugMode).toBe(false);
+        });
+
+        test("should filter out debug words when debugMode is disabled", () => {
+            commandState.debugMode = false;
+            
+            const displayState = commandState.getDisplayState();
+            expect(displayState.wordChoices).toEqual(["look", "take"]);
+            expect(displayState.wordChoices).not.toContain("debug");
+            expect(displayState.wordChoices).not.toContain("info");
+        });
+
+        test("should include debug words when debugMode is enabled", () => {
+            commandState.debugMode = true;
+            
+            const displayState = commandState.getDisplayState();
+            expect(displayState.wordChoices).toEqual(["debug", "info"]);
+        });
+
+        test("should filter debug words in getAllWords() based on debugMode", () => {
+            // Test disabled debug mode - should exclude debug words
+            commandState.debugMode = false;
+            const wordsDisabled = (commandState as any).getAllWords();
+            expect(wordsDisabled).toHaveLength(2);
+            expect(wordsDisabled.map((w: Word) => w.value)).toEqual(["look", "take"]);
+
+            // Test enabled debug mode - should only include debug words
+            commandState.debugMode = true;
+            const wordsEnabled = (commandState as any).getAllWords();
+            expect(wordsEnabled).toHaveLength(2);
+            expect(wordsEnabled.map((w: Word) => w.value)).toEqual(["debug", "info"]);
+        });
+
+        test("should reset debugMode to false after command execution", () => {
+            commandState.debugMode = true;
+            
+            // Add a word to the command
+            commandState.command.push({ type: "word", id: "look", value: "look", partOfSpeech: "verb", position: 0 });
+            
+            // Mock getAllWords to return empty array to trigger command execution
+            vi.mocked(mockEngine.getWords).mockReturnValue([]);
+            
+            // Manually trigger the execute path that resets debugMode
+            const result = (commandState as any).execute([{ type: "word", id: "north", value: "north", partOfSpeech: "verb", position: 0 }]);
+            
+            expect(result).toBe(true);
+            expect(commandState.debugMode).toBe(false);
+        });
+
+        test("should handle words with no tags properly", () => {
+            const wordsWithoutTags: Word[] = [
+                { type: "word", id: "simple", value: "simple", partOfSpeech: "verb", position: 0 },
+                { type: "word", id: "debug-word", value: "debug-word", partOfSpeech: "verb", position: 0, tags: ["debug"] }
+            ];
+            
+            vi.mocked(mockEngine.getWords).mockReturnValue(wordsWithoutTags);
+            
+            // Debug mode disabled - should only show words without debug tag
+            commandState.debugMode = false;
+            let displayState = commandState.getDisplayState();
+            expect(displayState.wordChoices).toEqual(["simple"]);
+            
+            // Debug mode enabled - should only show words with debug tag
+            commandState.debugMode = true;
+            displayState = commandState.getDisplayState();
+            expect(displayState.wordChoices).toEqual(["debug-word"]);
+        });
+
+        test("should handle words with multiple tags including debug", () => {
+            const wordsWithMultipleTags: Word[] = [
+                { type: "word", id: "multi-tag", value: "multi", partOfSpeech: "verb", position: 0, tags: ["debug", "admin", "test"] },
+                { type: "word", id: "normal", value: "normal", partOfSpeech: "verb", position: 0, tags: ["basic"] }
+            ];
+            
+            vi.mocked(mockEngine.getWords).mockReturnValue(wordsWithMultipleTags);
+            
+            // Debug mode disabled - should exclude word with debug tag
+            commandState.debugMode = false;
+            let displayState = commandState.getDisplayState();
+            expect(displayState.wordChoices).toEqual(["normal"]);
+            
+            // Debug mode enabled - should only include word with debug tag
+            commandState.debugMode = true;
+            displayState = commandState.getDisplayState();
+            expect(displayState.wordChoices).toEqual(["multi"]);
+        });
+
+        test("should maintain debugMode state across multiple operations until reset", () => {
+            // Enable debug mode
+            commandState.control("d");
+            expect(commandState.debugMode).toBe(true);
+            
+            // Perform various operations - debugMode should persist
+            commandState.addChar("d");
+            expect(commandState.debugMode).toBe(true);
+            
+            commandState.tab("forward");
+            expect(commandState.debugMode).toBe(true);
+            
+            commandState.backSpace();
+            expect(commandState.debugMode).toBe(true);
+            
+            // Only command execution should reset it by manually calling execute
+            commandState.command.push({ type: "word", id: "look", value: "look", partOfSpeech: "verb", position: 0 });
+            vi.mocked(mockEngine.getWords).mockReturnValue([]);
+            
+            const result = (commandState as any).execute([{ type: "word", id: "north", value: "north", partOfSpeech: "verb", position: 0 }]);
+            
+            expect(result).toBe(true);
+            expect(commandState.debugMode).toBe(false);
+        });
+    });
 });
