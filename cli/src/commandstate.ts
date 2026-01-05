@@ -1,4 +1,3 @@
-import { IdValue } from "tift-engine/src/shared";
 import { Word } from "tift-types/src/messages/word";
 import { Display, DisplayState } from "./display";
 import { EngineFacade } from "./enginefacade";
@@ -17,12 +16,20 @@ export class CommandState extends BaseInputHandler {
     command : Word[];
     engine : EngineFacade;
     messages : Message[];
+    debugMode : boolean = false;
 
     constructor(engine : EngineFacade, display : Display) {
         super(display);
         this.command = [];
         this.engine = engine;
         this.messages = [];
+    }
+
+    control(char: string) {
+        if (char === "d") {
+            this.debugMode = !this.debugMode;
+            const modeMessage = this.debugMode ? "Debug mode enabled." : "Debug mode disabled.";
+        }
     }
 
     protected onBackspaceWithEmptyInput() {
@@ -33,7 +40,10 @@ export class CommandState extends BaseInputHandler {
     }
 
     protected getAllWords(): Word[] {
-        return this.engine.getWords(this.command);
+        const allWords =  this.engine.getWords(this.command);
+        const debugFiltered = allWords.filter(
+            word => this.debugMode ? word.tags?.includes("debug") : !word.tags?.includes("debug"));
+        return debugFiltered;
     }
 
     protected execute(selectedWords : Word[]) : boolean{
@@ -41,13 +51,14 @@ export class CommandState extends BaseInputHandler {
             this.input.pop();
         } else if (selectedWords.length === 1) {
             this.command.push(selectedWords[0]);
-            const words = getWords(this.engine, this);
+            const words = this.getAllWords();
             if (words.length === 0) {
                 const commandMessage = createMessage(this.command.map(word => word.value).join(" "), "Command");
                 this.messages.push(commandMessage);
                 this.engine.execute(this.command.map(word => word.id));
                 this.engine.flushMessages(message => this.messages.push(message));
                 this.command.length = 0;
+                this.debugMode = false;
             }
             this.clearInput();
         }
@@ -67,14 +78,9 @@ export class CommandState extends BaseInputHandler {
             messages : messages,
             partialCommand : this.command.map(word => word.value), 
             partialWord : this.input,
-            wordChoices : filterWords(this.engine.getWords(this.command), this.input).map(word => word.value),
+            wordChoices : filterWords(this.getAllWords(), this.input).map(word => word.value),
             selectedWordIndex
         } 
     }
      
-}
-
-function getWords(engine : EngineFacade, state : CommandState) : IdValue<string>[] {
-    const matched = engine.getWords(state.command);
-    return matched;
 }

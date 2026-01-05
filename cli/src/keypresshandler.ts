@@ -6,6 +6,7 @@ export type TabMotion = "forward" | "backward";
 
 export interface InputHandler {
     addChar(char: string): void;
+    control(char: string): void;
     backSpace(): void;
     enter(): void;
     update(execute: boolean): void;
@@ -49,6 +50,9 @@ export class KeypressHandler {
         } else if (event.name === "l" && event.ctrl) {
             this.mode = (this.mode === "GAME") ? "CONTROL" : "GAME";
             state = this.getCurrentState();
+            execute = false;
+        } else if (event.name && event.ctrl) {
+            state.control(event.name);
             execute = false;
         }
 

@@ -15,7 +15,8 @@ describe("KeypressHandler", () => {
             backSpace: vi.fn(),
             enter: vi.fn(),
             tab: vi.fn(),
-            update: vi.fn()
+            update: vi.fn(),
+            control: vi.fn()
         };
 
         mockControlState = {
@@ -23,7 +24,8 @@ describe("KeypressHandler", () => {
             backSpace: vi.fn(),
             enter: vi.fn(),
             tab: vi.fn(),
-            update: vi.fn()
+            update: vi.fn(),
+            control: vi.fn()
         };
 
         // Create mock dependencies

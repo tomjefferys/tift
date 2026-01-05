@@ -57,15 +57,19 @@ export function getDebugCommands(env : Env, behaviour : Behaviour, outputConsume
     if (!ENABLE_DEBUG) {
         return [];
     }
+
+    // Remove any wildcards, not part of debug commands, and complicates logic to leave them in.
+    const debugWords = words.filter(word => word.id !== "?");
+
     try {
-        if (words.length == 0 || words.length == 1 && words[0]?.id === "?") {
+        if (debugWords.length == 0) {
             return DEBUG_COMMANDS;
-        } else if (words[0].id.startsWith("debug.") ) {
-            const handler = GET_WORD_HANDLERS[words[0].id];
+        } else if (debugWords[0].id.startsWith("debug.") ) {
+            const handler = GET_WORD_HANDLERS[debugWords[0].id];
             if (!handler) {
-                throw new Error(`No debug word handler for ${words[0].id}`);
+                throw new Error(`No debug word handler for ${debugWords[0].id}`);
             }
-            return handler(env, behaviour, words);
+            return handler(env, behaviour, debugWords);
         } else { // Not a debug command
             return [];
         }
@@ -95,16 +99,16 @@ export function executeDebugCommand(env : Env, behaviour : Behaviour, outputCons
 }
 
 function getInspectOptions(env : Env, behaviour : Behaviour, command : Word[]) : Word[] {
-    if (command.length === 2 && command[1].id === "?") {
+    if (command.length === 1 ) {
         return getInspectTypes();
-    } else if (command.length === 3 && command[2].id === "?") {
+    } else if (command.length === 2) {
         const type = command[1].id;
         return getInspectTargets(env, behaviour, type);
-    } else if (command.length === 4 && command[1].id === CONTEXT_ITEM && command[3].id === "?") {
+    } else if (command.length === 3 && command[1].id === CONTEXT_ITEM) {
         const ctxId = command[2].id;
         return getInspectContextItems(env, behaviour, ctxId);
     }
-    throw new Error("No inspect options available");
+    return [];
 }
 
 function getInspectTypes() : Word[] {
@@ -190,7 +194,7 @@ function inspectContextItem(env : Env, behaviour : Behaviour, outputConsumer : O
 
 function getListOptions(_env : Env, _behaviour : Behaviour, command : Word[]) : Word[] {
     const words : Word[]= [];
-    if (command.length === 2 && command[1].id === "?") {
+    if (command.length === 1) {
         words.push(...Object.entries(LIST_TYPES).map(([key,value]) => debugCommand(key, value)));
     }
     return words;

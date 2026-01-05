@@ -33,6 +33,7 @@ export class InteractiveRunner {
             if (display) {
                 display.clearScreen();
             }
+            this.keypressHandler.setMode("GAME");
             this.stateManager.get().update(false);
         }
 

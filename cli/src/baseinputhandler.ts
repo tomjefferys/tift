@@ -20,6 +20,10 @@ export abstract class BaseInputHandler implements InputHandler {
         this.selectedWordIndex = undefined; // Clear selection when typing
     }
 
+    control(char: string) {
+        // No special behavior needed for base input handler
+    }
+
     backSpace() {
         if (this.input.length) {
             this.input.pop();
