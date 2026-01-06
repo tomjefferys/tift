@@ -38,16 +38,14 @@ export class CommandState extends BaseInputHandler {
         }
     }
 
-    // FIXME should be protected
-    getAllWords(): Word[] {
+    protected getAllWords(): Word[] {
         const allWords =  this.engine.getWords(this.command);
         const debugFiltered = allWords.filter(
             word => this.debugMode ? word.tags?.includes("debug") : !word.tags?.includes("debug"));
         return debugFiltered;
     }
 
-    // FIXME should be protected
-    execute(selectedWords : Word[]) : boolean{
+    protected execute(selectedWords : Word[]) : boolean{
         if (selectedWords.length === 0) {
             this.input.pop();
         } else if (selectedWords.length === 1) {
