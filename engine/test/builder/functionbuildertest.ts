@@ -42,7 +42,7 @@ test("Build rule - error", () => {
     try {
       compileFunctions(undefined, obj["id"], env);
       env.get(obj.id)["afterTurn"](env);
-      fail();
+      expect.fail();
     } catch (e) {
       const error = e as Error;
       expect(error.message).toContain("rule1.afterTurn");

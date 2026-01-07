@@ -157,7 +157,7 @@ test("Build entity - action error", () => {
 
       try { 
         makeItem(obj);
-        fail()
+        expect.fail()
       } catch(e) {
         const error = e as Error;
         expect(error.message).toContain("soup.before");

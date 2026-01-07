@@ -28,7 +28,7 @@ engine/out: engine/node_modules
 engine: types engine/out
 
 engine-test: engine
-	cd engine && npx jest
+	cd engine && npx vitest --run
 
 engine-lint: engine
 	cd engine && npm run lint
