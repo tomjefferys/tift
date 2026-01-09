@@ -1,18 +1,18 @@
 import React, { useEffect, useRef, Fragment } from "react";
 import { OutputEntry, Command } from "../outputentry";
 import ReactMarkdown from "react-markdown";
-import { Container, List, ListItem, Text, useColorModeValue, useToken } from "@chakra-ui/react";
 import { Optional } from "tift-types/src/util/optional";
 
+// Color mappings for light/dark themes
 const LEVEL_COLOURS : Record<string, [string, string]> = {
-    "trace" : ["blue.700", "blue.400"],
-    "debug" : ["blue.700", "blue.400"],
-    "info" : ["blue.700", "blue.400"],
-    "warn" : ["yellow.500", "yellow.300"],
-    "error" : ["red.700", "red.600"]
+    "trace" : ["#2d3748", "#63b3ed"],   // blue.700, blue.400
+    "debug" : ["#2d3748", "#63b3ed"],   // blue.700, blue.400
+    "info" : ["#2d3748", "#63b3ed"],    // blue.700, blue.400
+    "warn" : ["#d69e2e", "#f6e05e"],    // yellow.500, yellow.300
+    "error" : ["#c53030", "#e53e3e"]    // red.700, red.600
 }
 
-const PROMPT_COLOURS : [string, string] = ["green.700", "green.400"];
+const PROMPT_COLOURS : [string, string] = ["#2f855a", "#68d391"]; // green.700, green.400
 
 interface OutputProps {
     entries : OutputEntry[];
@@ -35,15 +35,14 @@ interface LogEntryProps {
 
 const getLevelColour = (logLevel : string) : string => {
     const colours = LEVEL_COLOURS[logLevel];
-    const colourToken =  useColorModeValue(colours[0], colours[1]);
-    const [colour] = useToken("colors", [colourToken]);
-    return colour;
+    // Use CSS custom property or default to light theme
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return isDark ? colours[1] : colours[0];
 }
 
 const getPromptColour = () : string => {
-    const colourToken =  useColorModeValue(PROMPT_COLOURS[0], PROMPT_COLOURS[1]);
-    const [colour] = useToken("colors", [colourToken]);
-    return colour;
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return isDark ? PROMPT_COLOURS[1] : PROMPT_COLOURS[0];
 }   
 
 const CURSOR = (<span key={`__cursor__`} className="cursor">|</span>);
@@ -63,9 +62,20 @@ const CommandEntry = ({ value, cursor } : CommandEntryProps) => {
     if (words.length === 0) {
         words.push(CURSOR);
     }
-   return (<Text color={getPromptColour()} data-testid="command">&gt; {words}</Text>);
+   return (
+       <span className="output-text output-text--prompt" 
+             style={{ color: getPromptColour() }} 
+             data-testid="command">
+           &gt; {words}
+       </span>
+   );
 }
-const LogEntry = ({ logLevel, message } : LogEntryProps) => (<Text color={getLevelColour(logLevel)}>{message}</Text>)
+const LogEntry = ({ logLevel, message } : LogEntryProps) => (
+    <span className="output-text output-text--log" 
+          style={{ color: getLevelColour(logLevel) }}>
+        {message}
+    </span>
+)
 
 const renderMessage = (message : OutputEntry) => {
     switch(message.type) {
@@ -88,19 +98,19 @@ const Output = ({ entries, command } : OutputProps) => {
     });
 
     return (
-        <React.Fragment>
-            <Container textAlign={"left"}>
-                <List>
-                    {entries.map((message : OutputEntry, index : number) => (
-                        <ListItem key={index}>{renderMessage(message)}</ListItem>
-                        ))}
-                    <ListItem>
-                        <CommandEntry value={command.command} cursor={command.cursor}/>
-                    </ListItem>
-                </List>
-                <div ref={entriesEndRef}/>
-            </Container>
-        </React.Fragment>
+        <div className="output-container">
+            <ul className="output-list">
+                {entries.map((message : OutputEntry, index : number) => (
+                    <li key={index} className="output-item">
+                        {renderMessage(message)}
+                    </li>
+                ))}
+                <li className="output-item">
+                    <CommandEntry value={command.command} cursor={command.cursor}/>
+                </li>
+            </ul>
+            <div ref={entriesEndRef}/>
+        </div>
     );
 }
 

@@ -124,3 +124,68 @@ code {
     background-color: transparent;
   }
 }
+
+/* Output Component Styles */
+.output-container {
+  text-align: left;
+  width: 100%;
+  max-width: 60rem; /* 960px - Chakra's xl container size */
+  margin: 0 auto; /* Center the container */
+  padding: 0 1rem; /* Side padding */
+}
+
+/* Responsive container widths (matching Chakra's responsive breakpoints) */
+@media (max-width: 30em) { /* sm breakpoint */
+  .output-container {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 30em) and (max-width: 48em) { /* md breakpoint */
+  .output-container {
+    max-width: 42rem; /* 672px */
+  }
+}
+
+@media (min-width: 48em) and (max-width: 62em) { /* lg breakpoint */
+  .output-container {
+    max-width: 48rem; /* 768px */
+  }
+}
+
+@media (min-width: 62em) and (max-width: 80em) { /* xl breakpoint */
+  .output-container {
+    max-width: 56rem; /* 896px */
+  }
+}
+
+@media (min-width: 80em) { /* 2xl breakpoint */
+  .output-container {
+    max-width: 60rem; /* 960px */
+  }
+}
+
+.output-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.output-item {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.output-text {
+  display: block;
+  font-family: inherit;
+}
+
+.output-text--prompt {
+  font-weight: 500;
+}
+
+.output-text--log {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+}
