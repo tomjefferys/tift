@@ -335,3 +335,44 @@ code {
     border-bottom-color: #63b3ed;
   }
 }
+
+/* Tift Component Layout Styles */
+.tift-container {
+  height: 100%;
+  width: 100%;
+  outline: none; /* Remove focus outline */
+}
+
+.tift-layout {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tift-status {
+  position: relative;
+  height: 5%;
+  min-height: 3rem; /* Ensure minimum height */
+}
+
+.tift-output {
+  position: relative;
+  height: 55%;
+  width: 100%;
+  overflow: auto;
+}
+
+.tift-divider {
+  height: 1px;
+  background-color: var(--divider-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.tift-controls {
+  position: relative;
+  height: 40%;
+  width: 100%;
+  flex: 1;
+  min-height: 0; /* Allow flex shrinking */
+}

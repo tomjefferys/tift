@@ -9,7 +9,6 @@ import { DecoratedForwarder, MessageForwarder } from "tift-types/src/engineproxy
 import Output from "./Output"
 import Controls from './Controls';
 import { commandEntry, logEntry, messageEntry, OutputEntry, Command } from '../outputentry';
-import { Box, Divider, useColorMode } from '@chakra-ui/react'
 import { createRestarter } from "../util/restarter";
 import { createColourSchemePicker } from "../util/colourschemepicker";
 import { createUISchemePicker } from "../util/uischemepicker";
@@ -57,7 +56,7 @@ function Tift() {
     const [command, setCommand] = useState<WordList>([]);
 
     const [partialWord, setPartialWord] = useState<string>("");
-    const { setColorMode } = useColorMode();
+    const [colorMode, setColorMode] = useState<string>('light');
 
     const statusRef = useRef<StatusType>({ title : "", undoable : false, redoable : false, properties : {}});
 
@@ -78,6 +77,21 @@ function Tift() {
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
     const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
+
+    // Initialize color mode based on system preference
+    useEffect(() => {
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialMode = isDark ? 'dark' : 'light';
+        setColorMode(initialMode);
+        
+        // Apply the color mode to the document
+        document.documentElement.setAttribute('data-theme', initialMode);
+    }, []);
+
+    // Apply color mode changes to document
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', colorMode);
+    }, [colorMode]);
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
       await engineRef.current?.send(Input.getNextWords(command));
@@ -402,30 +416,23 @@ function Tift() {
     ];
 
     return (
-        <React.Fragment>
-           <Box height="100%" width="100%">
-              <Box position={"relative"} height="5%">
+        <div className="tift-container" tabIndex={0}>
+           <div className="tift-layout">
+              <div className="tift-status">
                 <StatusBar status={statusRef.current.title}/>
-              </Box>
-              <Box position={"relative"}
-                   height="55%"
-                   width="100%"
-                   overflow="auto">
+              </div>
+              <div className="tift-output">
                 <Output entries={messagesRef.current ?? []} command={getCommand()}/>
-              </Box>
-              {/*eslint-disable-next-line */}
-              {/* @ts-ignore ignore "Expression produces a union type that is too complex to represent.ts(2590)"*/}
-              <Divider/> 
-              <Box position={"relative"}
-                   height="40%" 
-                   width="100%">
+              </div>
+              <div className="tift-divider"></div>
+              <div className="tift-controls">
                 <Controls words={filteredWords ?? []}
                           wordSelected={wordSelected}
                           panelIds={panelIds}
                           useBubbles={settingsRef.current.uiType === "bubble"}/>
-              </Box>
-            </Box>
-        </React.Fragment>
+              </div>
+            </div>
+        </div>
       );
 }
 
