@@ -189,3 +189,149 @@ code {
   font-family: 'Courier New', monospace;
   font-size: 0.875rem;
 }
+
+/* Controls Component Styles */
+.controls-container {
+  height: 100%;
+  width: 100%;
+  max-width: 60rem; /* Same as output container */
+  margin: 0 auto; /* Center the container */
+  padding: 0 1rem; /* Side padding */
+}
+
+/* Responsive container widths for Controls (same as Output) */
+@media (max-width: 30em) { /* sm breakpoint */
+  .controls-container {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 30em) and (max-width: 48em) { /* md breakpoint */
+  .controls-container {
+    max-width: 42rem; /* 672px */
+  }
+}
+
+@media (min-width: 48em) and (max-width: 62em) { /* lg breakpoint */
+  .controls-container {
+    max-width: 48rem; /* 768px */
+  }
+}
+
+@media (min-width: 62em) and (max-width: 80em) { /* xl breakpoint */
+  .controls-container {
+    max-width: 56rem; /* 896px */
+  }
+}
+
+@media (min-width: 80em) { /* 2xl breakpoint */
+  .controls-container {
+    max-width: 60rem; /* 960px */
+  }
+}
+
+.tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-list {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  background: inherit;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2d3748;;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #1a202c;
+}
+
+.tab--active {
+  color: #3182ce;
+  border-bottom-color: #3182ce;
+}
+
+.tab-panels {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+}
+
+.tab-panel--hidden {
+  display: none;
+}
+
+.tab-panel--active {
+  display: block;
+}
+
+/* Grid Components */
+.simple-button-grid {
+  display: grid;
+  height: 100%;
+  width: 100%;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  grid-auto-rows: 1fr;
+  overflow-y: auto;
+}
+
+.custom-button-grid {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.5rem;
+}
+
+.grid-item {
+  display: flex;
+  align-items: stretch;
+}
+
+.grid-item > * {
+  width: 100%;
+}
+
+.grid-empty-cell {
+  /* Empty cell placeholder */
+}
+
+/* Dark mode support for Controls */
+@media (prefers-color-scheme: dark) {
+  .tab-list {
+    border-bottom-color: #4a5568;
+  }
+  
+  .tab {
+    color: #a0aec0;
+  }
+  
+  .tab:hover {
+    color: #e2e8f0;
+  }
+  
+  .tab--active {
+    color: #63b3ed;
+    border-bottom-color: #63b3ed;
+  }
+}

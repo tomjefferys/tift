@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, TabList, Tab, TabPanels, TabPanel, Container, SimpleGrid, Grid, GridItem, Box, useColorModeValue, useToken} from "@chakra-ui/react";
 import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { WordType } from "tift-types/src/messages/output";
 import WordButton from "./WordButton";
@@ -106,21 +105,35 @@ const Controls = ({ words, wordSelected, panelIds, useBubbles } : ControlProps) 
     }, [words]);
 
     return (
-        // eslint-disable-next-line
-        // @ts-ignore ignore "Expression produces a union type that is too complex to represent.ts(2590)"
-        <Container h="100%">
-            <Tabs h="100%" index={tabIndex} onChange={handleTabsChange}>
-                <TabList>{activePanels.map(panel => (<Tab key={panel.id}>{panel.name}</Tab>))}</TabList>
-                <TabPanels h="85%">{activePanels.map(panel => (
-                    <TabPanel h="100%" key={panel.id} padding={0}>{
-                        (useBubbles && panel.id !== "options")
-                           ? <WordBubbles wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
-                           : <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
-                        }
-                    </TabPanel>))}
-                </TabPanels>
-            </Tabs>
-        </Container>)
+        <div className="controls-container">
+            <div className="tabs">
+                <div className="tab-list">
+                    {activePanels.map((panel, index) => (
+                        <button 
+                            key={panel.id}
+                            className={`tab ${index === tabIndex ? 'tab--active' : ''}`}
+                            onClick={() => handleTabsChange(index)}
+                        >
+                            {panel.name}
+                        </button>
+                    ))}
+                </div>
+                <div className="tab-panels">
+                    {activePanels.map((panel, index) => (
+                        <div 
+                            key={panel.id} 
+                            className={`tab-panel ${index === tabIndex ? 'tab-panel--active' : 'tab-panel--hidden'}`}
+                        >
+                            {(useBubbles && panel.id !== "options")
+                               ? <WordBubbles wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
+                               : <WordButtons wordFilter={panel.wordFilter} allWords={words} wordSelected={wordSelected} />
+                            }
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 };
 
 const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) => {
@@ -138,8 +151,12 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
 }
 
 const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) => {
-    const borderColourToken = useColorModeValue('gray.200', 'gray.700');
-    const [borderColour] = useToken('colors', [borderColourToken]);
+    // Get border color based on dark/light theme
+    const getBorderColor = () => {
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        return isDark ? '#4a5568' : '#e2e8f0'; // gray.700 : gray.200
+    };
+
     const words : (Word | undefined)[] = wordFilter(allWords);
 
     // Ensure backspace is always in the same location
@@ -159,7 +176,7 @@ const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     ) : BLANK_CELL);
 
     const style : React.CSSProperties = { 
-        border : `1px solid ${borderColour}`,
+        border : `1px solid ${getBorderColor()}`,
         minHeight : "60px",
         maxHeight : "60px",
     };
@@ -199,12 +216,18 @@ const SimpleButtonGrid = ({ words, columns, wordSelected } : SimpleButtonGridPro
     // cells will ve stretched vertically
     const extraCells = columns * 3 - cells.length;
     for(let i=0; i<extraCells; i++) {
-        cells.push((<Box key={`__empty__${i}`}></Box>));
+        cells.push((<div key={`__empty__${i}`} className="grid-empty-cell"></div>));
     }
+    
+    const gridStyle = {
+        gridTemplateColumns: `repeat(${columns}, 1fr)`
+    };
+
     return (
-        <SimpleGrid columns={columns} h="100%" w="100%" overflow={"auto"} overflowY={"scroll"} gridAutoRows="1fr">
+        <div className="simple-button-grid" style={gridStyle}>
             {cells}
-        </SimpleGrid>);
+        </div>
+    );
 }
 
 
@@ -247,16 +270,21 @@ const OPTION_GRID : GridCell[] = [
 
 const CustomButtonGrid = ({ words, totalColumns, cells, wordSelected } : CustomButtonGridProps) => {
     const placedIds : string[] = [];
-    const templateColumns = `repeat(${totalColumns},1fr)`;
+    const gridStyle = {
+        gridTemplateColumns: `repeat(${totalColumns}, 1fr)`
+    };
     return (
-        <Grid templateColumns={templateColumns}>
+        <div className="custom-button-grid" style={gridStyle}>
             {cells.map(({ wordId, columns, defaultValue }) => {
                 const word = words.find(word => word.id === wordId);
                 if (word) {
                     placedIds.push(word.id);
                 }
+                const cellStyle = {
+                    gridColumn: `span ${columns}`
+                };
                 return (
-                    <GridItem colSpan={columns} key={wordId}>
+                    <div key={wordId} className="grid-item" style={cellStyle}>
                         {(word !== undefined)
                             ? (<WordButton key={word.id} word={word} wordSelected={wordSelected}/>)
                             : ((defaultValue)
@@ -269,12 +297,16 @@ const CustomButtonGrid = ({ words, totalColumns, cells, wordSelected } : CustomB
                                                disabled={true}
                                                wordSelected={wordSelected}/>)
                                 : (<></>))}
-                    </GridItem>
+                    </div>
                 )
             })}
             {words.filter(word => !placedIds.find(id => id === word.id))
-                  .map(word => (<GridItem colSpan={1} key={word.id}><WordButton key={word.id} word={word} wordSelected={wordSelected}/></GridItem>))}
-        </Grid>
+                  .map(word => (
+                      <div key={word.id} className="grid-item" style={{ gridColumn: 'span 1' }}>
+                          <WordButton key={word.id} word={word} wordSelected={wordSelected}/>
+                      </div>
+                  ))}
+        </div>
     );
 } 
 
