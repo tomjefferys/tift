@@ -47,7 +47,7 @@ code {
 /* StatusBar Component Styles */
 .status-bar {
   width: 100%;
-  background-color: #2b6cb0; /* blue.600 equivalent */
+  background-color: var(--status-bar-bg);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   padding: 0.25rem;
   text-align: center;
@@ -56,16 +56,9 @@ code {
 .status-heading {
   font-size: 1.125rem; /* md size equivalent */
   font-weight: 600;
-  color: white;
+  color: var(--status-bar-text);
   margin: 0;
   line-height: 1.25;
-}
-
-/* Dark mode support for StatusBar */
-@media (prefers-color-scheme: dark) {
-  .status-bar {
-    background-color: #2c5282; /* slightly darker blue for dark mode */
-  }
 }
 
 /* WordButton Component Styles */
@@ -385,6 +378,8 @@ code {
   --scrollbar-track-bg: #f7fafc;
   --scrollbar-thumb-bg: #cbd5e0;
   --scrollbar-thumb-hover-bg: #a0aec0;
+  --status-bar-bg: #2b6cb0;
+  --status-bar-text: #ffffff;
   --log-color-trace: #2d3748;
   --log-color-debug: #2d3748;
   --log-color-info: #2d3748;
@@ -407,6 +402,8 @@ code {
   --scrollbar-track-bg: #2d3748;
   --scrollbar-thumb-bg: #4a5568;
   --scrollbar-thumb-hover-bg: #718096;
+  --status-bar-bg: #2c5282;
+  --status-bar-text: #e2e8f0;
   --log-color-trace: #63b3ed;
   --log-color-debug: #63b3ed;
   --log-color-info: #63b3ed;
@@ -430,6 +427,8 @@ code {
   --scrollbar-track-bg: #1e1b4b;
   --scrollbar-thumb-bg: #4c1d95;
   --scrollbar-thumb-hover-bg: #6d28d9;
+  --status-bar-bg: #7c3aed;
+  --status-bar-text: #c4b5fd;
   --log-color-trace: #06b6d4;
   --log-color-debug: #06b6d4;
   --log-color-info: #06b6d4;
@@ -453,6 +452,8 @@ code {
   --scrollbar-track-bg: #052e16;
   --scrollbar-thumb-bg: #166534;
   --scrollbar-thumb-hover-bg: #22c55e;
+  --status-bar-bg: #065f46;
+  --status-bar-text: #4ade80;
   --log-color-trace: #4ade80;
   --log-color-debug: #4ade80;
   --log-color-info: #4ade80;
@@ -476,6 +477,8 @@ code {
   --scrollbar-track-bg: #451a03;
   --scrollbar-thumb-bg: #92400e;
   --scrollbar-thumb-hover-bg: #b45309;
+  --status-bar-bg: #92400e;
+  --status-bar-text: #fbbf24;
   --log-color-trace: #d97706;
   --log-color-debug: #d97706;
   --log-color-info: #d97706;
@@ -499,6 +502,8 @@ code {
   --scrollbar-track-bg: #1a2e05;
   --scrollbar-thumb-bg: #365314;
   --scrollbar-thumb-hover-bg: #4d7c0f;
+  --status-bar-bg: #365314;
+  --status-bar-text: #bef264;
   --log-color-trace: #84cc16;
   --log-color-debug: #84cc16;
   --log-color-info: #84cc16;
@@ -522,6 +527,8 @@ code {
   --scrollbar-track-bg: #f0f0f0;
   --scrollbar-thumb-bg: #666666;
   --scrollbar-thumb-hover-bg: #333333;
+  --status-bar-bg: #000000;
+  --status-bar-text: #ffffff;
   --log-color-trace: #000000;
   --log-color-debug: #000000;
   --log-color-info: #000000;
@@ -545,6 +552,8 @@ code {
   --scrollbar-track-bg: #333333;
   --scrollbar-thumb-bg: #999999;
   --scrollbar-thumb-hover-bg: #cccccc;
+  --status-bar-bg: #ffffff;
+  --status-bar-text: #000000;
   --log-color-trace: #ffffff;
   --log-color-debug: #ffffff;
   --log-color-info: #ffffff;
