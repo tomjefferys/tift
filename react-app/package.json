@@ -4,10 +4,8 @@
   "homepage": ".",
   "private": true,
   "dependencies": {
-    "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/user-event": "^14.4.3",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.18.3",
+    "@types/node": "^20.0.0",
     "@types/react": "^18.0.24",
     "@types/react-dom": "^18.0.8",
     "@types/lodash": "^4.14.182",
@@ -23,14 +21,14 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --transformIgnorePatterns \"node_modules/(?!react-markdown)/\"",
-    "test:debug": "react-scripts --inspect-brk test --runInBand --no-cache --transformIgnorePatterns \"node_modules/(?!react-markdown)/\"",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "react-app"
     ]
   },
   "browserslist": {
@@ -46,8 +44,13 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^14.2.1",
+    "@types/jest": "^27.5.2",
+    "@vitest/ui": "^1.0.0",
+    "jsdom": "^23.0.0",
     "msw": "^0.49.2",
-    "tift-types": "file:../types"
+    "tift-types": "file:../types",
+    "vitest": "^1.0.0"
   }
 }

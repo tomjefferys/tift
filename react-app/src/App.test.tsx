@@ -1,76 +1,11 @@
 import React from 'react';
 import { render, screen, waitFor, cleanup, act, waitForElementToBeRemoved, findByRole, getByTestId, findAllByTestId, fireEvent } from '@testing-library/react';
-import { rest } from 'msw'
-import {setupServer} from 'msw/node'
 import App from './App';
 import userEvent from '@testing-library/user-event';
-import * as fs from "fs";
 
-// Mock ResizeObserver as it is not available when running tests.
-class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-(global as any).ResizeObserver = ResizeObserver;
-
-const TEST_DATA = `
----
-game: Test Game
-author: Presto Turnip
-version: 1.0.0
-gameId: Test1234
-foo: bar
-options:
-  - useDefaultVerbs
----
-room: cave
-description: A dark dank cave
-tags: [start]
-exits:
-  south: forest
----
-room: forest
-description: A dense verdant forest
-exits:
-  north: cave
----
-item: ball
-description: a round ball
-location: cave
-tags:
-  - carryable
-after:
-  drop(this):
-    do: print('boing boing')
----
-item: box
-description: a large box
-location: cave
-tags:
-  - pushable
-  - container
----
-`
-
-const server = setupServer(
-  rest.get('/adventure.yaml', (req, res, ctx) => {
-    return res(ctx.body(TEST_DATA));
-  }),
-  rest.get('/properties.yaml', (req, res, ctx) => {
-    const data = fs.readFileSync("public/properties.yaml", "utf8");
-    return res(ctx.body(data));
-  }),
-  rest.get('/stdlib.yaml', (req, res, ctx) => {
-    const data = fs.readFileSync("public/stdlib.yaml", "utf8");
-    return res(ctx.body(data));
-  })
-)
-
-beforeAll(() => server.listen())
-beforeEach(() => window.localStorage.clear())
-afterEach(() => server.resetHandlers())
-afterAll(() => server.close())
+beforeEach(() => {
+  window.localStorage.clear();
+})
 
 test('renders starting room status', async () => {
   window.HTMLElement.prototype.scrollIntoView = function() {};
