@@ -9,7 +9,7 @@
           "sourceMap": true,
           "declaration": true,
           "outDir": "./out",
-          "types": ["node", "moo", "vitest/globals"],
+          "types": ["node", "vitest/globals"],
 	  "composite": true,
           "lib": [
             "ES2022"

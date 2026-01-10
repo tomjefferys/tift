@@ -223,7 +223,6 @@ function Tift() {
   
       // Set the initial colour scheme
       if (settingsRef.current.colourScheme) {
-        console.log("Loaded colour scheme:", settingsRef.current.colourScheme);
         setColourScheme(settingsRef.current.colourScheme);
       } else {
         const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
