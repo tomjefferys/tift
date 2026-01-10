@@ -56,6 +56,7 @@ const PANELS : PanelDefinition[] =
                     id : "game",
                     name : "Game",
                     wordFilter : words => filterWords(words, ["word", "control"])
+                                            .filter(word => !word.tags?.includes("inventory"))
                                             .filter(word => !word.tags?.includes("debug"))
                  },
                  {
@@ -113,6 +114,8 @@ const Controls = ({ words, wordSelected, panelIds, useBubbles } : ControlProps) 
                             key={panel.id}
                             className={`tab ${index === tabIndex ? 'tab--active' : ''}`}
                             onClick={() => handleTabsChange(index)}
+                            role="tab"
+                            aria-label={panel.name}
                         >
                             {panel.name}
                         </button>
