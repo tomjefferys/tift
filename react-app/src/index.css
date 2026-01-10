@@ -87,16 +87,16 @@ code {
 }
 
 .word-button:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--button-hover-bg, rgba(0, 0, 0, 0.04));
 }
 
 .word-button:focus {
-  outline: 2px solid #3182ce;
+  outline: 2px solid var(--tab-active-color, #3182ce);
   outline-offset: 2px;
 }
 
 .word-button:active {
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: var(--button-active-bg, rgba(0, 0, 0, 0.08));
 }
 
 .word-button:disabled {
@@ -113,17 +113,6 @@ code {
   padding: 0.5rem;
   min-width: 2.5rem;
   min-height: 2.5rem;
-}
-
-/* Dark mode support for WordButton */
-@media (prefers-color-scheme: dark) {
-  .word-button:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-  }
-  
-  .word-button:active {
-    background-color: rgba(255, 255, 255, 0.12);
-  }
 }
 
 /* Disable hover effects on touch devices */
@@ -375,6 +364,8 @@ code {
   --tab-color: #2d3748;
   --tab-hover-color: #1a202c;
   --tab-active-color: #3182ce;
+  --button-hover-bg: rgba(0, 0, 0, 0.04);
+  --button-active-bg: rgba(0, 0, 0, 0.08);
   --log-color-trace: #2d3748;
   --log-color-debug: #2d3748;
   --log-color-info: #2d3748;
@@ -392,6 +383,8 @@ code {
   --tab-color: #a0aec0;
   --tab-hover-color: #e2e8f0;
   --tab-active-color: #63b3ed;
+  --button-hover-bg: rgba(255, 255, 255, 0.08);
+  --button-active-bg: rgba(255, 255, 255, 0.12);
   --log-color-trace: #63b3ed;
   --log-color-debug: #63b3ed;
   --log-color-info: #63b3ed;
