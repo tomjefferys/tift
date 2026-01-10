@@ -56,7 +56,6 @@ function Tift() {
     const [command, setCommand] = useState<WordList>([]);
 
     const [partialWord, setPartialWord] = useState<string>("");
-    const [colorMode, setColorMode] = useState<string>('light');
 
     const statusRef = useRef<StatusType>({ title : "", undoable : false, redoable : false, properties : {}});
 
@@ -77,21 +76,6 @@ function Tift() {
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
     const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
-
-    // Initialize color mode based on system preference
-    useEffect(() => {
-        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const initialMode = isDark ? 'dark' : 'light';
-        setColorMode(initialMode);
-        
-        // Apply the color mode to the document
-        document.documentElement.setAttribute('data-theme', initialMode);
-    }, []);
-
-    // Apply color mode changes to document
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', colorMode);
-    }, [colorMode]);
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
       await engineRef.current?.send(Input.getNextWords(command));
@@ -139,11 +123,13 @@ function Tift() {
       setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
       setCommand([WILD_CARD]);
     }
-  
-    const changeColourMode = (newMode : string) => {
-        setColorMode(newMode);
-    }
 
+    const setColourScheme = (scheme : string) => {
+        document.documentElement.setAttribute('data-theme', scheme);
+        settingsRef.current.colourScheme = scheme;
+        saveSettings(settingsRef.current);
+    }
+  
     // Engine creator
     // Sets up proxies, and returns a new engine
     const createEngine = (saveMessages : (messages : OutputEntry[]) => void) : DuplexProxy<InputMessage, OutputMessage> => {
@@ -156,7 +142,7 @@ function Tift() {
       });
 
       // Colour scheme picker
-      const colourSchemePicker = createColourSchemePicker(value => changeColourMode(value));
+      const colourSchemePicker = createColourSchemePicker(value => setColourScheme(value));
 
       const uiSchemePicker = createUISchemePicker((uiScheme : UIType) => {
         settingsRef.current.uiType = uiScheme;
@@ -234,6 +220,16 @@ function Tift() {
       }
 
       settingsRef.current = loadSettings();
+  
+      // Set the initial colour scheme
+      if (settingsRef.current.colourScheme) {
+        console.log("Loaded colour scheme:", settingsRef.current.colourScheme);
+        setColourScheme(settingsRef.current.colourScheme);
+      } else {
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialMode = isDark ? 'dark' : 'light';
+        setColourScheme(initialMode);
+      }
   
       const saveGame = (saveData : string) => {
         storageRef.current?.saveGame(saveData);

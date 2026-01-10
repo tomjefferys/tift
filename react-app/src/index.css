@@ -417,33 +417,142 @@ code {
   --text-color: #e2e8f0;
 }
 
-/* Additional theme-specific scrollbar styles */
-[data-theme="light"] .tab-panel::-webkit-scrollbar-track,
-[data-theme="light"] .simple-button-grid::-webkit-scrollbar-track,
-[data-theme="light"] .tift-output::-webkit-scrollbar-track,
-[data-theme="light"] .output-container::-webkit-scrollbar-track {
-  background: #f7fafc;
+/* Sci-Fi Cyberpunk Theme */
+[data-theme="cyberpunk"] {
+  --divider-color: #4c1d95;
+  --bubble-border-color: #4c1d95;
+  --tab-border-color: #4c1d95;
+  --tab-color: #c4b5fd;
+  --tab-hover-color: #e9d5ff;
+  --tab-active-color: #06b6d4;
+  --button-hover-bg: rgba(6, 182, 212, 0.1);
+  --button-active-bg: rgba(6, 182, 212, 0.2);
+  --scrollbar-track-bg: #1e1b4b;
+  --scrollbar-thumb-bg: #4c1d95;
+  --scrollbar-thumb-hover-bg: #6d28d9;
+  --log-color-trace: #06b6d4;
+  --log-color-debug: #06b6d4;
+  --log-color-info: #06b6d4;
+  --log-color-warn: #f59e0b;
+  --log-color-error: #ef4444;
+  --prompt-color: #10b981;
+  --background-color: #0f0f23;
+  --text-color: #c4b5fd;
 }
 
-[data-theme="light"] .tab-panel::-webkit-scrollbar-thumb,
-[data-theme="light"] .simple-button-grid::-webkit-scrollbar-thumb,
-[data-theme="light"] .tift-output::-webkit-scrollbar-thumb,
-[data-theme="light"] .output-container::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+/* Terminal/Matrix Theme */
+[data-theme="terminal"] {
+  --divider-color: #166534;
+  --bubble-border-color: #166534;
+  --tab-border-color: #166534;
+  --tab-color: #4ade80;
+  --tab-hover-color: #86efac;
+  --tab-active-color: #22d3ee;
+  --button-hover-bg: rgba(34, 211, 238, 0.1);
+  --button-active-bg: rgba(34, 211, 238, 0.2);
+  --scrollbar-track-bg: #052e16;
+  --scrollbar-thumb-bg: #166534;
+  --scrollbar-thumb-hover-bg: #22c55e;
+  --log-color-trace: #4ade80;
+  --log-color-debug: #4ade80;
+  --log-color-info: #4ade80;
+  --log-color-warn: #fbbf24;
+  --log-color-error: #f87171;
+  --prompt-color: #22d3ee;
+  --background-color: #000000;
+  --text-color: #22c55e;
 }
 
-[data-theme="dark"] .tab-panel::-webkit-scrollbar-track,
-[data-theme="dark"] .simple-button-grid::-webkit-scrollbar-track,
-[data-theme="dark"] .tift-output::-webkit-scrollbar-track,
-[data-theme="dark"] .output-container::-webkit-scrollbar-track {
-  background: #2d3748;
+/* Fantasy Medieval Theme */
+[data-theme="medieval"] {
+  --divider-color: #92400e;
+  --bubble-border-color: #92400e;
+  --tab-border-color: #92400e;
+  --tab-color: #d97706;
+  --tab-hover-color: #f59e0b;
+  --tab-active-color: #eab308;
+  --button-hover-bg: rgba(234, 179, 8, 0.1);
+  --button-active-bg: rgba(234, 179, 8, 0.2);
+  --scrollbar-track-bg: #451a03;
+  --scrollbar-thumb-bg: #92400e;
+  --scrollbar-thumb-hover-bg: #b45309;
+  --log-color-trace: #d97706;
+  --log-color-debug: #d97706;
+  --log-color-info: #d97706;
+  --log-color-warn: #f59e0b;
+  --log-color-error: #dc2626;
+  --prompt-color: #eab308;
+  --background-color: #1c1917;
+  --text-color: #fbbf24;
 }
 
-[data-theme="dark"] .tab-panel::-webkit-scrollbar-thumb,
-[data-theme="dark"] .simple-button-grid::-webkit-scrollbar-thumb,
-[data-theme="dark"] .tift-output::-webkit-scrollbar-thumb,
-[data-theme="dark"] .output-container::-webkit-scrollbar-thumb {
-  background: #4a5568;
+/* Enchanted Forest Theme */
+[data-theme="forest"] {
+  --divider-color: #365314;
+  --bubble-border-color: #365314;
+  --tab-border-color: #365314;
+  --tab-color: #84cc16;
+  --tab-hover-color: #a3e635;
+  --tab-active-color: #22d3ee;
+  --button-hover-bg: rgba(34, 211, 238, 0.1);
+  --button-active-bg: rgba(34, 211, 238, 0.2);
+  --scrollbar-track-bg: #1a2e05;
+  --scrollbar-thumb-bg: #365314;
+  --scrollbar-thumb-hover-bg: #4d7c0f;
+  --log-color-trace: #84cc16;
+  --log-color-debug: #84cc16;
+  --log-color-info: #84cc16;
+  --log-color-warn: #f59e0b;
+  --log-color-error: #ef4444;
+  --prompt-color: #22d3ee;
+  --background-color: #0f1419;
+  --text-color: #bef264;
+}
+
+/* High Contrast Light (Accessibility) */
+[data-theme="high-contrast-light"] {
+  --divider-color: #000000;
+  --bubble-border-color: #000000;
+  --tab-border-color: #000000;
+  --tab-color: #000000;
+  --tab-hover-color: #333333;
+  --tab-active-color: #0000ff;
+  --button-hover-bg: rgba(0, 0, 255, 0.1);
+  --button-active-bg: rgba(0, 0, 255, 0.2);
+  --scrollbar-track-bg: #f0f0f0;
+  --scrollbar-thumb-bg: #666666;
+  --scrollbar-thumb-hover-bg: #333333;
+  --log-color-trace: #000000;
+  --log-color-debug: #000000;
+  --log-color-info: #000000;
+  --log-color-warn: #cc6600;
+  --log-color-error: #cc0000;
+  --prompt-color: #006600;
+  --background-color: #ffffff;
+  --text-color: #000000;
+}
+
+/* High Contrast Dark (Accessibility) */
+[data-theme="high-contrast-dark"] {
+  --divider-color: #ffffff;
+  --bubble-border-color: #ffffff;
+  --tab-border-color: #ffffff;
+  --tab-color: #ffffff;
+  --tab-hover-color: #cccccc;
+  --tab-active-color: #00ffff;
+  --button-hover-bg: rgba(0, 255, 255, 0.2);
+  --button-active-bg: rgba(0, 255, 255, 0.3);
+  --scrollbar-track-bg: #333333;
+  --scrollbar-thumb-bg: #999999;
+  --scrollbar-thumb-hover-bg: #cccccc;
+  --log-color-trace: #ffffff;
+  --log-color-debug: #ffffff;
+  --log-color-info: #ffffff;
+  --log-color-warn: #ffff00;
+  --log-color-error: #ff6666;
+  --prompt-color: #00ff00;
+  --background-color: #000000;
+  --text-color: #ffffff;
 }
 
 .output-text--log-trace { color: var(--log-color-trace); }

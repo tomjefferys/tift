@@ -5,6 +5,7 @@ export type UIType = "bubble" | "normal";
 export interface Settings {
     uiType : UIType;
     enableDevMode : boolean;
+    colourScheme? : string;
 }
 
 export const DEFAULT_SETTINGS : Settings = {

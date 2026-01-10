@@ -5,7 +5,15 @@ import { StateMachine } from "tift-types/src/util/statemachine";
 
 const LIGHT = "light";
 const DARK = "dark";
+const CYBERPUNK = "cyberpunk";
+const TERMINAL = "terminal";
+const MEDIEVAL = "medieval";
+const FOREST = "forest";
+const HIGH_CONTRAST_LIGHT = "high-contrast-light";
+const HIGH_CONTRAST_DARK = "high-contrast-dark";
 const CANCEL = "cancel";
+
+const ALL_SCHEMES = [LIGHT, DARK, CYBERPUNK, TERMINAL, MEDIEVAL, FOREST, HIGH_CONTRAST_LIGHT, HIGH_CONTRAST_DARK];
 
 const CHANGE_MESSAGE = (scheme : string) => `Changing to the ${scheme} scheme.`;
 
@@ -15,25 +23,22 @@ const CHANGE_MESSAGE = (scheme : string) => `Changing to the ${scheme} scheme.`;
  * @returns the colour scheme picker
  */
 export function createColourSchemePicker(schemeChanger : (scheme : string) => void) : StateMachine<InputMessage, DecoratedForwarder> {
-    const colourSchemes = [LIGHT, DARK].map(value => word(value, value, "select"));
+    const colourSchemes = ALL_SCHEMES.map(value => word(value, value, "select"));
     return createStateMachine("prompt", ["prompt", {
         onEnter : (forwarder : DecoratedForwarder) => {
-            forwarder.print("Select a colour scheme: light, dark");
+            forwarder.print("Select a colour scheme: " + ALL_SCHEMES.join(", "));
             forwarder.words([], colourSchemes);
         },
         onAction : async (input : InputMessage, forwarder : DecoratedForwarder) => {
             let finished = false;
             const handler = handleInput(input);
-            await handler.onCommand([LIGHT], async () => {
-                    forwarder.print(CHANGE_MESSAGE(LIGHT));
-                    schemeChanger(LIGHT);
+            ALL_SCHEMES.forEach(scheme => {
+                handler.onCommand([scheme], async () => {
+                    forwarder.print(CHANGE_MESSAGE(scheme));
+                    schemeChanger(scheme);
                     finished = true;
                 });
-            await handler.onCommand([DARK], async () => {
-                    forwarder.print(CHANGE_MESSAGE(DARK));
-                    schemeChanger(DARK);
-                    finished = true;
-                });
+            });
             await handler.onCommand([CANCEL], async () => {
                     forwarder.print("cancelled");
                     finished = true;
