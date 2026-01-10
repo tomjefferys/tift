@@ -5,6 +5,14 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-color, #ffffff);
+  color: var(--text-color, #1a202c);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html {
+  background-color: var(--background-color, #ffffff);
+  transition: background-color 0.2s ease;
 }
 
 code {
@@ -238,7 +246,7 @@ code {
 
 .tab-list {
   display: flex;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--tab-border-color);
   background: inherit;
 }
 
@@ -249,18 +257,18 @@ code {
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #2d3748;;
+  color: var(--tab-color);
   border-bottom: 2px solid transparent;
   transition: all 0.2s;
 }
 
 .tab:hover {
-  color: #1a202c;
+  color: var(--tab-hover-color);
 }
 
 .tab--active {
-  color: #3182ce;
-  border-bottom-color: #3182ce;
+  color: var(--tab-active-color);
+  border-bottom-color: var(--tab-active-color);
 }
 
 .tab-panels {
@@ -316,31 +324,13 @@ code {
   /* Empty cell placeholder */
 }
 
-/* Dark mode support for Controls */
-@media (prefers-color-scheme: dark) {
-  .tab-list {
-    border-bottom-color: #4a5568;
-  }
-  
-  .tab {
-    color: #a0aec0;
-  }
-  
-  .tab:hover {
-    color: #e2e8f0;
-  }
-  
-  .tab--active {
-    color: #63b3ed;
-    border-bottom-color: #63b3ed;
-  }
-}
-
 /* Tift Component Layout Styles */
 .tift-container {
   height: 100%;
   width: 100%;
   outline: none; /* Remove focus outline */
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 .tift-layout {
@@ -376,3 +366,45 @@ code {
   flex: 1;
   min-height: 0; /* Allow flex shrinking */
 }
+
+/* Theme system */
+[data-theme="light"] {
+  --divider-color: #e2e8f0;
+  --bubble-border-color: #e2e8f0;
+  --tab-border-color: #e2e8f0;
+  --tab-color: #2d3748;
+  --tab-hover-color: #1a202c;
+  --tab-active-color: #3182ce;
+  --log-color-trace: #2d3748;
+  --log-color-debug: #2d3748;
+  --log-color-info: #2d3748;
+  --log-color-warn: #d69e2e;
+  --log-color-error: #c53030;
+  --prompt-color: #2f855a;
+  --background-color: #ffffff;
+  --text-color: #1a202c;
+}
+
+[data-theme="dark"] {
+  --divider-color: #4a5568;
+  --bubble-border-color: #4a5568;
+  --tab-border-color: #4a5568;
+  --tab-color: #a0aec0;
+  --tab-hover-color: #e2e8f0;
+  --tab-active-color: #63b3ed;
+  --log-color-trace: #63b3ed;
+  --log-color-debug: #63b3ed;
+  --log-color-info: #63b3ed;
+  --log-color-warn: #f6e05e;
+  --log-color-error: #e53e3e;
+  --prompt-color: #68d391;
+  --background-color: #1a202c;
+  --text-color: #e2e8f0;
+}
+
+.output-text--log-trace { color: var(--log-color-trace); }
+.output-text--log-debug { color: var(--log-color-debug); }
+.output-text--log-info { color: var(--log-color-info); }
+.output-text--log-warn { color: var(--log-color-warn); }
+.output-text--log-error { color: var(--log-color-error); }
+.output-text--prompt { color: var(--prompt-color); }

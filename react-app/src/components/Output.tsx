@@ -3,17 +3,6 @@ import { OutputEntry, Command } from "../outputentry";
 import ReactMarkdown from "react-markdown";
 import { Optional } from "tift-types/src/util/optional";
 
-// Color mappings for light/dark themes
-const LEVEL_COLOURS : Record<string, [string, string]> = {
-    "trace" : ["#2d3748", "#63b3ed"],   // blue.700, blue.400
-    "debug" : ["#2d3748", "#63b3ed"],   // blue.700, blue.400
-    "info" : ["#2d3748", "#63b3ed"],    // blue.700, blue.400
-    "warn" : ["#d69e2e", "#f6e05e"],    // yellow.500, yellow.300
-    "error" : ["#c53030", "#e53e3e"]    // red.700, red.600
-}
-
-const PROMPT_COLOURS : [string, string] = ["#2f855a", "#68d391"]; // green.700, green.400
-
 interface OutputProps {
     entries : OutputEntry[];
     command : Command;
@@ -33,17 +22,9 @@ interface LogEntryProps {
     message : string
 }
 
-const getLevelColour = (logLevel : string) : string => {
-    const colours = LEVEL_COLOURS[logLevel];
-    // Use CSS custom property or default to light theme
-    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return isDark ? colours[1] : colours[0];
+const getLevelClass = (logLevel : string) : string => {
+    return `output-text--log-${logLevel}`;
 }
-
-const getPromptColour = () : string => {
-    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return isDark ? PROMPT_COLOURS[1] : PROMPT_COLOURS[0];
-}   
 
 const CURSOR = (<span key={`__cursor__`} className="cursor">|</span>);
 
@@ -63,16 +44,13 @@ const CommandEntry = ({ value, cursor } : CommandEntryProps) => {
         words.push(CURSOR);
     }
    return (
-       <span className="output-text output-text--prompt" 
-             style={{ color: getPromptColour() }} 
-             data-testid="command">
+       <span className="output-text output-text--prompt" data-testid="command">
            &gt; {words}
        </span>
    );
 }
-const LogEntry = ({ logLevel, message } : LogEntryProps) => (
-    <span className="output-text output-text--log" 
-          style={{ color: getLevelColour(logLevel) }}>
+const LogEntry = ({ logLevel, message }: LogEntryProps) => (
+    <span className={`output-text ${getLevelClass(logLevel)}`}>
         {message}
     </span>
 )

@@ -154,11 +154,6 @@ const WordButtons = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
 }
 
 const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) => {
-    // Get border color based on dark/light theme
-    const getBorderColor = () => {
-        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        return isDark ? '#4a5568' : '#e2e8f0'; // gray.700 : gray.200
-    };
 
     const words : (Word | undefined)[] = wordFilter(allWords);
 
@@ -179,7 +174,7 @@ const WordBubbles = ({ wordFilter, allWords, wordSelected } : WordButtonsProps) 
     ) : BLANK_CELL);
 
     const style : React.CSSProperties = { 
-        border : `1px solid ${getBorderColor()}`,
+        border : `1px solid var(--bubble-border-color)`,
         minHeight : "60px",
         maxHeight : "60px",
     };
