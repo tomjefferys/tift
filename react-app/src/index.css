@@ -122,43 +122,58 @@ code {
   }
 }
 
-/* Output Component Styles */
-.output-container {
-  text-align: left;
+/* Shared Container Styles */
+.output-container,
+.controls-container {
   width: 100%;
-  max-width: 60rem; /* 960px - Chakra's xl container size */
+  max-width: 48rem; /* 768px - Better for readability */
   margin: 0 auto; /* Center the container */
   padding: 0 1rem; /* Side padding */
 }
 
-/* Responsive container widths (matching Chakra's responsive breakpoints) */
+/* Output Component Specific Styles */
+.output-container {
+  text-align: left;
+}
+
+/* Controls Component Specific Styles */
+.controls-container {
+  height: 100%;
+}
+
+/* Responsive container widths */
 @media (max-width: 30em) { /* sm breakpoint */
-  .output-container {
+  .output-container,
+  .controls-container {
     max-width: 100%;
   }
 }
 
 @media (min-width: 30em) and (max-width: 48em) { /* md breakpoint */
-  .output-container {
+  .output-container,
+  .controls-container {
     max-width: 42rem; /* 672px */
   }
 }
 
 @media (min-width: 48em) and (max-width: 62em) { /* lg breakpoint */
-  .output-container {
-    max-width: 48rem; /* 768px */
+  .output-container,
+  .controls-container {
+    max-width: 44rem; /* 704px */
   }
 }
 
 @media (min-width: 62em) and (max-width: 80em) { /* xl breakpoint */
-  .output-container {
-    max-width: 56rem; /* 896px */
+  .output-container,
+  .controls-container {
+    max-width: 46rem; /* 736px */
   }
 }
 
 @media (min-width: 80em) { /* 2xl breakpoint */
-  .output-container {
-    max-width: 60rem; /* 960px */
+  .output-container,
+  .controls-container {
+    max-width: 48rem; /* 768px */
   }
 }
 
@@ -185,46 +200,6 @@ code {
 .output-text--log {
   font-family: 'Courier New', monospace;
   font-size: 0.875rem;
-}
-
-/* Controls Component Styles */
-.controls-container {
-  height: 100%;
-  width: 100%;
-  max-width: 60rem; /* Same as output container */
-  margin: 0 auto; /* Center the container */
-  padding: 0 1rem; /* Side padding */
-}
-
-/* Responsive container widths for Controls (same as Output) */
-@media (max-width: 30em) { /* sm breakpoint */
-  .controls-container {
-    max-width: 100%;
-  }
-}
-
-@media (min-width: 30em) and (max-width: 48em) { /* md breakpoint */
-  .controls-container {
-    max-width: 42rem; /* 672px */
-  }
-}
-
-@media (min-width: 48em) and (max-width: 62em) { /* lg breakpoint */
-  .controls-container {
-    max-width: 48rem; /* 768px */
-  }
-}
-
-@media (min-width: 62em) and (max-width: 80em) { /* xl breakpoint */
-  .controls-container {
-    max-width: 56rem; /* 896px */
-  }
-}
-
-@media (min-width: 80em) { /* 2xl breakpoint */
-  .controls-container {
-    max-width: 60rem; /* 960px */
-  }
 }
 
 .tabs {
@@ -313,6 +288,47 @@ code {
   /* Empty cell placeholder */
 }
 
+/* Custom scrollbar styles for themed components */
+/* Global scrollbar styling for webkit browsers */
+.tab-panel::-webkit-scrollbar,
+.simple-button-grid::-webkit-scrollbar,
+.tift-output::-webkit-scrollbar,
+.output-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tab-panel::-webkit-scrollbar-track,
+.simple-button-grid::-webkit-scrollbar-track,
+.tift-output::-webkit-scrollbar-track,
+.output-container::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-bg);
+  border-radius: 4px;
+}
+
+.tab-panel::-webkit-scrollbar-thumb,
+.simple-button-grid::-webkit-scrollbar-thumb,
+.tift-output::-webkit-scrollbar-thumb,
+.output-container::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 4px;
+}
+
+.tab-panel::-webkit-scrollbar-thumb:hover,
+.simple-button-grid::-webkit-scrollbar-thumb:hover,
+.tift-output::-webkit-scrollbar-thumb:hover,
+.output-container::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover-bg);
+}
+
+/* Firefox scrollbar support */
+.tab-panel,
+.simple-button-grid,
+.tift-output,
+.output-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
+}
+
 /* Tift Component Layout Styles */
 .tift-container {
   height: 100%;
@@ -366,6 +382,9 @@ code {
   --tab-active-color: #3182ce;
   --button-hover-bg: rgba(0, 0, 0, 0.04);
   --button-active-bg: rgba(0, 0, 0, 0.08);
+  --scrollbar-track-bg: #f7fafc;
+  --scrollbar-thumb-bg: #cbd5e0;
+  --scrollbar-thumb-hover-bg: #a0aec0;
   --log-color-trace: #2d3748;
   --log-color-debug: #2d3748;
   --log-color-info: #2d3748;
@@ -385,6 +404,9 @@ code {
   --tab-active-color: #63b3ed;
   --button-hover-bg: rgba(255, 255, 255, 0.08);
   --button-active-bg: rgba(255, 255, 255, 0.12);
+  --scrollbar-track-bg: #2d3748;
+  --scrollbar-thumb-bg: #4a5568;
+  --scrollbar-thumb-hover-bg: #718096;
   --log-color-trace: #63b3ed;
   --log-color-debug: #63b3ed;
   --log-color-info: #63b3ed;
@@ -393,6 +415,35 @@ code {
   --prompt-color: #68d391;
   --background-color: #1a202c;
   --text-color: #e2e8f0;
+}
+
+/* Additional theme-specific scrollbar styles */
+[data-theme="light"] .tab-panel::-webkit-scrollbar-track,
+[data-theme="light"] .simple-button-grid::-webkit-scrollbar-track,
+[data-theme="light"] .tift-output::-webkit-scrollbar-track,
+[data-theme="light"] .output-container::-webkit-scrollbar-track {
+  background: #f7fafc;
+}
+
+[data-theme="light"] .tab-panel::-webkit-scrollbar-thumb,
+[data-theme="light"] .simple-button-grid::-webkit-scrollbar-thumb,
+[data-theme="light"] .tift-output::-webkit-scrollbar-thumb,
+[data-theme="light"] .output-container::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+}
+
+[data-theme="dark"] .tab-panel::-webkit-scrollbar-track,
+[data-theme="dark"] .simple-button-grid::-webkit-scrollbar-track,
+[data-theme="dark"] .tift-output::-webkit-scrollbar-track,
+[data-theme="dark"] .output-container::-webkit-scrollbar-track {
+  background: #2d3748;
+}
+
+[data-theme="dark"] .tab-panel::-webkit-scrollbar-thumb,
+[data-theme="dark"] .simple-button-grid::-webkit-scrollbar-thumb,
+[data-theme="dark"] .tift-output::-webkit-scrollbar-thumb,
+[data-theme="dark"] .output-container::-webkit-scrollbar-thumb {
+  background: #4a5568;
 }
 
 .output-text--log-trace { color: var(--log-color-trace); }
