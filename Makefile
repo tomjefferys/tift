@@ -82,7 +82,7 @@ react-app/build: react-app/node_modules
 react-app: types engine react-app/build
 
 react-app-test: react-app
-	cd react-app && npm test -- --watchAll=false
+	cd react-app && npm test -- --run
 
 react-app-start: react-app
 	cd react-app && npm start
