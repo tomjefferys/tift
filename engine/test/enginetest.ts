@@ -653,6 +653,46 @@ test("Test setting 'this' in match action", () => {
     executeAndTest(["examine", "thing"], { expected : ["The thing is completely fuddled"]});
 });
 
+test("Test setting local variable should not set it on 'this'", () => {
+    builder.withObj(THE_ROOM)
+           .withObj({
+                id : "thing",
+                name : "thing",
+                type : "item",
+                location : "theRoom",
+                fuddled : false,
+                description : "The thing is {{#fuddled}}completely fuddled{{/fuddled}}{{^fuddled}}perfectly ok{{/fuddled}}",
+                verbs : ["fuddle"],
+                before : {
+                   "fuddle(this)" : [
+                        "bob = 'foo'",
+                        "this.fuddled = bob",
+                        "'Fuddled!'"
+                   ]
+                },
+                after : {
+                    "examine(this)" : [
+                        "print('fuddled is ' + this.fuddled)",
+                        "print('bob is ' + this.bob)"
+                    ]
+                }
+           })
+           .withObj({
+                id : "fuddle",
+                type : "verb",
+                tags : ["transitive"]
+           });
+           
+    engine.ref = builder.build();
+    engine.send(Input.start()); 
+    // Initial state
+    executeAndTest(["examine", "thing"], { expected : ["fuddled is false", "bob is undefined"]});
+
+    // Try fuddling
+    executeAndTest(["fuddle", "thing"], { expected : ["Fuddled!"]});
+    executeAndTest(["examine", "thing"], { expected : ["fuddled is foo", "bob is undefined"]});
+});  
+
 test("Test error when executing", () => {
     builder.withObj(THE_ROOM)
            .withObj({

@@ -32,7 +32,7 @@ export const evaluateRule : RuleEvaluator = (rule, path) => {
         const isPrefixedString = rule.trimStart().startsWith(STRING_PREFIX);
         ruleFn = isPrefixedString
                     ? handlePrefixedString(rule)
-                    : parseToThunk(rule, path);
+                    : handleString(rule, path);
     } else if (_.isPlainObject(rule)) {
         ruleFn = evaluateComponentRule(rule as object, path);
     } else if (_.isArray(rule)) {
@@ -53,6 +53,16 @@ function handlePrefixedString(str : string) : Thunk {
         const str= formatString(env, finalString);
         return mkResult(env.execute("write", { "value": str } ));
     });
+}
+
+function handleString(str : string, path? : Path.PossiblePath) : Thunk {
+    const thunk = parseToThunk(str, path);
+    // Make sure the thunk is evaluated in a child environment
+    const envFn = (env : Env) => {
+        const scope = env.newChild();
+        return mkResult(thunk.resolve(scope).getValue());
+    }
+    return mkThunk(envFn);
 }
 
 /**
