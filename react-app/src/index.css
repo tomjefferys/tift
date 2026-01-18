@@ -279,6 +279,7 @@ code {
 
 .grid-empty-cell {
   /* Empty cell placeholder */
+  display: block;
 }
 
 /* Custom scrollbar styles for themed components */
