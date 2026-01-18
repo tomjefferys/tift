@@ -3,6 +3,82 @@ import { render, screen, waitFor, cleanup, act, waitForElementToBeRemoved, findB
 import App from './App';
 import userEvent from '@testing-library/user-event';
 
+// Mock CompressionStream and DecompressionStream for test environment
+global.CompressionStream = class MockCompressionStream {
+  readable: ReadableStream;
+  writable: WritableStream;
+  
+  constructor() {
+    const { readable, writable } = new TransformStream({
+      transform(chunk, controller) {
+        // Mock compression - just pass through data with minimal changes
+        controller.enqueue(chunk);
+      }
+    });
+    this.readable = readable;
+    this.writable = writable;
+  }
+} as any;
+
+global.DecompressionStream = class MockDecompressionStream {
+  readable: ReadableStream;
+  writable: WritableStream;
+  
+  constructor() {
+    const { readable, writable } = new TransformStream({
+      transform(chunk, controller) {
+        // Mock decompression - just pass through data
+        controller.enqueue(chunk);
+      }
+    });
+    this.readable = readable;
+    this.writable = writable;
+  }
+} as any;
+
+// Mock localStorage properly for tests
+const localStorageMock = (() => {
+  let store: { [key: string]: string } = {};
+  
+  const mock = {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => {
+      const keys = Object.keys(store);
+      return keys[index] || null;
+    },
+
+  };
+  
+  return mock;
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true
+});
+
+// Mock navigator.storage API for tests
+Object.defineProperty(window.navigator, 'storage', {
+  value: {
+    persist: async () => Promise.resolve(true),
+    persisted: async () => Promise.resolve(true),
+    estimate: async () => Promise.resolve({ quota: 1000000, usage: 0 })
+  },
+  writable: true
+});
+
 beforeEach(() => {
   window.localStorage.clear();
 })
@@ -622,6 +698,133 @@ test("Test get info", async () => {
   await waitFor(() => screen.getByText("game version: 1.0.0"));
   await waitFor(() => screen.getByText("game id: Test1234"));
   await waitFor(() => screen.getByText("foo: bar"));
+});
+
+test("Test bookmark and load bookmark", async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  // Start in cave
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+
+  // Get the ball and go south to forest
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  await waitFor(() => getButton('go'));
+  await act(() => user.click(getButton('go')));
+
+  await waitFor(() => getButton('south'));
+  await act(() => user.click(getButton('south')));
+
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
+
+  // Verify we have the ball in inventory
+  await waitFor(() => getButton('Inventory', 'tab'));
+  await act(() => user.click(getButton('Inventory', 'tab')));
+  
+  await waitFor(() => getButton('ball'));
+
+  // Create a bookmark at this point (forest with ball)
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark'));
+  await act(() => user.click(getButton('bookmark')));
+
+  // Wait for bookmark success message
+  await waitFor(() => screen.getByText(/Game bookmarked/));
+
+  // Go back to game and make more changes - drop the ball and go north
+  await waitFor(() => getButton('Game', 'tab'));
+  await act(() => user.click(getButton('Game', 'tab')));
+
+  await waitFor(() => getButton('drop'));
+  await act(() => user.click(getButton('drop')));
+
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  await waitFor(() => getButton('go'));
+  await act(() => user.click(getButton('go')));
+
+  await waitFor(() => getButton('north'));
+  await act(() => user.click(getButton('north')));
+
+  // Should be back in cave without ball
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+
+  // Verify ball is no longer in inventory
+  await waitFor(() => getButton('Inventory', 'tab'));
+  await act(() => user.click(getButton('Inventory', 'tab')));
+  
+  await waitFor(() => {
+    const ballButton = screen.queryByRole('button', { name: 'ball' });
+    expect(ballButton).toBeNull();
+  });
+
+  // Now load the bookmark
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('load bookmark'));
+  await act(() => user.click(getButton('load bookmark')));
+
+// Wait for load success message
+  await waitFor(() => screen.getByText(/Bookmarked game loaded\./), { timeout: 3000 });
+
+  // Verify we're back in the forest (bookmarked state)
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
+
+  // Verify we have the ball back in inventory (bookmarked state)
+  await waitFor(() => getButton('Inventory', 'tab'));
+  await act(() => user.click(getButton('Inventory', 'tab')));
+  
+  await waitFor(() => getButton('ball'));
+});
+
+test("Test load bookmark when no bookmark exists", async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  // Start in cave
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+
+  // Try to load bookmark when none exists
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('load bookmark'));
+  await act(() => user.click(getButton('load bookmark')));
+
+  // Should see error message
+  await waitFor(() => screen.getByText(/No bookmarked game found/));
+
+  // Should still be in cave
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
 });
 
 

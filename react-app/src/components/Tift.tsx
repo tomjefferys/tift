@@ -78,6 +78,8 @@ function Tift() {
 
     const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
     
+    // Force re-render when messages change
+    const [_messageCounter, setMessageCounter] = useState(0);
 
     const bookmarkManagerRef = useRef<BookmarkManager | null>(null);
     const bookmarkRef = useRef<string | null>(null);
@@ -230,6 +232,7 @@ function Tift() {
           messages.splice(0, deleteCount);
       }
       saveMessages(messages);
+      setMessageCounter(prev => prev + 1);
     }
 
     // Initialization
