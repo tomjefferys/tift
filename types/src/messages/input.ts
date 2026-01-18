@@ -1,6 +1,6 @@
 import { Word } from "./word";
 
-export type InputMessage = GetWords | Execute | GetStatus | Load | Start | Config | Reset | Undo | Redo | GetInfo;
+export type InputMessage = GetWords | Execute | GetStatus | Save | Load | Start | Config | Reset | Undo | Redo | GetInfo;
 
 export type InputMessageType = InputMessage["type"];
 
@@ -23,6 +23,11 @@ export interface GetStatus {
 export interface Load {
     type : "Load",
     data : string
+}
+
+export interface Save {
+    type : "Save"
+    compress : boolean
 }
 
 export interface Reset {

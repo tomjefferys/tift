@@ -1,5 +1,5 @@
 import { BasicEngine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage, StatusType, Properties } from "tift-types/src/messages/output";
+import { LogLevel, OutputConsumer, OutputMessage, StatusType, Properties, SaveState } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 import { InputMessage } from "tift-types/src/messages/input"
 import { BiConsumer, Consumer } from "tift-types/src/util/functions";
@@ -76,6 +76,13 @@ export namespace Input {
         type : "GetStatus"
     }
   }
+   
+  export function save(compress : boolean) : InputMessage {
+    return {
+      type : "Save",
+      compress
+    }
+  }
 
   export function load(data : string) : InputMessage {
     return {
@@ -119,7 +126,7 @@ export class OutputConsumerBuilder {
   wordsConsumer? : BiConsumer<Word[], Word[]>;
   statusConsumer? : Consumer<StatusType>;
   logConsumer? : BiConsumer<LogLevel,string>;
-  saveConsumer? : Consumer<string>;
+  saveConsumer? : Consumer<SaveState>;
   controlConsumer? : Consumer<ControlType>;
   infoConsumer? : Consumer<Properties>;
   defaultConsumer : Consumer<OutputMessage> = _message => { /* do nothing */ };
@@ -144,7 +151,7 @@ export class OutputConsumerBuilder {
     return this;
   }
 
-  withSaveConsumer(saveConsumer : Consumer<string>) : OutputConsumerBuilder {
+  withSaveConsumer(saveConsumer : Consumer<SaveState>) : OutputConsumerBuilder {
     this.saveConsumer = saveConsumer;
     return this;
   }
@@ -177,7 +184,7 @@ export class OutputConsumerBuilder {
           this.statusConsumer? this.statusConsumer(message.status) : this.defaultConsumer(message);
           break;
         case "SaveState": 
-          this.saveConsumer? this.saveConsumer(JSON.stringify(message.state)) : this.defaultConsumer(message);
+          this.saveConsumer? this.saveConsumer(message) : this.defaultConsumer(message);
           break;
         case "Log":
           this.logConsumer? this.logConsumer(message.level, message.message) : this.defaultConsumer(message);

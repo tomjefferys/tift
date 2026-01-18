@@ -199,6 +199,7 @@ export class BasicEngine implements Engine {
     "GetWords" : (m) => this.getWords((m as Input.GetWords).command),  
     "GetStatus" : () => this.getStatus(),
     "Execute" :  (m) => this.execute((m as Input.Execute).command),
+    "Save" :      (m) => this.save((m as Input.Save).compress),
     "Load" :     (m) => this.loadData(m as Input.Load),
     "Start" :    (m) => this.start((m as Input.Start).saveData), 
     "Config" :   (m) => this.setConfig((m as Input.Config).properties),
@@ -213,6 +214,7 @@ export class BasicEngine implements Engine {
     "GetWords" : (m) => this.output(Output.words((m as Input.GetWords).command,[])),
     "GetStatus" : () => this.output(Output.status("error", false, false, {})),
     "Execute" :   NO_OP,
+    "Save" :      NO_OP,
     "Load" :      NO_OP,
     "Start" :     NO_OP,
     "Config" :    NO_OP,
@@ -246,9 +248,9 @@ export class BasicEngine implements Engine {
     this.addContent(env => builder.addToEnv(env));
   }
 
-  save() {
-    const history = this.env.proxyManager.getHistory();
-    const saveState = Output.saveState(history);
+  save(compress = false) {
+    const history = this.env.proxyManager.getHistory(compress);
+    const saveState = Output.saveState(history, compress);
     this.output(saveState);
   }
 

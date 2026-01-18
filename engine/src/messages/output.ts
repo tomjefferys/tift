@@ -37,8 +37,8 @@ export function status(title : string,
     }
 }
 
-export function saveState(state : History) : OutputMessage {
-    return { type : "SaveState", state };
+export function saveState(state : History, compressed : boolean) : OutputMessage {
+    return { type : "SaveState", state, compressed };
 }
 
 export function log(level : LogLevel, message : string) : OutputMessage {

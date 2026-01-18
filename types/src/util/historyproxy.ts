@@ -30,7 +30,7 @@ export interface History {
 
 export interface ProxyManager {
 
-    getHistory() : History;
+    getHistory(compress? : boolean) : History;
 
     /**
      * Clear the proxy history

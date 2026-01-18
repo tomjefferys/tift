@@ -65,6 +65,7 @@ export interface Log {
 
 export interface SaveState {
     type : "SaveState",
+    compressed : boolean,
     state : History
 }
 

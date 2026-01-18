@@ -2,7 +2,7 @@ import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter, OutputConsumerBuilder } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
-import { OutputConsumer, OutputMessage, StatusType, Properties } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage, StatusType, Properties, SaveState } from "tift-types/src/messages/output";
 import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { DecoratedForwarder, MessageForwarder } from "tift-types/src/engineproxy";
@@ -26,6 +26,7 @@ import * as GameStorage from "../util/gamestorage";
 import StatusBar from "./StatusBar";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, Settings, UIType } from "../util/settings";
 import { createDevModePicker } from "../util/devmodepicker";
+import { BookmarkManager, createBookmarkManager, createSaveOption, createLoadOption } from "../util/bookmarkmanager";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;
@@ -72,10 +73,14 @@ function Tift() {
     const engineRef = useRef<Engine | null>(null);
 
     const storageRef = useRef<GameStorage | null>(null);
-
+    
     const [filteredWords, setFilteredWords] = useState<Word[]>([]);
 
     const settingsRef = useRef<Settings>(DEFAULT_SETTINGS);
+    
+
+    const bookmarkManagerRef = useRef<BookmarkManager | null>(null);
+    const bookmarkRef = useRef<string | null>(null);
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
       await engineRef.current?.send(Input.getNextWords(command));
@@ -110,6 +115,7 @@ function Tift() {
       if (!infoRef.current["Errored"]) {
         storageRef.current = GameStorage.createStorage(infoRef.current, 
                                 (level, message) => updateMessages(messagesRef.current, logEntry(level, message)));
+        bookmarkManagerRef.current = createBookmarkManager(infoRef.current);
       }
     }
 
@@ -169,6 +175,21 @@ function Tift() {
         InfoPrinter.print(forwarder, infoRef.current);
       });
 
+      const bookmarkGame = createSaveOption( bookmarkManagerRef, bookmarkRef);
+
+      const reloadAndStartGame = async (data : string, forwarder : DecoratedForwarder) => {
+          latestWordsRef.current = WordTree.createRoot();
+          storageRef.current?.removeGame();
+          await loadGame(GAME_FILE, forwarder);
+          await forwarder.send(Input.start(data));
+          await forwarder.send(Input.getStatus());
+          await forwarder.send(Input.getNextWords([WILD_CARD]));
+          setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
+          setCommand([WILD_CARD]);
+      }
+
+      const loadBookmark = createLoadOption( bookmarkManagerRef, reloadAndStartGame);
+
       const undoFn = async () => {
         engine.send(Input.undo());
         engine.send(Input.getStatus());
@@ -191,7 +212,9 @@ function Tift() {
                                                     ["clear", logClearer],
                                                     ["info", getInfo],
                                                     ["ui type", uiSchemePicker],
-                                                    ["developer", devModePicker]));
+                                                    ["developer", devModePicker],
+                                                    ["bookmark", bookmarkGame],
+                                                    ["load bookmark", loadBookmark]));
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
       return engine;
     }
@@ -230,8 +253,14 @@ function Tift() {
         setColourScheme(initialMode);
       }
   
-      const saveGame = (saveData : string) => {
-        storageRef.current?.saveGame(saveData);
+      const saveGame = (saveState : SaveState) => {
+        const saveData = JSON.stringify(saveState.state);
+        if (saveState.compressed) {
+          bookmarkRef.current = saveData;
+        } else {
+          bookmarkRef.current = null;
+          storageRef.current?.saveGame(saveData);
+        }
       }
 
       // Pauser

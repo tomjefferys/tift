@@ -70,12 +70,31 @@ export class ProxyManager implements Type.ProxyManager {
         return new Proxy(obj, this.createHandler(prefix));
     }
 
-    getHistory() : History {
-        return {
-            baseHistory : this.baseHistory,
-            undoStack : this.undoStack,
-            redoStack : this.redoStack
+    getHistory(compress = false) : History {
+        if (compress) {
+            return {
+                baseHistory : this.getCompressedHistory(),
+                undoStack : [],
+                redoStack : []
+            }
+        } else  {
+            return {
+                baseHistory : this.baseHistory,
+                undoStack : this.undoStack,
+                redoStack : this.redoStack
+            }
         }
+    }
+
+    /**
+     * Get the compressed history, combining the base history and the undo stack
+     */
+    getCompressedHistory() : Action[] {
+        const compressedHistory = [...this.baseHistory];
+        this.undoStack.forEach(
+            undoTransaction => undoTransaction.forEach(
+                undoStep => addActionToHistory(compressedHistory, undoStep.redo)));
+        return compressedHistory;
     }
 
     /**
@@ -196,14 +215,9 @@ export class ProxyManager implements Type.ProxyManager {
      * @param newAction 
      */
     private addAction(newAction : Action) {
-        const isSettingEmptyObject = (action : Action) => action.type === "Set" && !action.replace && objects.isEmptyObject(action.newValue);
-
-        Arrays.remove(this.baseHistory, action => 
-            Arrays.isPrefixOf(newAction.property, action.property) ||
-            (isSettingEmptyObject(action) && Arrays.isPrefixOf(action.property, newAction.property))
-        );
-        this.baseHistory.push(newAction);
+        addActionToHistory(this.baseHistory, newAction);
     }
+
 
     private createHandler(prefix : PropType[]) : object {
         return {
@@ -236,6 +250,16 @@ export class ProxyManager implements Type.ProxyManager {
             }
         }
     }
+}
+
+function addActionToHistory(history : Action[], newAction : Action) {
+    const isSettingEmptyObject = (action : Action) => action.type === "Set" && !action.replace && objects.isEmptyObject(action.newValue);
+
+    Arrays.remove(history, action => 
+        Arrays.isPrefixOf(newAction.property, action.property) ||
+        (isSettingEmptyObject(action) && Arrays.isPrefixOf(action.property, newAction.property))
+    );
+    history.push(newAction);
 }
 
 /**

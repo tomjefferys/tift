@@ -246,6 +246,30 @@ test("Test undo/redo", () => {
 
 });
 
+test("Test get compressed history", () => {
+    const original : Obj = {};
+    const [proxy, manager] = createProxy(original, true, undefined, 10);
+    proxy.foo = "bar"
+    manager.pushHistory();
+    proxy.baz = {"qux": "xyzzy"}
+    manager.pushHistory();
+    proxy.baz.qux = {"corge" : "grualt"};
+    manager.pushHistory();
+    proxy.baz.qux = "foobar";
+    manager.pushHistory();
+    proxy.foo = "qux";
+    manager.pushHistory();
+
+    const compressedHistory = manager.getCompressedHistory();
+
+    const expectedCompressedHistory = [
+        {"type":"Set","property":["baz"],"newValue":{"qux": "xyzzy"}},
+        {"type":"Set","property":["baz", "qux"],"newValue":"foobar", "replace":true},
+        {"type":"Set","property":["foo"],"newValue":"qux"}
+    ];
+    expect(compressedHistory).toStrictEqual(expectedCompressedHistory);
+});
+
 test("Test undo/redo: single undo level", () => {
     const original : Obj = {};
     const [proxy, manager] = createProxy(original, true, undefined, 1);
