@@ -739,11 +739,15 @@ test("Test bookmark and load bookmark", async () => {
   await waitFor(() => getButton('Options', 'tab'));
   await act(() => user.click(getButton('Options', 'tab')));
 
-  await waitFor(() => getButton('bookmark'));
-  await act(() => user.click(getButton('bookmark')));
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Select "new bookmark" option
+  await waitFor(() => getButton('new bookmark'));
+  await act(() => user.click(getButton('new bookmark')));
 
   // Wait for bookmark success message
-  await waitFor(() => screen.getByText(/Game bookmarked/));
+  await waitFor(() => screen.getByText(/Bookmark ".*" created/));
 
   // Go back to game and make more changes - drop the ball and go north
   await waitFor(() => getButton('Game', 'tab'));
@@ -780,11 +784,24 @@ test("Test bookmark and load bookmark", async () => {
   await waitFor(() => getButton('Options', 'tab'));
   await act(() => user.click(getButton('Options', 'tab')));
 
-  await waitFor(() => getButton('load bookmark'));
-  await act(() => user.click(getButton('load bookmark')));
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should see the bookmark we created, click on it to select it
+  await waitFor(() => {
+    const bookmarkButton = screen.getByRole('button', { name: /forest.*- .*/ });
+    expect(bookmarkButton).toBeInTheDocument();
+    return bookmarkButton;
+  });
+  const bookmarkButton = screen.getByRole('button', { name: /forest.*- .*/ });
+  await act(() => user.click(bookmarkButton));
+
+  // Now click load to load the selected bookmark
+  await waitFor(() => getButton('load'));
+  await act(() => user.click(getButton('load')));
 
 // Wait for load success message
-  await waitFor(() => screen.getByText(/Bookmarked game loaded\./), { timeout: 3000 });
+  await waitFor(() => screen.getByText(/Bookmark loaded/), { timeout: 3000 });
 
   // Verify we're back in the forest (bookmarked state)
   await waitFor(() => {
@@ -799,7 +816,7 @@ test("Test bookmark and load bookmark", async () => {
   await waitFor(() => getButton('ball'));
 });
 
-test("Test load bookmark when no bookmark exists", async () => {
+test("Test bookmark manager when no bookmarks exist", async () => {
   const user = userEvent.setup();
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
@@ -810,17 +827,174 @@ test("Test load bookmark when no bookmark exists", async () => {
     expect(status).toHaveTextContent('cave');
   });
 
-  // Try to load bookmark when none exists
+  // Open bookmark manager when no bookmarks exist
   await waitFor(() => getButton('Options', 'tab'));
   await act(() => user.click(getButton('Options', 'tab')));
 
-  await waitFor(() => getButton('load bookmark'));
-  await act(() => user.click(getButton('load bookmark')));
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
 
-  // Should see error message
-  await waitFor(() => screen.getByText(/No bookmarked game found/));
+  // Should only see "new bookmark" and "cancel" options (no existing bookmarks)
+  await waitFor(() => getButton('new bookmark'));
+  await waitFor(() => getButton('cancel'));
+  
+  // Verify no bookmark buttons are present
+  const bookmarkButtons = screen.queryAllByRole('button').filter(button => 
+    button.textContent && button.textContent.includes(' - ') && !['new bookmark', 'cancel'].includes(button.textContent.trim())
+  );
+  expect(bookmarkButtons).toHaveLength(0);
+  
+  // Cancel out
+  await act(() => user.click(getButton('cancel')));
+  await waitFor(() => screen.getByText(/cancelled/));
 
   // Should still be in cave
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+});
+
+test("Test bookmark creation and deletion", async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  // Start in cave
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+
+  // Create a bookmark
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  await waitFor(() => getButton('new bookmark'));
+  await act(() => user.click(getButton('new bookmark')));
+
+  // Wait for bookmark creation success
+  await waitFor(() => screen.getByText(/Bookmark \".*\" created/));
+
+  // Open bookmark manager again to delete the bookmark
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should see the bookmark we created, click on it to select it
+  await waitFor(() => {
+    const bookmarkButton = screen.getByRole('button', { name: /cave.*- .*/ });
+    expect(bookmarkButton).toBeInTheDocument();
+    return bookmarkButton;
+  });
+  const bookmarkButton = screen.getByRole('button', { name: /cave.*- .*/ });
+  await act(() => user.click(bookmarkButton));
+
+  // Now click delete to remove the selected bookmark
+  await waitFor(() => getButton('delete'));
+  await act(() => user.click(getButton('delete')));
+
+  // Wait for deletion success message
+  await waitFor(() => screen.getByText(/Bookmark deleted/));
+
+  // Verify bookmark was deleted by opening manager again
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should only see "new bookmark" and "cancel" options (no existing bookmarks)
+  await waitFor(() => getButton('new bookmark'));
+  await waitFor(() => getButton('cancel'));
+  
+  // Verify no bookmark buttons are present
+  const remainingBookmarkButtons = screen.queryAllByRole('button').filter(button => 
+    button.textContent && button.textContent.includes(' - ') && !['new bookmark', 'cancel'].includes(button.textContent.trim())
+  );
+  expect(remainingBookmarkButtons).toHaveLength(0);
+});
+
+test("Test multiple bookmarks and selection", async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  // Start in cave
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('cave');
+  });
+
+  // Create first bookmark in cave
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  await waitFor(() => getButton('new bookmark'));
+  await act(() => user.click(getButton('new bookmark')));
+
+  await waitFor(() => screen.getByText(/Bookmark \".*\" created/));
+
+  // Move to forest and create second bookmark
+  await waitFor(() => getButton('Game', 'tab'));
+  await act(() => user.click(getButton('Game', 'tab')));
+
+  await waitFor(() => getButton('go'));
+  await act(() => user.click(getButton('go')));
+
+  await waitFor(() => getButton('south'));
+  await act(() => user.click(getButton('south')));
+
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
+
+  // Create second bookmark in forest
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  await waitFor(() => getButton('new bookmark'));
+  await act(() => user.click(getButton('new bookmark')));
+
+  await waitFor(() => screen.getByText(/Bookmark \".*\" created/));
+
+  // Verify we can see and load both bookmarks
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should see both bookmarks
+  await waitFor(() => {
+    const caveBookmark = screen.getByRole('button', { name: /cave.*- .*/ });
+    const forestBookmark = screen.getByRole('button', { name: /forest.*- .*/ });
+    expect(caveBookmark).toBeInTheDocument();
+    expect(forestBookmark).toBeInTheDocument();
+  });
+
+  // Load the cave bookmark (should transport us back to cave)
+  const caveBookmark = screen.getByRole('button', { name: /cave.*- .*/ });
+  await act(() => user.click(caveBookmark));
+
+  await waitFor(() => getButton('load'));
+  await act(() => user.click(getButton('load')));
+
+  await waitFor(() => screen.getByText(/Bookmark loaded/));
+
+  // Verify we're back in the cave
   await waitFor(() => {
     const status = screen.getByTestId('status');
     expect(status).toHaveTextContent('cave');

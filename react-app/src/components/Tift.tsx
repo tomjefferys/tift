@@ -26,7 +26,7 @@ import * as GameStorage from "../util/gamestorage";
 import StatusBar from "./StatusBar";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, Settings, UIType } from "../util/settings";
 import { createDevModePicker } from "../util/devmodepicker";
-import { BookmarkManager, createBookmarkManager, createSaveOption, createLoadOption, createBookmarkManagerOptions } from "../util/bookmarkmanager";
+import { BookmarkManager, createBookmarkManagerOptions } from "../util/bookmarkmanager";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;
@@ -81,7 +81,6 @@ function Tift() {
     // Force re-render when messages change
     const [_messageCounter, setMessageCounter] = useState(0);
 
-    const bookmarkManagerRef = useRef<BookmarkManager | null>(null);
     const bookmarkRef = useRef<string | null>(null);
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
@@ -117,7 +116,6 @@ function Tift() {
       if (!infoRef.current["Errored"]) {
         storageRef.current = GameStorage.createStorage(infoRef.current, 
                                 (level, message) => updateMessages(messagesRef.current, logEntry(level, message)));
-        bookmarkManagerRef.current = createBookmarkManager(infoRef.current);
       }
     }
 
@@ -177,8 +175,6 @@ function Tift() {
         InfoPrinter.print(forwarder, infoRef.current);
       });
 
-      const bookmarkGame = createSaveOption( bookmarkManagerRef, bookmarkRef);
-
       const reloadAndStartGame = async (data : string, forwarder : DecoratedForwarder) => {
           latestWordsRef.current = WordTree.createRoot();
           storageRef.current?.removeGame();
@@ -190,9 +186,7 @@ function Tift() {
           setCommand([WILD_CARD]);
       }
 
-      const loadBookmark = createLoadOption( bookmarkManagerRef, reloadAndStartGame);
-
-      const bookmarkManager = createBookmarkManagerOptions(bookmarkRef, reloadAndStartGame);
+      const bookmarkManager = createBookmarkManagerOptions(bookmarkRef, statusRef, reloadAndStartGame);
 
       const undoFn = async () => {
         engine.send(Input.undo());
@@ -217,8 +211,6 @@ function Tift() {
                                                     ["info", getInfo],
                                                     ["ui type", uiSchemePicker],
                                                     ["developer", devModePicker],
-                                                    ["bookmark", bookmarkGame],
-                                                    ["load bookmark", loadBookmark],
                                                     ["bookmark manager", bookmarkManager]));
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
       return engine;

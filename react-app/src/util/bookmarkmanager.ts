@@ -1,4 +1,4 @@
-import { Properties } from "tift-types/src/messages/output";
+import { Properties, StatusType } from "tift-types/src/messages/output";
 import { createSimpleOption } from "./util";
 import { DecoratedForwarder } from "tift-types/src/engineproxy";
 import * as ReactUtils from "./reactutils";
@@ -9,9 +9,9 @@ import { InputMessage } from 'tift-types/src/messages/input';
 import { Word } from "tift-types/src/messages/word";
 import { Optional } from "tift-types/src/util/optional";
 
-const TIFT_BOOKMARK = "TIFT_BOOKMARK";
-const TIFT_BOOKMARKS = "TIFT_BOOKMARKS";
+const MAX_BOOKMARKS = 10;
 
+const TIFT_BOOKMARKS = "TIFT_BOOKMARKS";
 
 const enum BOOKMARK_MANAGER_STATES {
     PROMPT = "prompt",
@@ -50,79 +50,6 @@ export interface BookmarkManager {
     getBookmark() : Promise<string | null>;
 }
 
-export function createBookmarkManager(gameInfo : Properties) : BookmarkManager {
-    const gameId = gameInfo["gameId"];
-    return {
-        setBookmark : async (data : string) => {
-            try {
-                await window.navigator.storage.persist();
-                const key = `${TIFT_BOOKMARK}_${gameId}`;
-                window.localStorage.setItem(key, data);
-                return true;
-            } catch {
-                return false;
-            }
-        },
-        getBookmark : async () => {
-            try {
-                const key = `${TIFT_BOOKMARK}_${gameId}`;
-                const data = window.localStorage.getItem(key);
-                return data;
-            } catch {
-                return null;
-            }
-        }
-    }
-} 
-
-export function createSaveOption(bookmarkManagerRef : React.RefObject<BookmarkManager | null>,
-                                 bookmarkRef : React.MutableRefObject<string | null>) {
-    return createSimpleOption( "bookmark", async (forwarder : DecoratedForwarder) => {
-        if (!bookmarkManagerRef.current) {
-            forwarder.warn("Bookmarking not available.");
-            return;
-        }
-        const bookmarkPromise = ReactUtils.createRefChangePromise(bookmarkRef);
-        await forwarder.send(Input.save((true)));
-        const success = await bookmarkPromise;
-        if (success && bookmarkRef.current) {
-            try {
-                const compressedData = await ReactUtils.compressAndEncode(bookmarkRef.current);
-                forwarder.print("Game bookmarked.");
-                bookmarkManagerRef.current?.setBookmark(compressedData);
-            } catch (e) {
-                forwarder.warn("Failed to compress bookmark data.");
-            }
-        } else {
-            forwarder.warn("Failed to bookmark game.");
-        }
-        bookmarkRef.current = null;
-    });
-}
-
-export function createLoadOption(bookmarkManagerRef : React.RefObject<BookmarkManager | null>,
-                                 loadGame : GameLoader) {
-    return createSimpleOption( "load bookmark", async (forwarder : DecoratedForwarder) => {
-        if (!bookmarkManagerRef.current) {
-          forwarder.warn("Bookmarking not available.");
-          return;
-        }
-        const bookmarkData = await bookmarkManagerRef.current.getBookmark();
-        if (bookmarkData) {
-            forwarder.print("Loading bookmarked game...");
-            try {
-                const decompressedData = await ReactUtils.decodeAndDecompress(bookmarkData);
-                await loadGame(decompressedData, forwarder);
-                forwarder.print("Bookmarked game loaded.");
-            } catch (e) {
-                forwarder.warn("Failed to load bookmarked game.");
-            }
-        } else {
-            forwarder.warn("No bookmarked game found.");
-        }
-    });
-}
-
 interface BookmarkOptions {
     bookmarks : BookmarkList;
     selectOptions : Word[];
@@ -131,14 +58,19 @@ interface BookmarkOptions {
 }
 
 /**
- * Creates the colour scheme picker
- * @param schemeChanger a function to perform the change
- * @returns the colour scheme picker
+ * Creates the bookmark manager options state machine
+ * @param bookmarkRef Reference to bookmark data
+ * @param gameLoader Function to load game from bookmark data
+ * @returns The bookmark manager state machine
  */
-export function createBookmarkManagerOptions(bookmarkRef : React.MutableRefObject<string | null>, gameLoader : GameLoader) : StateMachine<InputMessage, DecoratedForwarder> {
+export function createBookmarkManagerOptions(
+        bookmarkRef : React.MutableRefObject<string | null>,
+        statusRef : React.RefObject<StatusType>,
+        gameLoader : GameLoader) : StateMachine<InputMessage, DecoratedForwarder> {
     let selectedBookmark = -1;
     return createStateMachine("prompt", ["prompt", {
         onEnter : (forwarder : DecoratedForwarder) => {
+            selectedBookmark = -1;
             const { allOptions } = getBookmarkOptions();
             forwarder.words([], allOptions);
         },
@@ -161,9 +93,18 @@ export function createBookmarkManagerOptions(bookmarkRef : React.MutableRefObjec
             await handler.onCommand([OPTIONS.NEW], async () => {
                     forwarder.print("Creating new bookmark...");
                     const bookmarkData = await getBookmarkData(bookmarkRef, forwarder);
-                    const name = `Bookmark ${new Date().toLocaleString()}`;
-                    addBookmark(name, bookmarkData);
-                    forwarder.print(`Bookmark "${name}" created.`);
+                    //const name = `Bookmark ${new Date().toLocaleString()}`;
+                    if (!statusRef.current) {
+                        forwarder.warn("Cannot create bookmark: game status unknown.");
+                        nextState = BOOKMARK_MANAGER_STATES.TERMINATE;
+                        return;
+                    }
+                    const name = generateBookmarkName(statusRef.current);
+                    if (addBookmark(name, bookmarkData)) {
+                        forwarder.print(`Bookmark "${name}" created.`);
+                    } else {
+                        forwarder.warn("Maximum number of bookmarks reached. Cannot create new bookmark.");
+                    }
                     nextState = BOOKMARK_MANAGER_STATES.TERMINATE;
             });
             await handler.onAnyCommand(async command => forwarder.warn("Unexpected command: " + command.join(" ")));
@@ -191,7 +132,6 @@ export function createBookmarkManagerOptions(bookmarkRef : React.MutableRefObjec
             // Load Bookmark
             await handler.onCommand([BOOKMARK_ACTIONS.LOAD], async () => {
                 forwarder.print("Loading bookmark...");
-                console.log("Loading bookmark data for:", selectedBookmark);
                 await loadGameFromBookmark(selectedBookmark, gameLoader, forwarder);
                 forwarder.print("Bookmark loaded.");
                 nextState = BOOKMARK_MANAGER_STATES.TERMINATE;
@@ -236,6 +176,13 @@ async function loadGameFromBookmark(bookmarkIndex : number, gameLoader : GameLoa
         forwarder.warn("Invalid bookmark selected.");
     }
 }
+
+function generateBookmarkName(status : StatusType) : string {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString();
+    const timeStr = new Date().toLocaleString([], { hour: '2-digit', minute: '2-digit' });
+    return `${status.title} - ${dateStr} ${timeStr}`;
+}   
 
 function getBookmarkOptions() : BookmarkOptions {
     const bookmarks = getBookmarkList();
@@ -289,10 +236,14 @@ function saveBookmarkList(bookmarks : BookmarkList) {
     window.localStorage.setItem(TIFT_BOOKMARKS, data);
 }
 
-function addBookmark(name : string, data : string) {
+function addBookmark(name : string, data : string) : boolean{
     const bookmarks = getBookmarkList();
+    if (bookmarks.length >= MAX_BOOKMARKS) {
+        return false;
+    }
     bookmarks.push({ name, data });
     saveBookmarkList(bookmarks);
+    return true;
 }
 
 function removeBookmark(index : number) {
