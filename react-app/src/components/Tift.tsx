@@ -26,7 +26,7 @@ import * as GameStorage from "../util/gamestorage";
 import StatusBar from "./StatusBar";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, Settings, UIType } from "../util/settings";
 import { createDevModePicker } from "../util/devmodepicker";
-import { BookmarkManager, createBookmarkManager, createSaveOption, createLoadOption } from "../util/bookmarkmanager";
+import { BookmarkManager, createBookmarkManager, createSaveOption, createLoadOption, createBookmarkManagerOptions } from "../util/bookmarkmanager";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;
@@ -192,6 +192,8 @@ function Tift() {
 
       const loadBookmark = createLoadOption( bookmarkManagerRef, reloadAndStartGame);
 
+      const bookmarkManager = createBookmarkManagerOptions(bookmarkRef, reloadAndStartGame);
+
       const undoFn = async () => {
         engine.send(Input.undo());
         engine.send(Input.getStatus());
@@ -216,7 +218,8 @@ function Tift() {
                                                     ["ui type", uiSchemePicker],
                                                     ["developer", devModePicker],
                                                     ["bookmark", bookmarkGame],
-                                                    ["load bookmark", loadBookmark]));
+                                                    ["load bookmark", loadBookmark],
+                                                    ["bookmark manager", bookmarkManager]));
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
       return engine;
     }

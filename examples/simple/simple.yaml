@@ -1,43 +1,1369 @@
----
-game: Simple Game
+
+--- # file:src/game.yaml
+game: Apprentice
 author: Presto Turnip
 version: 1.0.0
-gameId: E9085F02-C794-4FFB-8644-0E59ED39EEE7
+gameId: 58379ffe-9ec5-4317-bdd2-1b79c171a2ec
 description: >
-  A very simple example game.
+  A simple example game
 options:
   - useDefaultVerbs
+introText: > 
+  {{br}}{{hr}}{{br}}
+  Waking after another uncomfortable night's sleep in your cold bedchamber, 
+  the pale morning light permeating lazily through a small window above your bed,
+  you wonder what the master has in store for you today.
+  {{br}}
+  When you accepted the role of sorcerers apprentice, you thought your days would be
+  filled with secrets, magic, and the arcane arts, but reality is day after day of 
+  cleaning, and lugging heavy boxes of equipment up the tower, to his laboratory.
+  {{br}}
+  You get out of bed and sigh. Today will probably be more of the same
+  {{br}}
+  **Apprentice**
+  {{br}}
+  A short example game.
+maxScore: 2
+beforeGame():
+  - print(introText)
+--- # file:src/verbs/lie_down.yaml
+verb: lie_down
+name: lie
+tags: 
+  - intransitive
+attributes:
+  - "on"
+templates:
+  lie_on_message: >
+    {{#sentence}}you lie on {{item_name}}{{/sentence}}
+actions:
+  lie_down().on($item):
+    - player = getPlayer()
+    - player.lying_on = item.id
+    #- setLocation(item)
+    - item_name = getFullName(item)
+    - print(format(templates.lie_on_message))
 ---
-room: cave
-description: A dark dank cave
+verb: get_up
+name: get up
+tags:
+  - intransitive
+templates:
+  get_up_message: >
+    {{#sentence}}you get up from {{item_name}}{{/sentence}}
+actions:
+  get_up():
+    - player = getPlayer()
+    - if: player.lying_on
+      then:
+        - item = getEntity(player.lying_on)
+#        - setLocation(item.location)
+        - player.lying_on = false;
+        - item_name = getFullName(item)
+        - print(format(templates.get_up_message))
+
+
+--- # file:src/verbs/slide.yaml
+verb: slide
+tags:
+  - transitive
+attributes:
+  - under
+contexts:
+  - inventory
+actions:
+  slide($slidable).under($container):
+    - moveItemTo(slidable,container)
+--- # file:src/verbs/hang.yaml
+verb: hang
+tags:
+  - transitive
+attributes:
+  - "on"
+contexts:
+  - inventory
+  - wearing
+actions:
+  hang($hangable).on($hanger):
+    - moveItemTo(hangable, hanger)
+--- # file:src/verbs/ask.yaml
+verb: ask
+tags:
+  - transitive
+attributes:
+  - about
+  - for
+--- # file:src/verbs/turn.yaml
+verb: turn
+tags:
+  - transitive
+modifiers:
+  - turn_direction
+
+--- # file:src/verbs/pour.yaml
+verb: pour
+tags:
+  - transitive
+attributes:
+  - on
+--- # file:src/verbs/stand_on.yaml
+verb: stand_on
+name: stand on
+tags:
+  - transitive
+templates:
+  stand_on_message: >
+    {{#sentence}}you stand on {{item_name}}{{/sentence}}
+actions:
+  stand_on($item):
+    - player = getPlayer()
+    - player.standing_on = item.id
+    - item_name = getFullName(item)
+    - print(format(templates.stand_on_message))
+--- # file:src/verbs/get_down.yaml
+verb: get_down
+name: get down
+tags:
+  - intransitive
+templates:
+  get_down_message: >
+    {{#sentence}}you get down from {{item_name}}{{/sentence}}
+actions:
+  get_down():
+    - player = getPlayer()
+    - if: player.standing_on
+      then:
+        - item = getEntity(player.standing_on)
+        - player.standing_on = false;
+        - item_name = getFullName(item)
+        - print(format(templates.get_down_message))
+      else:
+        - print("You are not standing on anything.")
+--- # file:src/verbs/pull.yaml
+verb: pull
+tags:
+  - transitive
+--- # file:src/rooms/roof_east.yaml
+room: roof_east
+name: roof (east)
+description: >
+  The east side of the roof.  The chimney is your only route down.
+  The roof extends to the northwest and west.
+  Nestled between the chimney and the edge of the roof is a bird's nest.
 exits:
-  north: entrance
-  south: pool
-tags: [start]
+  down: chimney
+  northwest: roof_north
+  west: roof_south
+before:
+  go($direction):
+    when: direction == 'down' && getInventory().length > 0
+    then: print("You're not going to be able to fit down the chimney with everything you're carrying.")
 ---
-room: entrance
-description: Sunlight casts a pool of illumination over the rocky and uneven floor
+item: nest
+name: nest
+description: >
+  A small bird's nest, made of twigs and grass.
+location: roof_east
+holdsHiddenButton(): isAtLocation(silver_button, nest) && hasTag(silver_button, "hidden")
+messages:
+  firstLook: >
+    There is a glint of silver at the bottom of the nest.
+tags:
+  - container
+after:
+  examine(this):
+    - when: holdsHiddenButton()
+      then: 
+        - print(messages.firstLook)
+        - reveal(glint_of_silver)
+---
+item: glint_of_silver
+name: silver glint
+description: >
+  It looks like a silver button.
+location: nest
+tags:
+  - hidden
+after:
+  examine(this):
+    - hide(this)
+    - reveal(silver_button)
+---
+item: roof_chimney
+name: chimney
+location: roof_east
+description: >
+  The brick chimney rises a couple of feet above the roof.
+  It's opening just wide enough to fit through.
+verbs:
+  - put.in
+before:
+  put($item).in(this):
+      when: hasTag(item, "large")
+      then: print("You can't fit " + getFullName(item) + " down the chimney.")
+      else: 
+        - move(item).to(fireplace)
+        - print("You throw " + getFullName(item) + " down the chimney.")
+      
+      
+
+
+
+
+--- # file:src/rooms/outside_west.yaml
+room: outside_west
+name: garden (west)
+description: >
+  The west side of the tower.
 exits:
-  south: cave
----
-room: pool
-description: A deep pool of cold clear water exends over the southern end of the chamber
+  southeast: outside_south
+  northeast: outside_north
+
+--- # file:src/rooms/outside_south.yaml
+room: outside_south
+name: garden (south)
+description: >
+  The south side of the garden.
+  Compared to rest of the garden, the ground here is mostly bare an unkempt.
+  There are bumps and runnels, where equipment and goods have been loaded unloaded 
+    before being hoisted to the tower above.
 exits:
-  north: cave
+  northeast: outside_east
+  northwest: outside_west
 ---
-item: key
-name: rusty key
-description: An old rusty key
-location: pool
-tags: [carryable]
+item: tower_south_side
+location: outside_south
+name: tower
+description: >
+  The top of the tower overhangs here, far above a trap door provides direct access to the
+    laboratory.
+  Lower down, is the balcony adjoining the masters room.
+after: 
+  examine(this): reveal(balcony_south_side)
 ---
-item: hotRock
-name: hot rock
-description: a burning hot piece of recently solidified lava
-location: entrance
-tags: [carryable]
-before: get(hotRock) => "Ouch!"
+item: balcony_south_side
+name: balcony
+location: outside_south
+description: > 
+  A small balcony protrudes from the side of the tower.
+  It's wooden platform is surrounded by a bronze balustrade. 
+  The master likes to sit out here, the overhanging tower above provides
+    shade from the unrelenting heat. 
+--- # file:src/rooms/ground_floor.yaml
+room: ground_floor
+name: ground floor
+description: >
+  A bare entrance hall, here a door leads out, and stairs lead up.
+  Protruding from the wall at shoulder height is a hook.
+exits:
+  up: landing_first_floor
+  out: outside_north
 ---
-rule: rule1
-run:
-  - if(random(1,2) == 1).then(print("A cold wind runs straight through you"))
+item: key_hook
+name: hook
+description: >
+  A simple metal hook.
+  {{#keyOnHook}}Hanging on the hook is the gate key{{/keyOnHook}}
+keyOnHook(): isAtLocation(gate_key, key_hook)
+location: ground_floor
+adposition: hanging on
+desc: > 
+  Protruding from the wall at shoulder height is a hook.
+verbs:
+  - hang.on
+--- # file:src/rooms/landling_first_floor.yaml
+room: landing_first_floor
+name: first floor landing
+description: >
+  The first floor landing, stairs lead up and down.
+  On the wall is a notice board.
+  Your bed chamber is to the west, and to the east a storage closet. 
+exits:
+  east: storage
+  west: bedchamber
+  up: landing_second_floor
+  down: ground_floor
+---
+item: notice_board
+name: notice board
+location: landing_first_floor
+description: >
+  A rectangle of cork, with pins stuck in it.
+adposition: pinned to
+relativeLocation: "on"
+tags:
+  - container
+before:
+  put($item).on(this):
+    unless: hasTag(item, 'paper')
+    then: print("You can't pin " + getFullName(item) + " to the notice board")
+after:
+  examine(this):
+    once:
+      - print("A scrap of paper with your masters handwriting is attached.")
+    #- reveal(timetable)
+      - reveal(todo_note)
+      - reveal(pin)
+--- # file:src/rooms/greenhouse.yaml
+room: greenhouse
+name: greenhouse
+description: >
+  Rows of identical plants are contained in pots.
+  Black and twisted, but abundant with an unnatural life.
+  Tall leafy stems extend upwards, supporting on top a large purple flower.
+exits:
+  out: roof_west
+---
+item: plant
+name: strange plant
+location: greenhouse
+description: >
+  Huge red petals surround a large protruding stalk, itself covered in a black inflorescence.
+  Bees are crawling all over the stem, burying themselves in the dark abundant pollen.
+verbs:
+  - pour.on
+before:
+  pour(weedkiller).on(this):
+    - print("You pour " + getFullName(weedkiller) + " over the plant. The plant withers and dies.")
+    - gameOver("The toxic pollen from the plant is no longer a threat. You have won!")
+  pour($liquid).on(this):
+    - print("You pour " + getFullName(liquid) + " over the plant. It seems unaffected.")
+    
+--- # file:src/rooms/outside_walls.yaml
+room: outside_walls
+name: outside the walls
+description: > 
+  Standing outside of the walls of the tower.
+exits:
+  south: outside_gate
+--- # file:src/rooms/outside_north.yaml
+room: outside_north
+name: outside
+description: > 
+  The air is fragrant with aromas of herbs and flowers.
+  Chirps, clicks and buzzing fill your ears as bees and other insects go about their business.
+  {{br}}
+  A path, roughly made of irregular shaped paving stones, with weeds growing between the gaps,
+   leads north-south from the tower to the front gate.
+exits:
+  in: ground_floor
+  north: outside_gate
+  southeast: outside_east
+  southwest: outside_west
+---
+item: path
+name: path
+location: outside_north
+desc: > 
+  Poorly maintained, with irregular shaped paving stones.
+  One of the paving stones seems loose and its edges slight chipped.
+---
+item: tower_north_side
+name: tower
+location: outside_north
+desc: >
+  Staring up at the tower is vertigo inducing.
+  The tallest building for many leagues, it's smooth white bricks, uniformly arranged, 
+    seem to stretch endlessly above you.
+--- # file:src/rooms/landing_second_floor.yaml
+room: landing_second_floor
+name: second floor landing
+description: > 
+  This floor contains your master's quarters.
+  Far more opulent then the part of the tower where you reside, the floor is covered with a carpet, deep and luxurious.
+  On the walls hang several portraits.
+  Stairs lead up and down. To the west a closed door leads to the master's room.
+exits:
+  down: landing_first_floor
+  up: landing_third_floor
+---
+item: master_door
+name: door
+location: landing_second_floor
+description: >
+  A wooden door, made of solid oak, and painted red.
+  Meandering over the paint, like the path of a snail, is a curious sigil.
+  The door has no handle, lock, or other means of opening it.
+messages:
+  onOpen: >
+    Without handle or lock, it is unclear how to open the door.
+    You try pushing, but it does not budge. 
+tags:
+  - openable
+before:
+  open(this):
+    print(messages.onOpen)
+after:
+  examine(this):
+    reveal: master_door_sigil
+---
+item: master_door_sigil
+name: sigil
+location: master_door
+description: >
+  Barely visible, the creeping lines form what appears to be the shape of a lighthouse.
+--- # file:src/rooms/bedchamber.yaml
+room: bedchamber
+name: bedchamber
+description: >
+  This small cell has been your home for the past six months.
+  Sparsely furnished wih an uncomfortable bed, and a small trunk
+  to hold your meagre possessions.{{br}}
+  To the east a door leads out, and a small window set high in the foo
+  wall above your bed provides illumination.
+tags:
+  - start
+exits:
+  east:
+    landing_first_floor
+before:
+  go(east):
+    when: not(bedchamber_door.is_open)
+    then: $ The door is closed.
+---
+item: wardrobe
+name: wardrobe
+location: bedchamber
+description: >
+  A small wardobe propped up against the wall. It's door is {{#is_open}}open{{/is_open}}{{^is_open}}closed{{/is_open}}.
+tags:
+  - openable
+  - container
+---
+item: bedchamber_door
+name: door
+location: bedchamber
+description: >
+  A rough wooden door, with paint peeling off and tarnished brasswork. Beneath the rusted iron handle is a small keyhole.
+tags:
+  - openable
+  - lockable
+  - locked
+key: bedchamber_key
+verbs:
+  - slide.under
+adposition: under
+after:
+  slide($thing).under(this):
+    - thingName = getFullName(thing)
+    - $ You put {{thingName}} under the door
+  examine(this):
+    - reveal(bedchamber_keyhole)
+---
+item: bedchamber_keyhole
+name: keyhole
+location: bedchamber_door
+key_in_hole(): isAtLocation(bedchamber_key, bedchamber_keyhole)
+description: >
+  A hole in the door. 
+  {{#key_in_hole}}You can't see anything through the hole, looks like the key is in the other side.{{/key_in_hole}}
+  {{^key_in_hole}}Peering through rhe hole you can make out the dimly lit hallway beyond.{{/key_in_hole}}
+before:
+  put(coathanger).in(this):
+    - when: key_in_hole()
+      then:
+        - when: isAtLocation(window_cover, bedchamber_door)
+          then: 
+            - $ You push the wire through the keyhole.
+            - $ You hear a clunk as the key falls from the keyhole.
+            - moveItemTo(bedchamber_key, window_cover)
+          else:
+            - $ It's probably not a good idea to push the key out of the keyhole just yet.
+        - return(true)
+      else:
+        - $ You push the wire through the keyhole, but northing happens.
+        - return(true)  
+  put($item).in(this):
+    when: item.id != 'bedchamber_key'
+    then:
+      - item_name = getFullName(item)
+      - $ You can't put {{item_name}} in the keyhole.
+verbs:
+  - put.in
+tags:
+  - container
+  - hidden
+--- # file:src/rooms/lab_west.yaml
+room: lab_west
+name: Laboratory (West)
+description: >
+  The west end of the laboratory. In the floor is a trapdoor, over which stands the windlass.
+exits:
+  east: lab_east
+--- # file:src/rooms/outside_gate.yaml
+room: outside_gate
+name: at the gate
+description: > 
+  The high walls surrounding the tower grounds end here, making way for a gate.
+exits:
+  south: outside_north
+---
+item: main_gate
+name: gate
+location: outside_gate
+description: > 
+  Iron bars tower above you, twisted into decorative shapes, and ending at the top in a 
+    row of evil looking spikes.
+  No one will be climbing over.
+  Large hinges, regularly oiled, allow the gate to be smoothly opened.
+  A heavy lock keeps unauthorized visitors out.
+  {{#is_open}}The gate stands open.{{/is_open}}
+tags:
+  - openable
+  - lockable
+  - locked
+key: gate_key
+after:
+  open(this):
+    openExit(outside_gate, 'north', outside_walls)
+  close(this):
+    closeExit(outside_gate, 'north')
+  
+--- # file:src/rooms/landing_third_floor.yaml
+room: landing_third_floor
+name: third floor landing
+ladderIsHere(): isAtLocation(ladder, roof_hatch)
+description: >
+  The stairs end here, at the top floor. The tower laboratory is to the south.
+  Above is a hatch, providing access to the roof.
+  {{#roof_hatch.is_open}}The hatch is open.{{/roof_hatch.is_open}}
+  {{^roof_hatch.is_open}}The hatch is closed.{{/roof_hatch.is_open}}
+  {{#ladderIsHere}}A ladder leads up through the hatch.{{/ladderIsHere}}
+exits:
+  down: landing_second_floor
+  south: lab_east
+  up: 
+    roof_north : roof_hatch.is_open && ladderIsHere
+---
+item: roof_hatch
+name: hatch
+description: >
+  The wooden hatch provides access to the roof.
+tags:
+  - openable
+  - locked
+when:
+  open(this):
+    - print("You can't reach.")
+--- # file:src/rooms/lab_east.yaml
+room: lab_east
+name: Lab (east end)
+description: > 
+  The east end of the laboratory, in the middle stands a wooden workbench.
+  On the wall is a basin, and a single tap.
+  To the east is a large fireplace.
+  To the north is the landing and the stairs down.
+exits:
+  west: lab_west
+  east: fireplace
+  north: landing_third_floor
+---
+item: workbench
+location: lab_east
+description: >
+  Racks of test tubes, burners, flasks of different sizes stand upon the workbench.
+  Scorch marks and stains decorate the oak surface, the varnish worn thin and
+  scratched through years of abuse.
+---
+item: basin
+name: basin
+location: lab_east
+description: >
+  A large ceramic basin. A chrome tap allows the basin to be filled with water.
+  {{#tap.isOpen}}{{messages.tapOpen}}{{/tap.isOpen}}
+  {{#waterLevel}}{{getLevelMessage}}{{/waterLevel}}
+messages:
+  waterLevel:
+    - The basin is empty.
+    - Water is pooling at the bottom of the basin.
+    - The basin is half full.
+    - The basin is completely full.
+    - The basin is overflowing, water is pouring onto the floor.
+  tapOpen: >
+    There is a stream of water flowing from the open tap.
+getLevelMessage():
+  - levelIndex = Math.min(4, waterLevel)
+  - return(messages.waterLevel[levelIndex])
+isTapOpen(): tap.isOpen
+tags:
+  - container
+waterLevel: 0
+after:
+  look:
+    - when: tap.isOpen
+      then: print(messages.tapOpen)
+    - when: waterLevel > 0
+      then: getLevelMessage()
+afterTurn():
+  - when: tap.isOpen && isAtLocation(plug,basin)
+    then: waterLevel = waterLevel + 1
+  - when: not(isAtLocation(plug,basin)) && waterLevel > 0
+    then: waterLevel = waterLevel - 1
+  - when: tap.isOpen
+    then:
+      - when: waterLevel >= 1
+        then: 
+          - levelIndex = Math.min(4, waterLevel)
+          - print(messages.waterLevel[levelIndex])
+---
+item: tap
+name: tap
+location: lab_east
+description: >
+  A simple metal tap. Used to fill the basin an other containers with water.
+  {{#isOpen}} Water is gushing out of the tap. {{/isOpen}}
+isOpen: false
+verbs:
+  - turn
+modifiers:
+  turn_direction:
+    - "on"
+    - "off"
+before:
+  turn(this, $turn_direction):
+    if: turn_direction == 'on'
+    then: 
+      if: tap.isOpen
+      then: print("The tap is already on.")
+      else: 
+        - print("There is a hiss, as water gushes out of the tap.")
+        - isOpen = true
+    else:
+      if: tap.isOpen
+      then: 
+        - print("The flow stops.")
+        - isOpen = false
+      else:
+        - print("The tap is already off.")
+---
+item: plug
+name: plug
+description: >
+  A small rubber plug.
+location: basin
+tags:
+  - carryable
+    
+--- # file:src/rooms/bar.yaml
+room: bar
+name: Bar
+description: >
+  A rough looking bar, It is completely empty except for a layer of sawdust covering the floor.
+  It looks like some sort of message has been written in the sawdust.
+tags:
+  - dark
+exits:
+  north: foyer
+blunderCount: 0
+onAddChild(entity): 
+  when: isAtLocation(cloak, entity)
+  then: 
+    - setTag(this, 'dark')
+    - openExit(bar, 'east', bar)
+    - openExit(bar, 'south', bar)
+    - openExit(bar, 'west', bar)
+  otherwise: 
+    - delTag(this, 'dark')
+    - closeExit(bar, 'east')
+    - closeExit(bar, 'south')
+    - closeExit(bar, 'west')
+before:
+  go($direction):
+    unless: direction == 'north'
+    do: 
+       - print("Blundering around in the dark isn't a good idea!")
+       - blunderCount = blunderCount + 1
+
+--- # file:src/rooms/fireplace.yaml
+room: fireplace
+name: Fireplace
+description: >
+  The hearth is raised off the floor by a partial brick wall.
+  A metal grate, blackened with carbon, sits on top.
+  Upon the grate rests a crucible.
+  Two levers protrude from the side of the hearth.
+
+  Above, a chimney extends through the roof.
+exits:
+  west: lab_east
+  up: chimney
+before:
+  go($direction):
+    when: direction == 'up' && getInventory().length > 0
+    then: print("Lifting yourself up you try to wriggle into the chimney, but you don't quite fit.")
+---
+item: hearth
+name: hearth
+location: fireplace
+description: >
+  {{#isLit}}The hearth is hot{{/isLit}}
+  {{^isLit}}The hearth is cold{{/isLit}}
+isLit: false
+hasFuel: false
+---
+item: fire_lever
+name: red lever
+location: fireplace
+description: >
+  A metal rod with a red handle.
+verbs:
+  - pull
+before:
+  pull(this):
+    when: hearth.hasFuel
+    then: 
+      - print("The hearth lights up and a wave of heat rolls out from the now burning hearth")
+      - hearth.isLit = true
+    else:
+      - print("There is a click, a momentary blue glow, and then nothing")
+---
+item: water_lever
+name: blue lever
+location: fireplace
+description: >
+  A metal rod, with a blue handle. 
+verbs:
+  - pull
+before:
+  pull(this):
+    - print("For a few seconds there is a hiss of running water.")
+    - when: hearth.isLit
+      then:
+        - print("Steam billows up from the hearth, as the fire is quickly extinguished.")
+        - hearth.isLit = false
+        - return(true)
+---
+item: crucible
+name: crucible
+location: fireplace
+tags:
+  - container
+description: >
+  A clay crucible.  Used to heat metals to molten temperatures.
+
+--- # file:src/rooms/roof_north.yaml
+room: roof_north
+name: roof (north)
+description: >
+  The north side of the roof.
+  There is a hatch in the floor.
+exits:
+  southeast: roof_east
+  south: roof_south
+  southwest: roof_west
+  down:
+    landing_third_floor : roof_hatch.is_open && isAtLocation(ladder, roof_hatch)
+    
+---
+item: roof_hatch
+name: hatch
+location: roof_north
+description: >
+  A wooden roof hatch, with a metal ring for lifting, and a brass keyhole.
+  {{#is_open}}The hatch is open.{{/is_open}}
+  {{^is_open}}The hatch is closed.{{/is_open}}
+key: roof_key
+tags: 
+  - openable 
+  - lockable
+  - locked
+  - container
+after:
+  put(ladder).in(this):
+    - $ You carefully lower the ladder through the hatch.
+  put($item).in(this):
+    - print("You drop " + getFullName(item) + " through the hatch.")
+    - move(item).to(landing_third_floor)
+--- # file:src/rooms/chimney.yaml
+room: chimney
+name: chimney
+description: >
+  Dark and claustrophobic, only just big enough for you to squeeze through.
+  The soot makes your eyes water.
+  There is light up above, below you is the fireplace. 
+exits:
+  down: fireplace
+  up: roof_east
+--- # file:src/rooms/storage.yaml
+room: storage
+name: storage closet
+description: > 
+  A small room lined with shelves loaded with various cleaning supplies.
+  Dimly lit by a small grime encrusted window, you can still make out various items.
+exits:
+  west: landing_first_floor
+--- # file:src/rooms/roof_south.yaml
+room: roof_south
+name: roof (south)
+description: >
+  The south side of the roof, which continues, north, east and west.
+exits:
+  north: roof_north
+  east: roof_east
+  west: roof_west
+--- # file:src/rooms/outside_east.yaml
+room: outside_east
+name: garden (east)
+description: >
+  The east side of the garden.
+  Tall wall enclose the space, blocking visibility and passage to the west.
+  The garden continues around the tower to the northwest, and southwest.
+  There is a small wooden shed here.
+exits:
+  northwest: outside_north
+  southwest: outside_south
+  in: shed
+---
+room: shed
+name: shed
+description: >
+  A small wooden outbuilding used for storing gardening tools.
+exits:
+  out: outside_east
+--- # file:src/rooms/roof_west.yaml
+room: roof_west
+name: roof (west)
+description: >
+  The west side of the roof.
+  There is a greenhouse here
+exits:
+  northeast: roof_north
+  east: roof_south
+  in: greenhouse
+--- # file:src/items/window_cover.yaml
+item: window_cover
+name: window cover
+location: bedchamber_window
+description: >
+  A piece of waxed linen. Keeps the worst of the weather out.
+  {{br}}
+  {{br}}
+  {{#firstTime}}Once all the tower windows contained glass; magnificient stained glass. The kalidoscopic patterns cast when the sun was in then right place was mesmerizing. The glass had to be taken away, it was needed for more important things.{{/firstTime}}
+tags:
+  - carryable
+  - hidden
+verbs:
+  - slide
+before:
+  get(this):
+    switch: 
+      - when: isAtLocation(this, bedchamber_window) && not(trunk.isStoodOn())
+        then: 
+          - $ You can't reach the window.
+          - return(true)
+      - when: isAtLocation(this, bedchamber_door) && isAtLocation(bedchamber_key, this)
+        then:
+          - $ You carefully pull the window covering away from the door, revealing the key.
+          - moveItemTo(window_cover, bedchamber)
+          - moveItemTo(bedchamber_key, bedchamber)
+          - reveal(bedchamber_key)
+          - return(true)
+after:
+  get(this):
+    once: $ You carefully remove the window covering from the window. It's going to get cold in here later.
+    
+--- # file:src/items/trapdoor.yaml
+item: trapdoor
+location: lab_west
+description: >
+  {{^is_open}}
+    Made of solid oak, and sturdy enough for an elephant to walk on, the trapdoor is closed.
+  {{/is_open}}
+  {{#is_open}}
+    The view from the trapdoor is vertigo inducing, the ground is over 40 feet away.
+    You don't want to get too close.
+  {{/is_open}}
+tags: 
+  - openable
+after:
+  open(this):
+    openExit(lab_west, 'down', outside_north)
+  close(this):
+    closeExit(lab_west, 'down')
+--- # file:src/items/bedchamber_key.yaml
+item: bedchamber_key
+name: small key
+description: A simple iron key
+location: bedchamber_keyhole
+verbs:
+  - unlock.with
+  - lock.with
+tags:
+  - carryable
+  - hidden
+--- # file:src/items/coal_wagon.yaml
+item: coal_wagon
+name: coal wagon
+location: outside_walls
+description: >
+  A small horse drawn wagon, loaded with sacks of coal.
+after:
+  look:
+    print("The coal delivery is here")
+---
+item: horse
+name: horse
+location: outside_walls
+description: >
+  A squat, sturdy looking horse.
+---
+item: coal_man
+name: coal man
+location: outside_walls
+description: >
+  The man is patiently waiting by his wagon.
+verbs:
+  - ask
+before:
+  ask(coal_man).about(coal_thought):
+    - say("Dirty stuff, dust get's everywhere, in your hair, under your nails, in your lungs.")
+    - reveal(lung_thought)
+  ask(coal_man).about(lung_thought):
+    - print("Cough... wheeze..."),
+    - say("This job's gonna kill me, wife says I need to give it yup for me health, but there's not other work around")
+  ask(coal_man).about(coal_sack):
+    - say("That's what I'm delivering, already paid for.")
+  ask(coal_man).for(coal_sack):
+    when: isAtLocation(wheelbarrow, outside_walls)
+    then:
+      - print("The coal man lowers the sack into the barrow, his muscles straining under the load.")
+      - move(coal_sack).to(wheelbarrow)
+      - say("Great, I'll be off then.")
+    else: say("A twig like yourself aint no gonna carry it.  You need something to put it in.")
+---
+item: coal_thought
+name: coal
+location: coal_wagon
+verbs:
+  - ask.about
+---
+item: lung_thought
+name: lungs
+location: coal_wagon
+tags:
+  - hidden
+verbs:
+  - ask.about
+
+--- # file:src/items/mop.yaml
+item: mop
+location: storage
+description: a mop
+tags:
+  - carryable
+--- # file:src/items/bucket.yaml
+item: bucket
+description: a bucket
+location: storage
+tags:
+  - carryable
+--- # file:src/items/hook.yaml
+item: hook
+name: small brass hook
+description: >
+  A small brass hook
+  {{#cloakOnHook}} with a cloak hanging on it.{{/cloakOnHook}}
+  {{^cloakOnHook}} screwed to the wall. {{/cloakOnHook}}
+cloakOnHook(): 
+  - onHook = isAtLocation(cloak, hook)
+  - return(onHook)
+#location: cloakroom
+adposition: hanging on
+verbs:
+  -  hang.on
+after:
+  hang(cloak).on(this):
+    once: score(1)
+--- # file:src/items/wheelbarrow.yaml
+item: wheelbarrow
+name: wheel barrow
+location: outside_west
+desc: > 
+  Two wooden handles, a large metal bowl, and a single wheel.  
+tags:
+  - pushable
+  - container
+--- # file:src/items/trunk.yaml
+item: trunk
+name: trunk
+location: bedchamber
+description: >
+  A small, but sturdy wooden trunk containing your meagre possessions.
+tags:
+  - container
+  - openable
+#  - pushable
+isStoodOn():
+  - player = getPlayer()
+  - return(player.standing_on == 'trunk')
+verbs:
+  - stand_on: not(isStoodOn())
+  - get_down: isStoodOn()
+--- # file:src/items/bedchamber_window.yaml
+item: bedchamber_window
+name: window
+description: >
+  {{#isStandingOnTrunk}}
+    Standing on the trunk you look at the desolate view outside,
+      you remember why you don't often look out.
+    The fields lay bare and untended, forests stripped clean of firewood, 
+      houses collapsing and unmaintained.
+    What few people remain shuffle aimlessly around.
+    With the crops failed, and little other work, it's a miserable existence out there.
+  {{/isStandingOnTrunk}}
+  {{^isStandingOnTrunk}}
+    The small window above the bed lets a meagre amount of light. But from down here doesn't 
+    offer much of a view.
+  {{/isStandingOnTrunk}}
+isStandingOnTrunk():
+  - return(trunk.isStoodOn())
+location: bedchamber
+adposition: "on"
+after:
+  examine(this):
+    when: hasTag(window_cover, 'hidden') && isAtLocation(window_cover, this)
+    then:
+      - reveal(window_cover)
+      - $ The window is covered by a piece of waxed linen.
+--- # file:src/items/roof_key.yaml
+item: roof_key
+name: small brass key
+location: lab_west
+verbs:
+  - lock.with
+  - unlock.with
+tags:
+  - carryable
+  - small
+--- # file:src/items/silver_button.yaml
+item: silver_button
+name: silver button
+location: nest
+description: >
+  A small silver button, with and image of a lighthouse embossed on it, matching the ones on the masters cloak.
+tags:
+  - hidden
+  - carryable
+  - small
+--- # file:src/items/bed.yaml
+item: bed
+name: bed
+description: >
+  The small hard bed where you sleep.
+location: bedchamber
+isLyingOn():
+  - player = getPlayer()
+  - return(player.lying_on == 'bed')
+verbs:
+  - lie_down.on: not(isLyingOn())
+  - get_up: isLyingOn()
+before:
+  go($direction):
+   when: isLyingOn()
+   then: print("You can't go anywhere lying down.")
+after:
+  look():
+    when: isLyingOn()
+    then: print("You are lying on the bed.")
+--- # file:src/items/rope.yaml
+item: rope
+name: rope
+description: >
+  A long coil of rope, made of some sort of rough fibre.
+tags:
+  - carryable
+location: storage
+
+--- # file:src/items/winch.yaml
+item: winch
+name: winch
+description: >
+  An overly complicated jumble of cogs, pulleys, and hydraulics.
+  Used to raise and lower heavy items through a trapdoor in the floor.
+  A lever extends from the side of the mechanism offering the only means of control
+# Windlass?
+---
+item: lever
+name: lever
+location: winch
+description: >
+  The large wooden lever extends from the side of the mechanism.
+verbs:
+  - pull_lever
+modifiers:
+  lever_direction:
+    - up
+    - down
+---
+verb: pull_lever
+name: pull
+tags:
+  - transitive
+modifiers:
+  - lever_direction
+actions:
+  pull_lever(lever, $lever_direction):
+    switch:
+      - when: lever_direction == 'up'
+        then: print("The mechanism whirs")
+      - when: lever_direction == 'down'
+        then: print("The mechanism hums");
+ 
+--- # file:src/items/pin.yaml
+item: pin
+article: a
+description: >
+  A small metal drawing pin.
+location: notice_board
+tags:
+  - carryable
+  - hidden
+  - small
+--- # file:src/items/magpie.yaml
+item: magpie
+name: magpie
+description: >
+  The black and white bird hops from foot to foot, its black eyes watch you curiously.
+location:  outside_east
+tags:
+  - NPC 
+isSmall(item): hasTag(item, "small")
+beforeTurn():
+  - print("Caw! Caw! Caw!")
+  - itemsHere = itemsAtLocation(location)
+#  - smallItem = Array.find(itemsHere, isSmall)
+  #- print(location)
+  #- print(itemsHere)
+  - smallItem = Array.find(itemsHere, fn([item], hasTag(item, "small")))
+  - when: smallItem
+    then:
+      - if(smallItem).then(print(smallItem))
+      - print("The magpie picks up " + getFullName(smallItem) + " and flies away.")
+      - moveItemTo(smallItem, nest)
+      - moveItemTo(magpie, roof_east)
+properties:
+  location:
+    messages:
+      leaves: The magpie files away to the {{direction}}
+      arrives: The magpie flies in from the {{direction}}
+---
+rule: move_magpie
+counter: 2
+afterTurn():
+  - counter = counter - 1
+  - when: counter == 0
+    then:
+      - switch:
+        - when: isAtLocation(magpie, roof_east)
+          then:
+            - printAt(roof_east, "The magpie flies down.")
+            - moveItemTo(magpie, outside_east)
+        - when: isAtLocation(magpie, outside_east)
+          then:
+            - printAt(outside_east, "The magpie flies north")
+            - moveItemTo(magpie, outside_north)
+        - when: isAtLocation(magpie, "outside_north")
+          then:
+            - printAt(outside_north, "The magpie flies east.")
+            - moveItemTo(magpie, outside_east)
+      - counter = 2
+
+
+--- # file:src/items/gate_key.yaml
+item: gate_key
+name: large iron key
+location: key_hook
+desc: >
+  A large iron key. Unlocks the main gate.
+tags:
+  - carryable
+verbs:
+  - hang
+  - unlock.with
+  - lock.with
+--- # file:src/items/coal_sack.yaml
+item: coal_sack
+name: coal sack
+location: coal_wagon
+description: >
+  A large sack of coal. Too heavy to lift.
+tags:
+  - carryable
+  - pushable
+  - openable
+before:
+  get(this):
+    print("The coal is too heavy to lift")
+  open(this):
+    print("You don't want to get coal dust everywhere.")
+verbs:
+  - ask.about
+  - ask.for
+--- # file:src/items/windlass.yaml
+item: windlass
+name: windlass
+location: lab_west
+description: > 
+  Filling up the space at the end of the laboratory stands the windlass.
+  It's axle extends over the trapdoor, held up by two cast iron supports.
+  At the end the crank handle - which you've spent too many hours turning - is used to
+  operate the mechanism, lifting supplies from the ground below.
+after:
+  examine(this): 
+    - reveal(axle)
+    - reveal(crank)
+---
+item: axle
+name: axle
+location: windlass
+description: >
+  A long pole made of cast iron, there is still some evidence of the green paint, now 
+  mostly worn away through use.
+  {{^hasRope}}There is hole where a rope could be attached.{{/hasRope}}
+  {{#hasRope}}A long length of rope is threaded through the axle.{{/hasRope}}
+hasRope: false
+tags:
+  - hidden
+  - container
+relativeLocation: "on"
+adposition: "attached to"
+before:
+  put($item).on(this): 
+    unless: item.id == 'rope'
+    then: print("There is no way to attach " + getFullName(item) " to the axle")
+after:
+  put(rope).on(this):
+    - print("You carefully attach the rope to the axle.")
+    - axle.hasRope = true
+  get(rope): axle.hasRope = false
+---
+item: crank
+name: crank
+location: windlass
+description: > 
+  Joined to the windlass, it's wooden grip is worn smooth by years of use.
+tags:
+  - hidden
+verbs:
+  - turn
+modifiers:
+  turn_direction:
+    - clockwise
+    - anticlockwise
+before:
+  turn(this, $turn_direction): 
+    - print("The crank turns, gears grind. ")
+    - when: axle.hasRope && turn_direction == 'clockwise'
+      then: print("The rope lowers")
+    - when: axle.hasRope && turn_direction == 'anticlockwise'
+      then: print("The rope lifts")
+    - when: not(axle.hasRope)
+      then: print("The axle turns " + turn_direction + ".")
+
+
+--- # file:src/items/ladder.yaml
+item: ladder
+name: ladder
+location: roof_south
+description: >
+  A wooden ladder.
+tags:
+  - carryable
+  - large
+--- # file:src/items/weedkiller.yaml
+item: weedkiller
+name: weed killer
+location: shed
+description: >
+  A glass bottle filled with a viscous liquid. A label on the side reads "Weed Killer".
+tags:
+  - carryable
+verbs:
+  - pour
+--- # file:src/items/message.yaml
+item: message
+name: message
+location: bar
+messages:
+  win: >
+    The message, neatly marked in the sawdust, reads...{{br}}
+    You have won.
+  lose: >
+    The message has been carelessly trampled, making it difficult to read.
+    You can just distinguish the words...{{br}}
+    You have lost.
+verbs: ["examine"]
+before:
+  examine(this):
+    when: bar.blunderCount <= 2
+    then: 
+      - once: score(1)
+      - gameOver(messages.win)
+    else: gameOver(messages.lose)
+
+--- # file:src/items/coathanger.yaml
+item: coathanger
+name: coathanger
+article: a
+relativeLocation: "on"
+adposition: "on"
+location: wardrobe
+description: >
+  {{^is_open}}
+  A coathanger made out of a single thick piece of wire, it's ends twisted together and shaped into a squat triangle with a hook at top.
+  {{/is_open}}
+  {{#is_open}} A stiff piece of wire that was once a coathanger
+  {{/is_open}}
+  {{#isHoldingRobe}}Hanging on the coathanger is your robe{{/isHoldingRobe}}
+isHoldingRobe(): isAtLocation(robe, coathanger)
+verbs:
+  - hang.on
+tags:
+  - openable
+  - carryable
+before:
+  open(this):
+    when: isHoldingRobe()
+    then: $ You can't open the coathanger while something is hanging on it.
+  get(this):
+    when: isHoldingRobe()
+    then: $ You can't get the coathanger while something is hanging on it.
+after:
+  open(this):
+    - this.name = "wire"
+    - $ You untwist the coathanger.
+  close(this):
+    - this.name = "coathanger"
+    - $ You fold the wire back onto an approximate hanger shape.
+   
+    
+
+--- # file:src/items/todo_note.yaml
+item: todo_note
+name: note
+article: a
+location: notice_board
+description: >
+  *Worm*{{br}}
+  *I will be away most of the day*{{br}}
+  *I am expecting all the floors swept, and the bathroom cleaned*{{br}}
+  *Make sure you take delivery of the coal*{{br}}
+  *I've lost the silver button from my cloak, find it*{{br}}
+  *Don't touch any of the lab equipment*{{br}}
+    - *master*
+tags:
+  - carryable
+  - hidden
+  - paper
+--- # file:src/items/robe.yaml
+item: robe
+description: >
+  Your robe. Dark red, faded, patched in several places and threadbare.
+article: your
+location: coathanger
+verbs:
+    - hang
+tags:
+    - carryable
+    - wearable
+    
