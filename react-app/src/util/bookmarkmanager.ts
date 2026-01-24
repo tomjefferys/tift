@@ -1,5 +1,4 @@
-import { Properties, StatusType } from "tift-types/src/messages/output";
-import { createSimpleOption } from "./util";
+import { StatusType } from "tift-types/src/messages/output";
 import { DecoratedForwarder } from "tift-types/src/engineproxy";
 import * as ReactUtils from "./reactutils";
 import { Input } from "tift-engine"
@@ -44,11 +43,6 @@ interface Bookmark {
 type BookmarkList = Bookmark[];
 
 type GameLoader = (gameData : string, forwarder : DecoratedForwarder) => Promise<void>;
-
-export interface BookmarkManager {
-    setBookmark(data : string) : Promise<boolean>;
-    getBookmark() : Promise<string | null>;
-}
 
 interface BookmarkOptions {
     bookmarks : BookmarkList;
