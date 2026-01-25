@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, cleanup, act, waitForElementToBeRemoved, findByRole, getByTestId, findAllByTestId, fireEvent } from '@testing-library/react';
 import App from './App';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 
 // Mock CompressionStream and DecompressionStream for test environment
 global.CompressionStream = class MockCompressionStream {
@@ -81,6 +82,8 @@ Object.defineProperty(window.navigator, 'storage', {
 
 beforeEach(() => {
   window.localStorage.clear();
+  // Reset any mocks
+  vi.clearAllMocks();
 })
 
 test('renders starting room status', async () => {
@@ -999,6 +1002,206 @@ test("Test multiple bookmarks and selection", async () => {
     const status = screen.getByTestId('status');
     expect(status).toHaveTextContent('cave');
   });
+});
+
+test('bookmark export button is available', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Create a bookmark first
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  await waitFor(() => getButton('new bookmark'));
+  await act(() => user.click(getButton('new bookmark')));
+
+  await waitFor(() => screen.getByText(/Bookmark \".*\" created/));
+
+  // Now test export accessibility
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Select the bookmark
+  const bookmark = screen.getByRole('button', { name: /cave.*- .*/ });
+  await act(() => user.click(bookmark));
+
+  // Verify export button is accessible
+  await waitFor(() => getButton('export'));
+  expect(screen.getByRole('button', { name: 'export' })).toBeInTheDocument();
+});
+
+test('bookmark import button is available', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Open bookmark manager
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Verify import bookmark option exists
+  await waitFor(() => getButton('import bookmark'));
+  expect(screen.getByRole('button', { name: 'import bookmark' })).toBeInTheDocument();
+});
+
+test('bookmark import and export features are available', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Test that import is available even with no bookmarks
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  await waitFor(() => getButton('import bookmark'));
+  expect(screen.getByRole('button', { name: 'import bookmark' })).toBeInTheDocument();
+  
+  // Create a bookmark to test export functionality
+  await act(() => user.click(getButton('new bookmark')));
+  await waitFor(() => screen.getByText(/Bookmark \".*\" created/));
+
+  // Go back to bookmark manager
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Select bookmark to access export
+  const bookmark = screen.getByRole('button', { name: /cave.*- .*/ });
+  await act(() => user.click(bookmark));
+  
+  await waitFor(() => getButton('export'));
+  expect(screen.getByRole('button', { name: 'export' })).toBeInTheDocument();
+});
+
+test('bookmark manager shows correct options for empty bookmark list', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Open bookmark manager without any existing bookmarks
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should see basic options for empty bookmark list
+  await waitFor(() => getButton('new bookmark'));
+  await waitFor(() => getButton('import bookmark'));
+  await waitFor(() => getButton('cancel'));
+  
+  expect(screen.getByRole('button', { name: 'new bookmark' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'import bookmark' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'cancel' })).toBeInTheDocument();
+  
+  // Should not see any bookmarks to select
+  const bookmarkButtons = screen.queryAllByRole('button', { name: /.*- .*/ });
+  expect(bookmarkButtons).toHaveLength(0);
+});
+
+test('can cancel out of bookmark manager', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Open bookmark manager
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  await waitFor(() => getButton('cancel'));
+  await act(() => user.click(getButton('cancel')));
+
+  // Should return to normal game interface
+  await waitFor(() => getButton('go'));
+  expect(screen.getByRole('button', { name: 'go' })).toBeInTheDocument();
+});
+
+test('bookmark management UI flow covers all main actions', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Test the entire bookmark management UI flow
+  
+  // 1. Start with empty bookmark manager
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should have new, import, cancel options when empty
+  await waitFor(() => getButton('new bookmark'));
+  await waitFor(() => getButton('import bookmark'));
+  await waitFor(() => getButton('cancel'));
+  
+  // 2. Create a bookmark
+  await act(() => user.click(getButton('new bookmark')));
+  await waitFor(() => screen.getByText(/Bookmark \".*\" created/));
+
+  // 3. Navigate to bookmark manager again to see created bookmark
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should now have the bookmark plus new/import/cancel options
+  await waitFor(() => {
+    const bookmark = screen.getByRole('button', { name: /cave.*- .*/ });
+    expect(bookmark).toBeInTheDocument();
+  });
+  await waitFor(() => getButton('new bookmark'));
+  await waitFor(() => getButton('import bookmark'));
+  await waitFor(() => getButton('cancel'));
+
+  // 4. Select bookmark to see management actions
+  const bookmark = screen.getByRole('button', { name: /cave.*- .*/ });
+  await act(() => user.click(bookmark));
+
+  // Should have load, delete, export, cancel options
+  await waitFor(() => getButton('load'));
+  await waitFor(() => getButton('delete'));  
+  await waitFor(() => getButton('export'));
+  await waitFor(() => getButton('cancel'));
+
+  // 5. Test load functionality directly
+  await act(() => user.click(getButton('load')));
+
+  // Should show loaded message and return to game
+  await waitFor(() => screen.getByText(/Bookmark loaded/));
+  await waitFor(() => getButton('go'));
+  expect(screen.getByRole('button', { name: 'go' })).toBeInTheDocument();
 });
 
 

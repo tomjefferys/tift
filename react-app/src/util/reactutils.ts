@@ -226,3 +226,63 @@ export function downloadTextFile(filename: string, content: string): void {
   // Clean up the URL
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Prompts the user to select and read a text file
+ * @param title - The title to display in the file picker dialog
+ * @param allowedExtensions - Array of file extensions to allow (e.g., ['.txt', '.json'])
+ * @returns Promise that resolves to the file content as a string
+ */
+export function promptForTextFile(title: string, allowedExtensions: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // Create a file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.style.display = 'none';
+    
+    // Set accepted file types
+    if (allowedExtensions && allowedExtensions.length > 0) {
+      input.accept = allowedExtensions.join(',');
+    }
+    
+    // Handle file selection
+    input.addEventListener('change', (event) => {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
+      
+      if (!file) {
+        reject(new Error('No file selected'));
+        return;
+      }
+      
+      // Create a FileReader to read the file content
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        resolve(content);
+        
+        // Clean up
+        document.body.removeChild(input);
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+        document.body.removeChild(input);
+      };
+      
+      // Read the file as text
+      reader.readAsText(file);
+    });
+    
+    // Handle cancellation
+    input.addEventListener('cancel', () => {
+      reject(new Error('File selection cancelled'));
+      document.body.removeChild(input);
+    });
+    
+    // Add to DOM and trigger click
+    document.body.appendChild(input);
+    input.click();
+  });
+}

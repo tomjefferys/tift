@@ -27,7 +27,6 @@ import StatusBar from "./StatusBar";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, Settings, UIType } from "../util/settings";
 import { createDevModePicker } from "../util/devmodepicker";
 import { createBookmarkManagerOptions } from "../util/bookmarkmanager";
-import { info } from "console";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;

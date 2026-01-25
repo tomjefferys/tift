@@ -26,8 +26,7 @@ type BookmarkManagerState = `${BOOKMARK_MANAGER_STATES}`;
 const enum OPTIONS {
     NEW = "new",
     CANCEL = "cancel",
-    LOAD = "load",
-    DELETE = "delete",
+    IMPORT = "import",
 }
 
 const enum BOOKMARK_ACTIONS {
@@ -72,8 +71,6 @@ export function createBookmarkManagerOptions(
         statusRef : React.RefObject<StatusType>,
         infoRef : React.RefObject<Properties>,
         gameLoader : GameLoader) : StateMachine<InputMessage, DecoratedForwarder> {
-
-    console.log("Creating bookmark manager for gameId: " + infoRef.current?.gameId);
 
     // Get the gameId from infoRef
     const getGameId = () : string => {
@@ -127,7 +124,7 @@ export function createBookmarkManagerOptions(
         saveBookmarkList(bookmarks);
     }
 
-    const exportBookmark = async (selectedBookmark : number, forwarder : DecoratedForwarder) : Promise<void> => {
+    const exportBookmark = async (selectedBookmark : number) : Promise<void> => {
         const bookmarks = getBookmarkList();
         if (selectedBookmark < 0 || selectedBookmark >= bookmarks.length) {
             throw new Error("Invalid bookmark selected for export.");
@@ -141,11 +138,30 @@ export function createBookmarkManagerOptions(
         }
     }    
     
+    // Import bookmark from file
+    const importBookmark = async () : Promise<string> => {
+        try {
+            const fileData = await ReactUtils.promptForTextFile("Select Bookmark File", [SAVE_FILE_EXTENSION]);
+            const bookmark : Bookmark = JSON.parse(fileData);
+            if (bookmark.gameId !== getGameId()) {
+                throw new Error("Bookmark game ID does not match current game.");
+            }
+            addBookmark(bookmark.name, bookmark.data);
+            return bookmark.name;
+        } catch (e) {
+            throw new Error("Failed to import bookmark.", { cause : e });
+        }
+    }
+
     // Get bookmark options for state machine
     const getBookmarkOptions = () : BookmarkOptions => {
         const bookmarks = getBookmarkList();
         const selectOptions = bookmarks.map((bookmark, index) => word(BOOKMARK_ACTIONS.SELECT + "_" + index.toString(), bookmark.name, "select"));
-        const extraOptions = [word(OPTIONS.CANCEL, OPTIONS.CANCEL, "select"), word(OPTIONS.NEW, "new bookmark", "select")];
+        const extraOptions = [
+            word(OPTIONS.CANCEL, OPTIONS.CANCEL, "select"),
+            word(OPTIONS.NEW, "new bookmark", "select"),
+            word(OPTIONS.IMPORT, "import bookmark", "select"),
+        ];
         const allOptions = [...selectOptions, ...extraOptions];
         return {
             bookmarks,
@@ -155,19 +171,34 @@ export function createBookmarkManagerOptions(
         };
     }
 
-    // Load game from bookmark
-    const loadGameFromBookmark = async (bookmarkIndex : number, forwarder : DecoratedForwarder) : Promise<void> => {
+    // Load game from bookmark data
+    const loadGameFromBookmark = async (bookmark : Bookmark, forwarder : DecoratedForwarder) : Promise<void> => {
+        try {
+            const decompressedData = await ReactUtils.decodeAndDecompress(bookmark.data); 
+            return gameLoader(decompressedData, forwarder);
+        } catch (e) {
+            throw new Error("Failed to load game from bookmark.", { cause : e });
+        }
+    }
+
+    // Load game from bookmark index
+    const loadGameFromBookmarkIndex = async (bookmarkIndex : number, forwarder : DecoratedForwarder) : Promise<void> => {
         const bookmarkList = getBookmarkList();
         if (bookmarkIndex < 0 || bookmarkIndex >= bookmarkList.length) {
             throw new Error("Invalid bookmark selected.");
         }
         const bookmark = bookmarkList[bookmarkIndex];
-        try {
-            const decompressedData = await ReactUtils.decodeAndDecompress(bookmark.data); 
-            return gameLoader(decompressedData, forwarder);
-        } catch (e) {
-            throw new Error("Failed to decompress bookmark data.", { cause : e });
+        await loadGameFromBookmark(bookmark, forwarder);
+    }
+
+    // Load game from bookmark name
+    const loadGameFromBookmarkName = async (bookmarkName : string, forwarder : DecoratedForwarder) : Promise<void> => {
+        const bookmarkList = getBookmarkList();
+        const bookmark = bookmarkList.find(b => b.name === bookmarkName);
+        if (!bookmark) {
+            throw new Error("Bookmark not found: " + bookmarkName);
         }
+        await loadGameFromBookmark(bookmark, forwarder);
     }
 
     // Get latest bookmark data by sending save command and waiting for bookmarkRef to be updated
@@ -208,21 +239,25 @@ export function createBookmarkManagerOptions(
             forwarder.words([], allOptions);
         },
         onAction : async (input : InputMessage, forwarder : DecoratedForwarder) => {
-            const { bookmarks, selectOptions, allOptions } = getBookmarkOptions();
+            const { selectOptions, allOptions } = getBookmarkOptions();
             let nextState : Optional<BookmarkManagerState> = undefined;
             const handler = handleInput(input);
+
+            // Handle selecting a bookmark
             selectOptions.forEach(async (option, index) => {
                 await handler.onCommand([option.id], async () => {
-                    const bookmark = bookmarks[index];
-                    forwarder.print(`Selecting bookmark: ${bookmark.name}`);
                     selectedBookmark = index;
                     nextState = BOOKMARK_MANAGER_STATES.BOOKMARK_SELECTED;
                 });
             });
+
+            // Handle cancelling
             await handler.onCommand([OPTIONS.CANCEL], async () => {
                 forwarder.print("cancelled");
                 nextState = BOOKMARK_MANAGER_STATES.TERMINATE;
             });
+
+            // Handle creating new bookmark
             await handler.onCommand([OPTIONS.NEW], async () => {
                 try {
                     forwarder.print("Creating new bookmark...");
@@ -236,6 +271,22 @@ export function createBookmarkManagerOptions(
                 }
                 nextState = BOOKMARK_MANAGER_STATES.TERMINATE;
             });
+
+            // Handle importing bookmark
+            await handler.onCommand([OPTIONS.IMPORT], async () => {
+                forwarder.print("Importing bookmark...");
+                try {
+                    const importedName = await importBookmark();
+                    forwarder.print(`Bookmark "${importedName}" imported.`);
+                    await loadGameFromBookmarkName(importedName, forwarder);
+                    forwarder.print("Bookmark loaded.");
+                } catch (e) {
+                    forwarder.warn("Failed to import bookmark.");
+                    forwarder.warn((e as Error).message);
+                }
+                nextState = BOOKMARK_MANAGER_STATES.TERMINATE;
+            });
+
             await handler.onAnyCommand(async command => forwarder.warn("Unexpected command: " + command.join(" ")));
             await handler.onGetWords(async () => forwarder.words([], allOptions));
             await handler.onAny(async message => forwarder.send(message));
@@ -262,7 +313,7 @@ export function createBookmarkManagerOptions(
             await handler.onCommand([BOOKMARK_ACTIONS.LOAD], async () => {
                 forwarder.print("Loading bookmark...");
                 try {
-                    await loadGameFromBookmark(selectedBookmark, forwarder);
+                    await loadGameFromBookmarkIndex(selectedBookmark, forwarder);
                     forwarder.print("Bookmark loaded.");
                 } catch (e) {
                     forwarder.warn("Failed to load bookmark.");
@@ -288,7 +339,7 @@ export function createBookmarkManagerOptions(
             await handler.onCommand([BOOKMARK_ACTIONS.EXPORT], async () => {
                 forwarder.print("Exporting bookmark...");
                 try {
-                    await exportBookmark(selectedBookmark, forwarder);
+                    await exportBookmark(selectedBookmark);
                     forwarder.print("Bookmark exported.");
                 } catch (e) {
                     forwarder.warn("Failed to export bookmark.");
