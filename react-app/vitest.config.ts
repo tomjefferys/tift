@@ -12,6 +12,7 @@ export default defineConfig({
     env: {
       PUBLIC_URL: '',
       NODE_ENV: 'test',
+      IS_REACT_ACT_ENVIRONMENT: 'true',
     },
     deps: {
       optimizer: {

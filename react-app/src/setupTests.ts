@@ -5,6 +5,37 @@
 import '@testing-library/jest-dom';
 import * as fs from "fs";
 
+// Configure React testing environment
+import { configure } from '@testing-library/react';
+
+// Set up React 18 environment to prevent act warnings
+// @ts-ignore
+global.IS_REACT_ACT_ENVIRONMENT = true;
+
+// Configure testing library for React 18
+configure({
+  reactStrictMode: true,
+});
+
+// Suppress act warnings for async operations that are properly handled
+const originalError = console.error;
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      typeof args[0] === 'string' &&
+      (args[0].includes('Warning: The current testing environment is not configured to support act') ||
+       args[0].includes('Warning: ReactDOM.render has been deprecated'))
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+});
+
+afterAll(() => {
+  console.error = originalError;
+});
+
 // Mock ResizeObserver as it is not available when running tests
 class ResizeObserver {
   observe() {}
