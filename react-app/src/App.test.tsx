@@ -3,6 +3,7 @@ import { render, screen, waitFor, cleanup, act, waitForElementToBeRemoved, findB
 import App from './App';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import * as reactutils from './util/reactutils';
 
 // Mock CompressionStream and DecompressionStream for test environment
 global.CompressionStream = class MockCompressionStream {
@@ -65,6 +66,24 @@ const localStorageMock = (() => {
   return mock;
 })();
 
+// Mock file operations for import/export testing
+let capturedExports: { filename: string; content: string }[] = [];
+
+const mockDownloadTextFile = vi.fn((filename: string, content: string) => {
+  capturedExports.push({ filename, content });
+});
+
+const mockPromptForTextFile = vi.fn((title: string, allowedExtensions: string[]) => {
+  const lastExport = capturedExports[capturedExports.length - 1];
+  if (lastExport) {
+    return Promise.resolve(lastExport.content);
+  }
+  return Promise.reject(new Error('No exported file available for import'));
+});
+
+vi.spyOn(reactutils, 'downloadTextFile').mockImplementation(mockDownloadTextFile);
+vi.spyOn(reactutils, 'promptForTextFile').mockImplementation(mockPromptForTextFile);
+
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
   writable: true
@@ -84,6 +103,11 @@ beforeEach(() => {
   window.localStorage.clear();
   // Reset any mocks
   vi.clearAllMocks();
+  // Clear captured exports for each test
+  capturedExports = [];
+  // Reset the mock functions
+  mockDownloadTextFile.mockClear();
+  mockPromptForTextFile.mockClear();
 })
 
 test('renders starting room status', async () => {
@@ -1200,6 +1224,199 @@ test('bookmark management UI flow covers all main actions', async () => {
 
   // Should show loaded message and return to game
   await waitFor(() => screen.getByText(/Bookmark loaded/));
+  await waitFor(() => getButton('go'));
+  expect(screen.getByRole('button', { name: 'go' })).toBeInTheDocument();
+});
+
+test('bookmark export and import end-to-end flow', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Create a bookmark with specific game state
+  await waitFor(() => getButton('get'));
+  await act(() => user.click(getButton('get')));
+  await waitFor(() => getButton('ball'));
+  await act(() => user.click(getButton('ball')));
+
+  // Move to another location to create more interesting state
+  await waitFor(() => getButton('go'));
+  await act(() => user.click(getButton('go')));
+  await waitFor(() => getButton('south'));
+  await act(() => user.click(getButton('south')));
+  await waitFor(() => screen.getAllByText('forest'));
+
+  // Create bookmark in this state
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  await waitFor(() => getButton('new bookmark'));
+  await act(() => user.click(getButton('new bookmark')));
+
+  await waitFor(() => screen.getByText(/Bookmark \".*\" created/));
+
+  // Export the bookmark
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  const bookmark = screen.getByRole('button', { name: /forest.*- .*/ });
+  await act(() => user.click(bookmark));
+
+  await waitFor(() => getButton('export'));
+  await act(() => user.click(getButton('export')));
+
+  // Verify export was called
+  await waitFor(() => {
+    expect(mockDownloadTextFile).toHaveBeenCalledTimes(1);
+    expect(capturedExports).toHaveLength(1);
+  });
+
+  const exportedData = capturedExports[0];
+  expect(exportedData.filename).toMatch(/\.tiftbk$/);
+  expect(exportedData.content).toBeTruthy();
+
+  // Parse and verify exported content structure
+  const parsedExport = JSON.parse(exportedData.content);
+  // Check the actual structure
+  expect(parsedExport).toHaveProperty('gameId');
+  expect(parsedExport).toHaveProperty('name');
+  expect(parsedExport).toHaveProperty('data');
+  
+  // Navigate back to bookmark manager to delete the bookmark
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  const bookmarkAgain = screen.getByRole('button', { name: /forest.*- .*/ });
+  await act(() => user.click(bookmarkAgain));
+  
+  // Delete the original bookmark to test import
+  await waitFor(() => getButton('delete'));
+  await act(() => user.click(getButton('delete')));
+
+  await waitFor(() => screen.getByText(/Bookmark deleted/));
+
+  // Verify bookmark is gone
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should not find the bookmark anymore
+  const deletedBookmark = screen.queryByRole('button', { name: /forest.*- .*/ });
+  expect(deletedBookmark).toBeNull();
+
+  // Import the bookmark
+  await waitFor(() => getButton('import bookmark'));
+  await act(() => user.click(getButton('import bookmark')));
+
+  // Verify import was called and successful
+  await waitFor(() => {
+    expect(mockPromptForTextFile).toHaveBeenCalledTimes(1);
+  });
+
+  await waitFor(() => screen.getByText(/Bookmark ".*" imported\./));
+
+  // Verify the bookmark is back in the manager
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Should find the bookmark again
+  await waitFor(() => {
+    const reimportedBookmark = screen.getByRole('button', { name: /forest.*- .*/ });
+    expect(reimportedBookmark).toBeInTheDocument();
+  });
+
+  // Load the imported bookmark and verify game state
+  const reimportedBookmark = screen.getByRole('button', { name: /forest.*- .*/ });
+  await act(() => user.click(reimportedBookmark));
+
+  await waitFor(() => getButton('load'));
+  await act(() => user.click(getButton('load')));
+
+  // Verify the game state is correctly restored
+  await waitFor(() => screen.getAllByText(/Bookmark loaded/));
+  await waitFor(() => {
+    const status = screen.getByTestId('status');
+    expect(status).toHaveTextContent('forest');
+  });
+
+  // Verify inventory is restored (should have the ball)
+  await waitFor(() => getButton('Inventory', 'tab'));
+  await act(() => user.click(getButton('Inventory', 'tab')));
+
+  await waitFor(() => getButton('ball'));
+  expect(screen.getByRole('button', { name: 'ball' })).toBeInTheDocument();
+});
+
+test('import bookmark handles invalid file gracefully', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+
+  // Mock promptForTextFile to return invalid JSON
+  mockPromptForTextFile.mockImplementationOnce(() => {
+    return Promise.resolve('invalid json content');
+  });
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Open bookmark manager
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Try to import invalid file
+  await waitFor(() => getButton('import bookmark'));
+  await act(() => user.click(getButton('import bookmark')));
+
+  // Should show error message
+  await waitFor(() => screen.getAllByText(/Failed to import bookmark/));
+});
+
+test('import bookmark handles file selection cancellation', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+
+  // Mock promptForTextFile to simulate cancellation
+  mockPromptForTextFile.mockImplementationOnce(() => {
+    return Promise.reject(new Error('File selection cancelled'));
+  });
+  
+  render(<App />);
+  await waitFor(() => screen.getAllByText('cave'));
+
+  // Open bookmark manager
+  await waitFor(() => getButton('Options', 'tab'));
+  await act(() => user.click(getButton('Options', 'tab')));
+
+  await waitFor(() => getButton('bookmark manager'));
+  await act(() => user.click(getButton('bookmark manager')));
+
+  // Try to import but cancel
+  await waitFor(() => getButton('import bookmark'));
+  await act(() => user.click(getButton('import bookmark')));
+
+  // Should see failure message but then return to game
+  await waitFor(() => screen.getAllByText(/Failed to import bookmark/));
+
+  // Check that we're back in the game interface
   await waitFor(() => getButton('go'));
   expect(screen.getByRole('button', { name: 'go' })).toBeInTheDocument();
 });
