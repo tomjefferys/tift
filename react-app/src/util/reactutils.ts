@@ -199,3 +199,30 @@ export async function decodeAndDecompress(encodedData: string): Promise<string> 
     const result = decoder.decode(decompressedData);
     return result;
 }
+
+/**
+ * Downloads text content as a file
+ * @param filename - The name of the file to download
+ * @param content - The text content to download
+ */
+export function downloadTextFile(filename: string, content: string): void {
+  // Create a blob with the text content
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  
+  // Create a URL for the blob
+  const url = URL.createObjectURL(blob);
+  
+  // Create a temporary anchor element to trigger download
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  
+  // Add to DOM, click, and remove
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Clean up the URL
+  URL.revokeObjectURL(url);
+}
