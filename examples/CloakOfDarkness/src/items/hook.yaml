@@ -8,7 +8,7 @@ cloakOnHook():
   - onHook = isAtLocation(cloak, hook)
   - return(onHook)
 location: cloakroom
-adposition: hanging on
+placement: hanging on
 verbs:
   -  hang.on
 after:

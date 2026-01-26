@@ -35,8 +35,8 @@ export const LOOK_FN = (env : Env) => {
     const getLocationObj = (locationId : string) => {
         const entity = Entities.getEntity(env, locationId);
         const location = getFullName(entity as Nameable);
-        const adposition = entity["adposition"];
-        return { location, adposition } 
+        const placement = entity["placement"];
+        return { location, placement } 
     }
 
     const getItemDescription = (item : Obj) => {

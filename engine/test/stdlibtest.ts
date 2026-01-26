@@ -532,7 +532,7 @@ test("Test put on container", () => {
                         description : "A large table.",
                         type : "item",
                         location : "northRoom",
-                        adposition : "on",
+                        placement : "on",
                         tags : ["container"]
                         })
             .withObj({id : "ball",
@@ -556,7 +556,7 @@ test("Test put under container", () => {
                         description : "A large table.",
                         type : "item",
                         location : "northRoom",
-                        adposition : "under",
+                        placement : "under",
                         tags : ["container"]
                         })
             .withObj({id : "ball",
@@ -573,14 +573,14 @@ test("Test put under container", () => {
     executeAndTest(["examine", "table"], { expected : ["Under the table", "ball"]});
 });
 
-test("Test put with non standard adposition", () => {
+test("Test put with non standard placement", () => {
     builder.withObj({...NORTH_ROOM})
             .withObj({id : "table",
                         name : "table",
                         description : "A large table.",
                         type : "item",
                         location : "northRoom",
-                        adposition : "beneath",
+                        placement : "beneath",
                         putAttribute : "under",
                         tags : ["container"]
                         })

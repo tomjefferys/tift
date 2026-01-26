@@ -24,8 +24,8 @@ templates:
       {{#sentence}}
         {{name}}
         {{#location}}
-          ( {{#adposition}}{{.}}{{/adposition}}
-          {{^adposition}}in{{/adposition}} {{.}} )
+          ( {{#placement}}{{.}}{{/placement}}
+          {{^placement}}in{{/placement}} {{.}} )
         {{/location}}
       {{/sentence}}
 ---
@@ -35,7 +35,7 @@ templates:
     {{#sentence}}{{> position}} {{container}} is {{#items}}{{> item}}{{/items}}.{{/sentence}}
   partials:
     position: >
-      {{#adposition}}{{.}}{{/adposition}}{{^adposition}}in{{/adposition}}
+      {{#placement}}{{.}}{{/placement}}{{^placement}}in{{/placement}}
     item: >-
        {{name}}
        {{^isLast}}{{^isPenultimate}}, {{/isPenultimate}}{{/isLast}}
@@ -51,9 +51,9 @@ property: put
 templates:
   container:
     closed: >
-      You can't put {{item}} {{adposition}} {{container}}, {{container}} is closed.
+      You can't put {{item}} {{placement}} {{container}}, {{container}} is closed.
     inItem: >
-      You can't put {{item}} {{adposition}} {{container}}, {{container}} is {{adposition}} {{item}}.
+      You can't put {{item}} {{placement}} {{container}}, {{container}} is {{placement}} {{item}}.
 ---
 property: wait
 message: Time passes

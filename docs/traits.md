@@ -27,8 +27,8 @@ description: An old tattered canvas backpack.
 tags: [carryable, container]
 ```
 
-### Adposition / Relative Location
-The `adposition` field defines how items are placed within the container.  A shelf might have items placed on it, whereas a chest would have items placed in it. This is defined using the `adposition` property.
+### placement / Relative Location
+The `placement` field defines how items are placed within the container.  A shelf might have items placed on it, whereas a chest would have items placed in it. This is defined using the `placement` property.
 Supported values are `in` and `on`.  Containers use `in` by default.
 
 (Tip: YAML treats `on` as a boolean value, so be sure to put the value inside quotation marks)
@@ -40,7 +40,7 @@ Containers can also be given the `closable`/`openable` traits. If a container is
 item: table
 name: table
 description: A large wooden table.
-adposition: "on"
+placement: "on"
 tags: [container]
 ```
 

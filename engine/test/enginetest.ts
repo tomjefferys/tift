@@ -1321,13 +1321,13 @@ test("Test put item in container", () => {
     executeAndTest(["look"], { expected : ["ball", "in the box"] });
 })
 
-test("Test adposition", () => {
+test("Test placement", () => {
     builder.withObj({...NORTH_ROOM})
            .withObj({
                 id : "shelf",
                 description : "A large wooden shelf",
                 location : "northRoom",
-                adposition : "on",
+                placement : "on",
                 type : "item",
                 verbs : ["put.on"]
            })
