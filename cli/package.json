@@ -4,8 +4,8 @@
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
-    "@types/lodash": "^4.14.182",
-    "lodash": "^4.17.21",
+    "@types/lodash": "^4.17.23",
+    "lodash": "^4.17.23",
     "picocolors": "^1.1.1",
     "remark": "^15.0.1",
     "tift-engine": "file:../engine"

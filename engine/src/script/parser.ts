@@ -202,8 +202,12 @@ function evaluateMemberExpression(memberExpression : MemberExpression) : Thunk {
     return mkThunk(envFn, memberExpression, builtInProperty? "property" : "normal");
 }
 
+function isImplicitFunction(value: unknown): value is EnvFn {
+    return typeof value === 'function' && value != null && IMPLICIT_FUNCTION in value;
+}
+
 function expandImplicitFunctions(env : Env, value : unknown) : Result {
-    return mkResult((value && _.has(value, IMPLICIT_FUNCTION))? (value as EnvFn)(env) : value);
+    return mkResult(isImplicitFunction(value) ? value(env) : value);
 }
 
 function getBuiltInProperty(expression : Expression) : string | undefined {

@@ -1,6 +1,5 @@
 import { Env } from "tift-types/src/env"
 import { Expression } from "jsep";
-import * as _ from "lodash";
 import { exprToString } from "./expressionutils";
 import { rethrowExecutionError } from "../util/errors";
 
@@ -54,10 +53,13 @@ export function mkThunk(envFn : EnvFn, expression? : Expression, type : ThunkTyp
  * @param result 
  * @returns 
  */
+function isResult(value: unknown): value is Result {
+    return value != null && typeof value === 'object' && 'value' in value && 'getValue' in value;
+}
+
  export function mkResult(result : unknown, properties = {}) : Result {
-    const isAlreadyResult = result && _.has(result,"value");
-    if (isAlreadyResult) { 
-        return result as Result;
+    if (isResult(result)) { 
+        return result;
     }
     const resultObj = { 
         value : result,
