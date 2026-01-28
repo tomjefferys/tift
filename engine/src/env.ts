@@ -3,8 +3,6 @@
  * Implenent exection environment using a history proxy to keep track of changes
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import _ from "lodash"
 import { pathElementEquals, fromValueList, makePath, toValueList } from "./path";
 import { Path, PathElement } from "tift-types/src/path"
@@ -53,7 +51,7 @@ export class Env implements Type.Env {
      * @param name 
      * @param value 
      */
-    def(name : string, value : any) {
+    def(name : string, value : unknown) {
         this.properties[name] = value;
     }
 
@@ -63,7 +61,7 @@ export class Env implements Type.Env {
      * @param name 
      * @param value 
      */
-    set(name : Path | string | symbol, value : any) : void {
+    set(name : Path | string | symbol, value : unknown) : void {
         let setPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
 
         setPath = this.expandReferences(setPath);
@@ -90,7 +88,7 @@ export class Env implements Type.Env {
         return obj;
     }
 
-    setToNameSpace(ns : NameSpace, path : Path, value : any) {
+    setToNameSpace(ns : NameSpace, path : Path, value : unknown) {
         const [head,tail] = splitPath(path);
         const env = this.findEnv(ns, head) ?? this;
         const nsObj = env.getNameSpace(ns, true); 
@@ -117,7 +115,7 @@ export class Env implements Type.Env {
      * @param name 
      * @returns 
      */
-    get(name : Path | string | symbol, followReferences = true) : any {
+    get(name : Path | string | symbol, followReferences = true) : unknown {
         let getPath = (_.isString(name) || _.isSymbol(name))? parsePath(name) : name;
 
         if (followReferences) {
@@ -156,18 +154,18 @@ export class Env implements Type.Env {
      */
     createNamespaceReferences(ns : NameSpace) {
         const handler = {
-            getOwnPropertyDescriptor : (target : any, property : any) => {
+            getOwnPropertyDescriptor : (target : object, property : string | symbol) => {
                 const value = handler.get(target, property);
                 return isFound(value) ? { configurable : true, enumerable : true, value } : undefined;
             },
             // If the requested object exist in the nameaspace, return a reference to it
-            get : (_target : any, key : any) => {
+            get : (_target : object, key : string | symbol) => {
                 return (this.has(makePath([...ns, key]))) 
                         ? this.reference(makePath([...ns, key])) 
                         : notFound(makePath([key]));
             },
-            has : (_target : any, key : any) => {
-                return this.has([...ns, key]);
+            has : (_target : object, key : string | symbol) => {
+                return this.has(makePath([...ns, key]));
             }
         }
         return new Proxy({}, handler);
@@ -242,7 +240,7 @@ export class Env implements Type.Env {
      * @param head 
      * @param tail 
      */
-    private getObjProperty(ns : NameSpace, head : PathElement, tail : Path | undefined) : any {
+    private getObjProperty(ns : NameSpace, head : PathElement, tail : Path | undefined) : unknown {
         const obj = _.get(this.properties, [...ns, head.getValue()]);
 
         if (typeof obj !== "object") {
@@ -284,7 +282,10 @@ export class Env implements Type.Env {
      */
     execute(name : string, bindings : Obj ) : ReturnType {
         const fn = this.get(parsePath(name));
-        return this.executeFn(fn, bindings);
+        if (typeof fn !== 'function') {
+            throw new Error(`${name} is not a function`);
+        }
+        return this.executeFn(fn as EnvFn, bindings);
     }
 
     executeFn(fn : EnvFn, bindings : Obj) : ReturnType {
@@ -348,7 +349,7 @@ export class Env implements Type.Env {
     findObjs(predicate: (obj: Obj) => boolean, namespaces : NameSpace[] = this.getNamespaces()) : Obj[] {
         const allNames = [...this.getAllObjectNames(namespaces)];
         return allNames.map(name => this.get(name))
-                       .filter(predicate);
+                       .filter((value): value is Obj => isObject(value) && predicate(value));
     }
 
     matchNameSpace(path : Path | string) : [NameSpace, Path] {
@@ -371,7 +372,7 @@ export class Env implements Type.Env {
         return { [REFERENCE] : path};
     }
 
-    setTransient(name : string, value : any) : void {
+    setTransient(name : string, value : unknown) : void {
         if (this.parent) {
             this.parent.setTransient(name, value);
         } else {
@@ -379,7 +380,7 @@ export class Env implements Type.Env {
         }
     }
 
-    getTransient(name : string) : any {
+    getTransient(name : string) : unknown {
         if (this.parent) {
             this.parent.getTransient(name);
         } else {
@@ -403,7 +404,7 @@ export class Env implements Type.Env {
  * @param obj 
  * @param name 
  */
-function getFromObj(obj : Obj, path : Path) : any {
+function getFromObj(obj : Obj, path : Path) : unknown {
     const [head, tail] = splitPath(path);
     const value = obj[head.getValue()];
     if (!value) {
@@ -425,7 +426,7 @@ function getFromObj(obj : Obj, path : Path) : any {
  * @param obj 
  * @param name 
  */
-function setToObj(obj : Obj, name : Path, value : any) {
+function setToObj(obj : Obj, name : Path, value : unknown) {
     const [head,tail] = splitPath(name);
     if (!tail) {
         obj[head.getValue()] = value;
@@ -482,7 +483,7 @@ function pathsEqual(path1? : Path, path2? : Path) : boolean {
     return (pathElementEquals(head1, head2))? pathsEqual(tail1, tail2) : false;
 }
 
-function isReference(value : unknown) : boolean {
+function isReference(value : unknown) : value is {[REFERENCE] : Path} {
     return _.isObject(value) && _.has(value, REFERENCE);
 }
 
