@@ -1,6 +1,8 @@
 {
   "name": "tift-cli",
+  "type": "module",
   "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=out/main.js",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
@@ -22,8 +24,8 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.7"
   },
-  "main": "out/src/main.js",
+  "main": "out/main.js",
   "bin": {
-    "tift": "out/src/main.js"
+    "tift": "out/main.js"
   }
 }

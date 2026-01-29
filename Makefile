@@ -44,14 +44,12 @@ cli/node_modules:
 
 cli/out: cli/node_modules
 	echo "Building cli..."
-	cd cli && npx tsc
+	cd cli && npm run build
 
 cli-lint: cli
 	cd cli && npm run lint
 
 cli/out/tift.js: cli/out
-	echo "Bundling cli..."
-	cd cli && npx esbuild out/src/main.js --bundle --minify --platform=node --outfile=out/tift.js
 
 cli-install: cli/out
 	echo "Installing cli..."
@@ -61,7 +59,7 @@ cli-uninstall:
 	echo "Uninstalling cli..."
 	cd cli && npm uninstall -g
 
-cli: types engine cli/out cli/out/tift.js
+cli: types engine cli/out
 
 cli-test: cli
 	cd cli && npx vitest --run

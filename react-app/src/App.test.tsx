@@ -1,5 +1,4 @@
-import React from 'react';
-import { render, screen, waitFor, cleanup, act, waitForElementToBeRemoved, findByRole, getByTestId, findAllByTestId, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import App from './App';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';

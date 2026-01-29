@@ -5,7 +5,8 @@ import { Env } from 'tift-types/src/env'
 import * as _ from 'lodash'
 import { parsePathExpr } from './pathparser';
 import { isPath } from '../path';
-import  jsepAssignment, { AssignmentExpression } from '@jsep-plugin/assignment';
+import * as jsepAssignmentModule from '@jsep-plugin/assignment';
+import type { AssignmentExpression } from '@jsep-plugin/assignment';
 import { Optional } from 'tift-types/src/util/optional';
 import { rethrowCompileError } from '../util/errors';
 import { formatString } from '../util/mustacheUtils';
@@ -14,7 +15,9 @@ import { isNotFound } from '../env';
 import * as Path from '../path';
 
 // Configure Jsep
-jsep.plugins.register(jsepAssignment as unknown as IPlugin);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const jsepAssignment = ((jsepAssignmentModule as any).default || jsepAssignmentModule) as IPlugin;
+jsep.plugins.register(jsepAssignment);
 jsep.addBinaryOp("=>", 0);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

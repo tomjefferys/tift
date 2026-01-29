@@ -134,7 +134,7 @@ export function createBookmarkManagerOptions(
             const filename = `${SAVE_FILE_PREFIX}${bookmark.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}${SAVE_FILE_EXTENSION}`;
             ReactUtils.downloadTextFile(filename, JSON.stringify(bookmark));
         } catch (e) {
-            throw new Error("Failed to export bookmark data.", { cause : e });
+            throw new Error("Failed to export bookmark data: " + (e instanceof Error ? e.message : String(e)));
         }
     }    
     
@@ -149,7 +149,7 @@ export function createBookmarkManagerOptions(
             addBookmark(bookmark.name, bookmark.data);
             return bookmark.name;
         } catch (e) {
-            throw new Error("Failed to import bookmark.", { cause : e });
+            throw new Error("Failed to import bookmark: " + (e instanceof Error ? e.message : String(e)));
         }
     }
 
@@ -177,7 +177,7 @@ export function createBookmarkManagerOptions(
             const decompressedData = await ReactUtils.decodeAndDecompress(bookmark.data); 
             return gameLoader(decompressedData, forwarder);
         } catch (e) {
-            throw new Error("Failed to load game from bookmark.", { cause : e });
+            throw new Error("Failed to load game from bookmark: " + (e instanceof Error ? e.message : String(e)));
         }
     }
 

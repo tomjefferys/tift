@@ -3,7 +3,7 @@ import { isFound } from "../env"
 import { Env } from "tift-types/src/env"
 import { Obj } from "./objects"
 import * as _ from "lodash"
-import * as Mustache from "mustache"
+import Mustache from "mustache"
 import { getCauseMessage } from "./errors";
 import { Optional } from "tift-types/src/util/optional"
 import { IMPLICIT_FUNCTION, EXPLICIT_FUNCTION } from "../game/functionbuilder"

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, Fragment } from "react";
+import { useEffect, useRef, Fragment } from "react";
 import { OutputEntry, Command } from "../outputentry";
 import ReactMarkdown from "react-markdown";
 import { Optional } from "tift-types/src/util/optional";

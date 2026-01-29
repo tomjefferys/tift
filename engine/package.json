@@ -1,12 +1,17 @@
 {
   "name": "tift-engine",
   "version": "1.0.0",
+  "type": "module",
   "description": "pseudo parser based interactive fiction engine",
-  "_main": "out/src/main.js",
-  "_types": "out/src/main.d.ts",
-  "main": "out/src/main",
-  "typings": "out/src/main",
-  "module": "out/src/main.js",
+  "main": "./out/src/main.js",
+  "types": "./out/src/main.d.ts",
+  "exports": {
+    ".": {
+      "types": "./out/src/main.d.ts",
+      "import": "./out/src/main.js",
+      "default": "./out/src/main.js"
+    }
+  },
   "directories": {
     "example": "example",
     "test": "test"

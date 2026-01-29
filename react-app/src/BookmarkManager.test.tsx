@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import App from './App';
 import userEvent from '@testing-library/user-event';
@@ -72,7 +71,7 @@ const mockDownloadTextFile = vi.fn((filename: string, content: string) => {
   capturedExports.push({ filename, content });
 });
 
-const mockPromptForTextFile = vi.fn((title: string, allowedExtensions: string[]) => {
+const mockPromptForTextFile = vi.fn((_title: string, _allowedExtensions: string[]) => {
   const lastExport = capturedExports[capturedExports.length - 1];
   if (lastExport) {
     return Promise.resolve(lastExport.content);

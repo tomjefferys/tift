@@ -1,4 +1,3 @@
-import React from "react";
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter, OutputConsumerBuilder } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
@@ -367,13 +366,13 @@ function Tift() {
         return words;
     }
 
-    const _containsNonInventoryContexts = (word : Word) : boolean => {
-      const inventoryContexts = ["context:inventory", "context:wearing"];
-      const contexts = word.tags?.filter(tag => tag.startsWith("context")) ?? [];
-      // Check we either have no contexts, or at least 1 no inventory context
-      return contexts.length == 0 || contexts.filter(context => !inventoryContexts.includes(context))
-                                             .length >= 1;
-    }
+    //const _containsNonInventoryContexts = (word : Word) : boolean => {
+    //  const inventoryContexts = ["context:inventory", "context:wearing"];
+    //  const contexts = word.tags?.filter(tag => tag.startsWith("context")) ?? [];
+    //  // Check we either have no contexts, or at least 1 no inventory context
+    //  return contexts.length == 0 || contexts.filter(context => !inventoryContexts.includes(context))
+    //                                         .length >= 1;
+    //}
   
     const wordSelected = (_event : Optional<SyntheticEvent>, word : Word) => {
       //The selected word should replace the first wildcard
@@ -472,17 +471,17 @@ function createControlHandler(pauser : Pauser.Pauser) : (control : ControlType) 
 }
 
 async function loadDefaults() : Promise<string> {
-    return fetch(process.env.PUBLIC_URL + "/" + DEFAULTS_FILE)
+    return fetch(import.meta.env.BASE_URL + DEFAULTS_FILE)
             .then((response) => response.text());
 }
 
 async function loadStdLib() : Promise<string> {
-    return fetch(process.env.PUBLIC_URL + "/" + STDLIB_FILE)
+    return fetch(import.meta.env.BASE_URL + STDLIB_FILE)
             .then((response) => response.text());
 }
 
 async function loadGameData(name : string) : Promise<string> {
-    return fetch(process.env.PUBLIC_URL + "/" + name)
+    return fetch(import.meta.env.BASE_URL + name)
             .then((response) => response.text());
 }
 

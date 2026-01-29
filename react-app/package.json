@@ -4,58 +4,38 @@
   "homepage": ".",
   "private": true,
   "dependencies": {
-    "@testing-library/user-event": "^14.4.3",
     "@types/lodash": "^4.17.23",
     "@types/node": "^20.0.0",
-    "@types/react": "^18.0.24",
-    "@types/react-dom": "^18.0.8",
-    "react": "^18.2.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "lodash": "^4.17.21",
+    "react": "^18.3.0",
     "react-div-100vh": "^0.7.0",
-    "react-dom": "^18.2.0",
-    "react-markdown": "^8.0.3",
-    "react-scripts": "^5.0.1",
-    "tift-engine": "file:../engine",
-    "typescript": "^4.8.4",
-    "web-vitals": "^2.1.4"
+    "react-dom": "^18.3.0",
+    "react-markdown": "^9.0.0",
+    "tift-engine": "file:../engine"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "dev": "vite",
+    "start": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "overrides": {
-    "nth-check": "^2.0.1",
-    "css-select": "^4.1.0"
+    "test:run": "vitest run"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^14.2.1",
-    "@types/jest": "^27.5.2",
+    "@testing-library/user-event": "^14.5.0",
+    "@types/jest": "^29.5.0",
     "@vitejs/plugin-react": "^5.1.2",
-    "@vitest/ui": "^1.0.0",
-    "jsdom": "^23.0.0",
-    "msw": "^0.49.2",
+    "@vitest/ui": "^2.0.0",
+    "jsdom": "^25.0.0",
+    "msw": "^2.0.0",
     "tift-types": "file:../types",
-    "vitest": "^1.0.0"
+    "typescript": "^5.5.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.0.0"
   }
 }

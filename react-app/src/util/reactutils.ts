@@ -233,7 +233,7 @@ export function downloadTextFile(filename: string, content: string): void {
  * @param allowedExtensions - Array of file extensions to allow (e.g., ['.txt', '.json'])
  * @returns Promise that resolves to the file content as a string
  */
-export function promptForTextFile(title: string, allowedExtensions: string[]): Promise<string> {
+export function promptForTextFile(_title: string, allowedExtensions: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     // Create a file input element
     const input = document.createElement('input');

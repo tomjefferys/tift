@@ -4,7 +4,7 @@ import { getTransform } from './transformBuilder';
 import { useBubbleGridMouse } from './bubbleGridMouseHook';
 
 // Are we running in a test environment, if so always show the grid
-const ALWAYS_SHOW = process.env.NODE_ENV === 'test';
+const ALWAYS_SHOW = import.meta.env.MODE === 'test';
 
 export interface Item {
     item: React.ReactNode;
