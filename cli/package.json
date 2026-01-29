@@ -2,7 +2,7 @@
   "name": "tift-cli",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=out/main.js",
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=out/main.mjs",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
