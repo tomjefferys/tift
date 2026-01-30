@@ -51,14 +51,6 @@ cli-lint: cli
 
 cli/out/tift.js: cli/out
 
-cli-install: cli/out
-	echo "Installing cli..."
-	cd cli && npm install -g
-
-cli-uninstall:
-	echo "Uninstalling cli..."
-	cd cli && npm uninstall -g
-
 cli: types engine cli/out
 
 cli-test: cli
@@ -101,8 +93,8 @@ examples/CloakOfDarkness: cli react-app
 	echo "Building Cloak of Darkness..."
 	cd examples/CloakOfDarkness && make
 
-examples/CloakOfDarkness-test: examples/CloakOfDarkness cli-install
-	cd examples/CloakOfDarkness && cat test.txt | tift \
+examples/CloakOfDarkness-test: examples/CloakOfDarkness
+	cd examples/CloakOfDarkness && cat test.txt | ../../cli/out/main.mjs \
 	 build/webapp/stdlib.yaml \
 	 build/webapp/properties.yaml \
 	 build/webapp/adventure.yaml
@@ -111,13 +103,11 @@ examples/CloakOfDarkness-clean:
 	cd examples/CloakOfDarkness && make clean
 
 # all
-.PHONY: all test lint install uninstall clean
+.PHONY: all test lint clean
 compile: types engine cli react-app examples
 test: engine-test cli-test react-app-test examples-test
 lint: types-lint engine-lint cli-lint
-install: cli-install
-uninstall: cli-uninstall
-all: compile lint install test
-clean: types-clean engine-clean cli-clean cli-uninstall react-app-clean examples-clean
+all: compile lint test
+clean: types-clean engine-clean cli-clean react-app-clean examples-clean
 
 .DEFAULT_GOAL := all
