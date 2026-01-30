@@ -81,6 +81,27 @@ Object.defineProperty(window.navigator, 'storage', {
   writable: true
 });
 
+// Suppress act warnings for async state updates in BubbleGrid and other components
+// These warnings are unavoidable due to requestAnimationFrame and other async APIs
+// used for animations and layout calculations
+const originalError = console.error;
+beforeAll(() => {
+  console.error = (...args: any[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Warning: An update to') &&
+      args[0].includes('inside a test was not wrapped in act')
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+});
+
+afterAll(() => {
+  console.error = originalError;
+});
+
 beforeEach(() => {
   window.localStorage.clear();
   // Reset any mocks
@@ -106,10 +127,10 @@ test('can change location', async () => {
   });
 
   await waitFor(() => getButton('go'));
-  await act(() => user.click(getButton('go')));
+  await user.click(getButton('go'));
 
   await waitFor(() => getButton('south'));
-  await act(() => user.click(getButton('south')));
+  await user.click(getButton('south'));
 
   await waitFor(() => {
     const status = screen.getByTestId('status');
@@ -124,25 +145,25 @@ test('can get item', async () => {
   await waitFor(() => screen.getAllByText('cave'));
 
   await waitFor(() => getButton('get'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   await waitFor(() => getButton('Options', 'tab'));
-  await act(() => user.click(getButton('Options', 'tab')));
+  await user.click(getButton('Options', 'tab'));
 
   await waitFor(() => getButton('clear'));
-  await act(() => user.click(getButton('clear')));
+  await user.click(getButton('clear'));
 
   await waitFor(() => getButton('Inventory', 'tab'));
-  await act(() => user.click(getButton('Inventory', 'tab')));
+  await user.click(getButton('Inventory', 'tab'));
  
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   await waitFor(() => getButton('drop'));
-  await act(() => user.click(getButton('drop')));
+  await user.click(getButton('drop'));
 
   await waitFor(() => screen.getByText('boing boing'));
 })
@@ -159,14 +180,14 @@ test('Test backspace', async () => {
 
   await waitFor(() => getButton('get'));
   await waitFor(() => getButton('go'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
   // Check we now have a backspace button
   await waitFor(() => getButton('backspace'));
 
   // Click backspace
-  await act(() => user.click(getButton('backspace')));
+  await user.click(getButton('backspace'));
   await waitFor(() => getButton('get'));
   await waitFor(() => getButton('go'));
 
@@ -190,7 +211,7 @@ test('Test backspace only deletes single word', async () => {
   });
 
   await waitFor(() => getButton('push'));
-  await act(() => user.click(getButton('push')));
+  await user.click(getButton('push'));
 
   await waitFor(() => {
     const command = screen.getByTestId('command');
@@ -201,7 +222,7 @@ test('Test backspace only deletes single word', async () => {
   await waitFor(() => getButton('backspace'));
 
   // Click backspace
-  await act(() => user.click(getButton('backspace')));
+  await user.click(getButton('backspace'));
   await waitFor(() => getButton('push'));
 
   // There should be no command
@@ -216,9 +237,9 @@ test('Test backspace only deletes single word', async () => {
     expect(backspaceButton).toBeNull();
   })
 
-  await act(() => user.click(getButton('push')));
+  await user.click(getButton('push'));
   await waitFor(() => getButton('box'));
-  await act(() => user.click(getButton('box')));
+  await user.click(getButton('box'));
 
   await waitFor(() => getButton('south'));
   await waitFor(() => getButton('backspace'));
@@ -228,7 +249,7 @@ test('Test backspace only deletes single word', async () => {
   })
 
   // Click backspace
-  await act(() => user.click(getButton('backspace')));
+  await user.click(getButton('backspace'));
   await waitFor(() => {
     const command = screen.getByTestId('command');
     expect(command.textContent).toContain("push");
@@ -237,7 +258,7 @@ test('Test backspace only deletes single word', async () => {
 
   await waitFor(() => getButton('box'));
   await waitFor(() => getButton('backspace'));
-  await act(() => user.click(getButton('backspace')));
+  await user.click(getButton('backspace'));
   await waitFor(() => {
     const command = screen.getByTestId('command');
     expect(command.textContent).not.toContain("push");
@@ -329,11 +350,11 @@ test('undo/redo', async () => {
     expect(button).toBeDisabled();
   });
 
-  await act(() => user.click(getButton('undo')));
+  await user.click(getButton('undo'));
 
   // Confirm action undo is now disabled, and redo is enabled
   await waitFor(() => getButton('Options', 'tab'));
-  await act(() => user.click(getButton('Options', 'tab')));
+  await user.click(getButton('Options', 'tab'));
 
   await waitFor(() => {
     const button = getButton('undo');
@@ -350,10 +371,10 @@ test('undo/redo', async () => {
   });
 
   // Now try redoing
-  await act(() => user.click(getButton('redo')));
+  await user.click(getButton('redo'));
 
   await waitFor(() => getButton('Options', 'tab'));
-  await act(() => user.click(getButton('Options', 'tab')));
+  await user.click(getButton('Options', 'tab'));
 
   await waitFor(() => {
     const button = getButton('undo');
@@ -377,16 +398,16 @@ test('Can use inventory item', async () => {
   await waitFor(() => screen.getAllByText('cave'));
 
   await waitFor(() => getButton('get'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   await waitFor(() => getButton('Inventory', 'tab'));
-  await act(() => user.click(getButton('Inventory', 'tab')));
+  await user.click(getButton('Inventory', 'tab'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   await waitFor(() => getButton('examine'));
   await waitFor(() => getButton('drop'));
@@ -396,7 +417,7 @@ test('Can use inventory item', async () => {
   const goButton = screen.queryByRole('button', { name : 'go' } );
   expect(goButton).toBeNull();
 
-  await act(() => user.click(getButton('examine')));
+  await user.click(getButton('examine'));
   await waitFor(() => screen.getByText('a round ball'));
 });
 
@@ -407,19 +428,19 @@ test('Inventory item verb still available for other contexts', async () => {
   await waitFor(() => screen.getAllByText('cave'));
 
   await waitFor(() => getButton('get'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   // Examine should be available
   await waitFor(() => getButton('examine'));
 
   await waitFor(() => getButton('Inventory', 'tab'));
-  await act(() => user.click(getButton('Inventory', 'tab')));
+  await user.click(getButton('Inventory', 'tab'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   // Examine should be available as an inventory verb
   await waitFor(() => getButton('examine'));
@@ -432,10 +453,10 @@ test('Can use inventory item with keyboard', async () => {
   await waitFor(() => screen.getAllByText('cave'));
 
   await waitFor(() => getButton('get'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   await user.keyboard('ball ');
 
@@ -458,10 +479,10 @@ test('Can use inventory item with keyboard autocomplete', async () => {
   await waitFor(() => screen.getAllByText('cave'));
 
   await waitFor(() => getButton('get'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   await user.keyboard('ba ');
 
@@ -483,34 +504,34 @@ test("Test backspace works correctly when using inventory item", async () => {
   await waitFor(() => screen.getAllByText('cave'));
 
   await waitFor(() => getButton('get'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   // Clear
   await waitFor(() => getButton('Options', 'tab'));
   await user.click(getButton('Options', 'tab'))
   await waitFor(() => getButton('clear'));
-  await act(() => user.click(getButton('clear')));
+  await user.click(getButton('clear'));
 
   // Select ball from inventory
   await waitFor(() => getButton('Inventory', 'tab'));
-  await act(() => user.click(getButton('Inventory', 'tab')));
+  await user.click(getButton('Inventory', 'tab'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   await waitFor(() => getButton('put'));
   await waitFor(() => getButton('backspace'));
 
-  await act(() => user.click(getButton('put')));
+  await user.click(getButton('put'));
 
   // Select 'put', then 'in'
   await waitFor(() => getButton('in'));
   await waitFor(() => getButton('backspace'));
 
-  await act(() => user.click(getButton('in')));
+  await user.click(getButton('in'));
 
   await waitFor(() => {
     const command = screen.getByTestId('command');
@@ -521,7 +542,7 @@ test("Test backspace works correctly when using inventory item", async () => {
   await waitFor(() => getButton('backspace'));
 
   // Check backspace removes 'in'
-  await act(() => user.click(getButton('backspace')));
+  await user.click(getButton('backspace'));
 
   await waitFor(() => getButton('in'));
   await waitFor(() => getButton('backspace'));
@@ -532,7 +553,7 @@ test("Test backspace works correctly when using inventory item", async () => {
   })
 
   // check backspace removes 'ball'
-  await act(() => user.click(getButton('backspace')));
+  await user.click(getButton('backspace'));
   await waitFor(() => {
     const command = screen.getByTestId('command');
     expect(command.textContent).toContain("put");
@@ -543,7 +564,7 @@ test("Test backspace works correctly when using inventory item", async () => {
   await waitFor(() => getButton('ball'));
   await waitFor(() => getButton('backspace'));
   
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
   await waitFor(() => getButton('in'));
   await waitFor(() => getButton('backspace'));
   await waitFor(() => {
@@ -561,22 +582,22 @@ test("Test can change colour scheme", async () => {
 
   // FIXME, the test fails without the next two lines, but they shouldn't be needed
   await waitFor(() => getButton('wait'));
-  await act(() => user.click(getButton('wait')));
+  await user.click(getButton('wait'));
  
   // Click Options tab
   await waitFor(() => getButton('Options', 'tab'));
-  await act(() => user.click(getButton('Options', 'tab')));
+  await user.click(getButton('Options', 'tab'));
 
   // Check for colours button
   await waitFor(() => getButton('colours'));
-  await act(() => user.click(getButton('colours')));
+  await user.click(getButton('colours'));
 
   // Check light/dark buttons appear
   await waitFor(() => getButton('light'));
   await waitFor(() => getButton('dark'));
 
   // Select dark theme
-  await act(() => user.click(getButton('dark')));
+  await user.click(getButton('dark'));
   
   // Check game buttons appear
   await waitFor(() => getButton('go'));
@@ -584,18 +605,18 @@ test("Test can change colour scheme", async () => {
 
   // Click Options tab
   await waitFor(() => getButton('Options', 'tab'));
-  await act(() => user.click(getButton('Options', 'tab')));
+  await user.click(getButton('Options', 'tab'));
 
   // Check for colours button
   await waitFor(() => getButton('colours'));
-  await act(() => user.click(getButton('colours')));
+  await user.click(getButton('colours'));
 
   // Check light/dark buttons appear
   await waitFor(() => getButton('light'));
   await waitFor(() => getButton('dark'));
 
   // Select light theme
-  await act(() => user.click(getButton('light')));
+  await user.click(getButton('light'));
 
   // Check game buttons appear
   await waitFor(() => getButton('go'));
@@ -614,17 +635,17 @@ test("Test can restart game", async () => {
 
   // get the ball
   await waitFor(() => getButton('get'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
   // go south
   await waitFor(() => getButton('go'));
-  await act(() => user.click(getButton('go')));
+  await user.click(getButton('go'));
 
   await waitFor(() => getButton('south'));
-  await act(() => user.click(getButton('south')));
+  await user.click(getButton('south'));
 
   await waitFor(() => {
     const status = screen.getByTestId('status');
@@ -634,17 +655,17 @@ test("Test can restart game", async () => {
   // Restart and cancel
   // Click Options tab
   await waitFor(() => getButton('Options', 'tab'));
-  await act(() => user.click(getButton('Options', 'tab')));
+  await user.click(getButton('Options', 'tab'));
 
   await waitFor(() => getButton('restart'));
-  await act(() => user.click(getButton('restart')));
+  await user.click(getButton('restart'));
 
   // Wait for restart/cancel
   await waitFor(() => getButton('restart'));
   await waitFor(() => getButton('cancel'));
 
   // Select cancel
-  await act(() => user.click(getButton('cancel')));
+  await user.click(getButton('cancel'));
 
   // Confirm no restart
   await waitFor(() => {
@@ -654,17 +675,17 @@ test("Test can restart game", async () => {
 
   // Click Options tab
   await waitFor(() => getButton('Options', 'tab'));
-  await act(() => user.click(getButton('Options', 'tab')));
+  await user.click(getButton('Options', 'tab'));
 
   await waitFor(() => getButton('restart'));
-  await act(() => user.click(getButton('restart')));
+  await user.click(getButton('restart'));
 
   // Wait for restart/cancel
   await waitFor(() => getButton('restart'));
   await waitFor(() => getButton('cancel'));
   
   // Select restart
-  await act(() => user.click(getButton('restart')));
+  await user.click(getButton('restart'));
 
   // Confirm restart
   await waitFor(() => {
@@ -674,10 +695,10 @@ test("Test can restart game", async () => {
 
   // check we can get the ball again
   await waitFor(() => getButton('get'));
-  await act(() => user.click(getButton('get')));
+  await user.click(getButton('get'));
 
   await waitFor(() => getButton('ball'));
-  await act(() => user.click(getButton('ball')));
+  await user.click(getButton('ball'));
 
 });
 
@@ -692,10 +713,10 @@ test("Test get info", async () => {
   });
 
   await waitFor(() => getButton('Options', 'tab'));
-  await act(() => user.click(getButton('Options', 'tab')));
+  await user.click(getButton('Options', 'tab'));
 
   await waitFor(() => getButton('info'));
-  await act(() => user.click(getButton('info')));
+  await user.click(getButton('info'));
 
   await waitFor(() => screen.getByText("name: Test Game"));
   await waitFor(() => screen.getByText("author: Presto Turnip"));
