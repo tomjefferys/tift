@@ -390,7 +390,10 @@ function Tift() {
           }
           setCommand(newCommand);
         }
-      } else if (word.type === "option") {
+        return;
+      }
+
+      if (word.type === "option") {
         setCommand([word]);
       } else if (word.type === "word" && word.tags?.includes("inventory")) {
         const position = word.position - 1;
@@ -411,6 +414,10 @@ function Tift() {
         } else {
           setCommand([...command, word, WILD_CARD]);
         } 
+      }
+
+      if (partialWord.length) {
+        setPartialWord("");
       }
     }
 
