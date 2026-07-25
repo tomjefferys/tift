@@ -27,6 +27,7 @@ const enum OPTIONS {
 const enum GAME_ACTIONS {
     LOAD = "load",
     EDIT = "edit",
+    ENTITIES = "entities",
     DELETE = "delete",
     SELECT = "select",
     EXPORT = "export",
@@ -36,6 +37,7 @@ const enum GAME_ACTIONS {
 const SELECTED_GAME_OPTIONS = [
     word(GAME_ACTIONS.LOAD, GAME_ACTIONS.LOAD, "select"),
     word(GAME_ACTIONS.EDIT, GAME_ACTIONS.EDIT, "select"),
+    word(GAME_ACTIONS.ENTITIES, "rooms & items", "select"),
     word(GAME_ACTIONS.EXPORT, GAME_ACTIONS.EXPORT, "select"),
     word(GAME_ACTIONS.DELETE, GAME_ACTIONS.DELETE, "select"),
     word(GAME_ACTIONS.CANCEL, GAME_ACTIONS.CANCEL, "select"),
@@ -59,12 +61,14 @@ interface GameManagerOptions {
  * machines.
  * @param gameLoader Function to load a game from its raw YAML text
  * @param defaultGameLoader Function to switch back to the built-in default game
- * @param onEditRequested Called when the user chooses to edit the selected game's YAML
+ * @param onEditRequested Called when the user chooses to edit the selected game's raw YAML
+ * @param onEntitiesRequested Called when the user chooses to browse/edit the selected game's rooms & items
  * @returns The game manager state machine
  */
 export function createGameManagerOptions(gameLoader : GameLoader,
                                           defaultGameLoader : DefaultGameLoader,
-                                          onEditRequested : EditRequestHandler) : StateMachine<InputMessage, DecoratedForwarder> {
+                                          onEditRequested : EditRequestHandler,
+                                          onEntitiesRequested : EditRequestHandler) : StateMachine<InputMessage, DecoratedForwarder> {
 
     const exportGame = (selectedGame : number) : void => {
         const games = GameLibrary.getGames();
@@ -201,6 +205,17 @@ export function createGameManagerOptions(gameLoader : GameLoader,
                     forwarder.warn("Invalid game selected.");
                 } else {
                     onEditRequested(selectedGame, games[selectedGame]);
+                }
+                nextState = GAME_MANAGER_STATES.TERMINATE;
+            });
+
+            // Browse/edit rooms & items
+            await handler.onCommand([GAME_ACTIONS.ENTITIES], async () => {
+                const games = GameLibrary.getGames();
+                if (selectedGame < 0 || selectedGame >= games.length) {
+                    forwarder.warn("Invalid game selected.");
+                } else {
+                    onEntitiesRequested(selectedGame, games[selectedGame]);
                 }
                 nextState = GAME_MANAGER_STATES.TERMINATE;
             });

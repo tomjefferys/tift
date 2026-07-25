@@ -8,6 +8,7 @@ import { DecoratedForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
 import Controls from './Controls';
 import GameEditor from './GameEditor';
+import EntityBrowser from './EntityBrowser';
 import { commandEntry, logEntry, messageEntry, OutputEntry, Command } from '../outputentry';
 import { createRestarter } from "../util/restarter";
 import { createColourSchemePicker } from "../util/colourschemepicker";
@@ -90,6 +91,10 @@ function Tift() {
     // Set when the user chooses to edit a saved game's raw YAML; while set,
     // the normal bubble UI is replaced by a full-screen text editor overlay.
     const [editingGame, setEditingGame] = useState<{index : number, game : GameLibrary.SavedGame} | null>(null);
+
+    // Set when the user chooses to browse/edit a saved game's rooms & items;
+    // while set, the normal bubble UI is replaced by the entity browser overlay.
+    const [editingEntities, setEditingEntities] = useState<{index : number, game : GameLibrary.SavedGame} | null>(null);
 
     const getWords = async (command : Word[]) : Promise<Word[]> => {
       await engineRef.current?.send(Input.getNextWords(command));
@@ -222,8 +227,9 @@ function Tift() {
       }
 
       const onEditRequested = (index : number, game : GameLibrary.SavedGame) => setEditingGame({ index, game });
+      const onEntitiesRequested = (index : number, game : GameLibrary.SavedGame) => setEditingEntities({ index, game });
 
-      const gameManager = createGameManagerOptions(loadCustomGame, loadDefaultGame, onEditRequested);
+      const gameManager = createGameManagerOptions(loadCustomGame, loadDefaultGame, onEditRequested, onEntitiesRequested);
 
       const undoFn = async () => {
         engine.send(Input.undo());
@@ -335,10 +341,10 @@ function Tift() {
     // Add keyboard listener
     useEffect(() => {
       const handleKeyDown = (e : KeyboardEvent) : void => {
-        // While the game editor overlay is open, keystrokes belong to its
-        // textarea, not the bubble word-matching shortcuts below - letting
+        // While an editor overlay is open, keystrokes belong to its own
+        // inputs, not the bubble word-matching shortcuts below - letting
         // both handle the same keydown corrupts the pending game command.
-        if (editingGame) {
+        if (editingGame || editingEntities) {
           return;
         }
         const nextWords = getPossibleNextWords();
@@ -482,26 +488,53 @@ function Tift() {
       return commandEntry(words, wildCardIndex);
     }
 
-    // Validates and saves changes made in the in-app YAML editor. On success,
-    // persists the change to the M1 game library, closes the editor, and
-    // reloads the game so the edit takes effect immediately.
-    const handleSaveEdit = async (yamlText : string) : Promise<ValidationResult> => {
+    // Validates and saves changes made in either the raw YAML editor or the
+    // entity browser. On success, persists the change to the M1 game
+    // library and reloads the game so the edit takes effect immediately.
+    // Does not itself close whichever overlay called it - the caller does
+    // that once it sees a valid result.
+    const validateAndSaveGame = async (index : number, yamlText : string) : Promise<ValidationResult> => {
       const engine = engineRef.current;
       if (!engine) {
         return { type : "ValidationResult", valid : false, errors : [{ message : "Engine has not been initialized" }] };
       }
       await engine.send(Input.validate(yamlText));
       const result = validationRef.current;
-      if (result?.valid && editingGame) {
-        GameLibrary.updateGameYaml(editingGame.index, yamlText);
+      if (result?.valid) {
+        GameLibrary.updateGameYaml(index, yamlText);
         updateMessages(messagesRef.current, logEntry("info", "Game saved."));
-        setEditingGame(null);
         await loadAndStartGame(yamlText, engine);
       }
       return result ?? { type : "ValidationResult", valid : false, errors : [{ message : "Validation failed unexpectedly." }] };
     }
 
+    const NOT_EDITING_ERROR : ValidationResult = { type : "ValidationResult", valid : false, errors : [{ message : "No game is being edited" }] };
+
+    const handleSaveEdit = async (yamlText : string) : Promise<ValidationResult> => {
+      if (!editingGame) {
+        return NOT_EDITING_ERROR;
+      }
+      const result = await validateAndSaveGame(editingGame.index, yamlText);
+      if (result.valid) {
+        setEditingGame(null);
+      }
+      return result;
+    }
+
     const handleCancelEdit = () => setEditingGame(null);
+
+    const handleSaveEntities = async (yamlText : string) : Promise<ValidationResult> => {
+      if (!editingEntities) {
+        return NOT_EDITING_ERROR;
+      }
+      const result = await validateAndSaveGame(editingEntities.index, yamlText);
+      if (result.valid) {
+        setEditingEntities(null);
+      }
+      return result;
+    }
+
+    const handleCancelEntities = () => setEditingEntities(null);
 
     const panelIds = [
       "game",
@@ -517,6 +550,11 @@ function Tift() {
                           initialYaml={editingGame.game.yamlText}
                           onSave={handleSaveEdit}
                           onCancel={handleCancelEdit}/>
+           ) : editingEntities ? (
+              <EntityBrowser gameName={editingEntities.game.name}
+                             initialYaml={editingEntities.game.yamlText}
+                             onSave={handleSaveEntities}
+                             onCancel={handleCancelEntities}/>
            ) : (
            <div className="tift-layout">
               <div className="tift-status">
