@@ -1,12 +1,13 @@
 import { useRef, useState, useEffect, SyntheticEvent } from 'react';
 import { getEngine, Input, createEngineProxy, createStateMachineFilter, OutputConsumerBuilder } from "tift-engine"
 import { Engine } from "tift-types/src/engine";
-import { OutputConsumer, OutputMessage, StatusType, Properties, SaveState } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage, StatusType, Properties, SaveState, ValidationResult } from "tift-types/src/messages/output";
 import { PartOfSpeech, Word } from "tift-types/src/messages/word";
 import { ControlType } from "tift-types/src/messages/controltype";
-import { DecoratedForwarder, MessageForwarder } from "tift-types/src/engineproxy";
+import { DecoratedForwarder } from "tift-types/src/engineproxy";
 import Output from "./Output"
 import Controls from './Controls';
+import GameEditor from './GameEditor';
 import { commandEntry, logEntry, messageEntry, OutputEntry, Command } from '../outputentry';
 import { createRestarter } from "../util/restarter";
 import { createColourSchemePicker } from "../util/colourschemepicker";
@@ -27,6 +28,7 @@ import { DEFAULT_SETTINGS, loadSettings, saveSettings, Settings, UIType } from "
 import { createDevModePicker } from "../util/devmodepicker";
 import { createBookmarkManagerOptions } from "../util/bookmarkmanager";
 import { createGameManagerOptions } from "../util/gamemanager";
+import * as GameLibrary from "../util/gamelibrary";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;
@@ -83,6 +85,12 @@ function Tift() {
 
     const bookmarkRef = useRef<string | null>(null);
 
+    const validationRef = useRef<ValidationResult | null>(null);
+
+    // Set when the user chooses to edit a saved game's raw YAML; while set,
+    // the normal bubble UI is replaced by a full-screen text editor overlay.
+    const [editingGame, setEditingGame] = useState<{index : number, game : GameLibrary.SavedGame} | null>(null);
+
     const getWords = async (command : Word[]) : Promise<Word[]> => {
       await engineRef.current?.send(Input.getNextWords(command));
       return (command.find(word => word.id === "?") != null)
@@ -94,7 +102,7 @@ function Tift() {
 
     // Load a game from its raw YAML text (either fetched from `public`, or
     // imported/selected via the game manager)
-    const loadGameFromText = async (data : string, engine : MessageForwarder) => {
+    const loadGameFromText = async (data : string, engine : Engine) => {
       if (engine == null) {
         throw new Error("Engine has not been initialized");
       }
@@ -120,12 +128,12 @@ function Tift() {
     }
 
     // Load a game file from the `public` folder
-    const loadGame = async (name : string, engine : MessageForwarder) => {
+    const loadGame = async (name : string, engine : Engine) => {
       const data = await loadGameData(name);
       await loadGameFromText(data, engine);
     }
 
-    const startGame = async (engine : MessageForwarder) => {
+    const startGame = async (engine : Engine) => {
       const saveData = storageRef.current?.loadGame() ?? null;
 
       await engine.send(Input.start((saveData != null)? saveData : undefined));
@@ -134,6 +142,16 @@ function Tift() {
       await engine.send(Input.getNextWords([WILD_CARD]));
       setFilteredWords(WordTree.getWithPrefix(latestWordsRef.current, ""));
       setCommand([WILD_CARD]);
+    }
+
+    // Resets local state and loads+starts a game from raw YAML text. Shared
+    // by the game manager's import/select/default flows and the in-app
+    // editor's save-and-reload flow.
+    const loadAndStartGame = async (data : string, engine : Engine) => {
+      latestWordsRef.current = WordTree.createRoot();
+      storageRef.current?.removeGame();
+      await loadGameFromText(data, engine);
+      await startGame(engine);
     }
 
     const setColourScheme = (scheme : string) => {
@@ -194,12 +212,7 @@ function Tift() {
 
       const bookmarkManager = createBookmarkManagerOptions(bookmarkRef, statusRef, infoRef, reloadAndStartGame);
 
-      const loadCustomGame = async (data : string, forwarder : DecoratedForwarder) => {
-        latestWordsRef.current = WordTree.createRoot();
-        storageRef.current?.removeGame();
-        await loadGameFromText(data, forwarder);
-        await startGame(forwarder);
-      }
+      const loadCustomGame = loadAndStartGame;
 
       const loadDefaultGame = async (forwarder : DecoratedForwarder) => {
         latestWordsRef.current = WordTree.createRoot();
@@ -208,7 +221,9 @@ function Tift() {
         await startGame(forwarder);
       }
 
-      const gameManager = createGameManagerOptions(loadCustomGame, loadDefaultGame);
+      const onEditRequested = (index : number, game : GameLibrary.SavedGame) => setEditingGame({ index, game });
+
+      const gameManager = createGameManagerOptions(loadCustomGame, loadDefaultGame, onEditRequested);
 
       const undoFn = async () => {
         engine.send(Input.undo());
@@ -299,6 +314,7 @@ function Tift() {
         .withSaveConsumer(saveGame)
         .withLogConsumer((level, message) => updateMessages(messagesRef.current,logEntry(level, message)))
         .withInfoConsumer(info => infoRef.current = info)
+        .withValidationConsumer(result => validationRef.current = result)
         .withControlConsumer(createControlHandler(pauser))
         .build();
 
@@ -319,6 +335,12 @@ function Tift() {
     // Add keyboard listener
     useEffect(() => {
       const handleKeyDown = (e : KeyboardEvent) : void => {
+        // While the game editor overlay is open, keystrokes belong to its
+        // textarea, not the bubble word-matching shortcuts below - letting
+        // both handle the same keydown corrupts the pending game command.
+        if (editingGame) {
+          return;
+        }
         const nextWords = getPossibleNextWords();
         const result = handleKeyboardInput(partialWord, nextWords, e);
         if (result.selected) {
@@ -460,6 +482,27 @@ function Tift() {
       return commandEntry(words, wildCardIndex);
     }
 
+    // Validates and saves changes made in the in-app YAML editor. On success,
+    // persists the change to the M1 game library, closes the editor, and
+    // reloads the game so the edit takes effect immediately.
+    const handleSaveEdit = async (yamlText : string) : Promise<ValidationResult> => {
+      const engine = engineRef.current;
+      if (!engine) {
+        return { type : "ValidationResult", valid : false, errors : [{ message : "Engine has not been initialized" }] };
+      }
+      await engine.send(Input.validate(yamlText));
+      const result = validationRef.current;
+      if (result?.valid && editingGame) {
+        GameLibrary.updateGameYaml(editingGame.index, yamlText);
+        updateMessages(messagesRef.current, logEntry("info", "Game saved."));
+        setEditingGame(null);
+        await loadAndStartGame(yamlText, engine);
+      }
+      return result ?? { type : "ValidationResult", valid : false, errors : [{ message : "Validation failed unexpectedly." }] };
+    }
+
+    const handleCancelEdit = () => setEditingGame(null);
+
     const panelIds = [
       "game",
       "inventory",
@@ -469,6 +512,12 @@ function Tift() {
 
     return (
         <div className="tift-container" tabIndex={0}>
+           {editingGame ? (
+              <GameEditor gameName={editingGame.game.name}
+                          initialYaml={editingGame.game.yamlText}
+                          onSave={handleSaveEdit}
+                          onCancel={handleCancelEdit}/>
+           ) : (
            <div className="tift-layout">
               <div className="tift-status">
                 <StatusBar status={statusRef.current.title}/>
@@ -484,6 +533,7 @@ function Tift() {
                           useBubbles={settingsRef.current.uiType === "bubble"}/>
               </div>
             </div>
+           )}
         </div>
       );
 }
