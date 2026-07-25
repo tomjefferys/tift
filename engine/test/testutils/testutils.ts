@@ -1,4 +1,4 @@
-import { Log, LogLevel, OutputConsumer, StatusType } from "tift-types/src/messages/output";
+import { Log, LogLevel, OutputConsumer, StatusType, ValidationResult } from "tift-types/src/messages/output";
 import { PartOfSpeech } from "tift-types/src/messages/word";
 import { bindParams } from "../../src/script/parser"
 import { createRootEnv } from "../../src/env";
@@ -17,13 +17,13 @@ export const STANDARD_VERBS = ["go", "look", "inventory", "wait"];
 
 export type SaveData = { data : History };
 
-export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData, statuses : StatusType[], log : Log[], info : Obj ) : OutputConsumer {
+export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData, statuses : StatusType[], log : Log[], info : Obj, validationResults : ValidationResult[] = [] ) : OutputConsumer {
     return message => {
         switch(message.type) {
             case "Print":
                 messages.push(message.value);
                 break;
-            case "Words": 
+            case "Words":
                 message.words.forEach(word => words.push(word.id));
                 break;
             case "SaveState":
@@ -37,6 +37,9 @@ export function listOutputConsumer(messages : string[], words : string[], saveDa
                 break;
             case "Info":
                 Object.assign(info, message.properties);
+                break;
+            case "ValidationResult":
+                validationResults.push(message);
                 break;
             default:
                 throw new Error("Can't handle type " + message.type);
@@ -215,6 +218,7 @@ export interface TestEnvironment {
     builder : EngineBuilder,
     engine : EngineRef,
     info : Obj,
+    validationResults : ValidationResult[],
     executeAndTest : ExecuteAndTestFn,
     getWordsIds : GetWordIdsFn,
     expectWords : ExpectWordsFn,
@@ -230,7 +234,8 @@ export function createEngineTestEnvironment() : TestEnvironment {
     const saveData = { data : getEmptyHistory() };
     const log : Log[] = [];
     const info = {};
-    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log, info));
+    const validationResults : ValidationResult[] = [];
+    const builder = new EngineBuilder().withOutput(listOutputConsumer(messages, wordsResponse, saveData, statuses, log, info, validationResults));
     const engine = createEngineRef();
     builder.withObj(GAME_METADATA);
     loadDefaults(builder);
@@ -247,6 +252,7 @@ export function createEngineTestEnvironment() : TestEnvironment {
         builder,
         engine,
         info,
+        validationResults,
         executeAndTest,
         getWordsIds,
         expectWords,

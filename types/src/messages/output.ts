@@ -2,7 +2,7 @@ import { ControlType } from "./controltype";
 import { History } from "../util/historyproxy";
 import { Word } from "./word";
 
-export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control | Info
+export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control | Info | ValidationResult
 
 export type OutputConsumer = (message : OutputMessage) => void;
 
@@ -72,4 +72,21 @@ export interface SaveState {
 export interface Info {
     type : "Info",
     properties : Properties
+}
+
+/**
+ * A single problem found while validating game data, with an optional
+ * location (file/line/col) pointing back into the source YAML, when available.
+ */
+export interface ValidationError {
+    message : string,
+    file? : string,
+    line? : number,
+    col? : number
+}
+
+export interface ValidationResult {
+    type : "ValidationResult",
+    valid : boolean,
+    errors : ValidationError[]
 }

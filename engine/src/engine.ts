@@ -3,7 +3,7 @@ import { Entity } from "./entity"
 import { Env } from "tift-types/src/env"
 import { createRootEnv } from "./env"
 import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
-import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
+import { OutputConsumer, OutputMessage, ValidationError } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 import * as Output from "./messages/output";
 import * as MessageOut from "./game/output";
@@ -12,13 +12,13 @@ import * as _ from "lodash";
 import * as arrays from "./util/arrays";
 import { PhaseAction } from "./script/phaseaction";
 import { SentenceNode } from "./command";
-import { InputMessage, Load, InputMessageType, ConfigProperties } from "tift-types/src/messages/input";
+import { InputMessage, Load, Validate, InputMessageType, ConfigProperties } from "tift-types/src/messages/input";
 import * as Input from "tift-types/src/messages/input";
 import { EngineBuilder } from "./game/enginebuilder";
 import { Config } from "./config"
 import * as Conf from "./config"
 import { Optional } from "tift-types/src/util/optional";
-import { logError } from "./util/errors";
+import { logError, toStructuredError } from "./util/errors";
 import { History } from "tift-types/src/util/historyproxy";
 import { Obj, KIND } from "./util/objects"
 import * as Logger from "./util/logger";
@@ -163,29 +163,7 @@ export class BasicEngine implements Engine {
 
   addContent(getContent : (env : Env) => Obj[]) {
     const objs = getContent(this.env);
-    const props = this.env.properties;
-    objs.forEach(obj => {
-      const { id, type, ...properties } = obj;
-      if (type === "property") {
-        Properties.setProperties(this.env, id, properties);
-      } else if (type === "global") {
-        Object.entries(obj)
-              .forEach(([key,value]) => {
-                props[key] = value;
-                compileGlobalFunction(key, value, this.env, Path.of(key));
-              })
-      } else {
-        const kind = obj[KIND] ?? type;
-        const namespace = TYPE_NAMESPACES[kind];
-        if (namespace) {
-          props[namespace][id] = obj;
-        } else {
-          props[id] = obj;
-        }
-        compileFunctions(namespace, id, this.env);
-        compileStrings(namespace, id, this.env);
-      }
-    });
+    applyContentToEnv(this.env, objs);
   }
 
 
@@ -206,7 +184,8 @@ export class BasicEngine implements Engine {
     "Reset" :     () => this.reset(),
     "Undo" :      () => this.undo(),
     "Redo" :      () => this.redo(),
-    "GetInfo" :   () => this.getInfo()
+    "GetInfo" :   () => this.getInfo(),
+    "Validate" :  (m) => this.validateData(m as Input.Validate)
   }
 
   // Map or error state handler functions
@@ -221,7 +200,8 @@ export class BasicEngine implements Engine {
     "Reset" :     () => this.reset(),
     "Undo" :      NO_OP,
     "Redo" :      NO_OP,
-    "GetInfo" :   () => this.getInfo()
+    "GetInfo" :   () => this.getInfo(),
+    "Validate" :  (m) => this.validateData(m as Input.Validate)
   }
 
   send(message : InputMessage) : Promise<void> {
@@ -246,6 +226,18 @@ export class BasicEngine implements Engine {
     const builder = new EngineBuilder();
     builder.fromYaml(message.data);
     this.addContent(env => builder.addToEnv(env));
+  }
+
+  /**
+   * Validates game data against a fresh, throwaway environment, without
+   * mutating this engine's live state. Returns a structured pass/fail
+   * result (with file/line/col, where available) rather than a printed
+   * log message, so callers such as an in-app editor can act on it
+   * programmatically. Works even if this engine has already errored.
+   */
+  validateData(message : Validate) {
+    const result = validateGameData(message.data);
+    this.output(Output.validationResult(result.valid, result.errors));
   }
 
   save(compress = false) {
@@ -429,7 +421,60 @@ export class BasicEngine implements Engine {
               ? multidict.values(this.context.entities)
                         .map(entity => entity.id)
                         .some(entity => ruleEntities.includes(entity))
-              : true; 
+              : true;
+  }
+}
+
+// Applies parsed game-data objects onto an Env, compiling any embedded
+// functions/expressions. Shared by BasicEngine.addContent (which mutates the
+// live engine's env) and validateGameData (which uses a throwaway env).
+function applyContentToEnv(env : Env, objs : Obj[]) {
+  const props = env.properties;
+  objs.forEach(obj => {
+    const { id, type, ...properties } = obj;
+    if (type === "property") {
+      Properties.setProperties(env, id, properties);
+    } else if (type === "global") {
+      Object.entries(obj)
+            .forEach(([key,value]) => {
+              props[key] = value;
+              compileGlobalFunction(key, value, env, Path.of(key));
+            })
+    } else {
+      const kind = obj[KIND] ?? type;
+      const namespace = TYPE_NAMESPACES[kind];
+      if (namespace) {
+        props[namespace][id] = obj;
+      } else {
+        props[id] = obj;
+      }
+      compileFunctions(namespace, id, env);
+      compileStrings(namespace, id, env);
+    }
+  });
+}
+
+export interface ValidationResult {
+  valid : boolean;
+  errors : ValidationError[];
+}
+
+/**
+ * Validates game data (a single blob of multi-document YAML, as accepted by
+ * Input.load) against a fresh, isolated environment. Does not touch any
+ * live engine instance. Stops at the first error found, matching the
+ * behaviour of loading data into a running engine.
+ */
+export function validateGameData(data : string) : ValidationResult {
+  const env = createRootEnv(_.cloneDeep(BASE_PROPS), _.cloneDeep(BASE_NS));
+  try {
+    const builder = new EngineBuilder();
+    builder.fromYaml(data);
+    const objs = builder.addToEnv(env);
+    applyContentToEnv(env, objs);
+    return { valid : true, errors : [] };
+  } catch (e) {
+    return { valid : false, errors : [toStructuredError(env, e)] };
   }
 }
 

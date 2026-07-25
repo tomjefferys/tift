@@ -1,6 +1,6 @@
 import { History } from "tift-types/src/util/historyproxy";
 import { ControlType } from "tift-types/src/messages/controltype";
-import { OutputMessage, LogLevel, SetVar, Properties } from "tift-types/src/messages/output";
+import { OutputMessage, LogLevel, SetVar, Properties, ValidationError } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 
 interface Stringable {
@@ -61,5 +61,13 @@ export function info(properties : Properties) : OutputMessage {
     return {
         type : "Info",
         properties
+    }
+}
+
+export function validationResult(valid : boolean, errors : ValidationError[]) : OutputMessage {
+    return {
+        type : "ValidationResult",
+        valid,
+        errors
     }
 }

@@ -1,5 +1,5 @@
 import { BasicEngine } from "./engine";
-import { LogLevel, OutputConsumer, OutputMessage, StatusType, Properties, SaveState } from "tift-types/src/messages/output";
+import { LogLevel, OutputConsumer, OutputMessage, StatusType, Properties, SaveState, ValidationResult } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 import { InputMessage } from "tift-types/src/messages/input"
 import { BiConsumer, Consumer } from "tift-types/src/util/functions";
@@ -114,6 +114,15 @@ export namespace Input {
   export function getInfo() : InputMessage {
     return { type : "GetInfo" };
   }
+
+  /**
+   * Validates game data without loading it into the running engine, or
+   * mutating any of its state. Works even after the engine has errored.
+   * Result is delivered via OutputConsumerBuilder.withValidationConsumer.
+   */
+  export function validate(data : string) : InputMessage {
+    return { type : "Validate", data };
+  }
 }
 
 /**
@@ -129,6 +138,7 @@ export class OutputConsumerBuilder {
   saveConsumer? : Consumer<SaveState>;
   controlConsumer? : Consumer<ControlType>;
   infoConsumer? : Consumer<Properties>;
+  validationConsumer? : Consumer<ValidationResult>;
   defaultConsumer : Consumer<OutputMessage> = _message => { /* do nothing */ };
 
   withMessageConsumer(messageConsumer : Consumer<string>) : OutputConsumerBuilder {
@@ -166,6 +176,11 @@ export class OutputConsumerBuilder {
     return this;
   }
 
+  withValidationConsumer(validationConsumer : Consumer<ValidationResult>) {
+    this.validationConsumer = validationConsumer;
+    return this;
+  }
+
   withDefaultConsumer(defaultConsumer : Consumer<OutputMessage>) {
     this.defaultConsumer = defaultConsumer;
     return this;
@@ -194,6 +209,9 @@ export class OutputConsumerBuilder {
           break;
         case "Info":
           this.infoConsumer? this.infoConsumer(message.properties) : this.defaultConsumer(message);
+          break;
+        case "ValidationResult":
+          this.validationConsumer? this.validationConsumer(message) : this.defaultConsumer(message);
           break;
         default:
           throw new Error("Unsupported OutputMessage Type: " + message.type);

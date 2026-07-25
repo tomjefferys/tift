@@ -1,6 +1,6 @@
 import { Word } from "./word";
 
-export type InputMessage = GetWords | Execute | GetStatus | Save | Load | Start | Config | Reset | Undo | Redo | GetInfo;
+export type InputMessage = GetWords | Execute | GetStatus | Save | Load | Start | Config | Reset | Undo | Redo | GetInfo | Validate;
 
 export type InputMessageType = InputMessage["type"];
 
@@ -54,4 +54,13 @@ export interface Start {
 
 export interface GetInfo {
     type : "GetInfo";
+}
+
+/**
+ * Validates game data without loading it into the running engine.
+ * Does not mutate any engine state, and works even after the engine has errored.
+ */
+export interface Validate {
+    type : "Validate",
+    data : string
 }

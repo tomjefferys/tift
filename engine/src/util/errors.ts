@@ -54,17 +54,40 @@ export function logError(env : Env, output : OutputConsumer, e : unknown) {
     output(message);
 }
 
-function getSourceLocation(env : Env, e : unknown) : string {
+/**
+ * A structured (non-text) representation of an error, for callers that need
+ * to work with the file/line/col of a problem programmatically (eg an
+ * in-app editor), rather than a pre-formatted log message.
+ */
+export interface StructuredError {
+    message : string;
+    file? : string;
+    line? : number;
+    col? : number;
+}
+
+export function toStructuredError(env : Env, e : unknown) : StructuredError {
+    const message = getCauseMessage(e);
+    const location = resolveLocation(env, e);
+    return location
+        ? { message, file : location.file, line : location.line, col : location.col }
+        : { message };
+}
+
+function resolveLocation(env : Env, e : unknown) : Optional<SourceLocation> {
     if (!(e instanceof TiftError) || !e.location) {
-        return UNKNOWN_LOCATION;
+        return undefined;
     }
     if (e.location instanceof TiftError) {
-        return getSourceLocation(env, e.location);
+        return resolveLocation(env, e.location);
     }
+    return SourceMap.isSourceLocation(e.location)
+                ? e.location
+                : getSourceLocationFromPath(env, e.location);
+}
 
-    const location = SourceMap.isSourceLocation(e.location)
-                            ? e.location
-                            : getSourceLocationFromPath(env, e.location);
+function getSourceLocation(env : Env, e : unknown) : string {
+    const location = resolveLocation(env, e);
     if (!location) {
         return UNKNOWN_LOCATION;
     }
