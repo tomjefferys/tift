@@ -37,7 +37,7 @@ const enum GAME_ACTIONS {
 const SELECTED_GAME_OPTIONS = [
     word(GAME_ACTIONS.LOAD, GAME_ACTIONS.LOAD, "select"),
     word(GAME_ACTIONS.EDIT, GAME_ACTIONS.EDIT, "select"),
-    word(GAME_ACTIONS.ENTITIES, "rooms & items", "select"),
+    word(GAME_ACTIONS.ENTITIES, "entities", "select"),
     word(GAME_ACTIONS.EXPORT, GAME_ACTIONS.EXPORT, "select"),
     word(GAME_ACTIONS.DELETE, GAME_ACTIONS.DELETE, "select"),
     word(GAME_ACTIONS.CANCEL, GAME_ACTIONS.CANCEL, "select"),
@@ -62,7 +62,7 @@ interface GameManagerOptions {
  * @param gameLoader Function to load a game from its raw YAML text
  * @param defaultGameLoader Function to switch back to the built-in default game
  * @param onEditRequested Called when the user chooses to edit the selected game's raw YAML
- * @param onEntitiesRequested Called when the user chooses to browse/edit the selected game's rooms & items
+ * @param onEntitiesRequested Called when the user chooses to browse/edit the selected game's entities (rooms, items & verbs)
  * @returns The game manager state machine
  */
 export function createGameManagerOptions(gameLoader : GameLoader,
@@ -209,7 +209,7 @@ export function createGameManagerOptions(gameLoader : GameLoader,
                 nextState = GAME_MANAGER_STATES.TERMINATE;
             });
 
-            // Browse/edit rooms & items
+            // Browse/edit entities (rooms, items & verbs)
             await handler.onCommand([GAME_ACTIONS.ENTITIES], async () => {
                 const games = GameLibrary.getGames();
                 if (selectedGame < 0 || selectedGame >= games.length) {

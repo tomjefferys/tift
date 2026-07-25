@@ -1,6 +1,6 @@
 import { parseGameDocuments, serializeGameDocuments } from "./gameyaml";
-import { listRooms, listItems, upsertRoom, upsertItem, removeEntity,
-         entityIdExists, listAllEntityIds, RoomFields, ItemFields } from "./entitydocs";
+import { listRooms, listItems, listVerbs, upsertRoom, upsertItem, upsertVerb, removeEntity,
+         entityIdExists, verbIdExists, listAllEntityIds, RoomFields, ItemFields, VerbFields } from "./entitydocs";
 
 const SAMPLE = `
 ---
@@ -25,6 +25,12 @@ name: rusty key
 description: An old rusty key
 location: cave
 tags: [carryable]
+---
+verb: stir
+tags: [transitive]
+attributes: [with]
+actions:
+  stir($object).with($tool): print("You stir it")
 ---
 `;
 
@@ -101,6 +107,49 @@ test("removeEntity removes only the targeted room or item", () => {
     const withoutKey = removeEntity(docs, "item", "key");
     expect(listItems(withoutKey)).toHaveLength(0);
     expect(listRooms(withoutKey)).toHaveLength(2);
+});
+
+test("listVerbs extracts structured fields, including inferred transitivity", () => {
+    const docs = parseGameDocuments(SAMPLE);
+    const verbs = listVerbs(docs);
+    expect(verbs).toHaveLength(1);
+    expect(verbs[0]).toMatchObject({ id : "stir", transitivity : "transitive", attributes : ["with"] });
+});
+
+test("verb ids live in a separate namespace from room/item/rule ids", () => {
+    const docs = parseGameDocuments(SAMPLE);
+    // "stir" is a verb id, not a room/item/rule id
+    expect(entityIdExists(docs, "stir")).toBe(false);
+    expect(verbIdExists(docs, "stir")).toBe(true);
+    // and a room id shouldn't count as a used verb id either
+    expect(verbIdExists(docs, "cave")).toBe(false);
+});
+
+test("upsertVerb updates an existing verb without disturbing its actions, and can add a new verb", () => {
+    const docs = parseGameDocuments(SAMPLE);
+    const updated : VerbFields = { id : "stir", name : "", transitivity : "transitive", attributes : ["with", "using"], modifiers : [], contexts : ["inventory"] };
+    const newDocs = upsertVerb(docs, updated);
+
+    const verb = listVerbs(newDocs)[0];
+    expect(verb.attributes).toEqual(["with", "using"]);
+    expect(verb.contexts).toEqual(["inventory"]);
+
+    const verbDoc = newDocs.find(doc => doc.verb === "stir");
+    expect(verbDoc?.actions).toBeDefined();
+    // The transitive tag should still be present, and not duplicated
+    expect(verbDoc?.tags).toEqual(["transitive"]);
+
+    const newVerb : VerbFields = { id : "fuddle", name : "", transitivity : "intransitive", attributes : [], modifiers : [], contexts : [] };
+    const withNewVerb = upsertVerb(newDocs, newVerb);
+    expect(listVerbs(withNewVerb).map(v => v.id)).toEqual(["stir", "fuddle"]);
+    expect(listVerbs(withNewVerb)[1].transitivity).toBe("intransitive");
+});
+
+test("removeEntity can remove a verb", () => {
+    const docs = parseGameDocuments(SAMPLE);
+    const withoutStir = removeEntity(docs, "verb", "stir");
+    expect(listVerbs(withoutStir)).toHaveLength(0);
+    expect(listRooms(withoutStir)).toHaveLength(2);
 });
 
 test("edits survive a full serialize/reparse round trip", () => {

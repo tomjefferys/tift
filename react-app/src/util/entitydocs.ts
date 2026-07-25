@@ -1,5 +1,7 @@
 import { GameDoc, getDocId, getDocKind } from "./gameyaml";
 
+export type EntityKind = "room" | "item" | "verb";
+
 export interface RoomFields {
     id : string;
     name : string;
@@ -16,12 +18,25 @@ export interface ItemFields {
     location : string;
 }
 
+export interface VerbFields {
+    id : string;
+    name : string;
+    transitivity : "transitive" | "intransitive";
+    attributes : string[];
+    modifiers : string[];
+    contexts : string[];
+}
+
 export function listRooms(docs : GameDoc[]) : RoomFields[] {
     return docs.filter(doc => getDocKind(doc) === "room").map(toRoomFields);
 }
 
 export function listItems(docs : GameDoc[]) : ItemFields[] {
     return docs.filter(doc => getDocKind(doc) === "item" || getDocKind(doc) === "object").map(toItemFields);
+}
+
+export function listVerbs(docs : GameDoc[]) : VerbFields[] {
+    return docs.filter(doc => getDocKind(doc) === "verb").map(toVerbFields);
 }
 
 function toRoomFields(doc : GameDoc) : RoomFields {
@@ -44,10 +59,26 @@ function toItemFields(doc : GameDoc) : ItemFields {
     };
 }
 
+function toVerbFields(doc : GameDoc) : VerbFields {
+    const tags : string[] = Array.isArray(doc.tags) ? doc.tags : [];
+    return {
+        id : String(doc.verb),
+        name : doc.name ?? "",
+        // Defaults to "transitive" for a not-yet-tagged verb; makeVerb()
+        // (engine/src/game/enginebuilder.ts) leaves a verb with neither
+        // trait if tags omits both, but the form always writes one back.
+        transitivity : tags.includes("intransitive") ? "intransitive" : "transitive",
+        attributes : Array.isArray(doc.attributes) ? doc.attributes : [],
+        modifiers : Array.isArray(doc.modifiers) ? doc.modifiers : [],
+        contexts : Array.isArray(doc.contexts) ? doc.contexts : [],
+    };
+}
+
 // Entity ids share a single namespace in the engine (rooms, items and rules
 // all live under "entities" - see engine/src/game/enginebuilder.ts's
 // TYPE_NAMESPACES), so uniqueness has to be checked across all of them, not
-// just within rooms or items alone.
+// just within rooms or items alone. Verbs live in their own separate
+// "verbs" namespace, so they're checked independently (see verbIdExists).
 export function entityIdExists(docs : GameDoc[], id : string) : boolean {
     return listAllEntityIds(docs).includes(id);
 }
@@ -59,6 +90,10 @@ export function listAllEntityIds(docs : GameDoc[]) : string[] {
                 ? getDocId(doc)
                 : undefined;
     }).filter((id) : id is string => id !== undefined);
+}
+
+export function verbIdExists(docs : GameDoc[], id : string) : boolean {
+    return listVerbs(docs).some(verb => verb.id === id);
 }
 
 export function upsertRoom(docs : GameDoc[], fields : RoomFields) : GameDoc[] {
@@ -85,6 +120,22 @@ export function upsertItem(docs : GameDoc[], fields : ItemFields) : GameDoc[] {
     });
 }
 
+export function upsertVerb(docs : GameDoc[], fields : VerbFields) : GameDoc[] {
+    return upsertEntity(docs, "verb", fields.id, existing => {
+        const otherTags = ((existing?.tags as string[] | undefined) ?? [])
+                            .filter(tag => tag !== "transitive" && tag !== "intransitive");
+        return {
+            ...existing,
+            verb : fields.id,
+            name : fields.name || undefined,
+            tags : [fields.transitivity, ...otherTags],
+            attributes : fields.attributes.length > 0 ? fields.attributes : undefined,
+            modifiers : fields.modifiers.length > 0 ? fields.modifiers : undefined,
+            contexts : fields.contexts.length > 0 ? fields.contexts : undefined,
+        };
+    });
+}
+
 function optionalFields(fields : { name : string, description : string, tags : string[] }) {
     return {
         name : fields.name || undefined,
@@ -93,15 +144,17 @@ function optionalFields(fields : { name : string, description : string, tags : s
     };
 }
 
+function matchesKind(docKind : ReturnType<typeof getDocKind>, kind : EntityKind) : boolean {
+    if (kind === "room") return docKind === "room";
+    if (kind === "item") return docKind === "item" || docKind === "object";
+    return docKind === "verb";
+}
+
 function upsertEntity(docs : GameDoc[],
-                       kind : "room" | "item",
+                       kind : EntityKind,
                        id : string,
                        build : (existing : GameDoc | undefined) => GameDoc) : GameDoc[] {
-    const index = docs.findIndex(doc => {
-        const docKind = getDocKind(doc);
-        const matchesKind = kind === "room" ? docKind === "room" : (docKind === "item" || docKind === "object");
-        return matchesKind && getDocId(doc) === id;
-    });
+    const index = docs.findIndex(doc => matchesKind(getDocKind(doc), kind) && getDocId(doc) === id);
     if (index === -1) {
         return [...docs, build(undefined)];
     }
@@ -110,10 +163,6 @@ function upsertEntity(docs : GameDoc[],
     return updated;
 }
 
-export function removeEntity(docs : GameDoc[], kind : "room" | "item", id : string) : GameDoc[] {
-    return docs.filter(doc => {
-        const docKind = getDocKind(doc);
-        const matchesKind = kind === "room" ? docKind === "room" : (docKind === "item" || docKind === "object");
-        return !(matchesKind && getDocId(doc) === id);
-    });
+export function removeEntity(docs : GameDoc[], kind : EntityKind, id : string) : GameDoc[] {
+    return docs.filter(doc => !(matchesKind(getDocKind(doc), kind) && getDocId(doc) === id));
 }

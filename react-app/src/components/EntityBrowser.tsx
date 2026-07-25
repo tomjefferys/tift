@@ -1,9 +1,10 @@
 import { useState } from "react";
 import EntityForm from "./EntityForm";
+import VerbForm from "./VerbForm";
 import { ValidationError, ValidationResult } from "tift-types/src/messages/output";
 import { GameDoc, parseGameDocuments, serializeGameDocuments } from "../util/gameyaml";
-import { RoomFields, ItemFields, listRooms, listItems, listAllEntityIds,
-         upsertRoom, upsertItem, removeEntity } from "../util/entitydocs";
+import { RoomFields, ItemFields, VerbFields, listRooms, listItems, listVerbs, listAllEntityIds,
+         upsertRoom, upsertItem, upsertVerb, removeEntity } from "../util/entitydocs";
 
 interface EntityBrowserProps {
     gameName : string;
@@ -12,7 +13,7 @@ interface EntityBrowserProps {
     onCancel : () => void;
 }
 
-type EditTarget = { kind : "room" | "item", id? : string };
+type EditTarget = { kind : "room" | "item" | "verb", id? : string };
 
 function formatError(error : ValidationError) : string {
     const location = [error.file, error.line != null ? `line ${error.line}` : undefined]
@@ -29,10 +30,16 @@ const EntityBrowser = ({ gameName, initialYaml, onSave, onCancel } : EntityBrows
 
     const rooms = listRooms(docs);
     const items = listItems(docs);
+    const verbs = listVerbs(docs);
     const roomIds = rooms.map(room => room.id);
 
     const handleSaveEntity = (fields : RoomFields | ItemFields) => {
         setDocs(editing?.kind === "room" ? upsertRoom(docs, fields as RoomFields) : upsertItem(docs, fields as ItemFields));
+        setEditing(null);
+    }
+
+    const handleSaveVerb = (fields : VerbFields) => {
+        setDocs(upsertVerb(docs, fields));
         setEditing(null);
     }
 
@@ -51,6 +58,22 @@ const EntityBrowser = ({ gameName, initialYaml, onSave, onCancel } : EntityBrows
         } finally {
             setSaving(false);
         }
+    }
+
+    if (editing?.kind === "verb") {
+        const existing = editing.id === undefined ? undefined : verbs.find(verb => verb.id === editing.id);
+        return (
+            <div className="entity-browser">
+                <div className="game-editor-header">
+                    <span className="game-editor-title">{editing.id ? `Edit verb: ${editing.id}` : "New verb"}</span>
+                </div>
+                <VerbForm initial={existing}
+                          existingIds={verbs.map(verb => verb.id).filter(id => id !== editing.id)}
+                          onSave={handleSaveVerb}
+                          onCancel={() => setEditing(null)}
+                          onDelete={editing.id !== undefined ? handleDeleteEntity : undefined} />
+            </div>
+        );
     }
 
     if (editing) {
@@ -76,7 +99,7 @@ const EntityBrowser = ({ gameName, initialYaml, onSave, onCancel } : EntityBrows
     return (
         <div className="entity-browser">
             <div className="game-editor-header">
-                <span className="game-editor-title">Rooms &amp; Items: {gameName}</span>
+                <span className="game-editor-title">Entities: {gameName}</span>
             </div>
             <div className="entity-browser-list">
                 <div className="form-label">rooms</div>
@@ -98,6 +121,16 @@ const EntityBrowser = ({ gameName, initialYaml, onSave, onCancel } : EntityBrows
                     ))}
                 </ul>
                 <button type="button" className="word-button" onClick={() => setEditing({ kind : "item" })}>add item</button>
+
+                <div className="form-label">verbs</div>
+                <ul className="entity-list">
+                    {verbs.map(verb => (
+                        <li key={verb.id}>
+                            <button type="button" className="word-button" onClick={() => setEditing({ kind : "verb", id : verb.id })}>{verb.id}</button>
+                        </li>
+                    ))}
+                </ul>
+                <button type="button" className="word-button" onClick={() => setEditing({ kind : "verb" })}>add verb</button>
             </div>
             {errors.length > 0 && (
                 <div className="game-editor-errors" role="alert">

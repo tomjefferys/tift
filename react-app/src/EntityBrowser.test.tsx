@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, within } from '@testing-library/react';
 import App from './App';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
@@ -105,13 +105,13 @@ async function openEntityBrowserForDesertGame(user: ReturnType<typeof userEvent.
   const savedGame = await waitFor(() => screen.getByRole('button', { name: 'Desert Game' }));
   await act(() => user.click(savedGame));
 
-  await waitFor(() => getButton('rooms & items'));
-  await act(() => user.click(getButton('rooms & items')));
+  await waitFor(() => getButton('entities'));
+  await act(() => user.click(getButton('entities')));
 
-  await waitFor(() => screen.getByText(/Rooms & Items:/));
+  await waitFor(() => screen.getByText(/Entities:/));
 }
 
-test('rooms & items browser lists the game\'s existing rooms and items', async () => {
+test('entities browser lists the game\'s existing rooms and items', async () => {
   const user = userEvent.setup();
   window.HTMLElement.prototype.scrollIntoView = function() {};
   render(<App />);
@@ -237,4 +237,53 @@ test('cancelling the browser discards all pending entity edits', async () => {
   // room was never saved
   await openEntityBrowserForDesertGame(user);
   expect(screen.queryByRole('button', { name: 'spring' })).not.toBeInTheDocument();
+});
+
+test('adding a new transitive verb persists after save & close', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await importDesertGame(user);
+  await openEntityBrowserForDesertGame(user);
+
+  await act(() => user.click(getButton('add verb')));
+  await waitFor(() => screen.getByLabelText('id'));
+  await act(() => user.type(screen.getByLabelText('id'), 'dig'));
+  await act(() => user.click(getButton('save')));
+
+  await waitFor(() => expect(getButton('dig')).toBeInTheDocument());
+
+  await act(() => user.click(getButton('save & close')));
+  await waitFor(() => screen.getByText(/Game saved\./));
+
+  await openEntityBrowserForDesertGame(user);
+  expect(getButton('dig')).toBeInTheDocument();
+});
+
+test('editing a verb\'s attributes and transitivity persists after save & close', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await importDesertGame(user);
+  await openEntityBrowserForDesertGame(user);
+
+  await act(() => user.click(getButton('add verb')));
+  await waitFor(() => screen.getByLabelText('id'));
+  await act(() => user.type(screen.getByLabelText('id'), 'stir'));
+  await act(() => user.click(getButton('intransitive')));
+  const attributesInput = screen.getByPlaceholderText('eg. with');
+  await act(() => user.type(attributesInput, 'with'));
+  const attributesField = attributesInput.closest('.form-field') as HTMLElement;
+  await act(() => user.click(within(attributesField).getByRole('button', { name: 'add' })));
+  await waitFor(() => screen.getByText('with'));
+  await act(() => user.click(getButton('save')));
+  await act(() => user.click(getButton('save & close')));
+  await waitFor(() => screen.getByText(/Game saved\./));
+
+  await openEntityBrowserForDesertGame(user);
+  await act(() => user.click(getButton('stir')));
+  await waitFor(() => screen.getByText('with'));
+  expect(getButton('intransitive')).toHaveAttribute('aria-pressed', 'true');
 });

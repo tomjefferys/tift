@@ -566,6 +566,30 @@ code {
   margin-top: 0.5rem;
 }
 
+.string-list-add {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.string-list-add input[type="text"] {
+  flex: 1;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--divider-color);
+  border-radius: 0.375rem;
+}
+
+.string-list-add .word-button {
+  border: 1px solid var(--bubble-border-color);
+  border-radius: 0.375rem;
+  flex-shrink: 0;
+}
+
 /* Theme system */
 [data-theme="light"] {
   --divider-color: #e2e8f0;
