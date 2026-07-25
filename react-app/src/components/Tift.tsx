@@ -26,6 +26,7 @@ import StatusBar from "./StatusBar";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, Settings, UIType } from "../util/settings";
 import { createDevModePicker } from "../util/devmodepicker";
 import { createBookmarkManagerOptions } from "../util/bookmarkmanager";
+import { createGameManagerOptions } from "../util/gamemanager";
 
 type WordTreeType = WordTree.WordTree;
 type GameStorage = GameStorage.GameStorage;
@@ -91,8 +92,9 @@ function Tift() {
 
     const execute = async (command : Word[]) => await engineRef.current?.send(Input.execute(command.map(word => word.id)));
 
-    // Load a game file from the `public` folder
-    const loadGame = async (name : string, engine : MessageForwarder) => {
+    // Load a game from its raw YAML text (either fetched from `public`, or
+    // imported/selected via the game manager)
+    const loadGameFromText = async (data : string, engine : MessageForwarder) => {
       if (engine == null) {
         throw new Error("Engine has not been initialized");
       }
@@ -108,14 +110,19 @@ function Tift() {
       engine.send(Input.load(stdlib));
 
       // Load the game data
-      const data = await loadGameData(name)
       await engine.send(Input.load(data));
       await engine.send(Input.getInfo());
 
       if (!infoRef.current["Errored"]) {
-        storageRef.current = GameStorage.createStorage(infoRef.current, 
+        storageRef.current = GameStorage.createStorage(infoRef.current,
                                 (level, message) => updateMessages(messagesRef.current, logEntry(level, message)));
       }
+    }
+
+    // Load a game file from the `public` folder
+    const loadGame = async (name : string, engine : MessageForwarder) => {
+      const data = await loadGameData(name);
+      await loadGameFromText(data, engine);
     }
 
     const startGame = async (engine : MessageForwarder) => {
@@ -187,6 +194,22 @@ function Tift() {
 
       const bookmarkManager = createBookmarkManagerOptions(bookmarkRef, statusRef, infoRef, reloadAndStartGame);
 
+      const loadCustomGame = async (data : string, forwarder : DecoratedForwarder) => {
+        latestWordsRef.current = WordTree.createRoot();
+        storageRef.current?.removeGame();
+        await loadGameFromText(data, forwarder);
+        await startGame(forwarder);
+      }
+
+      const loadDefaultGame = async (forwarder : DecoratedForwarder) => {
+        latestWordsRef.current = WordTree.createRoot();
+        storageRef.current?.removeGame();
+        await loadGame(GAME_FILE, forwarder);
+        await startGame(forwarder);
+      }
+
+      const gameManager = createGameManagerOptions(loadCustomGame, loadDefaultGame);
+
       const undoFn = async () => {
         engine.send(Input.undo());
         engine.send(Input.getStatus());
@@ -210,7 +233,8 @@ function Tift() {
                                                     ["info", getInfo],
                                                     ["ui type", uiSchemePicker],
                                                     ["developer", devModePicker],
-                                                    ["bookmark manager", bookmarkManager]));
+                                                    ["bookmark manager", bookmarkManager],
+                                                    ["game manager", gameManager]));
                         //.insertProxy("pauser", pauser); // FIXME FIX PAUSER
       return engine;
     }
