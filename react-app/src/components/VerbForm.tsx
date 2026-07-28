@@ -2,7 +2,9 @@ import { useState } from "react";
 import TagToggleGrid from "./TagToggleGrid";
 import PickerGrid from "./PickerGrid";
 import StringListEditor from "./StringListEditor";
+import ActionBlockEditor from "./ActionBlockEditor";
 import { VerbFields } from "../util/entitydocs";
+import { ActionClause } from "../util/actions";
 import { VERB_CONTEXTS, VERB_TRANSITIVITY } from "../util/entitytags";
 
 const ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]*$/;
@@ -10,12 +12,14 @@ const ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 interface VerbFormProps {
     initial? : VerbFields;
     existingIds : string[];
+    verbOptions : string[];
+    entityOptions : string[];
     onSave : (fields : VerbFields) => void;
     onCancel : () => void;
     onDelete? : () => void;
 }
 
-const VerbForm = ({ initial, existingIds, onSave, onCancel, onDelete } : VerbFormProps) => {
+const VerbForm = ({ initial, existingIds, verbOptions, entityOptions, onSave, onCancel, onDelete } : VerbFormProps) => {
     const isNew = initial === undefined;
     const [id, setId] = useState<string>(initial?.id ?? "");
     const [name, setName] = useState<string>(initial?.name ?? "");
@@ -23,6 +27,9 @@ const VerbForm = ({ initial, existingIds, onSave, onCancel, onDelete } : VerbFor
     const [attributes, setAttributes] = useState<string[]>(initial?.attributes ?? []);
     const [modifiers, setModifiers] = useState<string[]>(initial?.modifiers ?? []);
     const [contexts, setContexts] = useState<string[]>(initial?.contexts ?? []);
+    const [before, setBefore] = useState<ActionClause[]>(initial?.before ?? []);
+    const [actions, setActions] = useState<ActionClause[]>(initial?.actions ?? []);
+    const [after, setAfter] = useState<ActionClause[]>(initial?.after ?? []);
     const [idError, setIdError] = useState<string>("");
 
     const handleSave = () => {
@@ -36,7 +43,7 @@ const VerbForm = ({ initial, existingIds, onSave, onCancel, onDelete } : VerbFor
                 return;
             }
         }
-        onSave({ id, name, transitivity, attributes, modifiers, contexts });
+        onSave({ id, name, transitivity, attributes, modifiers, contexts, before, actions, after });
     }
 
     return (
@@ -69,6 +76,9 @@ const VerbForm = ({ initial, existingIds, onSave, onCancel, onDelete } : VerbFor
                 <div className="form-label">contexts</div>
                 <TagToggleGrid vocabulary={VERB_CONTEXTS} selected={contexts} onChange={setContexts} />
             </div>
+            <ActionBlockEditor title="before" clauses={before} onChange={setBefore} verbOptions={verbOptions} entityOptions={entityOptions} />
+            <ActionBlockEditor title="actions" clauses={actions} onChange={setActions} verbOptions={verbOptions} entityOptions={entityOptions} />
+            <ActionBlockEditor title="after" clauses={after} onChange={setAfter} verbOptions={verbOptions} entityOptions={entityOptions} />
             <div className="entity-form-actions">
                 <button type="button" className="word-button" onClick={handleSave}>save</button>
                 <button type="button" className="word-button" onClick={onCancel}>cancel</button>

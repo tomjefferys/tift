@@ -2,7 +2,9 @@ import { useState } from "react";
 import TagToggleGrid from "./TagToggleGrid";
 import PickerGrid from "./PickerGrid";
 import ExitsEditor from "./ExitsEditor";
+import ActionBlockEditor from "./ActionBlockEditor";
 import { RoomFields, ItemFields } from "../util/entitydocs";
+import { ActionClause } from "../util/actions";
 import { ROOM_TAGS, ITEM_TAGS } from "../util/entitytags";
 
 const ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]*$/;
@@ -14,12 +16,14 @@ interface EntityFormProps {
     initial? : EntityFields;
     existingIds : string[];
     roomOptions : string[];
+    verbOptions : string[];
+    entityOptions : string[];
     onSave : (fields : EntityFields) => void;
     onCancel : () => void;
     onDelete? : () => void;
 }
 
-const EntityForm = ({ kind, initial, existingIds, roomOptions, onSave, onCancel, onDelete } : EntityFormProps) => {
+const EntityForm = ({ kind, initial, existingIds, roomOptions, verbOptions, entityOptions, onSave, onCancel, onDelete } : EntityFormProps) => {
     const isNew = initial === undefined;
     const [id, setId] = useState<string>(initial?.id ?? "");
     const [name, setName] = useState<string>(initial?.name ?? "");
@@ -29,6 +33,8 @@ const EntityForm = ({ kind, initial, existingIds, roomOptions, onSave, onCancel,
         kind === "room" ? (initial as RoomFields | undefined)?.exits ?? {} : {});
     const [location, setLocation] = useState<string>(
         kind === "item" ? (initial as ItemFields | undefined)?.location ?? "" : "");
+    const [before, setBefore] = useState<ActionClause[]>(initial?.before ?? []);
+    const [after, setAfter] = useState<ActionClause[]>(initial?.after ?? []);
     const [idError, setIdError] = useState<string>("");
 
     const otherRoomOptions = roomOptions.filter(roomId => roomId !== id);
@@ -44,7 +50,7 @@ const EntityForm = ({ kind, initial, existingIds, roomOptions, onSave, onCancel,
                 return;
             }
         }
-        const fields = { id, name, description, tags,
+        const fields = { id, name, description, tags, before, after,
                           ...(kind === "room" ? { exits } : { location }) } as EntityFields;
         onSave(fields);
     }
@@ -81,6 +87,8 @@ const EntityForm = ({ kind, initial, existingIds, roomOptions, onSave, onCancel,
                     <PickerGrid options={roomOptions} selected={location} onSelect={setLocation} emptyMessage="Add a room first" />
                 </div>
             )}
+            <ActionBlockEditor title="before" clauses={before} onChange={setBefore} verbOptions={verbOptions} entityOptions={entityOptions} />
+            <ActionBlockEditor title="after" clauses={after} onChange={setAfter} verbOptions={verbOptions} entityOptions={entityOptions} />
             <div className="entity-form-actions">
                 <button type="button" className="word-button" onClick={handleSave}>save</button>
                 <button type="button" className="word-button" onClick={onCancel}>cancel</button>

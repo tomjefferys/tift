@@ -38,7 +38,6 @@ const DEFAULTS_FILE = "properties.yaml";
 const STDLIB_FILE = "stdlib.yaml";
 const GAME_FILE = "adventure.yaml";
 
-
 const SCROLL_BACK_ITEMS = 200;
 
 const WILD_CARD : PartOfSpeech = {type:"word", partOfSpeech: "verb", id:"?", value:"?", position:0 };
@@ -361,7 +360,7 @@ function Tift() {
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     });
-  
+
     // When command updated
     useEffect(() => {
       commandUpdated();

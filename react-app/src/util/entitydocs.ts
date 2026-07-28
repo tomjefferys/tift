@@ -1,4 +1,5 @@
 import { GameDoc, getDocId, getDocKind } from "./gameyaml";
+import { ActionClause, parseActionBlock, serializeActionBlock } from "./actions";
 
 export type EntityKind = "room" | "item" | "verb";
 
@@ -8,6 +9,8 @@ export interface RoomFields {
     description : string;
     tags : string[];
     exits : { [direction : string] : string };
+    before : ActionClause[];
+    after : ActionClause[];
 }
 
 export interface ItemFields {
@@ -16,6 +19,8 @@ export interface ItemFields {
     description : string;
     tags : string[];
     location : string;
+    before : ActionClause[];
+    after : ActionClause[];
 }
 
 export interface VerbFields {
@@ -25,6 +30,15 @@ export interface VerbFields {
     attributes : string[];
     modifiers : string[];
     contexts : string[];
+    before : ActionClause[];
+    actions : ActionClause[];
+    after : ActionClause[];
+}
+
+// Serializes an action block, omitting the field entirely when it's empty so
+// entities/verbs with no before/actions/after don't gain a stray `before: {}`.
+function optionalActionBlock(clauses : ActionClause[]) : Record<string, unknown> | undefined {
+    return clauses.length > 0 ? serializeActionBlock(clauses) : undefined;
 }
 
 export function listRooms(docs : GameDoc[]) : RoomFields[] {
@@ -46,6 +60,8 @@ function toRoomFields(doc : GameDoc) : RoomFields {
         description : doc.description ?? "",
         tags : Array.isArray(doc.tags) ? doc.tags : [],
         exits : (doc.exits && typeof doc.exits === "object") ? doc.exits : {},
+        before : parseActionBlock(doc.before),
+        after : parseActionBlock(doc.after),
     };
 }
 
@@ -56,6 +72,8 @@ function toItemFields(doc : GameDoc) : ItemFields {
         description : doc.description ?? "",
         tags : Array.isArray(doc.tags) ? doc.tags : [],
         location : doc.location ?? "",
+        before : parseActionBlock(doc.before),
+        after : parseActionBlock(doc.after),
     };
 }
 
@@ -71,6 +89,11 @@ function toVerbFields(doc : GameDoc) : VerbFields {
         attributes : Array.isArray(doc.attributes) ? doc.attributes : [],
         modifiers : Array.isArray(doc.modifiers) ? doc.modifiers : [],
         contexts : Array.isArray(doc.contexts) ? doc.contexts : [],
+        before : parseActionBlock(doc.before),
+        // The authoring field is "actions", though its internal engine phase
+        // is "main" (see engine/src/game/enginebuilder.ts's getActionStrings).
+        actions : parseActionBlock(doc.actions),
+        after : parseActionBlock(doc.after),
     };
 }
 
@@ -102,6 +125,8 @@ export function upsertRoom(docs : GameDoc[], fields : RoomFields) : GameDoc[] {
         room : fields.id,
         ...optionalFields(fields),
         exits : Object.keys(fields.exits).length > 0 ? fields.exits : undefined,
+        before : optionalActionBlock(fields.before),
+        after : optionalActionBlock(fields.after),
     }));
 }
 
@@ -116,6 +141,8 @@ export function upsertItem(docs : GameDoc[], fields : ItemFields) : GameDoc[] {
             ...(useObjectKey ? { object : fields.id } : { item : fields.id }),
             ...optionalFields(fields),
             location : fields.location || undefined,
+            before : optionalActionBlock(fields.before),
+            after : optionalActionBlock(fields.after),
         };
     });
 }
@@ -132,6 +159,9 @@ export function upsertVerb(docs : GameDoc[], fields : VerbFields) : GameDoc[] {
             attributes : fields.attributes.length > 0 ? fields.attributes : undefined,
             modifiers : fields.modifiers.length > 0 ? fields.modifiers : undefined,
             contexts : fields.contexts.length > 0 ? fields.contexts : undefined,
+            before : optionalActionBlock(fields.before),
+            actions : optionalActionBlock(fields.actions),
+            after : optionalActionBlock(fields.after),
         };
     });
 }

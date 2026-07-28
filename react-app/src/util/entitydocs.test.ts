@@ -25,6 +25,8 @@ name: rusty key
 description: An old rusty key
 location: cave
 tags: [carryable]
+before:
+  examine(this): print('A rusty key, nothing special')
 ---
 verb: stir
 tags: [transitive]
@@ -48,6 +50,46 @@ test("listRooms/listItems extract structured fields", () => {
     expect(items[0]).toMatchObject({ id : "key", name : "rusty key", location : "cave", tags : ["carryable"] });
 });
 
+test("listRooms/listItems/listVerbs surface before/actions/after as structured clauses", () => {
+    const docs = parseGameDocuments(SAMPLE);
+    const cave = listRooms(docs).find(room => room.id === "cave")!;
+    expect(cave.before).toEqual([{
+        matcher : { kind : "pattern", verb : "examine", directObject : { kind : "this" }, modifiers : [], attribute : undefined },
+        rule : { kind : "commands", commands : ["print('Just a cave')"] },
+    }]);
+    expect(cave.after).toEqual([]);
+
+    const key = listItems(docs).find(item => item.id === "key")!;
+    expect(key.before).toHaveLength(1);
+    expect(key.before[0].matcher).toEqual({ kind : "pattern", verb : "examine", directObject : { kind : "this" }, modifiers : [], attribute : undefined });
+
+    const stir = listVerbs(docs).find(verb => verb.id === "stir")!;
+    expect(stir.before).toEqual([]);
+    expect(stir.actions).toHaveLength(1);
+    expect(stir.actions[0].matcher).toEqual({
+        kind : "pattern", verb : "stir",
+        directObject : { kind : "capture", name : "object" },
+        modifiers : [],
+        attribute : { name : "with", indirectObject : { kind : "capture", name : "tool" } },
+    });
+});
+
+test("editing an item's other fields preserves its 'before' clause across a full serialize/reparse round trip", () => {
+    const docs = parseGameDocuments(SAMPLE);
+    const existing = listItems(docs).find(item => item.id === "key")!;
+    expect(existing.before.length).toBeGreaterThan(0);
+
+    const updated : ItemFields = { ...existing, location : "entrance" };
+    const newDocs = upsertItem(docs, updated);
+    expect(listItems(newDocs)[0].before).toEqual(existing.before);
+
+    const yamlText = serializeGameDocuments(newDocs);
+    const reparsed = parseGameDocuments(yamlText);
+    const key = listItems(reparsed).find(item => item.id === "key")!;
+    expect(key.location).toBe("entrance");
+    expect(key.before).toEqual(existing.before);
+});
+
 test("listAllEntityIds/entityIdExists span rooms and items together", () => {
     const docs = parseGameDocuments(SAMPLE);
     expect(listAllEntityIds(docs)).toEqual(["cave", "entrance", "key"]);
@@ -57,9 +99,12 @@ test("listAllEntityIds/entityIdExists span rooms and items together", () => {
 
 test("upsertRoom updates an existing room's fields without disturbing unrelated fields (eg before/after)", () => {
     const docs = parseGameDocuments(SAMPLE);
+    const existing = listRooms(docs).find(room => room.id === "cave")!;
+    // The cave's "before" clause is carried through unchanged, exactly as a
+    // real edit form would (read the parsed fields, edit only what changed).
+    expect(existing.before.length).toBeGreaterThan(0);
     const updated: RoomFields = {
-        id : "cave",
-        name : "",
+        ...existing,
         description : "A newly lit cave",
         tags : ["start", "dark"],
         exits : { north : "entrance", south : "pool" },
@@ -79,7 +124,7 @@ test("upsertRoom updates an existing room's fields without disturbing unrelated 
 
 test("upsertRoom adds a brand new room", () => {
     const docs = parseGameDocuments(SAMPLE);
-    const newRoom: RoomFields = { id : "pool", name : "", description : "A deep pool", tags : [], exits : { north : "cave" } };
+    const newRoom: RoomFields = { id : "pool", name : "", description : "A deep pool", tags : [], exits : { north : "cave" }, before : [], after : [] };
     const newDocs = upsertRoom(docs, newRoom);
 
     expect(listRooms(newDocs).map(r => r.id)).toEqual(["cave", "entrance", "pool"]);
@@ -87,12 +132,12 @@ test("upsertRoom adds a brand new room", () => {
 
 test("upsertItem updates an existing item, and adding one with an empty location omits the field", () => {
     const docs = parseGameDocuments(SAMPLE);
-    const updated: ItemFields = { id : "key", name : "rusty key", description : "A shinier key now", tags : ["carryable"], location : "entrance" };
+    const updated: ItemFields = { id : "key", name : "rusty key", description : "A shinier key now", tags : ["carryable"], location : "entrance", before : [], after : [] };
     const newDocs = upsertItem(docs, updated);
     expect(listItems(newDocs)[0].description).toBe("A shinier key now");
     expect(listItems(newDocs)[0].location).toBe("entrance");
 
-    const newItem: ItemFields = { id : "torch", name : "", description : "A torch", tags : ["carryable", "lightSource"], location : "" };
+    const newItem: ItemFields = { id : "torch", name : "", description : "A torch", tags : ["carryable", "lightSource"], location : "", before : [], after : [] };
     const withNewItem = upsertItem(newDocs, newItem);
     const torchDoc = withNewItem.find(doc => doc.item === "torch");
     expect(torchDoc?.location).toBeUndefined();
@@ -127,7 +172,11 @@ test("verb ids live in a separate namespace from room/item/rule ids", () => {
 
 test("upsertVerb updates an existing verb without disturbing its actions, and can add a new verb", () => {
     const docs = parseGameDocuments(SAMPLE);
-    const updated : VerbFields = { id : "stir", name : "", transitivity : "transitive", attributes : ["with", "using"], modifiers : [], contexts : ["inventory"] };
+    const existing = listVerbs(docs).find(verb => verb.id === "stir")!;
+    // The stir verb's "actions" clause is carried through unchanged, exactly
+    // as a real edit form would (read the parsed fields, edit only what changed).
+    expect(existing.actions.length).toBeGreaterThan(0);
+    const updated : VerbFields = { ...existing, attributes : ["with", "using"], contexts : ["inventory"] };
     const newDocs = upsertVerb(docs, updated);
 
     const verb = listVerbs(newDocs)[0];
@@ -139,7 +188,7 @@ test("upsertVerb updates an existing verb without disturbing its actions, and ca
     // The transitive tag should still be present, and not duplicated
     expect(verbDoc?.tags).toEqual(["transitive"]);
 
-    const newVerb : VerbFields = { id : "fuddle", name : "", transitivity : "intransitive", attributes : [], modifiers : [], contexts : [] };
+    const newVerb : VerbFields = { id : "fuddle", name : "", transitivity : "intransitive", attributes : [], modifiers : [], contexts : [], before : [], actions : [], after : [] };
     const withNewVerb = upsertVerb(newDocs, newVerb);
     expect(listVerbs(withNewVerb).map(v => v.id)).toEqual(["stir", "fuddle"]);
     expect(listVerbs(withNewVerb)[1].transitivity).toBe("intransitive");
@@ -154,7 +203,7 @@ test("removeEntity can remove a verb", () => {
 
 test("edits survive a full serialize/reparse round trip", () => {
     const docs = parseGameDocuments(SAMPLE);
-    const updated = upsertRoom(docs, { id : "cave", name : "", description : "A newly lit cave", tags : ["start", "dark"], exits : { north : "entrance" } });
+    const updated = upsertRoom(docs, { id : "cave", name : "", description : "A newly lit cave", tags : ["start", "dark"], exits : { north : "entrance" }, before : [], after : [] });
     const yamlText = serializeGameDocuments(updated);
     const reparsed = parseGameDocuments(yamlText);
 

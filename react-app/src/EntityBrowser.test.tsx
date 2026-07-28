@@ -287,3 +287,147 @@ test('editing a verb\'s attributes and transitivity persists after save & close'
   await waitFor(() => screen.getByText('with'));
   expect(getButton('intransitive')).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('adding a before clause to an item takes effect on examine after save & close', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await importDesertGame(user);
+  await openEntityBrowserForDesertGame(user);
+
+  await act(() => user.click(getButton('canteen')));
+  await waitFor(() => screen.getByLabelText('id'));
+
+  // Expand the (initially empty) "before" action block and add a clause
+  await act(() => user.click(getButton('before (0)')));
+  await act(() => user.click(getButton('add before clause')));
+
+  await waitFor(() => screen.getByLabelText('verb'));
+  await act(() => user.type(screen.getByLabelText('verb'), 'examine'));
+  // The default new argument is `this` - exactly what we want for examine(this)
+  await act(() => user.click(getButton('add argument')));
+
+  const commandsInput = screen.getByPlaceholderText("eg. print('You take it')");
+  await act(() => user.type(commandsInput, "print('It has a leather strap')"));
+  const commandsField = commandsInput.closest('.form-field') as HTMLElement;
+  await act(() => user.click(within(commandsField).getByRole('button', { name: 'add' })));
+  await waitFor(() => screen.getByText("print('It has a leather strap')"));
+
+  await act(() => user.click(getButton('done')));
+  await act(() => user.click(getButton('save')));
+  await waitFor(() => expect(getButton('canteen')).toBeInTheDocument());
+
+  await act(() => user.click(getButton('save & close')));
+  await waitFor(() => screen.getByText(/Game saved\./));
+
+  // Play: examine the canteen and confirm the new before-clause fired
+  await waitFor(() => getButton('examine'));
+  await act(() => user.click(getButton('examine')));
+  await waitFor(() => getButton('canteen'));
+  await act(() => user.click(getButton('canteen')));
+
+  await waitFor(() => screen.getByText(/It has a leather strap/));
+});
+
+test('adding an actions clause to a new verb persists after save & close', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await importDesertGame(user);
+  await openEntityBrowserForDesertGame(user);
+
+  await act(() => user.click(getButton('add verb')));
+  await waitFor(() => screen.getByLabelText('id'));
+  await act(() => user.type(screen.getByLabelText('id'), 'dig'));
+
+  await act(() => user.click(getButton('actions (0)')));
+  await act(() => user.click(getButton('add actions clause')));
+
+  await waitFor(() => screen.getByLabelText('verb'));
+  await act(() => user.type(screen.getByLabelText('verb'), 'dig'));
+  await act(() => user.click(getButton('add argument')));
+
+  const commandsInput = screen.getByPlaceholderText("eg. print('You take it')");
+  await act(() => user.type(commandsInput, "print('You dig a hole')"));
+  const commandsField = commandsInput.closest('.form-field') as HTMLElement;
+  await act(() => user.click(within(commandsField).getByRole('button', { name: 'add' })));
+  await waitFor(() => screen.getByText("print('You dig a hole')"));
+
+  await act(() => user.click(getButton('done')));
+  await act(() => user.click(getButton('save')));
+  await waitFor(() => expect(getButton('dig')).toBeInTheDocument());
+
+  await act(() => user.click(getButton('save & close')));
+  await waitFor(() => screen.getByText(/Game saved\./));
+
+  // Re-open the browser - the persisted actions clause should still be there.
+  // The "actions" block starts expanded already since it's non-empty.
+  await openEntityBrowserForDesertGame(user);
+  await act(() => user.click(getButton('dig')));
+  await waitFor(() => getButton('dig(this)'));
+});
+
+test('the engine\'s built-in verbs are offered as matcher suggestions, even for a game with no custom verbs', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await importDesertGame(user);
+  await openEntityBrowserForDesertGame(user);
+
+  // The desert game defines no custom verbs at all - the suggestions must
+  // be coming from the engine's built-in verb list (defaultverbs.ts).
+  await act(() => user.click(getButton('canteen')));
+  await act(() => user.click(getButton('before (0)')));
+  await act(() => user.click(getButton('add before clause')));
+
+  await waitFor(() => screen.getByLabelText('verb'));
+  expect(getButton('examine')).toBeInTheDocument();
+  expect(getButton('get')).toBeInTheDocument();
+  expect(getButton('push')).toBeInTheDocument();
+});
+
+test('switching a rule to raw and editing its JSON actually persists the edit', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await importDesertGame(user);
+  await openEntityBrowserForDesertGame(user);
+
+  await act(() => user.click(getButton('add verb')));
+  await waitFor(() => screen.getByLabelText('id'));
+  await act(() => user.type(screen.getByLabelText('id'), 'whistle'));
+
+  await act(() => user.click(getButton('actions (0)')));
+  await act(() => user.click(getButton('add actions clause')));
+
+  await waitFor(() => screen.getByLabelText('verb'));
+  await act(() => user.type(screen.getByLabelText('verb'), 'whistle'));
+  await act(() => user.click(getButton('add argument')));
+
+  // Switch the rule type from the default "commands" to "raw" and edit its
+  // underlying JSON directly - this used to silently fail to save.
+  await act(() => user.click(getButton('raw')));
+  const rawInput = screen.getByLabelText(/raw \(unrecognised/) as HTMLTextAreaElement;
+  await act(() => user.clear(rawInput));
+  await act(() => user.type(rawInput, '"print(\'You whistle a merry tune\')"'));
+  await waitFor(() => expect(rawInput).toHaveValue("\"print('You whistle a merry tune')\""));
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+  await act(() => user.click(getButton('done')));
+  await act(() => user.click(getButton('save')));
+  await waitFor(() => expect(getButton('whistle')).toBeInTheDocument());
+
+  await act(() => user.click(getButton('save & close')));
+  await waitFor(() => screen.getByText(/Game saved\./));
+
+  // Re-open: the raw-edited JSON string round-trips as a plain command
+  await openEntityBrowserForDesertGame(user);
+  await act(() => user.click(getButton('whistle')));
+  await waitFor(() => getButton('whistle(this)'));
+  await act(() => user.click(getButton('whistle(this)')));
+  await waitFor(() => screen.getByText("print('You whistle a merry tune')"));
+});

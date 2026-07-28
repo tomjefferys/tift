@@ -38,3 +38,14 @@ export const VERB_CONTEXTS = ["location", "environment", "inventory", "wearing",
 // stdlib verbs - engine/src/game/enginebuilder.ts's makeVerb() only ever
 // recognises these two tags from authored YAML.
 export const VERB_TRANSITIVITY = ["transitive", "intransitive"];
+
+// The engine's built-in verbs (engine/src/game/defaultverbs.ts /
+// verbnames.ts) - these are never authored anywhere in a game's own YAML
+// (enabled instead via the "useDefaultVerbs" option), so they can't be
+// discovered from the game's own docs the way custom verbs can. Offered as
+// matcher suggestions alongside a game's own custom verbs.
+export const DEFAULT_VERBS = [
+    "go", "look", "inventory", "wait",
+    "get", "drop", "put", "examine", "wear", "remove",
+    "open", "close", "push", "unlock", "lock",
+];

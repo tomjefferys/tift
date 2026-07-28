@@ -5,6 +5,7 @@ import { ValidationError, ValidationResult } from "tift-types/src/messages/outpu
 import { GameDoc, parseGameDocuments, serializeGameDocuments } from "../util/gameyaml";
 import { RoomFields, ItemFields, VerbFields, listRooms, listItems, listVerbs, listAllEntityIds,
          upsertRoom, upsertItem, upsertVerb, removeEntity } from "../util/entitydocs";
+import { DEFAULT_VERBS } from "../util/entitytags";
 
 interface EntityBrowserProps {
     gameName : string;
@@ -32,6 +33,13 @@ const EntityBrowser = ({ gameName, initialYaml, onSave, onCancel } : EntityBrows
     const items = listItems(docs);
     const verbs = listVerbs(docs);
     const roomIds = rooms.map(room => room.id);
+    // Suggestions offered when editing a matcher's arguments/attribute - the
+    // game's own room & item ids (things a matcher can reference by literal
+    // id). Verb suggestions combine the engine's built-in verbs (which are
+    // never authored anywhere in this file, so can't be discovered from the
+    // docs) with this game's own custom verb ids.
+    const entityOptions = [...roomIds, ...items.map(item => item.id)];
+    const verbOptions = Array.from(new Set([...DEFAULT_VERBS, ...verbs.map(verb => verb.id)]));
 
     const handleSaveEntity = (fields : RoomFields | ItemFields) => {
         setDocs(editing?.kind === "room" ? upsertRoom(docs, fields as RoomFields) : upsertItem(docs, fields as ItemFields));
@@ -69,6 +77,8 @@ const EntityBrowser = ({ gameName, initialYaml, onSave, onCancel } : EntityBrows
                 </div>
                 <VerbForm initial={existing}
                           existingIds={verbs.map(verb => verb.id).filter(id => id !== editing.id)}
+                          verbOptions={verbOptions}
+                          entityOptions={entityOptions}
                           onSave={handleSaveVerb}
                           onCancel={() => setEditing(null)}
                           onDelete={editing.id !== undefined ? handleDeleteEntity : undefined} />
@@ -89,6 +99,8 @@ const EntityBrowser = ({ gameName, initialYaml, onSave, onCancel } : EntityBrows
                             initial={existing}
                             existingIds={listAllEntityIds(docs).filter(id => id !== editing.id)}
                             roomOptions={roomIds}
+                            verbOptions={verbOptions}
+                            entityOptions={entityOptions}
                             onSave={handleSaveEntity}
                             onCancel={() => setEditing(null)}
                             onDelete={editing.id !== undefined ? handleDeleteEntity : undefined} />
