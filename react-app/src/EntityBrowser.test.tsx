@@ -58,6 +58,12 @@ location: dunes
 tags:
   - carryable
 ---
+item: lamp
+description: a brass lamp
+location: dunes
+before:
+  examine(this): setTag(this, 'seen')
+---
 `;
 
 const mockPromptForTextFile = vi.fn((_title: string, _allowedExtensions: string[]) => {
@@ -79,6 +85,15 @@ beforeEach(() => {
 
 function getButton(name: string, role = "button"): HTMLElement {
   return screen.getByRole(role, { name });
+}
+
+// Grabs the most recently mounted element matching selector - used to scope
+// queries into a specific ExpressionEditor row when several with identically
+// labelled controls (eg "call", "raw", "add argument") can be on screen at
+// once (a matcher's arguments and a rule's commands both use "add argument").
+function lastOf(selector: string): HTMLElement {
+  const all = document.querySelectorAll<HTMLElement>(selector);
+  return all[all.length - 1];
 }
 
 async function openGameManager(user: ReturnType<typeof userEvent.setup>) {
@@ -308,11 +323,12 @@ test('adding a before clause to an item takes effect on examine after save & clo
   // The default new argument is `this` - exactly what we want for examine(this)
   await act(() => user.click(getButton('add argument')));
 
-  const commandsInput = screen.getByPlaceholderText("eg. print('You take it')");
-  await act(() => user.type(commandsInput, "print('It has a leather strap')"));
-  const commandsField = commandsInput.closest('.form-field') as HTMLElement;
-  await act(() => user.click(within(commandsField).getByRole('button', { name: 'add' })));
-  await waitFor(() => screen.getByText("print('It has a leather strap')"));
+  await act(() => user.click(getButton('add command')));
+  const commandRow = lastOf('.rule-value-list-item');
+  await act(() => user.click(within(commandRow).getByRole('button', { name: 'call' })));
+  await act(() => user.click(within(commandRow).getByRole('button', { name: 'add argument' })));
+  const argRow = lastOf('.expression-arg-row');
+  await act(() => user.type(within(argRow).getByLabelText('literal value'), "It has a leather strap"));
 
   await act(() => user.click(getButton('done')));
   await act(() => user.click(getButton('save')));
@@ -349,11 +365,12 @@ test('adding an actions clause to a new verb persists after save & close', async
   await act(() => user.type(screen.getByLabelText('verb'), 'dig'));
   await act(() => user.click(getButton('add argument')));
 
-  const commandsInput = screen.getByPlaceholderText("eg. print('You take it')");
-  await act(() => user.type(commandsInput, "print('You dig a hole')"));
-  const commandsField = commandsInput.closest('.form-field') as HTMLElement;
-  await act(() => user.click(within(commandsField).getByRole('button', { name: 'add' })));
-  await waitFor(() => screen.getByText("print('You dig a hole')"));
+  await act(() => user.click(getButton('add command')));
+  const commandRow = lastOf('.rule-value-list-item');
+  await act(() => user.click(within(commandRow).getByRole('button', { name: 'call' })));
+  await act(() => user.click(within(commandRow).getByRole('button', { name: 'add argument' })));
+  const argRow = lastOf('.expression-arg-row');
+  await act(() => user.type(within(argRow).getByLabelText('literal value'), "You dig a hole"));
 
   await act(() => user.click(getButton('done')));
   await act(() => user.click(getButton('save')));
@@ -424,10 +441,36 @@ test('switching a rule to raw and editing its JSON actually persists the edit', 
   await act(() => user.click(getButton('save & close')));
   await waitFor(() => screen.getByText(/Game saved\./));
 
-  // Re-open: the raw-edited JSON string round-trips as a plain command
+  // Re-open: the raw-edited JSON string round-trips as a plain command,
+  // parsed back into a structured call (fn "print", one string argument)
+  // rather than staying raw text.
   await openEntityBrowserForDesertGame(user);
   await act(() => user.click(getButton('whistle')));
   await waitFor(() => getButton('whistle(this)'));
   await act(() => user.click(getButton('whistle(this)')));
-  await waitFor(() => screen.getByText("print('You whistle a merry tune')"));
+  await waitFor(() => expect(screen.getByLabelText('function')).toHaveValue('print'));
+  expect(screen.getByDisplayValue('You whistle a merry tune')).toBeInTheDocument();
+});
+
+test('an existing command already authored in YAML renders as a structured call, not raw', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await importDesertGame(user);
+  await openEntityBrowserForDesertGame(user);
+
+  // "lamp" is imported with a `before: examine(this) => setTag(this, 'seen')`
+  // clause already in its YAML - opening it should parse the command
+  // straight into ExpressionEditor's structured "call" mode.
+  await act(() => user.click(getButton('lamp')));
+  // The "before" block starts expanded already since it's non-empty (one
+  // clause already in the imported YAML) - no toggle click needed here.
+  await waitFor(() => getButton('examine(this)'));
+  await act(() => user.click(getButton('examine(this)')));
+
+  await waitFor(() => expect(screen.getByLabelText('function')).toHaveValue('setTag'));
+  expect(screen.getByDisplayValue('seen')).toBeInTheDocument();
+  // Not shown as a raw fallback anywhere in the rule editor.
+  expect(screen.queryByLabelText(/raw \(unrecognised/)).not.toBeInTheDocument();
 });

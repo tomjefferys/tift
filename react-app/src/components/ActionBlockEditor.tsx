@@ -64,7 +64,8 @@ const ActionBlockEditor = ({ title, clauses, onChange, verbOptions, entityOption
                                         <MatcherEditor matcher={clause.matcher}
                                                        onChange={matcher => updateClause(index, { ...clause, matcher })}
                                                        verbOptions={verbOptions} entityOptions={entityOptions} />
-                                        <RuleValueEditor value={clause.rule} onChange={rule => updateClause(index, { ...clause, rule })} />
+                                        <RuleValueEditor value={clause.rule} onChange={rule => updateClause(index, { ...clause, rule })}
+                                                         entityOptions={entityOptions} />
                                         <div className="entity-form-actions">
                                             <button type="button" className="word-button" onClick={() => setEditingIndex(undefined)}>done</button>
                                             <button type="button" className="word-button" onClick={() => removeClause(index)}>delete</button>

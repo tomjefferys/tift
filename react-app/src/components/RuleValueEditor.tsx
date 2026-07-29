@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import PickerGrid from "./PickerGrid";
-import StringListEditor from "./StringListEditor";
+import ExpressionEditor from "./ExpressionEditor";
 import { RuleValue, serializeRuleValue } from "../util/actions";
 
 // The rule control-clause vocabulary this editor structures (see
@@ -27,10 +27,11 @@ function defaultForMode(mode : Mode, current : RuleValue) : RuleValue {
 interface RuleValueListEditorProps {
     items : RuleValue[];
     onChange : (items : RuleValue[]) => void;
+    entityOptions : string[];
 }
 
 // A list of nested rules, used for switch/repeat/random's case lists.
-const RuleValueListEditor = ({ items, onChange } : RuleValueListEditorProps) => {
+const RuleValueListEditor = ({ items, onChange, entityOptions } : RuleValueListEditorProps) => {
     const addItem = () => onChange([...items, { kind : "commands", commands : [] }]);
     const removeItem = (index : number) => onChange(items.filter((_, i) => i !== index));
     const updateItem = (index : number, item : RuleValue) => onChange(items.map((existing, i) => i === index ? item : existing));
@@ -39,11 +40,38 @@ const RuleValueListEditor = ({ items, onChange } : RuleValueListEditorProps) => 
         <div className="rule-value-list">
             {items.map((item, index) => (
                 <div key={index} className="rule-value-list-item">
-                    <RuleValueEditor value={item} onChange={updated => updateItem(index, updated)} />
+                    <RuleValueEditor value={item} onChange={updated => updateItem(index, updated)} entityOptions={entityOptions} />
                     <button type="button" className="word-button" onClick={() => removeItem(index)} aria-label={`remove item ${index + 1}`}>remove</button>
                 </div>
             ))}
             <button type="button" className="word-button" onClick={addItem}>add item</button>
+        </div>
+    );
+};
+
+interface ExpressionListEditorProps {
+    commands : string[];
+    onChange : (commands : string[]) => void;
+    entityOptions : string[];
+}
+
+// The list of expression strings run in order for a "commands" RuleValue -
+// each one tap-composable via ExpressionEditor rather than typed as plain
+// text (see util/expressions.ts).
+const ExpressionListEditor = ({ commands, onChange, entityOptions } : ExpressionListEditorProps) => {
+    const addCommand = () => onChange([...commands, ""]);
+    const removeCommand = (index : number) => onChange(commands.filter((_, i) => i !== index));
+    const updateCommand = (index : number, command : string) => onChange(commands.map((existing, i) => i === index ? command : existing));
+
+    return (
+        <div className="rule-value-list">
+            {commands.map((command, index) => (
+                <div key={index} className="rule-value-list-item">
+                    <ExpressionEditor value={command} onChange={updated => updateCommand(index, updated)} entityOptions={entityOptions} />
+                    <button type="button" className="word-button" onClick={() => removeCommand(index)} aria-label={`remove command ${index + 1}`}>remove</button>
+                </div>
+            ))}
+            <button type="button" className="word-button" onClick={addCommand}>add command</button>
         </div>
     );
 };
@@ -86,16 +114,12 @@ const RawRuleEditor = ({ value, onChange } : RawRuleEditorProps) => {
 interface RuleValueEditorProps {
     value : RuleValue;
     onChange : (value : RuleValue) => void;
+    entityOptions : string[];
 }
 
 // Recursively edits a RuleValue - the value side of a before/actions/after
 // entry, or of any nested condition/switch/repeat/random/once clause.
-const RuleValueEditor = ({ value, onChange } : RuleValueEditorProps) => {
-    // Unique per instance - nested/sibling clauses (switch cases, a
-    // conditional's action vs otherwise, or another block's clause) can all
-    // be rendered at once, so a static id would collide across them.
-    const id = useId();
-
+const RuleValueEditor = ({ value, onChange, entityOptions } : RuleValueEditorProps) => {
     const setMode = (mode : string) => {
         if (mode !== value.kind) {
             onChange(defaultForMode(mode as Mode, value));
@@ -112,9 +136,9 @@ const RuleValueEditor = ({ value, onChange } : RuleValueEditorProps) => {
             {value.kind === "commands" && (
                 <div className="form-field">
                     <div className="form-label">commands (expressions, run in order)</div>
-                    <StringListEditor values={value.commands}
-                                      onChange={commands => onChange({ kind : "commands", commands })}
-                                      placeholder="eg. print('You take it')" />
+                    <ExpressionListEditor commands={value.commands}
+                                          onChange={commands => onChange({ kind : "commands", commands })}
+                                          entityOptions={entityOptions} />
                 </div>
             )}
 
@@ -126,19 +150,19 @@ const RuleValueEditor = ({ value, onChange } : RuleValueEditorProps) => {
                                     onSelect={condType => onChange({ ...value, condType : condType as "when" | "if" | "unless" })} />
                     </div>
                     <div className="form-field">
-                        <label className="form-label" htmlFor={`${id}-rule-condition`}>condition (expression)</label>
-                        <input id={`${id}-rule-condition`} type="text" value={value.condition}
-                               onChange={event => onChange({ ...value, condition : event.target.value })} />
+                        <div className="form-label">condition (expression)</div>
+                        <ExpressionEditor value={value.condition} entityOptions={entityOptions}
+                                          onChange={condition => onChange({ ...value, condition })} />
                     </div>
                     <div className="form-field">
                         <div className="form-label">then</div>
-                        <RuleValueEditor value={value.action} onChange={action => onChange({ ...value, action })} />
+                        <RuleValueEditor value={value.action} onChange={action => onChange({ ...value, action })} entityOptions={entityOptions} />
                     </div>
                     <div className="form-field">
                         <div className="form-label">otherwise</div>
                         {value.otherwise ? (
                             <>
-                                <RuleValueEditor value={value.otherwise} onChange={otherwise => onChange({ ...value, otherwise })} />
+                                <RuleValueEditor value={value.otherwise} onChange={otherwise => onChange({ ...value, otherwise })} entityOptions={entityOptions} />
                                 <button type="button" className="word-button" onClick={() => onChange({ ...value, otherwise : undefined })}>remove otherwise</button>
                             </>
                         ) : (
@@ -152,28 +176,28 @@ const RuleValueEditor = ({ value, onChange } : RuleValueEditorProps) => {
             {value.kind === "switch" && (
                 <div className="form-field">
                     <div className="form-label">cases (first truthy one runs)</div>
-                    <RuleValueListEditor items={value.cases} onChange={cases => onChange({ ...value, cases })} />
+                    <RuleValueListEditor items={value.cases} onChange={cases => onChange({ ...value, cases })} entityOptions={entityOptions} />
                 </div>
             )}
 
             {value.kind === "repeat" && (
                 <div className="form-field">
                     <div className="form-label">steps (one runs per turn, cycling)</div>
-                    <RuleValueListEditor items={value.steps} onChange={steps => onChange({ ...value, steps })} />
+                    <RuleValueListEditor items={value.steps} onChange={steps => onChange({ ...value, steps })} entityOptions={entityOptions} />
                 </div>
             )}
 
             {value.kind === "random" && (
                 <div className="form-field">
                     <div className="form-label">choices (one runs at random)</div>
-                    <RuleValueListEditor items={value.choices} onChange={choices => onChange({ ...value, choices })} />
+                    <RuleValueListEditor items={value.choices} onChange={choices => onChange({ ...value, choices })} entityOptions={entityOptions} />
                 </div>
             )}
 
             {value.kind === "once" && (
                 <div className="form-field">
                     <div className="form-label">action (runs only the first time)</div>
-                    <RuleValueEditor value={value.action} onChange={action => onChange({ ...value, action })} />
+                    <RuleValueEditor value={value.action} onChange={action => onChange({ ...value, action })} entityOptions={entityOptions} />
                 </div>
             )}
 
