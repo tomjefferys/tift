@@ -4,6 +4,23 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import * as reactutils from './util/reactutils';
 
+// Suppress the async-state-update act() warnings BubbleGrid's
+// requestAnimationFrame-based settle/centering logic causes in jsdom - the
+// same known, harmless warning App.test.tsx already suppresses. The bubble
+// wizard (BubbleWizard.tsx) renders BubbleGrid whenever it's opened below.
+const originalConsoleError = console.error;
+beforeAll(() => {
+  console.error = (...args: unknown[]) => {
+    if (typeof args[0] === 'string' && args[0].includes('Warning: An update to') && args[0].includes('inside a test was not wrapped in act')) {
+      return;
+    }
+    originalConsoleError.call(console, ...args);
+  };
+});
+afterAll(() => {
+  console.error = originalConsoleError;
+});
+
 // Mock localStorage properly for tests
 const localStorageMock = (() => {
   let store: { [key: string]: string } = {};
@@ -85,6 +102,19 @@ beforeEach(() => {
 
 function getButton(name: string, role = "button"): HTMLElement {
   return screen.getByRole(role, { name });
+}
+
+// The bubble wizard renders its own "back"/"cancel"/"finish" controls and
+// bubbles, which can share labels with buttons already visible in the
+// underlying form it was opened from (eg a verb name appearing both as a
+// PickerGrid suggestion and as a wizard bubble). Scope wizard interactions
+// to its overlay specifically.
+function wizard(): ReturnType<typeof within> {
+  const overlay = document.querySelector('.bubble-wizard-overlay');
+  if (!overlay) {
+    throw new Error('bubble wizard overlay not found - is it open?');
+  }
+  return within(overlay as HTMLElement);
 }
 
 // Grabs the most recently mounted element matching selector - used to scope
@@ -473,4 +503,62 @@ test('an existing command already authored in YAML renders as a structured call,
   expect(screen.getByDisplayValue('seen')).toBeInTheDocument();
   // Not shown as a raw fallback anywhere in the rule editor.
   expect(screen.queryByLabelText(/raw \(unrecognised/)).not.toBeInTheDocument();
+});
+
+test('building a before clause entirely via the bubble wizard (matcher + expression) takes effect after save & close', async () => {
+  const user = userEvent.setup();
+  window.HTMLElement.prototype.scrollIntoView = function() {};
+  render(<App />);
+
+  await importDesertGame(user);
+  await openEntityBrowserForDesertGame(user);
+
+  await act(() => user.click(getButton('canteen')));
+  await waitFor(() => screen.getByLabelText('id'));
+
+  await act(() => user.click(getButton('before (0)')));
+  await act(() => user.click(getButton('add before clause')));
+
+  // --- Build the matcher via the bubble wizard: examine(this) ---
+  await waitFor(() => screen.getByLabelText('verb'));
+  await act(() => user.click(getButton('edit as bubbles')));
+  await waitFor(() => wizard().getByRole('button', { name: 'examine' }));
+  await act(() => user.click(wizard().getByRole('button', { name: 'examine' })));
+  await act(() => user.click(wizard().getByRole('button', { name: 'this' })));
+  await act(() => user.click(wizard().getByRole('button', { name: 'finish' })));
+
+  // Back on the form - the wizard filled the matcher in structurally.
+  await waitFor(() => expect(screen.getByLabelText('verb')).toHaveValue('examine'));
+
+  // --- Build the command via the bubble wizard: print('It smells of tea') ---
+  await act(() => user.click(getButton('add command')));
+  const commandRow = lastOf('.rule-value-list-item');
+  await act(() => user.click(within(commandRow).getByRole('button', { name: 'edit as bubbles' })));
+
+  await waitFor(() => wizard().getByRole('button', { name: 'call' }));
+  await act(() => user.click(wizard().getByRole('button', { name: 'call' })));
+  await act(() => user.click(wizard().getByRole('button', { name: 'print' })));
+  await act(() => user.click(wizard().getByRole('button', { name: 'add argument' })));
+  await act(() => user.click(wizard().getByRole('button', { name: 'literal' })));
+  await act(() => user.click(wizard().getByRole('button', { name: 'string' })));
+  await act(() => user.click(wizard().getByRole('button', { name: 'type value' })));
+  await act(() => user.type(wizard().getByLabelText('wizard text entry'), 'It smells of tea'));
+  await act(() => user.click(wizard().getByRole('button', { name: 'confirm' })));
+  await act(() => user.click(wizard().getByRole('button', { name: 'finish' }))); // finishes the argument
+  await act(() => user.click(wizard().getByRole('button', { name: 'finish' }))); // finishes the call
+
+  await act(() => user.click(getButton('done')));
+  await act(() => user.click(getButton('save')));
+  await waitFor(() => expect(getButton('canteen')).toBeInTheDocument());
+
+  await act(() => user.click(getButton('save & close')));
+  await waitFor(() => screen.getByText(/Game saved\./));
+
+  // Play: examine the canteen and confirm the wizard-built clause fired.
+  await waitFor(() => getButton('examine'));
+  await act(() => user.click(getButton('examine')));
+  await waitFor(() => getButton('canteen'));
+  await act(() => user.click(getButton('canteen')));
+
+  await waitFor(() => screen.getByText(/It smells of tea/));
 });

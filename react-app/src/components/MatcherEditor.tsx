@@ -1,6 +1,8 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import PickerGrid from "./PickerGrid";
 import SlotEditor from "./SlotEditor";
+import BubbleWizard from "./bubbleWizard/BubbleWizard";
+import { initialMatcherWizardState, planMatcherStep } from "../util/matcherWizard";
 import { Matcher, ObjectSlot, matcherArgs, withMatcherArgs } from "../util/actions";
 
 interface MatcherEditorProps {
@@ -14,20 +16,38 @@ interface MatcherEditorProps {
 // entry, eg `push(this, $direction)` or `ask(this).about($topic)` (see
 // engine/src/script/matchParser.ts). A matcher we couldn't confidently parse
 // falls back to a single raw text field.
+//
+// Also offers a "edit as bubbles" alternative: a full-screen, one-token-at-a-
+// time wizard (matcherWizard.ts + BubbleWizard) mirroring how the game
+// itself builds a command word by word. Both views edit the same
+// MatcherPattern - switching between them never loses information, except
+// that entering the wizard from a "raw" matcher starts it fresh (a raw
+// matcher couldn't be parsed structurally in the first place).
 const MatcherEditor = ({ matcher, onChange, verbOptions, entityOptions } : MatcherEditorProps) => {
     // Unique per instance - before/actions/after can all have a clause open
     // for editing at the same time, so a static id would be duplicated in
     // the DOM and mis-associate each block's <label> with the wrong <input>.
     const id = useId();
+    const [wizardOpen, setWizardOpen] = useState<boolean>(false);
+
+    const wizard = wizardOpen && (
+        <BubbleWizard title="Build matcher"
+                      initial={initialMatcherWizardState(matcher.kind === "pattern" ? matcher : undefined)}
+                      planStep={planMatcherStep({ verbOptions, entityOptions })}
+                      onFinish={state => { onChange(state.pattern); setWizardOpen(false); }}
+                      onCancel={() => setWizardOpen(false)} />
+    );
 
     if (matcher.kind === "raw") {
         return (
             <div className="matcher-editor">
+                {wizard}
                 <div className="form-field">
                     <label className="form-label" htmlFor={`${id}-matcher-raw`}>matcher (unrecognised, edited as text)</label>
                     <input id={`${id}-matcher-raw`} type="text" value={matcher.text}
                            onChange={event => onChange({ kind : "raw", text : event.target.value })} />
                 </div>
+                <button type="button" className="word-button" onClick={() => setWizardOpen(true)}>edit as bubbles</button>
             </div>
         );
     }
@@ -47,6 +67,8 @@ const MatcherEditor = ({ matcher, onChange, verbOptions, entityOptions } : Match
 
     return (
         <div className="matcher-editor">
+            {wizard}
+            <button type="button" className="word-button" onClick={() => setWizardOpen(true)}>edit as bubbles</button>
             <div className="form-field">
                 <label className="form-label" htmlFor={`${id}-matcher-verb`}>verb</label>
                 <input id={`${id}-matcher-verb`} type="text" value={matcher.verb} placeholder="eg. push"

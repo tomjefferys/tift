@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import PickerGrid from "./PickerGrid";
+import BubbleWizard from "./bubbleWizard/BubbleWizard";
+import { initialExpressionWizardState, planExpressionStep } from "../util/expressionWizard";
 import {
     ASSIGN_OPS, AssignOp, BINARY_OPS, BinaryOp, EXPR_FUNCTIONS, ExprValue, LiteralType,
     parseExpression, serializeExpression,
@@ -39,6 +41,7 @@ interface ExpressionEditorProps {
 const ExpressionEditor = ({ value, onChange, entityOptions } : ExpressionEditorProps) => {
     const id = useId();
     const [expr, setExpr] = useState<ExprValue>(() => parseExpression(value));
+    const [wizardOpen, setWizardOpen] = useState<boolean>(false);
     // Tracks the last string this instance itself emitted, so an external
     // change to `value` (eg this row's list position now holds a different
     // sibling's data, after another row was removed - React reuses the same
@@ -68,6 +71,14 @@ const ExpressionEditor = ({ value, onChange, entityOptions } : ExpressionEditorP
 
     return (
         <div className="expression-editor">
+            {wizardOpen && (
+                <BubbleWizard title="Build expression"
+                              initial={initialExpressionWizardState(expr)}
+                              planStep={planExpressionStep({ entityOptions })}
+                              onFinish={state => { update(state.value); setWizardOpen(false); }}
+                              onCancel={() => setWizardOpen(false)} />
+            )}
+            <button type="button" className="word-button" onClick={() => setWizardOpen(true)}>edit as bubbles</button>
             <div className="form-field">
                 <div className="form-label">expression type</div>
                 <PickerGrid options={[...MODES]} selected={expr.kind} onSelect={setMode} />
