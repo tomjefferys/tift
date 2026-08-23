@@ -1,4 +1,4 @@
-import { useEffect, useRef, Fragment } from "react";
+import { useEffect, useRef, Fragment, memo } from "react";
 import { OutputEntry, Command } from "../outputentry";
 import ReactMarkdown from "react-markdown";
 import { Optional } from "tift-types/src/util/optional";
@@ -28,9 +28,11 @@ const getLevelClass = (logLevel : string) : string => {
 
 const CURSOR = (<span key={`__cursor__`} className="cursor">|</span>);
 
-const MessageEntry = ({ value } : EntryProps)  => (
+// Memoized so that re-rendering Output (e.g. on every word click) doesn't re-run
+// ReactMarkdown's parser over every past history entry - only newly added/changed ones.
+const MessageEntry = memo(({ value } : EntryProps)  => (
     <ReactMarkdown className="markdown-content">{value}</ReactMarkdown>
-)
+))
 const CommandEntry = ({ value, cursor } : CommandEntryProps) => {
     const words : JSX.Element[] = [];
     value.forEach((word, index) => {
