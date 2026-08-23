@@ -1,7 +1,9 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
+import { getBuildDefines } from './buildVersion';
 
 export default defineConfig({
+  define: getBuildDefines(),
   test: {
     globals: true,
     environment: 'jsdom',
