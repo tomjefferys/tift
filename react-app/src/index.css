@@ -251,6 +251,23 @@ code {
   display: block;
 }
 
+/* Bubble grid cell/content transforms are animated via an inline `transition` set in JS
+   (BubbleGrid.tsx) only when the word content itself changes - not on every scroll-driven
+   resize - so scrolling stays snappy. No static transition here on purpose. */
+
+/* Briefly pulses the bubble grid when its words change (e.g. after selecting a word), so the
+   update is noticeable even when a cell's on-screen position doesn't move. Shallow and short
+   on purpose - it's a cue, not the old full fade-out/fade-in hide. */
+@keyframes bubble-grid-update-pulse {
+  0% { opacity: 1; }
+  40% { opacity: 0.55; }
+  100% { opacity: 1; }
+}
+
+.bubble-grid--updated {
+  animation: bubble-grid-update-pulse 0.22s ease-out;
+}
+
 /* Grid Components */
 .simple-button-grid {
   display: grid;

@@ -67,87 +67,129 @@ export const BubbleGrid = ({ content } : Content) => {
         }
     }, [handleScroll]);
 
-    // Make sure we reset isLoaded as soon as the content changes
-    useLayoutEffect(() => {
-        setIsLoaded(false);
-    }, [content]);
-
-    // Set the initial scroll position to the middle of the container on load
+    // Centre the scroll position and reveal the grid. Only needed when the container's own
+    // size actually changes - initial mount, an inactive (display:none) tab becoming active,
+    // or a real window resize - not on every word tap. Ordinary content updates are handled
+    // by the cell-transform effect below, which already re-runs whenever `content` changes;
+    // skipping the hide/recentre/reveal dance for those keeps word selection snappy and lets
+    // the transform transition (see definedCellStyle) animate the change smoothly instead.
     useEffect(() => {
-        setIsLoaded(false);
+        const container = containerRef.current;
+        if (!container) {
+            return;
+        }
+
+        // ResizeObserver only fires once layout has actually settled, so there's no need to
+        // separately poll for a "stable" size on top of it - and it naturally never fires for
+        // a display:none container, so this can't spin the way a busy rAF loop could.
+        const resizeObserver = new ResizeObserver(() => {
+            const containerRect = container.getBoundingClientRect();
+            if (containerRect.width === 0 || containerRect.height === 0) {
+                // Not visible yet (e.g. an inactive tab) - wait for the next notification.
+                return;
+            }
+
+            const scrollTop = Math.max(container.scrollHeight / 2 - containerRect.height / 2, 0);
+            const scrollLeft = Math.max(container.scrollWidth / 2 - containerRect.width / 2, 0);
+            container.scrollTop = scrollTop;
+            container.scrollLeft = scrollLeft;
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Wait two frames to ensure the browser has painted the scroll position
+                    // before revealing (a no-op if this isn't the first reveal).
+                    setIsLoaded(true);
+                    forceUpdate();
+                });
+            });
+        });
+        resizeObserver.observe(container);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
+
+    // Tracks whether the pending cell-transform pass (below) was triggered by new `content`
+    // rather than only a scroll update, so that effect knows whether to animate the move
+    // (content changed - want a smooth, noticeable transition) or snap instantly (scrolling -
+    // must track the pointer/gesture exactly, an animated lag here reads as unresponsive).
+    const contentChangedRef = useRef(true);
+    const isFirstContentRef = useRef(true);
+
+    // When the words themselves change (not just scrolling), re-centre the scroll position -
+    // the grid supports free two-way scrolling, so the user may have scrolled to an edge and
+    // would otherwise miss new/changed words appearing off-screen - and briefly pulse the grid
+    // so the update is noticeable even when a cell's on-screen position doesn't move.
+    useLayoutEffect(() => {
+        contentChangedRef.current = true;
+
+        if (isFirstContentRef.current) {
+            // Initial load is already handled by the mount/resize-driven reveal effect below.
+            isFirstContentRef.current = false;
+            return;
+        }
 
         const container = containerRef.current;
         if (!container) {
             return;
         }
-        
-        let lastWidth = 0;
-        let lastHeight = 0;
-        let stableFrames = 0;
-        const STABLE_FRAME_COUNT = 5;
 
-        // Don't set the initial scroll position until the container has a stable size
-        // This seems to be the only way to avoid the initial scroll position being set before the container is fully rendered
-        const pollForStableSize = () => {
-            const containerRect = container.getBoundingClientRect();
-            if (containerRect.width === lastWidth 
-                    && containerRect.height === lastHeight
-                    && containerRect.width > 0 
-                    && containerRect.height > 0) {
-                stableFrames++;
-            } else {
-                stableFrames = 0;
-                lastWidth = containerRect.width;
-                lastHeight = containerRect.height;
-            }
+        const containerRect = container.getBoundingClientRect();
+        if (containerRect.width > 0 && containerRect.height > 0) {
+            container.scrollTop = Math.max(container.scrollHeight / 2 - containerRect.height / 2, 0);
+            container.scrollLeft = Math.max(container.scrollWidth / 2 - containerRect.width / 2, 0);
+        }
 
-            if (stableFrames >= STABLE_FRAME_COUNT) {
-                // Size is stable, set the initial scroll position
-                const scrollTop = Math.max(container.scrollHeight / 2 - containerRect.height / 2, 0);
-                const scrollLeft = Math.max(container.scrollWidth / 2 - containerRect.width / 2, 0);
-                container.scrollTop = scrollTop;
-                container.scrollLeft = scrollLeft;
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        // Wait for two frames to ensure the browser has painted the scroll position
-                        setIsLoaded(true);
-                        forceUpdate();
-                    });
-                });
-            } else {
-                requestAnimationFrame(pollForStableSize);
-            }
-        };
-
-        pollForStableSize();
-        
-        return () => {
-            // No cleanup needed
-        };
+        container.classList.remove('bubble-grid--updated');
+        void container.offsetWidth; // Force reflow so the animation restarts every time.
+        container.classList.add('bubble-grid--updated');
     }, [content]);
 
     useLayoutEffect(() => {
-        if (!isLoaded) return;
-        // Only run after all refs are set
+        if (!isLoaded || !containerRef.current) return;
+
+        const isContentUpdate = contentChangedRef.current;
+        contentChangedRef.current = false;
+
+        // Read the container rect once; it's the same for every cell.
+        const containerRect = containerRef.current.getBoundingClientRect();
+
+        // Phase 1: gather all reads and computed values before making any DOM writes.
+        // Interleaving reads (getBoundingClientRect/scrollWidth) with writes (style.transform)
+        // inside the loop forces a synchronous layout on every iteration - batching avoids that.
+        type Update = { cellDiv: HTMLElement; transform: string; contentDiv: HTMLDivElement | null; scale: number };
+        const updates: Update[] = [];
+
         content.forEach((row, rowIndex) => {
             row.forEach((_, colIndex) => {
                 const cellDiv = document.querySelector(`[data-cell="${instanceId}-${rowIndex}-${colIndex}"]`);
-                if (cellDiv && cellDiv instanceof HTMLElement && outerDivs.current[rowIndex] && outerDivs.current[rowIndex][colIndex] && containerRef.current) {
-                    const containerRect = containerRef.current.getBoundingClientRect();
+                if (cellDiv && cellDiv instanceof HTMLElement && outerDivs.current[rowIndex] && outerDivs.current[rowIndex][colIndex]) {
                     const cellRect = outerDivs.current[rowIndex][colIndex];
                     const transform = getTransform(containerRect, cellRect);
-                    cellDiv.style.transform = transform + ' translate3d(0,0,0)'; // Force GPU acceleration;
-                    
-                    // Scale the content if it doesn't fit
-                    const contentDiv = contentRefs.current[rowIndex][colIndex];
+
+                    const contentDiv = contentRefs.current[rowIndex]?.[colIndex] ?? null;
+                    let scale = 1;
                     if (contentDiv) {
                         const contentScrollWidth = contentDiv.scrollWidth;
-                        const cellWidth = cellRect.width;
-                        const scale = Math.min(cellWidth / contentScrollWidth, 1);
-                        contentDiv.style.transform = `scale3d(${scale}, ${scale}, 1)`; // Force GPU acceleration
+                        scale = Math.min(cellRect.width / contentScrollWidth, 1);
                     }
+
+                    updates.push({ cellDiv, transform, contentDiv, scale });
                 }
             });
+        });
+
+        // Phase 2: apply all writes together. Only animate the move when the words changed -
+        // scroll-driven repositioning/rescaling snaps instantly so it tracks the gesture
+        // exactly instead of visibly lagging behind a fast scroll.
+        const transition = isContentUpdate ? 'transform 0.15s ease-out' : 'none';
+        updates.forEach(({ cellDiv, transform, contentDiv, scale }) => {
+            cellDiv.style.transition = transition;
+            cellDiv.style.transform = transform + ' translate3d(0,0,0)'; // Force GPU acceleration
+            if (contentDiv) {
+                contentDiv.style.transition = transition;
+                contentDiv.style.transform = `scale3d(${scale}, ${scale}, 1)`; // Force GPU acceleration
+            }
         });
     }, [isLoaded, content, scrollPosition, instanceId]);
 
@@ -183,7 +225,7 @@ export const BubbleGrid = ({ content } : Content) => {
     const definedCellStyle = {
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',  
+        alignItems: 'center',
         padding: '0px',
         margin: '0px',
         position: 'relative',
@@ -192,6 +234,8 @@ export const BubbleGrid = ({ content } : Content) => {
         overflow: 'hidden', // Clip content inside the div
         maxWidth: '200px',
         transformOrigin: 'center',
+        // `transition` is set imperatively in the cell-transform effect above (transform.15s
+        // for content updates, 'none' while scrolling) rather than statically here.
     }
 
     const baseStyle = {
