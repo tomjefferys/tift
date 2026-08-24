@@ -2,7 +2,7 @@
   "name": "tift-cli",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=out/main.mjs",
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=out/main.mjs --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
@@ -17,7 +17,7 @@
     "@types/node": "^24.10.0",
     "@typescript-eslint/eslint-plugin": "^5.37.0",
     "@typescript-eslint/parser": "^5.37.0",
-    "esbuild": "0.24.0",
+    "esbuild": "0.28.2",
     "eslint": "^8.23.1",
     "tift-types": "file:../types",
     "tsx": "^4.20.6",
