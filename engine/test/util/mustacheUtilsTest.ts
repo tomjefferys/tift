@@ -1,4 +1,5 @@
 import { formatString } from "../../src/util/mustacheUtils";
+import { parse } from "../../src/util/markdownparser";
 import { createRootEnv } from "../../src/env";
 import { defaultOutputConsumer, loadDefaults } from "../testutils/testutils";
 import { EngineBuilder } from "../../src/game/enginebuilder";
@@ -222,5 +223,49 @@ test("Test format sentence", () => {
     expect(formatString(env, "{{#sentence}}{{FOO}} is a {{QUESTION}}{{/sentence}}")).toEqual("Foo is a question?");
     expect(formatString(env, "{{#sentence}}{{FOO}} is a {{EXCLAMATION}}  {{/sentence}}")).toEqual("Foo is a exclamation!");
     expect(formatString(env, "{{#sentence}}  {{FOO}} is a {{STOP}} {{/sentence}}")).toEqual("Foo is a stop.");
+});
+
+test("Test headings", () => {
+    const env = createRootEnv({ "TITLE" : "The Cave", "SUBTITLE" : "A Dark Place" });
+
+    expect(formatString(env, "{{#h1}}{{TITLE}}{{/h1}}")).toEqual("\n\n# The Cave\n\n");
+    expect(formatString(env, "{{#h1}}  {{TITLE}}  {{/h1}}")).toEqual("\n\n# The Cave\n\n");
+    expect(formatString(env, "{{#h1}}{{/h1}}")).toEqual("");
+
+    // Each level uses the matching number of #s
+    expect(formatString(env, "{{#h2}}{{SUBTITLE}}{{/h2}}")).toEqual("\n\n## A Dark Place\n\n");
+    expect(formatString(env, "{{#h3}}{{SUBTITLE}}{{/h3}}")).toEqual("\n\n### A Dark Place\n\n");
+    expect(formatString(env, "{{#h4}}{{SUBTITLE}}{{/h4}}")).toEqual("\n\n#### A Dark Place\n\n");
+    expect(formatString(env, "{{#h5}}{{SUBTITLE}}{{/h5}}")).toEqual("\n\n##### A Dark Place\n\n");
+    expect(formatString(env, "{{#h6}}{{SUBTITLE}}{{/h6}}")).toEqual("\n\n###### A Dark Place\n\n");
+
+    // Renders as isolated heading blocks (with the right level), not merged into surrounding text
+    expect(parse(formatString(env, "Before{{#h1}}{{TITLE}}{{/h1}}{{#h2}}{{SUBTITLE}}{{/h2}}After"))).toEqual([
+        { type : "paragraph", content : [{ text : "Before" }] },
+        { type : "heading", level : 1, content : [{ text : "The Cave" }] },
+        { type : "heading", level : 2, content : [{ text : "A Dark Place" }] },
+        { type : "paragraph", content : [{ text : "After" }] }
+    ]);
+});
+
+test("Test list", () => {
+    const env = createRootEnv({ "FOO" : "foo" });
+
+    expect(formatString(env, "{{#list}}one||two||three{{/list}}")).toEqual("\n\n- one\n\n- two\n\n- three");
+    // Items and mustache expressions inside them are whitespace-insensitive,
+    // same as everywhere else
+    expect(formatString(env, "{{#list}} {{FOO}} || two || three {{/list}}")).toEqual("\n\n- foo\n\n- two\n\n- three");
+    // Empty items (e.g. a trailing separator) are dropped
+    expect(formatString(env, "{{#list}}one||{{/list}}")).toEqual("\n\n- one");
+    expect(formatString(env, "{{#list}}{{/list}}")).toEqual("");
+
+    // Renders as a single list block with one item per entry
+    expect(parse(formatString(env, "{{#list}}one||two||three{{/list}}"))).toEqual([
+        { type : "list", ordered : false, items : [
+            [{ type : "paragraph", content : [{ text : "one" }] }],
+            [{ type : "paragraph", content : [{ text : "two" }] }],
+            [{ type : "paragraph", content : [{ text : "three" }] }]
+        ]}
+    ]);
 });
 

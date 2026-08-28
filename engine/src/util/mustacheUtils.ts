@@ -14,6 +14,16 @@ type ObjProp = [Obj,string];
 type IncrementFunction = (tag : string) => void;
 type FinalizeFunction = () => void;
 
+// Shared by the h1..h6 special functions below - each is an ATX heading
+// (level = number of leading #s), isolated from surrounding text by blank
+// lines on both sides.
+function headingLambda(level : number) : (text : string, render : (str : string) => string) => string {
+    return (text, render) => {
+        const heading = render(text).trim();
+        return heading.length > 0 ? `\n\n${"#".repeat(level)} ${heading}\n\n` : "";
+    };
+}
+
 export function formatString(env : Env, str : string, objProp? : Optional<ObjProp>, partials? : Record<string,string>) : string {
     const [count, incrementCount, finalizeCount] = getCountAndIncrement(str, objProp);
 
@@ -35,6 +45,21 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
         },
         "br" : "\n\n", // Force a paragraph break
         "hr" : "\n\n---\n\n", // Force a horizontal rule (blank lines avoid it being read as a setext heading underline)
+        "h1" : () => headingLambda(1),
+        "h2" : () => headingLambda(2),
+        "h3" : () => headingLambda(3),
+        "h4" : () => headingLambda(4),
+        "h5" : () => headingLambda(5),
+        "h6" : () => headingLambda(6),
+        "list" : () => (text : string, render : (str : string) => string) => {
+            // Same ||-separated syntax as "choose", so it survives whitespace
+            // normalization regardless of how the items are laid out in YAML.
+            return text.split("||")
+                       .map(item => render(item).trim())
+                       .filter(item => item.length > 0)
+                       .map(item => `\n\n- ${item}`)
+                       .join("");
+        },
         "sentence" : () => (text : string, render : (str : string) => string) => {
             let sentence = render(text).trim();
             if (sentence.length > 0) {
