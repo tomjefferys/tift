@@ -1,6 +1,7 @@
 import { ControlType } from "./controltype";
 import { History } from "../util/historyproxy";
 import { Word } from "./word";
+import { TextBlock } from "./textblock";
 
 export type OutputMessage = Print | SetVar | Look | Words | Status | SaveState | Log | Control | Info
 
@@ -22,7 +23,7 @@ export type StatusType = {
 
 export interface Print {
     type : "Print",
-    value : string,
+    value : TextBlock[],
     tag? : string
 }
 

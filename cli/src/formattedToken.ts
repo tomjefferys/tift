@@ -24,6 +24,7 @@ export interface Colour {
 export interface FormattedToken {
     text : string;
     format? : Format;
+    strikethrough? : boolean;
     colour? : Colour;
     space? : Space;
     spaceFormat? : SpaceFormat;

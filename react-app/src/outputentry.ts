@@ -1,10 +1,15 @@
+import { TextBlock } from "tift-types/src/messages/textblock";
+
 export type OutputEntry = Message | Command | Log
 
 export type LogLevel = "error" | "warn" | "info" | "debug" | "trace"
 
 export interface Message {
     type : "message";
-    message : string;
+    // `string` is only possible here for scroll-back persisted before the
+    // structured TextBlock[] format was introduced - see BlockRenderer's
+    // legacy-string handling in Output.tsx.
+    message : TextBlock[] | string;
 }
 
 export interface Command {
@@ -19,7 +24,7 @@ export interface Log {
     message : string
 }
 
-export function messageEntry(message : string) : OutputEntry {
+export function messageEntry(message : TextBlock[]) : OutputEntry {
     return { type : "message", message };
 }
 

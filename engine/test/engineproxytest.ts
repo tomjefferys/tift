@@ -1,5 +1,5 @@
 import { EngineBuilder } from "../src/game/enginebuilder";
-import { getEngine, Input, OutputConsumerBuilder } from "../src/main";
+import { getEngine, Input, OutputConsumerBuilder, blocksToText } from "../src/main";
 import { Consumer } from "tift-types/src/util/functions";
 import { Forwarder } from "tift-types/src/util/duplexproxy";
 import { GAME_METADATA, NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
@@ -270,7 +270,7 @@ function getWordCapturer() : [string[], OutputConsumer] {
     const output : string[] = [];
     const outputConsumer = new OutputConsumerBuilder()
                                     .withWordsConsumer((_command, wordResponse) => output.push(...wordResponse.map(idValue => idValue.value)))
-                                    .withMessageConsumer(message => output.push(message))
+                                    .withMessageConsumer(message => output.push(blocksToText(message)))
                                     .build();
     return [output, outputConsumer];
 }

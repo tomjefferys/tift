@@ -20,8 +20,8 @@ describe("CommandState", () => {
     ];
 
     const mockMessages: Message[] = [
-        { text: "You look around.", type: "Normal" },
-        { text: "Command executed successfully.", type: "Info" }
+        { text: "You look around.", type: "Normal", blocks: [] },
+        { text: "Command executed successfully.", type: "Info", blocks: [] }
     ];
 
     beforeEach(() => {
@@ -230,7 +230,7 @@ describe("CommandState", () => {
         });
 
         test("should reset messages after getting display state", () => {
-            commandState.messages.push({ text: "Test message", type: "Normal" });
+            commandState.messages.push({ text: "Test message", type: "Normal", blocks: [] });
             
             const _displayState1 = commandState.getDisplayState();
             const _displayState2 = commandState.getDisplayState();

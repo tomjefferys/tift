@@ -1,5 +1,6 @@
 import { BasicEngine } from "./engine";
 import { LogLevel, OutputConsumer, OutputMessage, StatusType, Properties, SaveState } from "tift-types/src/messages/output";
+import { TextBlock } from "tift-types/src/messages/textblock";
 import { Word } from "tift-types/src/messages/word";
 import { InputMessage } from "tift-types/src/messages/input"
 import { BiConsumer, Consumer } from "tift-types/src/util/functions";
@@ -122,7 +123,7 @@ export namespace Input {
  */
 export class OutputConsumerBuilder {
 
-  messageConsumer? : Consumer<string>;
+  messageConsumer? : Consumer<TextBlock[]>;
   wordsConsumer? : BiConsumer<Word[], Word[]>;
   statusConsumer? : Consumer<StatusType>;
   logConsumer? : BiConsumer<LogLevel,string>;
@@ -131,7 +132,7 @@ export class OutputConsumerBuilder {
   infoConsumer? : Consumer<Properties>;
   defaultConsumer : Consumer<OutputMessage> = _message => { /* do nothing */ };
 
-  withMessageConsumer(messageConsumer : Consumer<string>) : OutputConsumerBuilder {
+  withMessageConsumer(messageConsumer : Consumer<TextBlock[]>) : OutputConsumerBuilder {
     this.messageConsumer = messageConsumer;
     return this;
   }
@@ -201,3 +202,14 @@ export class OutputConsumerBuilder {
     }
   }
 }
+
+/**
+ * Flattens a structured Print message's TextBlock[] into plain text.
+ * Front-ends that need a plain-text projection (e.g. for substring matching
+ * in scripted tests) should use this rather than re-deriving one themselves.
+ *
+ * `parseMarkdown` is exposed for front-ends that need to parse markdown text
+ * which didn't come from a Print message (e.g. locally constructed log/error
+ * text) into the same TextBlock[] model, so they render it identically.
+ */
+export { blocksToText, parse as parseMarkdown } from "./util/markdownparser";

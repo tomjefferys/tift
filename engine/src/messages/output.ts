@@ -2,6 +2,7 @@ import { History } from "tift-types/src/util/historyproxy";
 import { ControlType } from "tift-types/src/messages/controltype";
 import { OutputMessage, LogLevel, SetVar, Properties } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
+import { parse } from "../util/markdownparser";
 
 interface Stringable {
     toString : () => string
@@ -14,7 +15,7 @@ export const word = (id : string, value : string, type : WordType) : Word => ({i
 export function print(value : Stringable, tag? : string) : OutputMessage {
     return {
         type : "Print",
-        value : value.toString(),
+        value : parse(value.toString()),
         ...(tag? { tag } : {})
     }
 }

@@ -1,3 +1,4 @@
+import { blocksToText, parseMarkdown } from "tift-engine";
 import { OutputMessage } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 import { StatePersister } from "./statepersister";
@@ -18,7 +19,7 @@ export class MessageConsumer {
     consume(message : OutputMessage) : void {
         switch(message.type) {
             case "Print":
-                this.printMessages.push({ type : "Normal", text : message.value } );
+                this.printMessages.push({ type : "Normal", text : blocksToText(message.value), blocks : message.value } );
                 break;
             case "Status":
                 this.status = message.status["title"];
@@ -32,7 +33,8 @@ export class MessageConsumer {
             case "Log":
                 this.printMessages.push({
                     type : this.getMessageType(message.level),
-                    text : message.message
+                    text : message.message,
+                    blocks : parseMarkdown(message.message)
                 });
                 break;
         }

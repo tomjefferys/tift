@@ -35,7 +35,7 @@ export const ANSI_TOKEN_FORMATTER : TokenFormatter = (token : FormattedToken) : 
     if (token.colour) {
         const { hue, brightness } = token.colour;
         colourFn = brightnessMap[brightness][hue];
-    } 
+    }
 
     switch(token.format) {
         case "bold":
@@ -56,6 +56,11 @@ export const ANSI_TOKEN_FORMATTER : TokenFormatter = (token : FormattedToken) : 
         case "plain":
         default:
             formattedText = colourFn(token.text);
+    }
+    // Strikethrough is an orthogonal flag rather than another Format value,
+    // so it can combine with bold/italic without enumerating every combo.
+    if (token.strikethrough) {
+        formattedText = pc.strikethrough(formattedText);
     }
     return formattedText;
 };

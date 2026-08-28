@@ -134,8 +134,8 @@ test("Test auto look", () => {
     messages.length = 0;
 
     executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] })
-    executeAndTest(["go", "north"], { expected : [ "**The North Room**" ], notExpected : ["The room is dark and square"] })
-    executeAndTest(["go", "south"], { expected : [ "**The South Room**" ], notExpected : ["The room is light and round"] })
+    executeAndTest(["go", "north"], { expected : [ "The North Room" ], notExpected : ["The room is dark and square"] })
+    executeAndTest(["go", "south"], { expected : [ "The South Room" ], notExpected : ["The room is light and round"] })
 })
 
 test("Test auto look happens after beforeGame function", () => {
@@ -198,8 +198,8 @@ test("Test auto look with description change", () => {
     executeAndTest(["go", "south"], { expected : [ "The room is light and round" ] });
     executeAndTest(["toggle", "switch"], {});
     executeAndTest(["go", "north"], { expected : [ "The room is light and square" ], notExpected : ["The room is dark and square"] });
-    executeAndTest(["go", "south"], { expected : [ "**The South Room**" ], notExpected : ["The room is light and round"] })
-    executeAndTest(["go", "north"], { expected : [ "**The North Room**" ], notExpected : ["The room is light and square"] })
+    executeAndTest(["go", "south"], { expected : [ "The South Room" ], notExpected : ["The room is light and round"] })
+    executeAndTest(["go", "north"], { expected : [ "The North Room" ], notExpected : ["The room is light and square"] })
 })
 //builder.withObj(THE_ROOM)
 //.withObj({

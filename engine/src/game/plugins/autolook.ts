@@ -11,6 +11,7 @@ import { bold } from "../../markdown";
 import { getName } from "../../nameable";
 import _ from "lodash";
 import { Print } from "tift-types/src/messages/output";
+import { blocksToText } from "../../util/markdownparser";
 
 type LocationDescriptionHashes = {[key: string]: string};
 
@@ -39,7 +40,7 @@ export const AUTOLOOK : PluginAction = (context : PluginActionContext) => {
     const messages = Output.getMessages(childEnv);
     const mainDesc = messages.filter((message) : message is Print => message.type === "Print")
                              .filter(message => message.tag === Output.MAIN_DESC_TAB)
-                             .map(message => message.value)
+                             .map(message => blocksToText(message.value))
                              .join();
     const descHash = Hash.cyrb53a(mainDesc);
 

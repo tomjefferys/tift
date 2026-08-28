@@ -9,7 +9,7 @@ import { EngineBuilder } from "../../src/game/enginebuilder";
 import * as YAMLParser from "../../src/yamlparser";
 import * as fs from "fs"
 import { Engine } from "tift-types/src/engine";
-import { Input } from "../../src/main";
+import { Input, blocksToText } from "../../src/main";
 import { GAME_METADATA } from "./testobjects";
 import { Obj } from "tift-types/src/util/objects";
 
@@ -21,7 +21,10 @@ export function listOutputConsumer(messages : string[], words : string[], saveDa
     return message => {
         switch(message.type) {
             case "Print":
-                messages.push(message.value);
+                // Tests assert against plain text; project the structured
+                // TextBlock[] down to a flat string rather than updating
+                // every assertion in the suite to work with blocks.
+                messages.push(blocksToText(message.value));
                 break;
             case "Words": 
                 message.words.forEach(word => words.push(word.id));

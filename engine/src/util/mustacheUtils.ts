@@ -33,8 +33,8 @@ export function formatString(env : Env, str : string, objProp? : Optional<ObjPro
             incrementCount("secondTime");
             return count === 1;
         },
-        "br" : "\n  \n", // Force a line break
-        "hr" : "\n---\n", // Force a horizontal rule
+        "br" : "\n\n", // Force a paragraph break
+        "hr" : "\n\n---\n\n", // Force a horizontal rule (blank lines avoid it being read as a setext heading underline)
         "sentence" : () => (text : string, render : (str : string) => string) => {
             let sentence = render(text).trim();
             if (sentence.length > 0) {
