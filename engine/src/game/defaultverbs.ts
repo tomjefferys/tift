@@ -101,25 +101,33 @@ const WAIT = phaseActionBuilder("wait")
     }));
         
 
+// An exit is either a plain room id, or (for a conditional exit) an object of the
+// form { roomId: condition }. Resolve either form down to the destination room id.
+function getExitDestination(location : Obj, direction : string) : string | undefined {
+    const directionValue = location?.exits[direction];
+    if (_.isString(directionValue)) {
+        return directionValue;
+    } else if (_.isPlainObject(directionValue)) {
+        const entries = Object.entries(directionValue) as [string, string][];
+        if (entries.length > 1) {
+            throw new Error("Multiple conditional exits not supported");
+        }
+        // The condition is already checked by commandsearch's isEnabled() before a direction
+        // is offered as a valid word, via the verbModifier/verbMatcher built in makeRoom() -
+        // so a command only reaches here once the condition is known to be true.
+        const [dest, _condition] = entries[0];
+        return dest;
+    }
+    return undefined;
+}
+
 const GO = phaseActionBuilder("go")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("go")).withModifier(captureModifier("direction")).build(),
             mkThunk(env => {
                 const location = Player.getLocationEntity(env);
-                let destination;
-                const directionValue = location?.exits[env.get("direction")];
-                if (_.isString(directionValue)) {
-                    destination = directionValue;
-                } else if (_.isPlainObject(directionValue)) {
-                    const entries = Object.entries(directionValue) as [string, string][];
-                    if ( entries.length > 1) {
-                        throw new Error("Multiple conditional exits not supported");
-                    }
-                    const [dest, _condition] = entries[0];
-                    // TODO we should evaluate the condition here
-                    destination = dest;
-                }
+                const destination = getExitDestination(location, env.get("direction"));
 
                 if (destination) {
                     const player = Player.getPlayer(env);
@@ -232,8 +240,7 @@ const PUSH = phaseActionBuilder(VERB_NAMES.PUSH)
                 const item =  env.get("pushable");
                 const direction = env.get("direction");
                 const location = Entities.getEntity(env, Locations.getLocation(item));
-                const exits = location["exits"] ?? {};
-                const destination = exits[direction];
+                const destination = getExitDestination(location, direction);
                 if (destination) {
                     Locations.setLocation(env, item, destination);
                     Output.write(env, `Pushed ${getName(item as Nameable)} ${direction}`);
