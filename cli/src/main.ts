@@ -67,6 +67,7 @@ async function runInteractive(statePersister : StatePersister,
             statePersister,
             options.dataFiles,
             () => new Display(process.stdout, ansiMessageFormatter, commandFormatter, wordsFormatter),
+            options.developer,
         );
         watchers = setupFileWatchers(options.dataFiles, () => stateManager.refresh());
         const interactiveRunner = new InteractiveRunner(stateManager);

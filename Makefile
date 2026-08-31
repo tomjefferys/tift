@@ -84,17 +84,23 @@ react-app-clean:
 # examples
 .PHONY: examples examples-test examples-clean
 examples: examples/CloakOfDarkness
-examples-test: examples/CloakOfDarkness-test
+examples-test: examples/CloakOfDarkness-test examples/CloakOfDarkness-test-dev
 examples-clean: examples/CloakOfDarkness-clean
 
 ## Cloak of darkness
-.PHONY: examples/CloakOfDarkness examples/CloakOfDarkness-test examples/CloakOfDarkness-clean
+.PHONY: examples/CloakOfDarkness examples/CloakOfDarkness-test examples/CloakOfDarkness-test-dev examples/CloakOfDarkness-clean
 examples/CloakOfDarkness: cli react-app
 	echo "Building Cloak of Darkness..."
 	cd examples/CloakOfDarkness && make
 
 examples/CloakOfDarkness-test: examples/CloakOfDarkness
 	cd examples/CloakOfDarkness && cat test.txt | ../../cli/out/main.mjs \
+	 build/webapp/stdlib.yaml \
+	 build/webapp/properties.yaml \
+	 build/webapp/adventure.yaml
+
+examples/CloakOfDarkness-test-dev: examples/CloakOfDarkness
+	cd examples/CloakOfDarkness && cat test_dev.txt | ../../cli/out/main.mjs \
 	 build/webapp/stdlib.yaml \
 	 build/webapp/properties.yaml \
 	 build/webapp/adventure.yaml

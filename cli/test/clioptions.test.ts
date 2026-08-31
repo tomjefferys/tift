@@ -16,6 +16,19 @@ describe("getCommandLineOptions", () => {
         const options = getCommandLineOptions(args);
         expect(options.silent).toBe(false);
         expect(options.saveFile).toBeUndefined();
+        expect(options.developer).toBe(false);
         expect(options.dataFiles).toEqual(["data1.tift"]);
+    });
+
+    test("should parse the developer option via --dev", () => {
+        const args = ["--dev", "data1.tift"];
+        const options = getCommandLineOptions(args);
+        expect(options.developer).toBe(true);
+    });
+
+    test("should parse the developer option via -d shorthand", () => {
+        const args = ["-d", "data1.tift"];
+        const options = getCommandLineOptions(args);
+        expect(options.developer).toBe(true);
     });
 });

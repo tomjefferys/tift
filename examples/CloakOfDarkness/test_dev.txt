@@ -1,0 +1,25 @@
+# Developer command test script for Cloak of Darkness.
+# Demonstrates the ">" developer-command prefix (see cli/src/scriptrunner.ts and
+# engine/src/debug.ts) - used to set up scenarios that would be awkward to reach by
+# playing normally: jumping straight to a room, and grabbing/dropping an item that
+# was never carried.
+
+Foyer of the Opera House
+
+> teleport bar
+Player teleported to location bar.
+
+$ look
+It is dark, you cannot see a thing.
+
+> get hook
+Item hook added to player inventory.
+
+$ inventory
+small brass hook
+
+> drop hook
+Item hook dropped in current location.
+
+$ inventory
+! small brass hook

@@ -19,16 +19,17 @@ export const ANSI_COMMAND_FORMATTER : CommandFormatter = (state : CommandState) 
 
 export const getAlignedANSICommandFormatter = (textAligner : TokenListFormatter) : CommandFormatter => {
     return (state : CommandState) => {
-        const createToken = (text: string) => ({
+        const createToken = (text: string, hue : "green" | "yellow" = "green") => ({
             text,
             format: "plain" as const,
             colour: {
-                hue: "green" as const,
+                hue,
                 brightness: "normal" as const
             }
         });
 
         const tokens = [
+            ...(state.developer ? [createToken("[DEV]", "yellow")] : []),
             ...state.partialCommand.map(word => createToken(word)),
             createToken(state.partialWord.join(""))
         ];

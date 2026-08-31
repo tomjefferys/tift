@@ -22,6 +22,11 @@ export function isScriptError(error : unknown) : error is ScriptError {
 // Runs a script line by line and checks the output
 // against the expected messages
 // Lines starting with a "$" are commands
+// Lines starting with a ">" are developer commands (eg teleport, get, drop - see
+// engine/src/debug.ts), used to set up scenarios that would be awkward to reach by
+// playing normally. They're matched against the engine's debug-tagged words, so they
+// resolve to the developer version of a word (eg "get") rather than any same-named
+// in-game verb.
 // Other lines are are tested to see if they match the output
 // Lines starting with a "#" are ignored
 // Lines staring with a "!" are negative matches.  An error will be thrown if the message is found
@@ -65,14 +70,21 @@ export class ScriptRunner {
     }
 
     // Runs a line of a script
-    // Lines starting with a "$" are commands
+    // Lines starting with a "$" are commands, lines starting with a ">" are developer commands
     // Other lines are expected to be message content.
     private executeLine(input : string) {
         const line = input.trim();
         if (line.startsWith("$")) {
             this.print(line);
             const commandWords = line.slice(1).trim().split(" ");
-            const wordIds = this.matchCommand(this.engine.getWords(), [], commandWords);
+            const wordIds = this.matchCommand(this.engine.getWords(), [], commandWords, false);
+            this.engine.execute(wordIds);
+            this.messages.length = 0;
+            this.flushOutput();
+        } else if (line.startsWith(">")) {
+            this.print(line);
+            const commandWords = line.slice(1).trim().split(" ");
+            const wordIds = this.matchCommand(this.engine.getWords(), [], commandWords, true);
             this.engine.execute(wordIds);
             this.messages.length = 0;
             this.flushOutput();
@@ -99,31 +111,37 @@ export class ScriptRunner {
         });
     }
 
+    // debugOnly restricts matching to developer/debug-tagged words (see engine/src/debug.ts),
+    // so a ">" script command like "get" or "drop" resolves to the developer version rather
+    // than any same-named in-game verb.
     private matchCommand(words : Word[],
                          match : Word[],
-                         command : string[]) : string[] {
+                         command : string[],
+                         debugOnly : boolean) : string[] {
         if (command.length === 0) {
             return match.map(word => word.id);
         }
 
+        const candidates = debugOnly ? words.filter(word => word.tags?.includes("debug")) : words;
+
         const commandTail = command;
         let commandHead = command.shift();
 
-        let nextWord = words.find(word => word.value === commandHead);
+        let nextWord = candidates.find(word => word.value === commandHead);
 
         // The next word, might be a compound such as "velvet cloak",
         // so we need to keep adding words until we find a match
         while(!nextWord && command.length) {
             commandHead = commandHead?.concat(" ", command.shift() ?? "");
-            nextWord = words.find(word => word.value === commandHead);
+            nextWord = candidates.find(word => word.value === commandHead);
         }
 
         if (!nextWord) {
             throw new ScriptError([], `Expected command "${commandHead}"`);
         }
 
-        const newMatch = match.concat(nextWord);   
+        const newMatch = match.concat(nextWord);
         const newWords = this.engine.getWords(newMatch);
-        return this.matchCommand(newWords, newMatch, commandTail);
+        return this.matchCommand(newWords, newMatch, commandTail, debugOnly);
     }
 }

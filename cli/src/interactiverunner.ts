@@ -37,12 +37,19 @@ export class InteractiveRunner {
             this.stateManager.get().update(false);
         }
 
+        const doDeveloper = () => {
+            this.stateManager.get().toggleDeveloperMode();
+            this.keypressHandler.setMode("GAME");
+            this.stateManager.get().update(false);
+        }
+
         const getControlState = () : ControlState => {
             if (!controlState) {
                 const commands : Record<string, () => void> = {
                     "quit": doQuit,
                     "restart": doRestart,
-                    "clear": doClear
+                    "clear": doClear,
+                    "developer": doDeveloper
                 };
                 controlState = this.stateManager.createControlState(commands);
             }

@@ -16,19 +16,24 @@ export class CommandState extends BaseInputHandler {
     command : Word[];
     engine : EngineFacade;
     messages : Message[];
-    debugMode = false;
+    developerMode : boolean;
 
-    constructor(engine : EngineFacade, display : Display) {
+    constructor(engine : EngineFacade, display : Display, developerMode = false) {
         super(display);
         this.command = [];
         this.engine = engine;
         this.messages = [];
+        this.developerMode = developerMode;
     }
 
     control(char: string) {
         if (char === "d") {
-            this.debugMode = !this.debugMode;
+            this.toggleDeveloperMode();
         }
+    }
+
+    toggleDeveloperMode() {
+        this.developerMode = !this.developerMode;
     }
 
     protected onBackspaceWithEmptyInput() {
@@ -41,7 +46,7 @@ export class CommandState extends BaseInputHandler {
     protected getAllWords(): Word[] {
         const allWords =  this.engine.getWords(this.command);
         const debugFiltered = allWords.filter(
-            word => this.debugMode ? word.tags?.includes("debug") : !word.tags?.includes("debug"));
+            word => this.developerMode ? word.tags?.includes("debug") : !word.tags?.includes("debug"));
         return debugFiltered;
     }
 
@@ -57,7 +62,6 @@ export class CommandState extends BaseInputHandler {
                 this.engine.execute(this.command.map(word => word.id));
                 this.engine.flushMessages(message => this.messages.push(message));
                 this.command.length = 0;
-                this.debugMode = false;
             }
             this.clearInput();
         }
@@ -75,11 +79,12 @@ export class CommandState extends BaseInputHandler {
         const selectedWordIndex = this.selectedWordIndex; 
         return {
             messages : messages,
-            partialCommand : this.command.map(word => word.value), 
+            partialCommand : this.command.map(word => word.value),
             partialWord : this.input,
             wordChoices : filterWords(this.getAllWords(), this.input).map(word => word.value),
-            selectedWordIndex
-        } 
+            selectedWordIndex,
+            developer : this.developerMode
+        }
     }
      
 }

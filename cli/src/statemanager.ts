@@ -10,24 +10,27 @@ export class StateManager {
     readonly statePersister : StatePersister;
     readonly dataFiles : string[];
     readonly displayBuilder : () => Display;
+    readonly developer : boolean;
 
     commandState : CommandState
 
     constructor(
         statePersister : StatePersister,
         dataFiles : string[],
-        displayBuilder : () => Display
+        displayBuilder : () => Display,
+        developer = false
     ) {
         this.statePersister = statePersister;
         this.dataFiles = dataFiles;
         this.displayBuilder = displayBuilder;
+        this.developer = developer;
         this.commandState = this.build();
     }
 
     private build() : CommandState {
         const engine = createEngine(this.statePersister, this.dataFiles);
         const display = this.displayBuilder();
-        const commandState = new CommandState(engine, display); 
+        const commandState = new CommandState(engine, display, this.developer);
         commandState.flush();
         commandState.update(true);
         return commandState;

@@ -7,6 +7,7 @@ export interface CommandState  {
     partialWord : string[];
     wordChoices : string[];
     selectedWordIndex? : number;
+    developer? : boolean;
 }
 
 export interface DisplayState extends CommandState {
@@ -24,7 +25,9 @@ export class Display {
 
     constructor(stdout : NodeJS.WriteStream,
                 messageFormatter : MessageFormatter = DEFAULT_MESSAGE_FORMATTER,
-                commandFormatter : CommandFormatter = (state) => [state.partialCommand.join(" ") + state.partialWord.join("")],
+                commandFormatter : CommandFormatter = (state) => [
+                    (state.developer ? "[DEV] " : "") + state.partialCommand.join(" ") + state.partialWord.join("")
+                ],
                 wordsFormatter : WordsFormatter = (state) => [state.wordChoices.join("\t")]) {
         this.stdout = stdout;
         this.messageFormatter = messageFormatter;
