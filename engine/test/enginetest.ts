@@ -3,7 +3,7 @@ import { EngineBuilder } from "../src/game/enginebuilder";
 import { listOutputConsumer, SaveData, loadDefaults, ExecuteAndTestFn, GetWordIdsFn, ExpectWordsFn, createEngineTestEnvironment, EngineRef, ExpectStatusFn } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUTH_ROOM, GOBLIN, GAME_METADATA } from "./testutils/testobjects";
-import { STANDARD_VERBS } from "./testutils/testutils";
+import { STANDARD_VERBS, STANDARD_VERBS_NO_EXITS } from "./testutils/testutils";
 import { Log, StatusType } from "tift-types/src/messages/output";
 import { Obj } from "../src/util/objects";
 
@@ -41,7 +41,7 @@ test("Test single room, no exits", () => {
     engine.ref = builder.build();
     engine.send(Input.start());
 
-    expectWords([], [...STANDARD_VERBS]);
+    expectWords([], [...STANDARD_VERBS_NO_EXITS]);
     expectWords(["go"], []);
     expectWords(["eat"], []);
     expect(messages).toHaveLength(0);
@@ -229,7 +229,7 @@ test("Test room with item", () => {
     engine.send(Input.execute(["look"]));
     executeAndTest(["look"], { expected : ["An almost empty room", "an ordinary item"]});
 
-    expectWords([], [...STANDARD_VERBS, "get"]);
+    expectWords([], [...STANDARD_VERBS_NO_EXITS, "get"]);
 })
 
 test("Test get item", () => {
@@ -275,12 +275,12 @@ test("Test get/drop", () => {
     engine.send(Input.start());
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
 
-    expectWords([], [...STANDARD_VERBS, "get"]);
+    expectWords([], [...STANDARD_VERBS_NO_EXITS, "get"]);
 
     executeAndTest(["get", "key"], {});
     executeAndTest(["look"], { expected : ["An almost empty room"], notExpected : ["key"]});
 
-    expectWords([], [...STANDARD_VERBS, "drop"]);
+    expectWords([], [...STANDARD_VERBS_NO_EXITS, "drop"]);
    
     executeAndTest(["drop", "key"], {});
     executeAndTest(["look"], { expected : ["An almost empty room", "key"]});
@@ -297,7 +297,7 @@ test("Test examine", () => {
     })
     engine.ref = builder.build();
     engine.send(Input.start());
-    expectWords([], [...STANDARD_VERBS, "examine"]);
+    expectWords([], [...STANDARD_VERBS_NO_EXITS, "examine"]);
     executeAndTest(["examine", "teapot"], { expected : ["A little teapot, short and stout"]});
 });
 
@@ -615,7 +615,7 @@ test('Test ask verb', () => {
            });
     engine.ref = builder.build();
     engine.send(Input.start());
-    expectWords([], [...STANDARD_VERBS, "ask"]);
+    expectWords([], [...STANDARD_VERBS_NO_EXITS, "ask"]);
     expectWords(["ask"], ["barkeep"]);
     expectWords(["ask", "barkeep"], ["about"]);
     expectWords(["ask", "barkeep", "about"], ["beerThought"]);
@@ -834,7 +834,7 @@ test("Test command deduplication", () => {
                     .build();
 
     engine.send(Input.start());
-    expectWords([], [...STANDARD_VERBS, "get"]);
+    expectWords([], [...STANDARD_VERBS_NO_EXITS, "get"]);
 })
 
 test("Test contextual rules", () => {

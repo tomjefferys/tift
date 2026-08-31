@@ -11,7 +11,7 @@ export type ContextType = "direct" | "indirect";
 // eg in inventory, or in the environment
 export type VerbContext = [ContextType, string];
 
-export type VerbTrait = "transitive" | "intransitive" | "modifiable" | "instant" | "indirectOptional";
+export type VerbTrait = "transitive" | "intransitive" | "instant" | "indirectOptional" | "modifierOptional";
 
 export interface Verb extends Nameable, ActionSource {
   id : string,
@@ -39,6 +39,12 @@ export function isInstant(verb : Verb) {
 
 export function isModifiable(verb : Verb) : boolean {
   return verb.modifiers.length !== 0;
+}
+
+// A verb that takes modifiers (eg "go", "push") needs one to form a complete
+// command, unless it opts out via the "modifierOptional" trait.
+export function isModifierRequired(verb : Verb) : boolean {
+  return isModifiable(verb) && !verb.traits.includes("modifierOptional");
 }
 
 /**

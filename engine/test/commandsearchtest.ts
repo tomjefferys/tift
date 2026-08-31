@@ -54,10 +54,10 @@ test("Test transitive verb with indirect object", () => {
 });
 
 test("Test instransitive verb with modifier", () => {
+  // "go" requires its "direction" modifier, so bare "go" isn't a complete command
   const commands = getAllCommandIds([CAVE], [GO]);
-  expect(commands).toHaveLength(3);
+  expect(commands).toHaveLength(2);
   expect(commands).toEqual(expect.arrayContaining([
-    ["go"],
     ["go","north"],
     ["go","east"] ]));
 });
@@ -69,20 +69,20 @@ test("Test intransitive verb with attribute and object", () => {
 });
 
 test("Test transitive verb with modifier", () => {
+  // "push" requires its "direction" modifier, so "push box" alone isn't a complete command
   const commands = getAllCommandIds([BOX, CAVE], [PUSH]);
-  expect(commands).toHaveLength(3);
+  expect(commands).toHaveLength(2);
   expect(commands).toEqual(expect.arrayContaining([
-    ["push", "box"],
     ["push", "box", "north"],
     ["push", "box", "east"]
   ]));
 })
 
 test("Test look", () => {
+  // "go" requires its "direction" modifier, so bare "go" isn't a complete command
   const commands = getAllCommandIds([CAVE], [GO, LOOK])
-  expect(commands).toHaveLength(4);
+  expect(commands).toHaveLength(3);
   expect(commands).toEqual(expect.arrayContaining([
-    ["go"],
     ["go","north"],
     ["go","east"],
     ["look"] ]));
@@ -151,9 +151,9 @@ test("Test exact search", () => {
   exact = searchExact(["push"], context);
   expect(exact).toBeUndefined();
 
+  // "push" requires its "direction" modifier, so "push box" alone isn't a complete command
   exact = searchExact(["push", "box"], context);
-  expect(exact).not.toBeUndefined();
-  expect(getCommandWords([exact as Command])).toEqual(expect.arrayContaining([["push", "box"]]));
+  expect(exact).toBeUndefined();
 
   exact = searchExact(["push", "box", "north"], context);
   expect(exact).not.toBeUndefined();

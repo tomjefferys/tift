@@ -15,6 +15,10 @@ import { Obj } from "tift-types/src/util/objects";
 
 export const STANDARD_VERBS = ["go", "look", "inventory", "wait"];
 
+// "go" takes a required "direction" modifier, so it's only offered when the room has
+// at least one (unblocked) exit - use this for rooms with no exits.
+export const STANDARD_VERBS_NO_EXITS = STANDARD_VERBS.filter(verb => verb !== "go");
+
 export type SaveData = { data : History };
 
 export function listOutputConsumer(messages : string[], words : string[], saveData : SaveData, statuses : StatusType[], log : Log[], info : Obj ) : OutputConsumer {

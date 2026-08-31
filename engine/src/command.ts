@@ -357,9 +357,14 @@ const VALIDATORS : SentenceValidator[] = [
 
 function checkValidity(node : SentenceNode) {
     const verb = node.getPoS("verb")?.verb;
-    return (verb)
-            ? VALIDATORS.filter(([verbMatcher, _sentenceMatcher]) => matchAll(...verbMatcher)(verb))
+    if (!verb) {
+        return false;
+    }
+    const structurallyValid = VALIDATORS.filter(([verbMatcher, _sentenceMatcher]) => matchAll(...verbMatcher)(verb))
                      .map(([_verbMatcher, sentenceMatcher]) => sentenceMatcher)
-                     .some((sentenceMatcher) => matchAll(...sentenceMatcher)(node))
-            : false;
+                     .some((sentenceMatcher) => matchAll(...sentenceMatcher)(node));
+    // A verb that requires a modifier (eg "go", "push") isn't a complete command
+    // until a modifier (eg a direction) has actually been chosen.
+    const modifierValid = !Verb.isModifierRequired(verb) || node.getModifiers().length > 0;
+    return structurallyValid && modifierValid;
 }

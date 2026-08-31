@@ -134,6 +134,9 @@ export function makeVerb(obj : Obj) : Verb {
               case 'intransitive':
                 builder.withTrait("intransitive");
                 break;
+              case 'modifierOptional':
+                builder.withTrait("modifierOptional");
+                break;
               default:
                 break;
     }});
