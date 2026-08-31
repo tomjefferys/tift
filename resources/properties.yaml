@@ -85,6 +85,10 @@ templates:
   isOpen: "{{#sentence}}{{item}} cannot be locked whilst it is open{{/sentence}}"
   success: "{{#sentence}}You lock {{item}}{{/sentence}}"
 ---
+property: command
+messages:
+  notUnderstood: I don't understand that.
+---
 property: gameOver
 template: >
   {{#message}}{{.}}{{/message}}

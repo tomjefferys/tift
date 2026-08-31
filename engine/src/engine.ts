@@ -317,7 +317,17 @@ export class BasicEngine implements Engine {
     
     this.env.clearTransients();
 
-    const [matchedCommand, verb] = searchCommand(this.env, this.context, command);
+    const matched = searchCommand(this.env, this.context, command);
+    if (!matched) {
+      // The command doesn't match anything currently possible (eg it's incomplete,
+      // such as a bare "go" with no direction chosen). This is normal user input,
+      // not an engine failure, so report it and carry on rather than entering the
+      // permanent error state that send() applies to thrown exceptions.
+      MessageOut.write(this.env, Properties.getPropertyString(this.env, "command.messages.notUnderstood"));
+      MessageOut.flush(this.env);
+      return;
+    }
+    const [matchedCommand, verb] = matched;
 
     const isTimePassing = verb && !isInstant(verb);
     // Run any before turn rules
@@ -434,18 +444,24 @@ export class BasicEngine implements Engine {
 }
 
 const commandExecutor : CommandExecutor = (env, context, command) => {
-  const [matchedCommand, verb] = searchCommand(env, context, command);
+  // Commands run via this executor (eg by plugins) are synthetic and expected to
+  // always be well-formed, so an unmatched command here is a genuine internal error.
+  const matched = searchCommand(env, context, command);
+  if (!matched) {
+    throw new Error("Could not match command: " + JSON.stringify(command));
+  }
+  const [matchedCommand, verb] = matched;
   executeActions(env, context, matchedCommand, verb);
 }
 
 /**
  * Search for a command in the provided context
  */
-function searchCommand(env : Env, context : CommandContext, command : string[]) : [SentenceNode, Verb?] {
+function searchCommand(env : Env, context : CommandContext, command : string[]) : [SentenceNode, Verb?] | undefined {
   const searchContext = buildSearchContext(context.entities, context.verbs, env);
   const matchedCommand = searchExact(command, searchContext);
   if (!matchedCommand) {
-    throw new Error("Could not match command: " + JSON.stringify(command));
+    return undefined;
   }
   const verb = matchedCommand.getPoS("verb")?.verb;
   return [matchedCommand, verb];
