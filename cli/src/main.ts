@@ -3,7 +3,7 @@ import * as readline from "readline";
 import * as os from "os";
 import { getCommandLineOptions, Options } from "./clioptions";
 import { Display } from "./display";
-import { createEngine, EngineFacade } from "./enginefacade";
+import { createEngine } from "./enginefacade";
 import { ScriptRunner } from "./scriptrunner";
 import { getFileStatePersister, getInMemoryStatePersister, StatePersister } from "./statepersister";
 import { FileWatcher } from "./filewatcher";
@@ -24,8 +24,7 @@ async function main() {
     if (process.stdin.isTTY) {
         result = await runInteractive(statePersister, options);
     } else {
-        const engine = createEngine(statePersister, options.dataFiles);
-        result = await runBatch(engine, options);
+        result = await runBatch(statePersister, options);
     }
     process.exit(result === "SUCCESS" ? 0 : 1);
 }
@@ -79,9 +78,9 @@ async function runInteractive(statePersister : StatePersister,
     }
 }
 
-async function runBatch(engine : EngineFacade, options : Options) : Promise<Result> {
+async function runBatch(statePersister : StatePersister, options : Options) : Promise<Result> {
     const printFn = options.silent
-                        ? (_message : string) => { /* do nothing */ } 
+                        ? (_message : string) => { /* do nothing */ }
                         : (message : string) => process.stdout.write(message + os.EOL);
 
     const errorFn = (message : string) => process.stderr.write(message + os.EOL);
@@ -92,7 +91,15 @@ async function runBatch(engine : EngineFacade, options : Options) : Promise<Resu
         return result.done ? null : result.value;
     }
 
-    const scriptRunner = new ScriptRunner(engine, printFn, errorFn);
+    const engine = createEngine(statePersister, options.dataFiles);
+    // A "---" script line restarts the game from scratch (deleting any persisted save
+    // state first), so each test section starts from a clean slate - see scriptrunner.ts.
+    const restartEngine = () => {
+        statePersister.deleteState();
+        return createEngine(statePersister, options.dataFiles);
+    }
+
+    const scriptRunner = new ScriptRunner(engine, printFn, errorFn, restartEngine);
     return await scriptRunner.run(getNextLine);
 }
 

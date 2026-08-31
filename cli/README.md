@@ -113,11 +113,30 @@ Script line types:
 
 - `$ <command words>` — run a game command, e.g. `$ go north` or
   `$ take brass key`. Multi-word object names (e.g. "velvet cloak") are
-  matched automatically by trying successively longer word combinations.
+  matched automatically by trying successively longer word combinations —
+  and note it's the word's *display value* that's matched, not its id (e.g.
+  `$ examine small brass hook`, not `$ examine hook`).
 - `> <command words>` — run a [developer command](#developer-commands), e.g.
   `> teleport bar` or `> get lamp`. Matched only against developer/debug
   words, so it reaches the developer version of a word even when a normal
-  in-game verb of the same name exists (e.g. `get`/`drop`).
+  in-game verb of the same name exists (e.g. `get`/`drop`). Unlike `$`
+  commands, targets (rooms/items) here are their bare *id* (e.g. `bar`,
+  `hook`), since that's the display value debug words use.
+- `--- [label]` — ends the current test and restarts a fresh game for what
+  follows, so state doesn't leak between sections (this lets one file hold
+  several independent test sequences). Anything after `---` is just a label
+  for readability and is otherwise ignored, *unless* the first word is
+  `sandbox` (see below).
+- `--- sandbox [label]` — restarts, then teleports the player into an empty,
+  auto-generated room, so the section that follows can test something in
+  isolation, unaffected by whatever else is going on in the rest of the
+  game. Every other entity still exists (and can still be reached with
+  developer commands), it's just out of scope in a different room.
+- `@item <id>` — a directive (as opposed to a game command) that moves an
+  item into the player's current location — typically a sandbox room — so
+  its verbs become available. Implemented via the developer `get`/`drop`
+  commands, so it's silent (no output) and doesn't require `--dev`/`>` to
+  already be set up for it to work.
 - `# ...` — a comment; ignored.
 - `! <text>` — a negative assertion: fails the script if `<text>` appears
   anywhere in the output produced since the last command.
@@ -156,6 +175,23 @@ Player teleported to location bar.
 $ inventory
 small brass hook
 ```
+
+### Isolated tests with `--- sandbox` and `@item`
+
+To test a single item without needing to reach it normally, or without
+other items in the same room interfering, restart into a sandbox and stage
+just the item(s) under test:
+
+```
+--- sandbox: test the hook on its own
+@item hook
+
+$ examine small brass hook
+screwed to the wall
+```
+
+A file can mix any number of `---`-separated sections, sandboxed or not —
+each one gets a completely fresh game.
 
 ## Save files
 

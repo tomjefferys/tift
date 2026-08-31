@@ -57,6 +57,15 @@ export class EngineFacade {
         this.engine.send(Input.load(data));
     }
 
+    // Forces the word cache to be re-fetched from the engine. getWords() normally skips
+    // re-querying the engine when called with its default (cached) command, so newly
+    // loaded content (eg load() called mid-script, after start()) wouldn't otherwise show
+    // up in the word list until some other command happened to bust the cache.
+    refreshWords() : Word[] {
+        this.engine.send(Input.getNextWords([]));
+        return this.messageConsumer.wordCache[1];
+    }
+
     configure(properties : {[key:string] : boolean | number | string}) {
         this.engine.send(Input.config(properties));
     }

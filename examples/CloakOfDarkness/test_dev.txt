@@ -23,3 +23,23 @@ Item hook dropped in current location.
 
 $ inventory
 ! small brass hook
+
+> get hook
+
+# A "---" line ends the current test and restarts a fresh game, so state from
+# the section above (eg the hook we just got) doesn't leak into what follows.
+--- restart test: confirm the previous section's state doesn't carry over
+
+Foyer of the Opera House
+
+$ inventory
+! small brass hook
+
+# "--- sandbox" restarts into an empty sandbox room, and "@item <id>" moves an
+# item into it - so the hook can be examined on its own, with the cloak,
+# message and other rooms all still present in the game but out of scope.
+--- sandbox: test the hook in isolation
+@item hook
+
+$ examine small brass hook
+screwed to the wall
