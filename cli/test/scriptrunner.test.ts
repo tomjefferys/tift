@@ -241,6 +241,97 @@ describe("ScriptRunner", () => {
             expect(errored.some(line => line.includes("Unknown directive"))).toBe(true);
         });
     });
+
+    describe("'!$' negative command", () => {
+        test("passes, and doesn't execute anything, when the command can't be built", async () => {
+            vi.mocked(mockEngineInstance.getWords).mockReturnValue([word("verb.get", "get")]);
+
+            const result = await runner().run(toLines(["!$ get candle"]));
+
+            expect(result).toBe("SUCCESS");
+            expect(mockEngineInstance.execute).not.toHaveBeenCalled();
+        });
+
+        test("fails, and doesn't execute anything, when the command can be built", async () => {
+            vi.mocked(mockEngineInstance.getWords)
+                .mockReturnValueOnce([word("verb.get", "get")])
+                .mockReturnValueOnce([word("candle", "candle")]);
+
+            const result = await runner().run(toLines(["!$ get candle"]));
+
+            expect(result).toBe("FAILURE");
+            expect(errored.some(line => line.includes('Command unexpectedly available: "get candle"'))).toBe(true);
+            expect(mockEngineInstance.execute).not.toHaveBeenCalled();
+        });
+
+        test("prints the line before checking it, like '$' lines", async () => {
+            vi.mocked(mockEngineInstance.getWords).mockReturnValue([word("verb.get", "get")]);
+
+            await runner().run(toLines(["!$ get candle"]));
+
+            expect(printed).toContain("!$ get candle");
+        });
+    });
+
+    describe("fail-fast per test section", () => {
+        test("skips the rest of a failed section but resumes normally after the next '---'", async () => {
+            const restartedEngine = createStandaloneMockEngine();
+            vi.mocked(restartedEngine.getWords).mockReturnValue([word("verb.wait", "wait")]);
+            const restartEngine = vi.fn(() => restartedEngine);
+
+            // Section 1: the first line fails (messages start empty, so this assertion
+            // can never match); the "$ wait" line after it must be skipped rather than
+            // run - if it ran, mockEngineInstance.getWords (unconfigured here) would be
+            // hit. Section 2 (after "---") should run normally regardless.
+            const result = await runner(restartEngine).run(toLines([
+                "nonexistent output",
+                "$ wait",
+                "---",
+                "$ wait"
+            ]));
+
+            expect(result).toBe("FAILURE");
+            expect(mockEngineInstance.execute).not.toHaveBeenCalled();
+            expect(restartedEngine.execute).toHaveBeenCalledWith(["verb.wait"]);
+        });
+    });
+
+    describe("test summary", () => {
+        test("reports each section as pass/fail, labelled by its '---' text or index, plus a tally", async () => {
+            const restartedEngine = createStandaloneMockEngine();
+            const restartEngine = vi.fn(() => restartedEngine);
+
+            // "!nope" passes trivially (message buffer starts empty on each section, so
+            // it never contains "nope"), giving each section a passing line to run
+            // before section 2's second line fails.
+            const result = await runner(restartEngine).run(toLines([
+                "!nope",
+                "--- second section: labelled",
+                "!nope",
+                "expected but missing"
+            ]));
+
+            expect(result).toBe("FAILURE");
+            expect(errored.some(line => line.includes("Test summary:"))).toBe(true);
+            expect(errored.some(line => line.includes("Test 1"))).toBe(true);
+            expect(errored.some(line => line.includes("second section: labelled"))).toBe(true);
+            expect(errored.some(line => line.includes("1 passed, 1 failed"))).toBe(true);
+        });
+
+        test("reports an all-passed tally when every section succeeds", async () => {
+            const result = await runner().run(toLines(["!nope"]));
+
+            expect(result).toBe("SUCCESS");
+            expect(errored.some(line => line.includes("All 1 test passed"))).toBe(true);
+        });
+
+        test("prints no summary at all when the script has no test content", async () => {
+            const result = await runner().run(toLines(["# just a comment"]));
+
+            expect(result).toBe("SUCCESS");
+            expect(errored.some(line => line.includes("Test summary:"))).toBe(false);
+        });
+    });
 });
 
 describe("isScriptError", () => {
