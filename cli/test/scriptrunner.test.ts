@@ -69,6 +69,22 @@ describe("ScriptRunner", () => {
         expect(mockEngineInstance.execute).toHaveBeenCalledWith(["verb.get"]);
     });
 
+    test("'!$' lines don't fall back to a debug word when the normal word isn't currently offered", async () => {
+        // Regression test: if the normal "get" verb isn't offered (eg nothing in scope
+        // is gettable) but the always-available debug "get" word shares the same value,
+        // a "!$" negative check must not silently match the debug word - the debug
+        // command bypasses scope entirely, so doing so would make an item look
+        // available via debug.get even though the real verb can't reach it.
+        vi.mocked(mockEngineInstance.getWords).mockReturnValue([
+            word("debug.get", "get", ["debug"])
+        ]);
+
+        const result = await runner().run(toLines(["!$ get candle"]));
+
+        expect(result).toBe("SUCCESS");
+        expect(mockEngineInstance.execute).not.toHaveBeenCalled();
+    });
+
     test("'>' lines match against debug-tagged words, even when a normal word shares the value", async () => {
         vi.mocked(mockEngineInstance.getWords).mockReturnValue([
             word("verb.get", "get"),

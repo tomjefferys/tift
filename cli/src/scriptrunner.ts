@@ -376,7 +376,7 @@ export class ScriptRunner {
             return match.map(word => word.id);
         }
 
-        const candidates = debugOnly ? words.filter(word => word.tags?.includes("debug")) : words;
+        const candidates = words.filter(word => Boolean(word.tags?.includes("debug")) === debugOnly);
 
         // A word's value might be a compound, eg "velvet cloak" or "get down" - try the
         // longest possible prefix of the remaining command first, so a multi-word
