@@ -1690,7 +1690,7 @@ test("Test dark room can wait", () => {
     executeAndTest(["wait"], {expected : ["Time passes"]});
 });
 
-test("Test visibleWhenDarkTag", () => {
+test("Test onlyVisibleInDarkTag: visible in the dark", () => {
     builder.withObj({
         ...NORTH_ROOM,
         tags : ["start", "dark"]
@@ -1704,7 +1704,7 @@ test("Test visibleWhenDarkTag", () => {
         description : "glow in the dark stickers",
         type : "item",
         location : "northRoom",
-        tags : ["carryable", "visibleWhenDark"]
+        tags : ["carryable", "onlyVisibleInDark"]
     })
     engine.ref = builder.build();
     engine.send(Input.start());
@@ -1713,6 +1713,40 @@ test("Test visibleWhenDarkTag", () => {
     const words = getWordIds(["get"]);
     expect(words).toContain("stickers");
     expect(words).not.toContain("ball");
+});
+
+test("Test onlyVisibleInDarkTag: hidden in the light", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start"]
+    }).withObj({
+        id : "stickers",
+        description : "glow in the dark stickers",
+        type : "item",
+        location : "northRoom",
+        tags : ["carryable", "onlyVisibleInDark"]
+    })
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    // A lit room: onlyVisibleInDark items should NOT be visible/gettable here,
+    // unlike the general canSee default which would show them.
+    executeAndTest(["look"], { notExpected : ["stickers"]});
+    const words = getWordIds(["get"]);
+    expect(words).not.toContain("stickers");
+});
+
+test("Test player stays visible (wait/inventory available) in a lit room", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    const words = getWordIds([]);
+    expect(words).toContain("wait");
+    expect(words).toContain("inventory");
 });
 
 test("Test visibleWhen function", () => {
@@ -1734,6 +1768,224 @@ test("Test visibleWhen function", () => {
     expect(words).toContain("stickers");
 
 })
+
+test("Test visibleWhen function hides when false", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start"]
+    }).withObj({
+        id : "stickers",
+        description : "glow in the dark stickers",
+        type : "item",
+        location : "northRoom",
+        "visibleWhen()" : "hasTag(location, 'dark')",
+        tags : ["carryable"]
+    })
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    const words = getWordIds(["get"]);
+    expect(words).not.toContain("stickers");
+
+})
+
+// A container ("shelf") whose contents are only visible when standing on another
+// entity ("trunk"), mirroring a high shelf that needs a trunk to stand on to see onto
+// it. Exercises: (1) the predicate gating the container's contents, (2) that an item
+// keeps its own visibility once moved out of the container (eg picked up), regardless
+// of the container's predicate, and (3) recursive containers - a closed box nested
+// inside the gated container, and a box containing the gated container.
+function withShelfAndTrunk(stoodOn : boolean, withStepOffRule = false, candleLocation = "shelf") {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start"]
+    }).withObj({
+        id : "trunk",
+        type : "item",
+        location : "northRoom",
+        tags : ["pushable"],
+        stoodOn,
+        "isStoodOn()" : "trunk.stoodOn"
+    }).withObj({
+        id : "shelf",
+        name : "shelf",
+        type : "item",
+        location : "northRoom",
+        description : "A shelf",
+        placement : "on",
+        tags : ["container"],
+        "contentsVisibleWhen()" : "trunk.isStoodOn()"
+    }).withObj({
+        id : "candle",
+        name : "candle",
+        type : "item",
+        location : candleLocation,
+        tags : ["carryable"]
+    });
+    if (withStepOffRule) {
+        // Flips the trunk's stoodOn flag off on the very next turn, so a test can
+        // move an item out of the shelf while standing on the trunk, then simulate
+        // stepping off it, without needing a real "get down" verb in this fixture.
+        builder.withObj({
+            id : "stepOff",
+            type : "rule",
+            "afterTurn()" : ["t = trunk", "t.stoodOn = false"]
+        });
+    }
+}
+
+test("Test contentsVisibleWhen: container's own predicate gates its contents", () => {
+    withShelfAndTrunk(false);
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { notExpected : ["candle"] });
+    expect(getWordIds(["get"])).not.toContain("candle");
+    executeAndTest(["examine", "shelf"], { notExpected : ["candle"] });
+});
+
+test("Test contentsVisibleWhen: contents visible when the predicate is true", () => {
+    withShelfAndTrunk(true);
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["candle"] });
+    expect(getWordIds(["get"])).toContain("candle");
+});
+
+test("Test contentsVisibleWhen: item stays visible once moved out of the container", () => {
+    withShelfAndTrunk(true, true);
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "candle"], {});
+    // Step off the trunk (afterTurn flips stoodOn to false on any subsequent turn) -
+    // the candle is no longer on the shelf, so its visibility should be unaffected.
+    executeAndTest(["wait"], {});
+    executeAndTest(["inventory"], { expected : ["candle"] });
+    expect(getWordIds(["drop"])).toContain("candle");
+});
+
+test("Test contentsVisibleWhen: a closed container inside a visibility-gated container stays hidden", () => {
+    withShelfAndTrunk(true);
+    // Add a closed box on the shelf, holding an item - even though the shelf's
+    // predicate is satisfied (stood on the trunk), the box itself must still be
+    // opened to see what's inside it.
+    builder.withObj({
+        id : "box",
+        name : "box",
+        type : "item",
+        location : "shelf",
+        description : "A small box",
+        tags : ["container", "openable"]
+    }).withObj({
+        id : "gem",
+        name : "gem",
+        type : "item",
+        location : "box",
+        tags : ["carryable"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    // The box itself is visible on the shelf (predicate satisfied)...
+    executeAndTest(["examine", "shelf"], { expected : ["box"], notExpected : ["gem"] });
+    expect(getWordIds(["get"])).not.toContain("gem");
+    // ...but its closed contents are not, until it's opened.
+    executeAndTest(["open", "box"], {});
+    executeAndTest(["examine", "box"], { expected : ["gem"] });
+    expect(getWordIds(["get"])).toContain("gem");
+});
+
+test("Test contentsVisibleWhen: an open container inside a closed container stays hidden", () => {
+    builder.withObj({
+        ...NORTH_ROOM,
+        tags : ["start"]
+    }).withObj({
+        id : "crate",
+        name : "crate",
+        type : "item",
+        location : "northRoom",
+        description : "A large crate",
+        tags : ["container", "openable"]
+    }).withObj({
+        id : "box",
+        name : "box",
+        type : "item",
+        location : "crate",
+        description : "A small box",
+        // "closable" (rather than "openable") starts open by default - see
+        // traits/openable.ts addOpenClose - so this box begins already open.
+        tags : ["container", "closable"]
+    }).withObj({
+        id : "gem",
+        name : "gem",
+        type : "item",
+        location : "box",
+        tags : ["carryable"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    // The outer crate is closed, so neither the (already open) inner box nor its
+    // contents should be visible.
+    executeAndTest(["examine", "crate"], { expected : ["A large crate"], notExpected : ["box", "gem"] });
+    expect(getWordIds(["get"])).not.toContain("gem");
+
+    executeAndTest(["open", "crate"], {});
+    executeAndTest(["examine", "crate"], { expected : ["box", "gem"] });
+    expect(getWordIds(["get"])).toContain("gem");
+});
+
+test("Test contentsVisibleWhen: put is unbuildable when the predicate is false", () => {
+    // Candle starts in the room (not yet on the shelf), so it can be picked up and
+    // then an attempt made to put it onto the gated shelf. ("put" requires the item
+    // to already be held - see VERB_NAMES.PUT's "inventory"/"holding" contexts.)
+    withShelfAndTrunk(false, false, "northRoom");
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "candle"], {});
+    // With the shelf inaccessible, "on" isn't even offered as a preposition (the
+    // shelf is the only container providing it), so "put candle on shelf" can't be
+    // built at all - not just rejected after being selected.
+    expect(getWordIds(["put", "candle"])).not.toContain("on");
+});
+
+test("Test contentsVisibleWhen: put succeeds when the predicate is true", () => {
+    withShelfAndTrunk(true, false, "northRoom");
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "candle"], {});
+    executeAndTest(["put", "candle", "on", "shelf"], {});
+    executeAndTest(["examine", "shelf"], { expected : ["candle"] });
+});
+
+test("Test contentsVisibleWhen: only inaccessible containers are excluded from put's indirect-object candidates", () => {
+    // A second, always-accessible container sharing the same "on" attribute as the
+    // gated shelf - proves the fix excludes the specific inaccessible container, not
+    // just the whole "on" attribute (which would trivially work with only one
+    // container providing it).
+    withShelfAndTrunk(false, false, "northRoom");
+    builder.withObj({
+        id : "table",
+        name : "table",
+        type : "item",
+        location : "northRoom",
+        description : "A table",
+        placement : "on",
+        tags : ["container"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["get", "candle"], {});
+    expect(getWordIds(["put", "candle"])).toContain("on");
+    const indirectObjects = getWordIds(["put", "candle", "on"]);
+    expect(indirectObjects).toContain("table");
+    expect(indirectObjects).not.toContain("shelf");
+});
 
 test("Test custom function", () => {
    builder.withObj({

@@ -38,28 +38,36 @@ export function isEntity(obj : Obj) : boolean {
 }
 
 export function isEntityVisible(env : Env, canSee : boolean, obj : Obj) : boolean {
-    const isVisible = (obj["visibleWhen"] ? obj["visibleWhen"](env) : canSee) && !entityHasTag(obj, "hidden");
+    const isVisible = (obj["visibleWhen"] ? Boolean(obj["visibleWhen"](env).getValue()) : canSee) && !entityHasTag(obj, "hidden");
     const isVisibleInContainer = isEntityVisibleInContainer(env, obj);
     return isVisible && isVisibleInContainer;
 }
 
 function isEntityVisibleInContainer(env : Env, obj : Obj) : boolean {
-    let isVisible = true;
     const locationId = obj[LOCATION];
-    if (locationId) {
-        const location = getEntity(env, locationId);
-        if (isEntityContainer(location)) {
-            isVisible = !Openable.isClosable(location)
-                        || Openable.isOpen(location)
-                        || (entityHasTag(location, Tags.TRANSPARENT));
-            if (isVisible) {
-                // Check if the container is itself in a container
-                isVisible = isEntityVisibleInContainer(env, location);
-            }
-        }
+    if (!locationId) {
+        return true;
     }
-    return isVisible;
-}   
+    const location = getEntity(env, locationId);
+    if (!isEntityContainer(location)) {
+        return true;
+    }
+    // A container's contents are visible according to its own contentsVisibleWhen
+    // predicate, AND only if the container itself is visible within whatever it's
+    // inside (checking the whole chain up to the room).
+    return isContainerContentsVisible(env, location) && isEntityVisibleInContainer(env, location);
+}
+
+// Evaluates a container's contentsVisibleWhen predicate (defaulting to the standard
+// open/closed/transparent rule - see makeContainerContentsVisibleFn, injected onto
+// every container that doesn't define its own). Shared by the visibility chain above
+// and by the get/put access checks in traits/container.ts, so seeing into a container
+// and physically reaching into it are gated by the same condition.
+export function isContainerContentsVisible(env : Env, container : Obj) : boolean {
+    return container["contentsVisibleWhen"]
+                ? Boolean(container["contentsVisibleWhen"](env).getValue())
+                : true;
+}
 
 
 export function isEntityContainer(obj : Obj) : boolean {
@@ -101,7 +109,29 @@ export function delEntityTag(obj : Obj, tag : string) : void {
     }
 }
 
-export function makeVisibleWhenDarkFn(optScope? : Env) : EnvFn {
+// The default contentsVisibleWhen predicate for containers: contents are visible if
+// the container isn't closable, is open, or is transparent (see traits/container.ts,
+// which injects this onto every container that doesn't define its own).
+export function makeContainerContentsVisibleFn() : EnvFn {
+    return env => {
+        const container = env.get("this");
+        const result = !Openable.isClosable(container)
+                    || Openable.isOpen(container)
+                    || entityHasTag(container, Tags.TRANSPARENT);
+        return mkResult(result);
+    }
+}
+
+// Always visible, regardless of darkness or anything else. Used by the player entity,
+// which must remain visible (so its verbs like "wait"/"inventory" stay available)
+// whether or not the room is dark.
+export function makeAlwaysVisibleFn() : EnvFn {
+    return () => mkResult(true);
+}
+
+// Entities tagged onlyVisibleInDark are visible only when their location is dark (and
+// hidden otherwise) - eg glow-in-the-dark items that would otherwise be invisible.
+export function makeVisibleOnlyInDarkFn(optScope? : Env) : EnvFn {
     return env => {
         const scope = optScope ?? env;
         const locationId = scope.get(LOCATION);

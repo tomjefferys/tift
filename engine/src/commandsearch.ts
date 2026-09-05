@@ -140,7 +140,7 @@ function getIndirectObjects(context : SearchContext,
   return entities
                .filter(obj =>
                   obj.verbs.some(matcher =>
-                        testAttributeMatches(matcher, verb, attribute)));
+                        testAttributeMatches(matcher, verb, attribute) && isEnabled(context, obj, matcher)));
 }
 
 /**

@@ -44,6 +44,39 @@ placement: "on"
 tags: [container]
 ```
 
+### contentsVisibleWhen
+By default, a container's contents are visible according to the open/closed/transparent
+rules above. A container can instead define its own `contentsVisibleWhen()` function to
+fully control when its contents can be seen - for example a high shelf that's only
+visible while standing on something tall enough to see onto it:
+
+```yaml
+item: trunk
+name: trunk
+location: storageCloset
+tags: [pushable]
+isStoodOn(): getPlayer().standing_on == 'trunk'
+---
+item: shelf
+name: shelf
+location: storageCloset
+placement: "on"
+tags: [container]
+contentsVisibleWhen(): trunk.isStoodOn()
+---
+item: candle
+name: candle
+location: shelf
+tags: [carryable]
+```
+
+The candle here is only visible/reachable while standing on the trunk - and, since the
+predicate lives on the shelf rather than the candle, this applies to *anything* placed
+on the shelf, and stops applying the moment an item is picked up (moved out of the
+shelf). Defining `contentsVisibleWhen` on a container **replaces** the default
+open/closed/transparent check entirely, so if the container is also `openable`, include
+`is_open` in your own expression if you still want that behaviour.
+
 ## Carryable
 
 Items tagged with `carryable` or `carried` can be picked up, dropped and put in containers. They have `get`, `drop`, and `put` verbs.
@@ -168,8 +201,9 @@ after:
       - print('You find a diamond')
 ```
 
-## visibleWhenDark
-Items tagged with `visibleWhenDark` can be seen in the dark.
+## onlyVisibleInDark
+Items tagged with `onlyVisibleInDark` are only visible while their room is dark - they
+are hidden in the light (eg glow-in-the-dark items that would otherwise blend in).
 
 ```yaml
 room: northRoom
@@ -185,7 +219,7 @@ description: >
 location: northRoom
 tags: 
   - carryable
-  - visibleWhenDark
+  - onlyVisibleInDark
 ```
 
 ## NPC

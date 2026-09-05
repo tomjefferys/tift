@@ -24,7 +24,9 @@ export function makePlayer(env : Env, start : string) {
       .withTag("container")
       .build();
     props["entities"][PLAYER] = player;
-    player["visibleWhen"] = Entities.makeVisibleWhenDarkFn(env.newChild(player));
+    // The player must remain visible (and so keep verbs like "wait"/"inventory"
+    // available) regardless of whether the room is dark.
+    player["visibleWhen"] = Entities.makeAlwaysVisibleFn();
 
     // Set up the inventory
     const inventory = new EntityBuilder({

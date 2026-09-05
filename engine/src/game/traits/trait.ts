@@ -58,10 +58,10 @@ const NPC : TraitProcessor = (obj, tags, builder) => {
     }
 }
 
-const VISIBLE_WHEN_DARK : TraitProcessor = (obj, tags, builder) => {
-    if (tags.includes("visibleWhenDark")) {
+const ONLY_VISIBLE_IN_DARK : TraitProcessor = (obj, tags, builder) => {
+    if (tags.includes(Tags.ONLY_VISIBLE_IN_DARK)) {
         if (!obj["visibleWhen()"]) {
-            builder.withProp("visibleWhen()", Entities.makeVisibleWhenDarkFn());
+            builder.withProp("visibleWhen()", Entities.makeVisibleOnlyInDarkFn());
         }
     }
 }
@@ -72,7 +72,7 @@ export const TRAITS : TraitProcessor[] = [
     PUSHABLE,
     EXAMINABLE,
     NPC,
-    VISIBLE_WHEN_DARK,
+    ONLY_VISIBLE_IN_DARK,
     CONTAINER,
     OPENABLE,
     LOCKABLE

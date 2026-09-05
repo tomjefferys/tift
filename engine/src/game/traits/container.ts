@@ -17,6 +17,8 @@ import { getLogger } from "../../util/logger";
 
 const CLOSED_CONTAINER_MESSAGE = "put.templates.container.closed";
 const CONTAINER_IN_ITEM_MESSAGE = "put.templates.container.inItem";
+const INACCESSIBLE_GET_MESSAGE = "get.templates.container.inaccessible";
+const INACCESSIBLE_PUT_MESSAGE = "put.templates.container.inaccessible";
 const PUT_PARTIAL_TEMPLATES = "put.templates.partials"
 const GET_PARTIAL_TEMPLATES = "get.templates.partials"
 
@@ -33,6 +35,15 @@ export const CONTAINER : TraitProcessor = (obj, tags, builder) => {
         return;
     }
 
+    // Contents are visible according to contentsVisibleWhen, defaulting to the
+    // standard open/closed/transparent rule unless the author defines their own (eg a
+    // shelf that's only visible when standing on something) - see
+    // Entities.makeContainerContentsVisibleFn and isEntityVisibleInContainer.
+    const hasCustomContentsVisibleWhen = Boolean(obj["contentsVisibleWhen()"]);
+    if (!hasCustomContentsVisibleWhen) {
+        builder.withProp("contentsVisibleWhen()", Entities.makeContainerContentsVisibleFn());
+    }
+
     const placement = obj[PLACEMENT_PROP] as string ?? "in";
 
     let putAttribute = placement;
@@ -45,7 +56,22 @@ export const CONTAINER : TraitProcessor = (obj, tags, builder) => {
         }
     }
 
-    builder.withAttributedVerb(VERB_NAMES.PUT, putAttribute)
+    if (hasCustomContentsVisibleWhen) {
+        // Only offer this container as a "put ... on/in ..." target while its contents
+        // are accessible (eg the shelf's "on" slot disappears entirely while not
+        // standing on the trunk, rather than being offered and then rejected). This is
+        // deliberately opt-in to a custom contentsVisibleWhen: the default open/closed
+        // rule keeps its existing behaviour of staying offered, and only rejecting
+        // with a message on execution (see getPutInContainerFn) - "it's closed" is
+        // worth surfacing as an attempt; "you can't currently reach this at all" isn't.
+        builder.withVerbMatcher({
+            verb : VERB_NAMES.PUT,
+            attribute : putAttribute,
+            condition : mkThunk(env => mkResult(Entities.isContainerContentsVisible(env, env.get("this"))))
+        });
+    } else {
+        builder.withAttributedVerb(VERB_NAMES.PUT, putAttribute);
+    }
 
     builder.withAfter(createAction(createThisMatcher(VERB_NAMES.EXAMINE),
                       createThunk(getExamineContainerFn(placement)), "after"));
@@ -115,9 +141,12 @@ function getFromContainerFn(placement : string) : EnvFn {
         const item = env.get(PARAM_ITEM);
         const container = env.get(PARAM_CONTAINER);
         let canGet = true;
-        if(Locations.isAtLocation(env, container.id, item) && isClosable(container)) {
-            if (!container.is_open) {
+        if(Locations.isAtLocation(env, container.id, item)) {
+            if (isClosable(container) && !container.is_open) {
                 writeError(env, `${CLOSED_CONTAINER_MESSAGE}`, GET_PARTIAL_TEMPLATES, container, item, placement);
+                canGet = false;
+            } else if (!Entities.isContainerContentsVisible(env, container)) {
+                writeError(env, `${INACCESSIBLE_GET_MESSAGE}`, GET_PARTIAL_TEMPLATES, container, item, placement);
                 canGet = false;
             }
         }
@@ -139,9 +168,12 @@ function getPutInContainerFn(placement : string) : EnvFn {
             writeError(env, `${CONTAINER_IN_ITEM_MESSAGE}`, PUT_PARTIAL_TEMPLATES, container, item, placement);
         }
         let canPut = !containerInsideItem;
-        if(canPut && isClosable(container)) {
-            if (!container.is_open) {
+        if(canPut) {
+            if (isClosable(container) && !container.is_open) {
                 writeError(env, `${CLOSED_CONTAINER_MESSAGE}`, PUT_PARTIAL_TEMPLATES, container, item, placement);
+                canPut = false;
+            } else if (!Entities.isContainerContentsVisible(env, container)) {
+                writeError(env, `${INACCESSIBLE_PUT_MESSAGE}`, PUT_PARTIAL_TEMPLATES, container, item, placement);
                 canPut = false;
             }
         }
