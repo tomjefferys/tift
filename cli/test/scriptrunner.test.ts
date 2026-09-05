@@ -81,6 +81,21 @@ describe("ScriptRunner", () => {
         expect(mockEngineInstance.execute).toHaveBeenCalledWith(["debug.get"]);
     });
 
+    test("'$' lines prefer a multi-word value over a shorter word sharing its first word (eg 'get down' vs 'get')", async () => {
+        // "get down" (a single, two-word verb, eg getting down off something) must not
+        // be shadowed by the unrelated single-word verb "get" just because it happens
+        // to match the first word.
+        vi.mocked(mockEngineInstance.getWords).mockReturnValue([
+            word("verb.get", "get"),
+            word("verb.get_down", "get down")
+        ]);
+
+        const result = await runner().run(toLines(["$ get down"]));
+
+        expect(result).toBe("SUCCESS");
+        expect(mockEngineInstance.execute).toHaveBeenCalledWith(["verb.get_down"]);
+    });
+
     test("'>' lines resolve multi-word developer commands (eg teleport <room>)", async () => {
         vi.mocked(mockEngineInstance.getWords)
             .mockReturnValueOnce([word("debug.teleport", "teleport", ["debug"])])
@@ -270,6 +285,30 @@ describe("ScriptRunner", () => {
             await runner().run(toLines(["!$ get candle"]));
 
             expect(printed).toContain("!$ get candle");
+        });
+
+        test("resets the engine's word cache after a partial match, so the next line matches from the top level", async () => {
+            // "get" resolves, but "candle" doesn't - matchCommand() advances (and caches)
+            // one word at a time, so this leaves the engine's word cache pointing at the
+            // "get" partial rather than the top level unless something resets it.
+            vi.mocked(mockEngineInstance.getWords)
+                .mockReturnValueOnce([word("verb.get", "get")])
+                .mockReturnValueOnce([word("mop", "mop")]);
+
+            const result = await runner().run(toLines(["!$ get candle"]));
+
+            expect(result).toBe("SUCCESS");
+            expect(mockEngineInstance.refreshWords).toHaveBeenCalled();
+        });
+
+        test("resets the engine's word cache even when the command fully resolves (and the line fails)", async () => {
+            vi.mocked(mockEngineInstance.getWords)
+                .mockReturnValueOnce([word("verb.get", "get")])
+                .mockReturnValueOnce([word("candle", "candle")]);
+
+            await runner().run(toLines(["!$ get candle"]));
+
+            expect(mockEngineInstance.refreshWords).toHaveBeenCalled();
         });
     });
 

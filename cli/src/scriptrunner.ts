@@ -238,7 +238,18 @@ export class ScriptRunner {
             this.print(line);
             const commandWords = line.slice(2).trim().split(" ");
             const commandText = commandWords.join(" ");
-            if (this.isCommandAvailable([...commandWords], false)) {
+            let available : boolean;
+            try {
+                available = this.isCommandAvailable([...commandWords], false);
+            } finally {
+                // isCommandAvailable() probes the engine's word cache one word at a
+                // time (via getWords()), which leaves it pointing at whatever partial
+                // command it stopped on instead of the top level. Reset it so the next
+                // script line starts matching from the top level again, same as after
+                // a real execute().
+                this.engine.refreshWords();
+            }
+            if (available) {
                 throw new ScriptError([...this.messages], `Command unexpectedly available: "${commandText}"`);
             }
         } else if (line.startsWith("!")) {
@@ -367,24 +378,20 @@ export class ScriptRunner {
 
         const candidates = debugOnly ? words.filter(word => word.tags?.includes("debug")) : words;
 
-        const commandTail = command;
-        let commandHead = command.shift();
-
-        let nextWord = candidates.find(word => word.value === commandHead);
-
-        // The next word, might be a compound such as "velvet cloak",
-        // so we need to keep adding words until we find a match
-        while(!nextWord && command.length) {
-            commandHead = commandHead?.concat(" ", command.shift() ?? "");
-            nextWord = candidates.find(word => word.value === commandHead);
+        // A word's value might be a compound, eg "velvet cloak" or "get down" - try the
+        // longest possible prefix of the remaining command first, so a multi-word
+        // value isn't shadowed by a shorter one that happens to match its first word
+        // (eg "get down" vs the unrelated single-word verb "get").
+        for (let len = command.length; len >= 1; len--) {
+            const commandHead = command.slice(0, len).join(" ");
+            const nextWord = candidates.find(word => word.value === commandHead);
+            if (nextWord) {
+                const newMatch = match.concat(nextWord);
+                const newWords = this.engine.getWords(newMatch);
+                return this.matchCommand(newWords, newMatch, command.slice(len), debugOnly);
+            }
         }
 
-        if (!nextWord) {
-            throw new ScriptError([], `Expected command "${commandHead}"`);
-        }
-
-        const newMatch = match.concat(nextWord);
-        const newWords = this.engine.getWords(newMatch);
-        return this.matchCommand(newWords, newMatch, commandTail, debugOnly);
+        throw new ScriptError([], `Expected command "${command[0]}"`);
     }
 }
