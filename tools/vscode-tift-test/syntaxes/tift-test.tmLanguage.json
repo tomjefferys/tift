@@ -1,0 +1,68 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "TIFT Test Script",
+  "scopeName": "source.tift-test",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#section" },
+    { "include": "#command" },
+    { "include": "#devcommand" },
+    { "include": "#directive" },
+    { "include": "#negative" },
+    { "include": "#assertion" }
+  ],
+  "repository": {
+    "comment": {
+      "comment": "# ... - a comment line, ignored by the runner",
+      "match": "^\\s*(#).*$",
+      "name": "comment.line.number-sign.tift-test"
+    },
+    "section": {
+      "comment": "--- [sandbox] [label] - ends the current test and restarts, optionally into an empty sandbox room",
+      "match": "^(\\s*---)(\\s+sandbox\\b)?(.*)$",
+      "captures": {
+        "1": { "name": "keyword.control.section.tift-test" },
+        "2": { "name": "storage.modifier.sandbox.tift-test" },
+        "3": { "name": "comment.line.tift-test" }
+      }
+    },
+    "command": {
+      "comment": "$ <command words> - a normal game command, matched by word display value",
+      "match": "^(\\s*\\$)(\\s+.*)?$",
+      "captures": {
+        "1": { "name": "punctuation.definition.command.tift-test" },
+        "2": { "name": "string.unquoted.command.tift-test" }
+      }
+    },
+    "devcommand": {
+      "comment": "> <command words> - a developer/debug command, matched against debug-tagged words only",
+      "match": "^(\\s*>)(\\s+.*)?$",
+      "captures": {
+        "1": { "name": "punctuation.definition.devcommand.tift-test" },
+        "2": { "name": "keyword.other.devcommand.tift-test" }
+      }
+    },
+    "directive": {
+      "comment": "@item <id> - a setup directive, eg staging an item into the current location",
+      "match": "^(\\s*@)(\\w+)(\\s+.*)?$",
+      "captures": {
+        "1": { "name": "punctuation.definition.directive.tift-test" },
+        "2": { "name": "entity.name.function.directive.tift-test" },
+        "3": { "name": "variable.parameter.directive.tift-test" }
+      }
+    },
+    "negative": {
+      "comment": "! <text> - fails if <text> appears anywhere in the output since the last command",
+      "match": "^(\\s*!)(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.negative-assertion.tift-test" },
+        "2": { "name": "invalid.illegal.negative-assertion.tift-test" }
+      }
+    },
+    "assertion": {
+      "comment": "any other non-blank line - fails unless <text> appears in the output since the last command",
+      "match": "^\\s*\\S.*$",
+      "name": "string.unquoted.assertion.tift-test"
+    }
+  }
+}

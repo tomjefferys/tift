@@ -1,0 +1,35 @@
+{
+  "name": "tift-test-syntax",
+  "displayName": "TIFT Test Script",
+  "description": "Syntax highlighting for TIFT CLI test scripts (.tift-test)",
+  "version": "0.1.0",
+  "publisher": "tift-make",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tift-test",
+        "aliases": [
+          "TIFT Test Script",
+          "tift-test"
+        ],
+        "extensions": [
+          ".tift-test"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tift-test",
+        "scopeName": "source.tift-test",
+        "path": "./syntaxes/tift-test.tmLanguage.json"
+      }
+    ]
+  }
+}
