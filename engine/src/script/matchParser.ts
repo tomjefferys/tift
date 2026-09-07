@@ -1,10 +1,16 @@
 import { CallExpression, Expression, Identifier, MemberExpression } from "jsep"
-import { matchBuilder, matchVerb, matchObject, captureObject, 
+import { matchBuilder, matchVerb, matchObject, captureObject,
             matchAttribute, matchIndirectObject, captureIndirectObject,
             Matcher, ALWAYS_FAIL, attributeMatchBuilder,
             matchAnyModifier,
-            captureModifier} from "../commandmatcher";
-import { isTransitive } from "../verb";
+            captureModifier,
+            subCommandMatchBuilder, matchSubVerb, captureSubVerb,
+            matchSubObject, captureSubObject,
+            matchAnySubModifier, captureSubModifier,
+            subAttributeMatchBuilder, matchSubAttribute,
+            matchSubIndirectObject, captureSubIndirectObject} from "../commandmatcher";
+import { isTransitive, isClausal } from "../verb";
+import { Command } from "../command";
 
 export const COMMAND = Symbol("__COMMAND__");
 
@@ -16,31 +22,46 @@ interface UnitMatch {
 // match name(args1, arg2).memberMatch(...)
 interface CompoundMatch {
     nameMatch : UnitMatch,
-    argMatches : UnitMatch[],
+    argMatches : ArgMatch[],
     member? : CompoundMatch
 }
 
-export function evaluateMatchExpression(matchExpr : Expression) : Matcher {
-    let compoundMatch : CompoundMatch;
-    switch(matchExpr.type) {
-        case "CallExpression":
-            compoundMatch = getCompoundMatcher(matchExpr as CallExpression);
-            break;
-        case "Identifier": 
-            compoundMatch = { 
-                nameMatch : getMatcher((matchExpr as Identifier).name),
-                argMatches : []};
-            break;
-        case "ThisExpression":
-            compoundMatch = { 
-                nameMatch : getMatcher("this"),
-                argMatches : []};
-            break;
-        default:
-            throw new Error("Invalid match expression: " + matchExpr);
-    }
+// An argument is either a simple value (UnitMatch) or, for a clausal verb's attribute,
+// a whole nested command (CompoundMatch) - eg the "go(north)" in "tell(this).to(go(north))".
+type ArgMatch = UnitMatch | CompoundMatch;
 
-    return createMatcher(compoundMatch);
+function isCompoundMatch(arg : ArgMatch) : arg is CompoundMatch {
+    return "nameMatch" in arg;
+}
+
+// Promotes a bare UnitMatch to the equivalent zero-arg CompoundMatch, eg "wait" is
+// equivalent to "wait()" when used as a clausal verb's sub-command.
+function toCompoundMatch(arg : ArgMatch) : CompoundMatch {
+    return isCompoundMatch(arg) ? arg : { nameMatch : arg, argMatches : [] };
+}
+
+function asUnitMatch(arg : ArgMatch) : UnitMatch {
+    if (isCompoundMatch(arg)) {
+        throw new Error("Expected a simple value here, but found a nested command: " + getCompoundMatchString(arg));
+    }
+    return arg;
+}
+
+export function evaluateMatchExpression(matchExpr : Expression) : Matcher {
+    return createMatcher(parseCompoundMatch(matchExpr));
+}
+
+function parseCompoundMatch(expr : Expression) : CompoundMatch {
+    switch(expr.type) {
+        case "CallExpression":
+            return getCompoundMatcher(expr as CallExpression);
+        case "Identifier":
+            return { nameMatch : getMatcher((expr as Identifier).name), argMatches : [] };
+        case "ThisExpression":
+            return { nameMatch : getMatcher("this"), argMatches : [] };
+        default:
+            throw new Error("Invalid match expression: " + expr);
+    }
 }
 
 function createMatcher(compoundMatch : CompoundMatch) : Matcher {
@@ -59,26 +80,30 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
         }
         builder.withVerb(matchVerb(compoundMatch.nameMatch.name))
 
-        const args = compoundMatch.argMatches.slice().reverse(); // Reverse list so we can use pop 
+        const args = compoundMatch.argMatches.slice().reverse(); // Reverse list so we can use pop
         if (isTransitive(verb)) {
             // First match will be the direct object
             const directObject = args.pop();
-            builder.withObject(directObject ? getObjectMatcher(directObject) : ALWAYS_FAIL);
-        } 
+            builder.withObject(directObject ? getObjectMatcher(asUnitMatch(directObject)) : ALWAYS_FAIL);
+        }
 
         // Treat any remaining args as modifiers
-        args.forEach(arg => builder.withModifier(getModifierMatcher(arg)));
+        args.forEach(arg => builder.withModifier(getModifierMatcher(asUnitMatch(arg))));
 
 
         if (compoundMatch.member) {
-            const attrBuilder = attributeMatchBuilder();
-            attrBuilder.withAttribute(matchAttribute(compoundMatch.member.nameMatch.name));
-            if (compoundMatch.member.argMatches.length) {
-                attrBuilder.withObject(getIndirectObjectMatcher(compoundMatch.member.argMatches[0]))
+            if (isClausal(verb)) {
+                builder.withSubCommand(getSubCommandMatcher(compoundMatch.member, command));
             } else {
-                attrBuilder.withObject(ALWAYS_FAIL);
+                const attrBuilder = attributeMatchBuilder();
+                attrBuilder.withAttribute(matchAttribute(compoundMatch.member.nameMatch.name));
+                if (compoundMatch.member.argMatches.length) {
+                    attrBuilder.withObject(getIndirectObjectMatcher(asUnitMatch(compoundMatch.member.argMatches[0])))
+                } else {
+                    attrBuilder.withObject(ALWAYS_FAIL);
+                }
+                builder.withAttribute(attrBuilder);
             }
-            builder.withAttribute(attrBuilder);
         }
         const matcher = builder.build();
         return matcher(command, objId);
@@ -88,10 +113,63 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
     return matcher;
 }
 
+/**
+ * Builds a matcher for the sub-command of a clausal verb (eg "tell"), from the single
+ * nested command that is its attribute's argument - eg the "go(north)" in
+ * "tell(this).to(go(north))", or "stir(soup).with(spoon)" in "tell(this).to(stir(soup).with(spoon))".
+ * The nested command is matched exactly like a top-level command would be by createMatcher
+ * above (verb/object/modifiers/attribute), just one level down - a bare identifier with no
+ * args (eg "wait") is equivalent to an empty call ("wait()"), the same as at the top level.
+ * @param member the parsed ".attribute(subCommand)" member match, eg "to(go(north))"
+ * @param command the command being matched against
+ * @returns
+ */
+function getSubCommandMatcher(member : CompoundMatch, command : Command) {
+    if (member.argMatches.length !== 1) {
+        throw new Error(`Clausal verb attribute "${member.nameMatch.name}" must take a single sub-command, `
+            + `eg ${member.nameMatch.name}(go(north))`);
+    }
+    const subCompoundMatch = toCompoundMatch(member.argMatches[0]);
+
+    const subCommandBuilder = subCommandMatchBuilder();
+    subCommandBuilder.withAttribute(matchAttribute(member.nameMatch.name));
+    subCommandBuilder.withSubVerb(getSubVerbMatcher(subCompoundMatch.nameMatch));
+
+    const subArgs = subCompoundMatch.argMatches.slice().reverse(); // Reverse list so we can use pop
+    const subVerb = command.getPoS("subVerb")?.verb;
+    if (subVerb && isTransitive(subVerb)) {
+        // First match will be the sub-command's direct object
+        const subObjectArg = subArgs.pop();
+        subCommandBuilder.withSubObject(subObjectArg ? getSubObjectMatcher(asUnitMatch(subObjectArg)) : ALWAYS_FAIL);
+    }
+
+    // Treat any remaining args as sub-command modifiers
+    subArgs.forEach(arg => subCommandBuilder.withSubModifier(getSubModifierMatcher(asUnitMatch(arg))));
+
+    // A member on the nested command is its own attribute, eg the ".with(spoon)" in
+    // "stir(soup).with(spoon)"
+    if (subCompoundMatch.member) {
+        const subAttrBuilder = subAttributeMatchBuilder();
+        subAttrBuilder.withAttribute(matchSubAttribute(subCompoundMatch.member.nameMatch.name));
+        if (subCompoundMatch.member.argMatches.length) {
+            subAttrBuilder.withObject(getSubIndirectObjectMatcher(asUnitMatch(subCompoundMatch.member.argMatches[0])))
+        } else {
+            subAttrBuilder.withObject(ALWAYS_FAIL);
+        }
+        subCommandBuilder.withSubAttribute(subAttrBuilder);
+    }
+
+    return subCommandBuilder;
+}
+
 function getCompoundMatchString(compoundMatch : CompoundMatch) : string {
-    return getUnitMatchString(compoundMatch.nameMatch) 
-                    + "(" + compoundMatch.argMatches.map(match => getUnitMatchString(match)).join(", ") + ")"
+    return getUnitMatchString(compoundMatch.nameMatch)
+                    + "(" + compoundMatch.argMatches.map(getArgMatchString).join(", ") + ")"
                     + ((compoundMatch.member != undefined)? "." + getCompoundMatchString(compoundMatch.member) : "");
+}
+
+function getArgMatchString(arg : ArgMatch) : string {
+    return isCompoundMatch(arg) ? getCompoundMatchString(arg) : getUnitMatchString(arg);
 }
 
 function getUnitMatchString(unitMatch : UnitMatch) : string {
@@ -133,19 +211,18 @@ function getCompoundMatcher(callExpression : CallExpression) : CompoundMatch {
     return parent ?? compoundMatcher;
 }
 
-function getArgumentMatcher(expression : Expression) : UnitMatch {
-    let matcher : UnitMatch;
+function getArgumentMatcher(expression : Expression) : ArgMatch {
     switch(expression.type) {
         case "Identifier":
-            matcher = getMatcher((expression as Identifier).name);
-            break;
+            return getMatcher((expression as Identifier).name);
         case "ThisExpression":
-            matcher = getMatcher("this");
-            break;
+            return getMatcher("this");
+        case "CallExpression":
+            // A nested command, eg the "go(north)" in "tell(this).to(go(north))"
+            return getCompoundMatcher(expression as CallExpression);
         default:
             throw new Error("Invalid argument matcher: " + expression);
     }
-    return matcher;
 }
 
 function getParentMatcher(expression : MemberExpression) : [UnitMatch, CompoundMatch] {
@@ -171,7 +248,27 @@ const  getIndirectObjectMatcher : (matchData : UnitMatch) => Matcher =
                                 ? captureIndirectObject(matchData.name)
                                 : matchIndirectObject(matchData.name);
 
-const getModifierMatcher : (match : UnitMatch) => Matcher = 
+const getModifierMatcher : (match : UnitMatch) => Matcher =
             matchData => matchData.isCapture
                             ? captureModifier(matchData.name)
                             : matchAnyModifier(matchData.name);
+
+const getSubVerbMatcher : (matchData : UnitMatch) => Matcher =
+            matchData => matchData.isCapture
+                                ? captureSubVerb(matchData.name)
+                                : matchSubVerb(matchData.name);
+
+const getSubObjectMatcher : (matchData : UnitMatch) => Matcher =
+            matchData => matchData.isCapture
+                                ? captureSubObject(matchData.name)
+                                : matchSubObject(matchData.name);
+
+const getSubModifierMatcher : (match : UnitMatch) => Matcher =
+            matchData => matchData.isCapture
+                            ? captureSubModifier(matchData.name)
+                            : matchAnySubModifier(matchData.name);
+
+const getSubIndirectObjectMatcher : (matchData : UnitMatch) => Matcher =
+            matchData => matchData.isCapture
+                                ? captureSubIndirectObject(matchData.name)
+                                : matchSubIndirectObject(matchData.name);

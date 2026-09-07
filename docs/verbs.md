@@ -112,3 +112,44 @@ actions:
 
 Verbs that are tagged as `instant` do not take any time to execute, and won't increment the turn counter.
 Instant verbs, should not alter game state, and are meant for verbs such as `examine`.
+
+## Sub-commands (clausal verbs)
+
+A verb can take a whole sub-command as its attribute's object, instead of a single indirect
+object. This is used for commanding another entity, eg `tell robot to go north`.
+
+A verb becomes "clausal" by declaring a `commands` list: the sub-verbs it will accept.
+It still needs the usual `transitive` tag (its direct object is the entity being commanded)
+and an `attributes` entry (the connecting word, eg `to`).
+
+```yaml
+verb: tell
+tags:
+  - transitive
+attributes:
+  - to
+commands:
+  - go
+  - fire
+```
+
+```yaml
+item: robot
+verbs:
+  - tell
+```
+
+With the above defined (and `go`/`fire` verbs available elsewhere), `tell robot to go north`
+and `tell robot to fire laser` become valid commands. The sub-verb's own grammar still
+applies: an intransitive sub-verb with modifiers (like `go`) needs a modifier to complete the
+command, a transitive sub-verb (like `fire`) needs a direct object, and an attributed
+sub-verb (like `stir`) can take its own indirect object, eg `tell robot to stir soup with
+spoon` - including `indirectOptional`, so `tell robot to stir soup` alone is also valid if
+`stir` allows it.
+
+Only the verbs listed in `commands` are offered after the connecting word - `commands` is an
+explicit allow-list on the commanding verb (`tell`), not something the commanded entity opts
+into.
+
+See [command matching](./commandmatching.md#sub-commands) for how to write actions that
+respond to a sub-command.

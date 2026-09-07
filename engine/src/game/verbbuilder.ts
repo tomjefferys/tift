@@ -12,6 +12,7 @@ export class VerbBuilder {
   attributes : string[] = [];
   traits : VerbTrait[] = [];
   modifiers : string[] = [];
+  commands : string[] = [];
   before : BeforeAction[] = [];
   actions : MainAction[] = [];
   after : AfterAction[] = [];
@@ -56,6 +57,16 @@ export class VerbBuilder {
     return this;
   }
 
+  withCommand(command : string) : VerbBuilder {
+    this.commands.push(command);
+    return this;
+  }
+
+  withCommands(commands : string[]) : VerbBuilder {
+    this.commands.push(...commands);
+    return this;
+  }
+
   withBefore(action : BeforeAction) : VerbBuilder {
     this.before.push(action);
     return this;
@@ -87,7 +98,8 @@ export class VerbBuilder {
              id : this.id, 
              attributes : this.attributes, 
              traits : this.traits,
-             modifiers : this.modifiers, 
+             modifiers : this.modifiers,
+             commands : this.commands,
              before : this.before,
              actions : this.actions, 
              after : this.after,

@@ -1,6 +1,7 @@
 import { IdValue, Taggable } from "../shared";
 
-export type PoSType = "start" | "verb" | "directObject" | "preposition" | "indirectObject" | "modifier";
+export type PoSType = "start" | "verb" | "directObject" | "preposition" | "indirectObject" | "modifier"
+                     | "subVerb" | "subObject" | "subModifier" | "subPreposition" | "subIndirectObject";
 
 export type Word = OptionWord | ControlWord | SelectWord | PartOfSpeech;
 

@@ -1,7 +1,11 @@
-import { matchVerb, matchObject, captureObject, matchBuilder, 
+import { matchVerb, matchObject, captureObject, matchBuilder,
             attributeMatchBuilder, matchAttribute,
-            matchIndirectObject, captureIndirectObject, matchModifier } from "../src/commandmatcher";
-import { LOOK, EAT, GO, APPLE, STIR, SOUP, SPOON } from "./testutils/testentities";
+            matchIndirectObject, captureIndirectObject, matchModifier,
+            subCommandMatchBuilder, matchSubVerb, captureSubVerb,
+            matchSubObject, captureSubObject, matchSubModifier,
+            subAttributeMatchBuilder, matchSubAttribute,
+            matchSubIndirectObject, captureSubIndirectObject } from "../src/commandmatcher";
+import { LOOK, EAT, GO, APPLE, STIR, SOUP, SPOON, TELL, ROBOT, FIRE, LASER } from "./testutils/testentities";
 import { verb } from "../src/command";
 
 test("Test simple match", () => {
@@ -112,3 +116,133 @@ test("Test capture with modifier", () => {
     expect(result.isMatch).toBeTruthy();
     expect(result.score).toBe(4);
 });
+
+test("Test sub-command match with modifier", () => {
+    const matcher = matchBuilder()
+        .withVerb(matchVerb("tell"))
+        .withObject(matchObject("robot"))
+        .withSubCommand(subCommandMatchBuilder()
+            .withAttribute(matchAttribute("to"))
+            .withSubVerb(matchSubVerb("go"))
+            .withSubModifier(matchSubModifier("direction", "north")))
+        .build();
+
+    const command = verb(TELL).object(ROBOT).preposition("to").subVerb(GO).subModifier("direction", "north");
+
+    const result = matcher(command, ROBOT.id);
+    expect(result.isMatch).toBeTruthy();
+})
+
+test("Test sub-command capture sub-verb", () => {
+    const matcher = matchBuilder()
+        .withVerb(matchVerb("tell"))
+        .withObject(matchObject("robot"))
+        .withSubCommand(subCommandMatchBuilder()
+            .withAttribute(matchAttribute("to"))
+            .withSubVerb(captureSubVerb("action"))
+            .withSubModifier(matchSubModifier("direction", "north")))
+        .build();
+
+    const command = verb(TELL).object(ROBOT).preposition("to").subVerb(GO).subModifier("direction", "north");
+
+    const result = matcher(command, ROBOT.id);
+    expect(result.isMatch).toBeTruthy();
+    expect(result.captures).toHaveProperty("action");
+    expect(result.captures?.action).toMatchObject({ "id" : "go" });
+})
+
+test("Test sub-command with direct object capture", () => {
+    const matcher = matchBuilder()
+        .withVerb(matchVerb("tell"))
+        .withObject(matchObject("robot"))
+        .withSubCommand(subCommandMatchBuilder()
+            .withAttribute(matchAttribute("to"))
+            .withSubVerb(matchSubVerb("fire"))
+            .withSubObject(captureSubObject("target")))
+        .build();
+
+    const command = verb(TELL).object(ROBOT).preposition("to").subVerb(FIRE).subObject(LASER);
+
+    const result = matcher(command, ROBOT.id);
+    expect(result.isMatch).toBeTruthy();
+    expect(result.captures).toHaveProperty("target");
+    expect(result.captures?.target).toMatchObject({ "id" : "laser" });
+})
+
+test("Test sub-command with exact direct object", () => {
+    const matcher = matchBuilder()
+        .withVerb(matchVerb("tell"))
+        .withObject(matchObject("robot"))
+        .withSubCommand(subCommandMatchBuilder()
+            .withAttribute(matchAttribute("to"))
+            .withSubVerb(matchSubVerb("fire"))
+            .withSubObject(matchSubObject("laser")))
+        .build();
+
+    const command = verb(TELL).object(ROBOT).preposition("to").subVerb(FIRE).subObject(LASER);
+
+    const result = matcher(command, ROBOT.id);
+    expect(result.isMatch).toBeTruthy();
+})
+
+test("Test sub-command with attribute and indirect object", () => {
+    const matcher = matchBuilder()
+        .withVerb(matchVerb("tell"))
+        .withObject(matchObject("robot"))
+        .withSubCommand(subCommandMatchBuilder()
+            .withAttribute(matchAttribute("to"))
+            .withSubVerb(matchSubVerb("stir"))
+            .withSubObject(matchSubObject("soup"))
+            .withSubAttribute(subAttributeMatchBuilder()
+                .withAttribute(matchSubAttribute("with"))
+                .withObject(matchSubIndirectObject("spoon"))))
+        .build();
+
+    const command = verb(TELL).object(ROBOT).preposition("to")
+                        .subVerb(STIR).subObject(SOUP).subPreposition("with").subObject(SPOON);
+
+    const result = matcher(command, ROBOT.id);
+    expect(result.isMatch).toBeTruthy();
+})
+
+test("Test sub-command capture indirect object via attribute", () => {
+    const matcher = matchBuilder()
+        .withVerb(matchVerb("tell"))
+        .withObject(matchObject("robot"))
+        .withSubCommand(subCommandMatchBuilder()
+            .withAttribute(matchAttribute("to"))
+            .withSubVerb(matchSubVerb("stir"))
+            .withSubObject(captureSubObject("food"))
+            .withSubAttribute(subAttributeMatchBuilder()
+                .withAttribute(matchSubAttribute("with"))
+                .withObject(captureSubIndirectObject("tool"))))
+        .build();
+
+    const command = verb(TELL).object(ROBOT).preposition("to")
+                        .subVerb(STIR).subObject(SOUP).subPreposition("with").subObject(SPOON);
+
+    const result = matcher(command, ROBOT.id);
+    expect(result.isMatch).toBeTruthy();
+    expect(result.captures?.food).toMatchObject({ "id" : "soup" });
+    expect(result.captures?.tool).toMatchObject({ "id" : "spoon" });
+})
+
+test("Test sub-command with attribute doesn't match when indirect object missing", () => {
+    const matcher = matchBuilder()
+        .withVerb(matchVerb("tell"))
+        .withObject(matchObject("robot"))
+        .withSubCommand(subCommandMatchBuilder()
+            .withAttribute(matchAttribute("to"))
+            .withSubVerb(matchSubVerb("stir"))
+            .withSubObject(matchSubObject("soup"))
+            .withSubAttribute(subAttributeMatchBuilder()
+                .withAttribute(matchSubAttribute("with"))
+                .withObject(matchSubIndirectObject("spoon"))))
+        .build();
+
+    // No "with spoon" on the command, so a matcher that requires the sub-attribute fails
+    const command = verb(TELL).object(ROBOT).preposition("to").subVerb(STIR).subObject(SOUP);
+
+    const result = matcher(command, ROBOT.id);
+    expect(result.isMatch).toBeFalsy();
+})

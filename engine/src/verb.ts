@@ -18,6 +18,9 @@ export interface Verb extends Nameable, ActionSource {
   attributes : string[],
   traits : VerbTrait[],
   modifiers : string[],
+  // Sub-verbs this verb will accept as part of a sub-command, eg "tell robot to go north".
+  // A non-empty list makes this verb "clausal" - see isClausal().
+  commands : string[],
   actions : MainAction[],
   contexts : VerbContext[],
   [props : string] : unknown
@@ -58,6 +61,12 @@ export function isIndirectOptional(verb : Verb) {
 
 export function isAttributed(verb : Verb) : boolean {
   return verb.attributes.length !== 0;
+}
+
+// A "clausal" verb takes a sub-command as part of its sentence,
+// eg "tell robot to go north". `commands` lists the sub-verbs it will accept.
+export function isClausal(verb : Verb) : boolean {
+  return verb.commands.length !== 0;
 }
 
 

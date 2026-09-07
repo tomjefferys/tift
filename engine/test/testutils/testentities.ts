@@ -122,3 +122,27 @@ export const BALL = new EntityBuilder({"id" : "ball"})
                     .withVerb("put")
                     .build();
 
+// A "clausal" verb, for sub-command tests, eg "tell robot to go north"
+export const TELL = new VerbBuilder({"id":"tell"})
+                    .withTrait("transitive")
+                    .withAttribute("to")
+                    .withCommand("go")
+                    .withCommand("fire")
+                    .withCommand("stir")
+                    .withCommand("lie")
+                    .build();
+
+export const ROBOT = new EntityBuilder({"id" : "robot"})
+                    .withVerb("tell")
+                    .withVerbModifier(({ "modType":"direction", "value":"north" }))
+                    .withVerbModifier(({ "modType":"direction", "value":"east" }))
+                    .build();
+
+export const FIRE = new VerbBuilder({"id":"fire"})
+                    .withTrait("transitive")
+                    .build();
+
+export const LASER = new EntityBuilder({"id" : "laser"})
+                    .withVerb("fire")
+                    .build();
+

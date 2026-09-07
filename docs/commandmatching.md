@@ -21,7 +21,12 @@ verb()
 verb(directObject)
 verb(directObject, modifier)
 verb(directObject).attribute(indirectObject)
+verb(directObject).attribute(subCommand)
 ```
+
+The last form is for [clausal verbs](./verbs.md#sub-commands-clausal-verbs), where the
+attribute's argument is itself a whole nested command (see [Sub-commands](#sub-commands)
+below), rather than a single indirect object.
 
 ### Specifying and capturing item
 Objects and modifiers can be specified exactly, or by capturing a value.
@@ -103,6 +108,52 @@ before:
     then: print("You cannot push the box " + direction)
     otherwise: return(false)
 ```
+
+## Sub-commands
+
+A [clausal verb](./verbs.md#sub-commands-clausal-verbs) like `tell` takes a sub-command as its
+attribute's argument. That sub-command is written and matched exactly like an ordinary
+top-level command matcher - `subVerb`, `subVerb(subObjectOrModifier)`, or
+`subVerb(subObject).attribute(subIndirectObject)` - just nested inside the outer attribute
+call, so the syntax stays the same at every level:
+
+```yaml
+---
+item: robot
+verbs:
+  - tell
+before:
+  tell(this).to(go($direction)): print("The robot whirs off to the " + direction)
+  tell(this).to(fire($target)): print("The robot fires its laser at " + getFullName(target))
+---
+```
+
+A bare sub-verb with no arguments (eg `wait`) is written the same way a bare intransitive
+verb is at the top level - with or without parentheses, `tell(this).to(wait)` and
+`tell(this).to(wait())` are equivalent.
+
+The sub-verb itself can also be captured, eg to write one handler for any command - the
+capture becomes the call name, and still takes whatever arguments that particular sub-verb
+needs:
+
+```yaml
+before:
+  tell(this).to($action($direction)): print("The robot tries to " + action.id + " " + direction)
+```
+
+### Attributed sub-verbs
+
+If the sub-verb itself takes an attribute (eg `stir soup with spoon`), write it exactly as
+you would at the top level, nested as the single argument to the outer attribute:
+
+```yaml
+before:
+  tell(this).to(stir($item).with($tool)): print("The robot stirs " + item.name + " with " + tool.name)
+```
+
+As with a normal attributed verb, if the sub-verb has the `indirectOptional` tag the
+`.with(...)` part can be omitted, eg `tell(this).to(stir(soup))` alone still matches
+`tell robot to stir soup`.
 
 
 

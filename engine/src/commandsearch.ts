@@ -1,4 +1,4 @@
-import { isIntransitive, isTransitive, Verb, VerbContext } from "./verb"
+import { isIntransitive, isTransitive, isClausal, Verb, VerbContext } from "./verb"
 import { VerbMap } from "./types"
 import { Entity, VerbMatcher, VerbModifier } from "./entity"
 import { MultiDict } from "./util/multidict"
@@ -6,18 +6,26 @@ import * as _ from "lodash"
 import * as multidict from "./util/multidict"
 import * as Tree from "./util/tree"
 import * as Arrays from "./util/arrays"
-import { castDirectable, castIndirectable, castModifiable, castPreopositional, Command, start, castVerbable, DirectObject } from "./command"
+import { castDirectable, castIndirectable, castModifiable, castPreopositional,
+         castSubVerbable, castSubDirectable, castSubModifiable,
+         castSubPrepositional, castSubIndirectable,
+         Command, start, castVerbable, DirectObject, SubObject } from "./command"
 import { Env } from "tift-types/src/env"
 import * as Logger from "./util/logger"
 import { PartOfSpeech, Word } from "tift-types/src/messages/word"
 import * as SearchTerm from "./searchterm";
 
-// verb                                -- intransitive verb
-// verb object                         -- transitive verb
-// verb object (with) object           -- transitive verb with attribute
-// verb direction                      -- intransitive verb with qualifier
-// verb object (to) direction          -- transitive verb with qualifier
-// verb object direction (with) object -- transitive verb with qual and attr
+// verb                                        -- intransitive verb
+// verb object                                 -- transitive verb
+// verb object (with) object                   -- transitive verb with attribute
+// verb direction                              -- intransitive verb with qualifier
+// verb object (to) direction                  -- transitive verb with qualifier
+// verb object direction (with) object         -- transitive verb with qual and attr
+// verb object (to) subVerb                            -- clausal verb (sub-command), eg "tell robot to go"
+// verb object (to) subVerb direction                  -- clausal verb, sub-command with modifier
+// verb object (to) subVerb subObject                  -- clausal verb, sub-command with direct object
+// verb object (to) subVerb (with) subObject           -- clausal verb, sub-command with attribute
+// verb object (to) subVerb subObject (with) subObject -- clausal verb, sub-command with object and attribute
 
 type SearchFn = (context: SearchContext, state: Command) => Command[]; 
 type SearchNode = Tree.ValueNode<SearchFn>;
@@ -161,12 +169,26 @@ function testAttributeMatches(
  * Return all verb attributes available in a context matching a single verb
  */
 function getVerbAttributes(context : SearchContext, verb : Verb) : string[] {
+  // A clausal verb's attribute (eg "to") introduces a sub-command rather than an
+  // indirect object, so it's offered whenever there's at least one sub-verb available,
+  // rather than being tied to any particular entity's verb matcher.
+  if (isClausal(verb)) {
+    return getSubVerbs(context, verb).length ? verb.attributes : [];
+  }
   const objs = getIndirectObjects(context, verb);
-  return objs.flatMap(entity => 
+  return objs.flatMap(entity =>
                 entity.verbs.filter(verbMatcher => verbMatcher.verb === verb.id)
                             .filter(verbMatcher => isEnabled(context, entity, verbMatcher)))
              .filter(verbMatcher => verbMatcher.attribute)
              .map(verbMatcher => verbMatcher.attribute as string);
+}
+
+/**
+ * Return the sub-verbs a clausal verb (eg "tell") will accept, resolved from its
+ * `commands` allow-list against the verbs available in the current context.
+ */
+function getSubVerbs(context : SearchContext, verb : Verb) : Verb[] {
+  return verb.commands.map(id => context.verbs[id]).filter((v) : v is Verb => Boolean(v));
 }
 
 /**
@@ -265,12 +287,64 @@ const modifierSearch : SearchFn = (context, state) => {
     const newModifiers = verb? getVerbModifiers(context, verb) : {};
     return multidict.entries(newModifiers).map(([modType, modValue]) => castModifiable(state).modifier(modType, modValue))}
 
+/**
+ * Creates a search function to match sub-verbs (of a clausal verb such as "tell") with entities
+ * @param filter a filter for the results, eg only transitive sub-verbs
+ * @returns the Search Function
+ */
+const getSubVerbSearch = (filter: (verb: Verb) => boolean) : SearchFn => {
+  return (context, state) => {
+    const verb = state.getPoS("verb")?.verb;
+    const preposition = state.getPoS("preposition")?.value;
+    if (!verb || !isClausal(verb) || !preposition) {
+      return [];
+    }
+    return getSubVerbs(context, verb)
+              .filter(filter)
+              .map(subVerb => castSubVerbable(state).subVerb(subVerb));
+  }
+}
+
+const subObjectSearch : SearchFn = (context, state) => {
+  const subVerb = state.getPoS("subVerb")?.verb;
+  const objs = subVerb && isTransitive(subVerb) ? getDirectObjects(context, subVerb) : [];
+  return objs.map(obj => castSubDirectable(state).subObject(obj));
+}
+
+const subModifierSearch : SearchFn = (context, state) => {
+    const subVerb = state.getPoS("subVerb")?.verb;
+    const newModifiers = subVerb ? getVerbModifiers(context, subVerb) : {};
+    return multidict.entries(newModifiers).map(([modType, modValue]) => castSubModifiable(state).subModifier(modType, modValue))}
+
+const subAttributeSearch : SearchFn = (context, state) => {
+  const subVerb = state.getPoS("subVerb")?.verb;
+  const attributes = subVerb ? getVerbAttributes(context, subVerb) : [];
+  return attributes.map(attr => castSubPrepositional(state).subPreposition(attr));
+}
+
+const subIndirectObjectSearch : SearchFn = (context, state) => {
+  const subVerb = state.getPoS("subVerb")?.verb;
+  const subPreposition = state.getPoS("subPreposition")?.value;
+
+  const objs = subVerb && subPreposition ? getIndirectObjects(context, subVerb, subPreposition) : [];
+  // Don't allow the same object to be used as both the sub-command's direct and indirect object
+  const subDirectObj = state.find(part => part.type === "subObject") as SubObject;
+  return objs.filter(obj => obj.id !== subDirectObj?.entity?.id)
+             .map(obj => castSubIndirectable(state).subObject(obj));
+}
+
 const TRANS_VERB      = getVerbSearch(verb => isTransitive(verb));
 const INTRANS_VERB    = getVerbSearch(verb => isIntransitive(verb));
 const DIRECT_OBJECT   = directObjectSearch;
 const ATTRIBUTE       = attributeSearch;
 const INDIRECT_OBJECT = indirectObjectSearch;
 const MODIFIER        = modifierSearch;
+const SUB_TRANS_VERB       = getSubVerbSearch(verb => isTransitive(verb));
+const SUB_INTRANS_VERB     = getSubVerbSearch(verb => isIntransitive(verb));
+const SUB_OBJECT           = subObjectSearch;
+const SUB_MODIFIER         = subModifierSearch;
+const SUB_ATTRIBUTE        = subAttributeSearch;
+const SUB_INDIRECT_OBJECT  = subIndirectObjectSearch;
 
 // When adding a new word pattern, make sure it is covered by a validator in command.ts
 const WORD_PATTERNS = Tree.fromArrays([
@@ -279,7 +353,12 @@ const WORD_PATTERNS = Tree.fromArrays([
   [INTRANS_VERB, ATTRIBUTE, INDIRECT_OBJECT],
   [TRANS_VERB, DIRECT_OBJECT],
   [TRANS_VERB, DIRECT_OBJECT, MODIFIER],
-  [TRANS_VERB, DIRECT_OBJECT, ATTRIBUTE, INDIRECT_OBJECT]
+  [TRANS_VERB, DIRECT_OBJECT, ATTRIBUTE, INDIRECT_OBJECT],
+  [TRANS_VERB, DIRECT_OBJECT, ATTRIBUTE, SUB_INTRANS_VERB],
+  [TRANS_VERB, DIRECT_OBJECT, ATTRIBUTE, SUB_INTRANS_VERB, SUB_MODIFIER],
+  [TRANS_VERB, DIRECT_OBJECT, ATTRIBUTE, SUB_INTRANS_VERB, SUB_ATTRIBUTE, SUB_INDIRECT_OBJECT],
+  [TRANS_VERB, DIRECT_OBJECT, ATTRIBUTE, SUB_TRANS_VERB, SUB_OBJECT],
+  [TRANS_VERB, DIRECT_OBJECT, ATTRIBUTE, SUB_TRANS_VERB, SUB_OBJECT, SUB_ATTRIBUTE, SUB_INDIRECT_OBJECT]
 ]);
 
 const doSearch = (context : SearchContext,
