@@ -14,6 +14,7 @@ import { getANSIMarkdownMessageFormatter } from "./ansimessageformatter";
 import { getAlignedANSICommandFormatter, getAlignedANSIWordsFormatter } from "./displayformatters";
 import { getTokenAligner } from "./textaligner";
 import { ANSI_TOKEN_FORMATTER } from "./tokenformatter";
+import pc from "picocolors";
 
 async function main() {
 
@@ -39,6 +40,14 @@ function setupFileWatchers(dataFiles : string[], callback : () => void) : FileWa
         watcher.start();
         return watcher;
     });
+}
+
+// Prints a fatal game-load error (eg a YAML syntax error - see EngineFacade.getLastError())
+// the same way regardless of which mode hit it, so batch and interactive runs report it
+// identically rather than drifting apart.
+function reportLoadError(loadError : string, errorFn : (message : string) => void) {
+    errorFn(pc.red(pc.bold("Error loading game:")));
+    errorFn(pc.red(loadError));
 }
 
 async function* createLineGenerator() {
@@ -68,6 +77,17 @@ async function runInteractive(statePersister : StatePersister,
             () => new Display(process.stdout, ansiMessageFormatter, commandFormatter, wordsFormatter),
             options.developer,
         );
+        const loadError = stateManager.getLastError();
+        if (loadError) {
+            // StateManager's initial build() already flushed this to the display inline
+            // (styled the same as any other error-level log - see MessageConsumer), mixed
+            // in with the rest of the game's startup text. Report it again here, the same
+            // way runBatch() does for the same failure, so it's unambiguous on stderr too.
+            // A broken game has no words to offer, so there's no point starting the input
+            // loop against it - exit instead of sitting at a dead prompt.
+            reportLoadError(loadError, (message) => process.stderr.write(message + os.EOL));
+            return "FAILURE";
+        }
         watchers = setupFileWatchers(options.dataFiles, () => stateManager.refresh());
         const interactiveRunner = new InteractiveRunner(stateManager);
         const result = await interactiveRunner.run();
@@ -92,6 +112,17 @@ async function runBatch(statePersister : StatePersister, options : Options) : Pr
     }
 
     const engine = createEngine(statePersister, options.dataFiles);
+    const loadError = engine.getLastError();
+    if (loadError) {
+        // The engine swallows load-time exceptions (eg a YAML syntax error) internally
+        // and enters a permanent error state (see BasicEngine.send() in engine.ts)
+        // rather than throwing here - so without this check, the script would run
+        // against a game that never actually loaded, surfacing as cryptic "Expected
+        // command ..." failures with no indication the real problem was at load time.
+        reportLoadError(loadError, errorFn);
+        return "FAILURE";
+    }
+
     // A "---" script line restarts the game from scratch (deleting any persisted save
     // state first), so each test section starts from a clean slate - see scriptrunner.ts.
     const restartEngine = () => {

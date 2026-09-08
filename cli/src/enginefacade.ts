@@ -53,6 +53,13 @@ export class EngineFacade {
         return this.messageConsumer.status;
     }
 
+    // The most recent fatal error logged by the engine (eg a YAML syntax error hit while
+    // loading game data), if any. Only meaningful to check right after initialize()/load() -
+    // see MessageConsumer.lastErrorMessage for why.
+    getLastError() : string | undefined {
+        return this.messageConsumer.lastErrorMessage;
+    }
+
     load(data : string) {
         this.engine.send(Input.load(data));
     }

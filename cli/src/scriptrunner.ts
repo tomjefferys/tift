@@ -358,6 +358,17 @@ export class ScriptRunner {
         this.engine = this.restartEngine();
         this.messages.length = 0;
         this.flushOutput();
+        const loadError = this.engine.getLastError();
+        if (loadError) {
+            // Without this check, a game that fails to (re)load (eg a YAML syntax
+            // error) leaves every word list empty, so the next line - often the
+            // sandbox's own "teleport" - would fail with a cryptic "Expected command
+            // ..." instead of pointing at the real cause. this.messages already holds
+            // the flushed error text, but flushOutput() only *prints* it (a no-op in
+            // --silent mode), so it's passed through here too to guarantee it's part
+            // of the reported failure.
+            throw new ScriptError([...this.messages], `Failed to load game: ${loadError}`);
+        }
     }
 
     // Teleports the player into an empty sandbox room, per a "--- sandbox" script line,

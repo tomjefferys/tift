@@ -11,6 +11,12 @@ export class MessageConsumer {
     wordCache : WordCache = [[],[]];
     status = "";
     statePersister? : StatePersister;
+    // The most recent error-level "Log" message (eg a YAML syntax error thrown while
+    // loading game data - see BasicEngine.send()'s catch block in engine.ts, which puts
+    // the engine into a permanent error state and logs the cause). Only meaningful to
+    // check right after a load/initialize - a later, recoverable debug-command error
+    // (see debug.ts) would also update this even though the engine isn't fatally errored.
+    lastErrorMessage : string | undefined;
 
     constructor(statePersister? : StatePersister) {
         this.statePersister = statePersister;
@@ -31,6 +37,9 @@ export class MessageConsumer {
                 this.statePersister?.saveState(JSON.stringify(message.state));
                 break;
             case "Log":
+                if (message.level === "error") {
+                    this.lastErrorMessage = message.message;
+                }
                 this.printMessages.push({
                     type : this.getMessageType(message.level),
                     text : message.message,
@@ -42,9 +51,9 @@ export class MessageConsumer {
 
     private getMessageType(level : string) : MessageType {
         switch(level) {
-            case "Error":
+            case "error":
                 return "Error";
-            case "Warning":
+            case "warn":
                 return "Warning";
             default:
                 return "Info";

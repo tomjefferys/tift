@@ -40,6 +40,13 @@ export class StateManager {
         return this.commandState;
     }
 
+    // The most recent fatal load error (eg a YAML syntax error), if the current
+    // engine failed to load - see EngineFacade.getLastError(). Only meaningful right
+    // after construction/build() - a later, recoverable error wouldn't set this.
+    getLastError() : string | undefined {
+        return this.commandState.engine.getLastError();
+    }
+
     createControlState(commands: Record<string, () => void>) : ControlState {
         const display = this.displayBuilder();
         return new ControlState(display, commands);

@@ -22,6 +22,7 @@ function createStandaloneMockEngine(startMessages : Message[] = []) : EngineFaca
         execute : vi.fn(),
         load : vi.fn(),
         refreshWords : vi.fn(),
+        getLastError : vi.fn(),
         flushMessages : vi.fn((callback : (message : Message) => void) => {
             pending.forEach(callback);
             pending = [];
@@ -44,6 +45,7 @@ describe("ScriptRunner", () => {
             execute : vi.fn(),
             load : vi.fn(),
             refreshWords : vi.fn(),
+            getLastError : vi.fn(),
             flushMessages : vi.fn((callback : (message : Message) => void) => {
                 pendingMessages.forEach(callback);
                 pendingMessages = [];
@@ -168,6 +170,22 @@ describe("ScriptRunner", () => {
             expect(result).toBe("SUCCESS");
             expect(restartedEngine.execute).toHaveBeenCalledWith(["verb.wait"]);
             expect(mockEngineInstance.execute).not.toHaveBeenCalled();
+        });
+
+        test("fails with a clear message, including the engine's error, when the restarted game fails to load", async () => {
+            // Regression test: a game that fails to (re)load (eg a YAML syntax error)
+            // used to surface no differently than any other failure - later lines would
+            // just fail against an empty word list with a cryptic "Expected command
+            // ..." and no indication the real problem was at load time.
+            const restartedEngine = createStandaloneMockEngine();
+            vi.mocked(restartedEngine.getLastError).mockReturnValue("Compilation failed: bad.yaml:3");
+            const restartEngine = vi.fn(() => restartedEngine);
+
+            const result = await runner(restartEngine).run(toLines(["---"]));
+
+            expect(result).toBe("FAILURE");
+            expect(errored.some(line => line.includes("Failed to load game"))).toBe(true);
+            expect(errored.some(line => line.includes("Compilation failed: bad.yaml:3"))).toBe(true);
         });
 
         test("a trailing label other than 'sandbox' is ignored and doesn't enter a sandbox room", async () => {
