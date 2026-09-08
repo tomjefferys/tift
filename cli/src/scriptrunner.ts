@@ -68,18 +68,37 @@ description: An empty room, used to isolate an item for testing.
 // rest of that section is skipped - execution resumes at the next "---". Each
 // section's pass/fail is tracked and reported in a summary once the whole script has
 // run (see run()).
+//
+// A constructor-supplied testFilter restricts a run to sections whose "---" label
+// contains it as a substring, letting a subset of tests in a file be run without
+// splitting the file up (see matchesFilter()).
 export class ScriptRunner {
     messages : string[] = [];
     print : PrintFn;
     engine : EngineFacade;
     error : PrintFn;
     restartEngine? : () => EngineFacade;
+    testFilter? : string;
 
-    constructor(engine : EngineFacade, print : PrintFn, error : PrintFn = print, restartEngine? : () => EngineFacade) {
+    // testFilter, when given, restricts execution to sections whose "---" label
+    // contains it as a substring (case-sensitive, like the "!"/plain-line message
+    // matching elsewhere in this file). Sections with no label (including section 1,
+    // when nothing precedes the first "---") never match a non-empty filter, and are
+    // skipped along with everything else that doesn't match.
+    constructor(engine : EngineFacade, print : PrintFn, error : PrintFn = print, restartEngine? : () => EngineFacade,
+                testFilter? : string) {
         this.engine = engine;
         this.print = print;
         this.error = error;
         this.restartEngine = restartEngine;
+        this.testFilter = testFilter;
+    }
+
+    private matchesFilter(label : string | undefined) : boolean {
+        if (this.testFilter === undefined) {
+            return true;
+        }
+        return label !== undefined && label.includes(this.testFilter);
     }
 
     async run(nextLine : () => Promise<string | null>) : Promise<Result> {
@@ -93,11 +112,12 @@ export class ScriptRunner {
         let currentLabel : string | undefined;
         let currentFailed = false;
         let sectionHasContent = false;
-        let skipping = false;
+        let sectionMatches = this.matchesFilter(currentLabel);
+        let skipping = !sectionMatches;
         const results : SectionResult[] = [];
 
         const finalizeSection = () => {
-            if (sectionHasContent) {
+            if (sectionHasContent && sectionMatches) {
                 results.push({ index : sectionIndex, label : currentLabel, passed : !currentFailed });
             }
         };
@@ -110,20 +130,27 @@ export class ScriptRunner {
                 currentLabel = this.parseDivider(trimmed).label;
                 currentFailed = false;
                 sectionHasContent = false;
-                skipping = false;
-                try {
-                    this.executeLine(line);
-                } catch (e) {
-                    if (isScriptError(e)) {
-                        this.printFailure(lineNum, line, e);
-                        currentFailed = true;
-                        skipping = true;
-                        // The divider itself is what failed (eg no restart handler
-                        // configured), so record this as a failed section even though
-                        // no further lines follow it.
-                        sectionHasContent = true;
-                    } else {
-                        throw e;
+                sectionMatches = this.matchesFilter(currentLabel);
+                // A section that doesn't match testFilter is skipped outright,
+                // including the "---" divider's own restart/sandbox setup - it has no
+                // effect on later sections, since every "---" restarts the engine from
+                // scratch regardless of what came before it.
+                skipping = !sectionMatches;
+                if (sectionMatches) {
+                    try {
+                        this.executeLine(line);
+                    } catch (e) {
+                        if (isScriptError(e)) {
+                            this.printFailure(lineNum, line, e);
+                            currentFailed = true;
+                            skipping = true;
+                            // The divider itself is what failed (eg no restart handler
+                            // configured), so record this as a failed section even though
+                            // no further lines follow it.
+                            sectionHasContent = true;
+                        } else {
+                            throw e;
+                        }
                     }
                 }
                 lineNum++;
@@ -157,6 +184,11 @@ export class ScriptRunner {
             lineNum++;
         }
         finalizeSection();
+
+        if (this.testFilter !== undefined && results.length === 0) {
+            this.error(pc.red(`No test sections matched filter: "${this.testFilter}"`));
+            return "FAILURE";
+        }
 
         this.printSummary(results);
 

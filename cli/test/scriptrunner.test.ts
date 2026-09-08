@@ -51,8 +51,8 @@ describe("ScriptRunner", () => {
         } as unknown as EngineFacade;
     });
 
-    function runner(restartEngine? : () => EngineFacade) {
-        return new ScriptRunner(mockEngineInstance, (m) => printed.push(m), (m) => errored.push(m), restartEngine);
+    function runner(restartEngine? : () => EngineFacade, testFilter? : string) {
+        return new ScriptRunner(mockEngineInstance, (m) => printed.push(m), (m) => errored.push(m), restartEngine, testFilter);
     }
 
     test("'$' lines match against normal words even when a debug word shares the value", async () => {
@@ -385,6 +385,53 @@ describe("ScriptRunner", () => {
 
             expect(result).toBe("SUCCESS");
             expect(errored.some(line => line.includes("Test summary:"))).toBe(false);
+        });
+    });
+
+    describe("testFilter", () => {
+        test("only runs sections whose label contains the filter as a substring", async () => {
+            const restartedEngine = createStandaloneMockEngine();
+            const restartEngine = vi.fn(() => restartedEngine);
+
+            // Section 2 ("keep this: trunk") matches the "trunk" filter; sections 1 and
+            // 3 don't, so their lines (which would otherwise fail) must never run.
+            const result = await runner(restartEngine, "trunk").run(toLines([
+                "nonexistent output",
+                "--- keep this: trunk",
+                "!nope",
+                "--- skip this: mop",
+                "nonexistent output"
+            ]));
+
+            expect(result).toBe("SUCCESS");
+            expect(errored.some(line => line.includes("keep this: trunk"))).toBe(true);
+            expect(errored.some(line => line.includes("skip this: mop"))).toBe(false);
+            expect(errored.some(line => line.includes("Test 1"))).toBe(false);
+        });
+
+        test("a section with no label never matches a filter", async () => {
+            // Section 1 (before any "---") has no label, so it can't match a non-empty
+            // filter even though it contains lines that would otherwise fail.
+            const result = await runner(undefined, "trunk").run(toLines(["nonexistent output"]));
+
+            expect(result).toBe("FAILURE");
+            expect(errored.some(line => line.includes('No test sections matched filter: "trunk"'))).toBe(true);
+        });
+
+        test("fails with a clear message when nothing matches the filter", async () => {
+            const result = await runner(undefined, "nonexistent-label").run(toLines(["!nope"]));
+
+            expect(result).toBe("FAILURE");
+            expect(errored.some(line => line.includes('No test sections matched filter: "nonexistent-label"'))).toBe(true);
+        });
+
+        test("doesn't restart the engine for a filtered-out section", async () => {
+            const restartedEngine = createStandaloneMockEngine();
+            const restartEngine = vi.fn(() => restartedEngine);
+
+            await runner(restartEngine, "trunk").run(toLines(["--- skip this: mop"]));
+
+            expect(restartEngine).not.toHaveBeenCalled();
         });
     });
 });

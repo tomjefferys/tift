@@ -5,6 +5,7 @@ export interface Options {
     saveFile : string | undefined;
     developer : boolean;
     dataFiles : string[];
+    testFilter : string | undefined;
 }
 
 export function getCommandLineOptions(args : string[]) : Options {
@@ -22,6 +23,10 @@ export function getCommandLineOptions(args : string[]) : Options {
             type : "boolean",
             short: "d",
             default : false
+        },
+        test : {
+            type : "string",
+            short: "t",
         }
     } as const;
 
@@ -31,6 +36,7 @@ export function getCommandLineOptions(args : string[]) : Options {
         silent : values.silent ?? false,
         saveFile : values.saveFile,
         developer : values.dev ?? false,
-        dataFiles : positionals
+        dataFiles : positionals,
+        testFilter : values.test
     }
 }

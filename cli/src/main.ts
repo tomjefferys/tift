@@ -99,7 +99,7 @@ async function runBatch(statePersister : StatePersister, options : Options) : Pr
         return createEngine(statePersister, options.dataFiles);
     }
 
-    const scriptRunner = new ScriptRunner(engine, printFn, errorFn, restartEngine);
+    const scriptRunner = new ScriptRunner(engine, printFn, errorFn, restartEngine, options.testFilter);
     return await scriptRunner.run(getNextLine);
 }
 

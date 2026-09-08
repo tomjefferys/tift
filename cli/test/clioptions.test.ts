@@ -31,4 +31,22 @@ describe("getCommandLineOptions", () => {
         const options = getCommandLineOptions(args);
         expect(options.developer).toBe(true);
     });
+
+    test("should parse the test filter option via --test", () => {
+        const args = ["--test", "trunk", "data1.tift"];
+        const options = getCommandLineOptions(args);
+        expect(options.testFilter).toBe("trunk");
+    });
+
+    test("should parse the test filter option via -t shorthand", () => {
+        const args = ["-t", "trunk", "data1.tift"];
+        const options = getCommandLineOptions(args);
+        expect(options.testFilter).toBe("trunk");
+    });
+
+    test("testFilter is undefined when not provided", () => {
+        const args = ["data1.tift"];
+        const options = getCommandLineOptions(args);
+        expect(options.testFilter).toBeUndefined();
+    });
 });
