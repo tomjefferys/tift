@@ -31,14 +31,22 @@ export function isScriptError(error : unknown) : error is ScriptError {
 // The id of the sandbox room created by "--- sandbox" (see enterSandbox()).
 const SANDBOX_ROOM_ID = "__sandbox__";
 
-// A minimal, empty room, loaded on demand by "--- sandbox" so a section can test a
-// single item in isolation, unaffected by whatever else is going on in the rest of
-// the game.
-const SANDBOX_ROOM_YAML = `
-room: ${SANDBOX_ROOM_ID}
-name: Sandbox
-description: An empty room, used to isolate an item for testing.
-`;
+// Builds the YAML for a room with the given exits (direction -> target room id),
+// used both for the initial empty sandbox room and for rooms created on demand by
+// the "@room" directive (see createRoom()/executeDirective()).
+function makeRoomYaml(id : string, exits : Record<string, string> = {}) : string {
+    const name = id === SANDBOX_ROOM_ID ? "Sandbox" : id;
+    const description = id === SANDBOX_ROOM_ID
+        ? "An empty room, used to isolate an item for testing."
+        : `An empty room named "${id}", created by a "@room" directive.`;
+    const exitsYaml = Object.entries(exits)
+        .map(([direction, target]) => `  ${direction}: ${target}`)
+        .join("\n");
+    return `
+room: ${id}
+name: ${name}
+description: ${description}` + (exitsYaml ? `\nexits:\n${exitsYaml}\n` : "\n");
+}
 
 // Runs a script line by line and checks the output
 // against the expected messages
@@ -56,6 +64,18 @@ description: An empty room, used to isolate an item for testing.
 // Lines starting with "@" are directives that set up test state rather than playing
 // the game, eg "@item <id>" moves an item into the player's current location (the
 // sandbox room, typically) so its verbs become available.
+// "@room [<id>] <direction>:<targetId> ..." creates (or adds exits to) a dummy room,
+// so a sandbox test can exercise motion (eg pushing an item between rooms, or the
+// player walking). If the first token is an exit spec rather than an id (ie it
+// contains a ":"), the exits are added to the sandbox room itself - this is the
+// terse common case of testing motion into one adjacent room, eg
+// "@room north:hall" gives the sandbox room a north exit to "hall" and creates
+// "hall" as an empty room. Any target room id that hasn't already been created
+// (by an earlier "@room", or the sandbox room itself) is auto-created as an empty
+// room; a target that already exists is left alone. Exits accumulate across
+// multiple "@room" directives on the same room id rather than replacing each
+// other. Directions are one-way - declare the reverse explicitly on the other
+// room (eg "@room hall south:__sandbox__") for two-way travel.
 // Other lines are are tested to see if they match the output
 // Lines starting with a "#" are ignored
 // Lines staring with a "!" are negative matches.  An error will be thrown if the message is found
@@ -79,6 +99,11 @@ export class ScriptRunner {
     error : PrintFn;
     restartEngine? : () => EngineFacade;
     testFilter? : string;
+
+    // Exits accumulated so far for each dummy room created by "@room" (including the
+    // sandbox room itself, once "--- sandbox" has run) - see executeDirective().
+    // Reset on every restart, since "---" always starts a fresh game.
+    roomExits : Map<string, Record<string, string>> = new Map();
 
     // testFilter, when given, restricts execution to sections whose "---" label
     // contains it as a substring (case-sensitive, like the "!"/plain-line message
@@ -356,6 +381,7 @@ export class ScriptRunner {
             throw new ScriptError([], `"---" requires a restart handler, but none was configured`);
         }
         this.engine = this.restartEngine();
+        this.roomExits = new Map();
         this.messages.length = 0;
         this.flushOutput();
         const loadError = this.engine.getLastError();
@@ -375,7 +401,8 @@ export class ScriptRunner {
     // so a following "@item" directive can test an item in isolation from the rest of
     // the game (every other entity still exists, just out of scope in a different room).
     private enterSandbox() {
-        this.engine.load(SANDBOX_ROOM_YAML);
+        this.roomExits.set(SANDBOX_ROOM_ID, {});
+        this.engine.load(makeRoomYaml(SANDBOX_ROOM_ID));
         // Loading content mid-script doesn't automatically refresh the word cache (see
         // EngineFacade.refreshWords), so without this the sandbox room wouldn't yet be
         // offered as a teleport target.
@@ -383,6 +410,14 @@ export class ScriptRunner {
         this.runCommand(["teleport", SANDBOX_ROOM_ID], true);
         this.messages.length = 0;
         this.flushOutput(false);
+    }
+
+    // Loads (or reloads) a dummy room with the given exits - used by both
+    // enterSandbox() and the "@room" directive. Reloading an existing room id
+    // overwrites it in place (see EngineBuilder.addContent()), which is how "@room"
+    // can add exits to a room (including the sandbox room) that already exists.
+    private createRoom(id : string, exits : Record<string, string>) {
+        this.engine.load(makeRoomYaml(id, exits));
     }
 
     // Dispatches an "@" directive line, eg "@item <id>".
@@ -393,9 +428,63 @@ export class ScriptRunner {
                 throw new ScriptError([], `"@item" requires exactly one item id, got: "@${directiveLine}"`);
             }
             this.stageItem(args[0]);
+        } else if (directive === "room") {
+            this.addRoom(args, directiveLine);
         } else {
             throw new ScriptError([], `Unknown directive: "@${directive}"`);
         }
+    }
+
+    // Creates (or adds exits to) a dummy room, per an "@room [<id>] <direction>:<targetId> ..."
+    // script line - see the class doc comment above for the full syntax. Reloading a
+    // room id that already exists just overwrites it with its accumulated exits (see
+    // createRoom()), so this also handles adding exits to a room created earlier
+    // (including the sandbox room itself).
+    private addRoom(args : string[], directiveLine : string) {
+        if (args.length === 0) {
+            throw new ScriptError([], `"@room" requires a room id and/or at least one exit, got: "@${directiveLine}"`);
+        }
+
+        // If the first token is itself an exit spec (contains ":"), there's no
+        // explicit id - the exits apply to the sandbox room, letting the common case
+        // of testing motion into one adjacent room be written on a single line, eg
+        // "@room north:hall".
+        const [id, exitArgs] = args[0].includes(":")
+            ? [SANDBOX_ROOM_ID, args]
+            : [args[0], args.slice(1)];
+
+        const newExits : Record<string, string> = {};
+        for (const exitArg of exitArgs) {
+            const separatorIndex = exitArg.indexOf(":");
+            const direction = separatorIndex === -1 ? exitArg : exitArg.slice(0, separatorIndex);
+            const target = separatorIndex === -1 ? "" : exitArg.slice(separatorIndex + 1);
+            if (!direction || !target) {
+                throw new ScriptError([], `"@room" exits must be in the form "<direction>:<targetId>", got: "${exitArg}"`);
+            }
+            newExits[direction] = target;
+        }
+
+        const exits = { ...this.roomExits.get(id), ...newExits };
+        this.roomExits.set(id, exits);
+        this.createRoom(id, exits);
+
+        // Auto-create any target room that hasn't been declared yet, so motion into
+        // it works immediately, without needing a separate "@room <target>" line. A
+        // target that already exists (declared earlier, or the sandbox room) is left
+        // untouched - only ever added to via its own "@room" line.
+        for (const target of Object.values(newExits)) {
+            if (!this.roomExits.has(target)) {
+                this.roomExits.set(target, {});
+                this.createRoom(target, {});
+            }
+        }
+
+        this.engine.refreshWords();
+        // Loading rooms shouldn't normally produce player-visible output, but swallow
+        // anything it does (eg a load error), consistent with the other setup helpers
+        // (enterSandbox, stageItem), so it can't leak into a later assertion.
+        this.messages.length = 0;
+        this.flushOutput(false);
     }
 
     // Moves an item into the player's current location (typically the sandbox room),

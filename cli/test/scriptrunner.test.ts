@@ -291,6 +291,76 @@ describe("ScriptRunner", () => {
         });
     });
 
+    describe("'@room' directive", () => {
+        test("the terse implicit form adds an exit to the sandbox room and auto-creates the target", async () => {
+            // No word-list mocking needed for the loads themselves; getWords() is only
+            // consulted by the "$ go north" command that follows.
+            vi.mocked(mockEngineInstance.getWords).mockReturnValue([word("verb.go_north", "go north")]);
+
+            const result = await runner().run(toLines(["@room north:study", "$ go north"]));
+
+            expect(result).toBe("SUCCESS");
+            // First load creates/updates the sandbox room with the new exit; second
+            // creates the auto-created "study" target.
+            expect(mockEngineInstance.load).toHaveBeenNthCalledWith(1, expect.stringContaining("__sandbox__"));
+            expect(mockEngineInstance.load).toHaveBeenNthCalledWith(1, expect.stringContaining("north: study"));
+            expect(mockEngineInstance.load).toHaveBeenNthCalledWith(2, expect.stringContaining("room: study"));
+            expect(mockEngineInstance.execute).toHaveBeenCalledWith(["verb.go_north"]);
+        });
+
+        test("an explicit id creates a room reachable by teleport", async () => {
+            vi.mocked(mockEngineInstance.getWords)
+                .mockReturnValueOnce([word("debug.teleport", "teleport", ["debug"])])
+                .mockReturnValueOnce([word("hall", "hall", ["debug"])]);
+
+            const result = await runner().run(toLines(["@room hall north:study", "> teleport hall"]));
+
+            expect(result).toBe("SUCCESS");
+            expect(mockEngineInstance.load).toHaveBeenNthCalledWith(1, expect.stringContaining("room: hall"));
+            expect(mockEngineInstance.load).toHaveBeenNthCalledWith(2, expect.stringContaining("room: study"));
+            expect(mockEngineInstance.execute).toHaveBeenCalledWith(["debug.teleport", "hall"]);
+        });
+
+        test("exits accumulate across multiple directives on the same room rather than replacing each other", async () => {
+            await runner().run(toLines(["@room north:study", "@room east:pantry"]));
+
+            // The second "@room" reloads the sandbox room; it must still declare the
+            // first exit alongside the new one.
+            expect(mockEngineInstance.load).toHaveBeenNthCalledWith(3, expect.stringContaining("north: study"));
+            expect(mockEngineInstance.load).toHaveBeenNthCalledWith(3, expect.stringContaining("east: pantry"));
+        });
+
+        test("auto-creating a target doesn't clobber a room that was already explicitly declared", async () => {
+            const result = await runner().run(toLines([
+                "@room study south:__sandbox__",
+                "@room north:study"
+            ]));
+
+            expect(result).toBe("SUCCESS");
+            // "study" is declared explicitly first (call 1); the second "@room" (calls
+            // 2-3: sandbox room, then study as a target) must NOT reload "study" again,
+            // since it already exists with its own exit.
+            const studyLoads = vi.mocked(mockEngineInstance.load).mock.calls
+                .filter(([yaml]) => (yaml as string).includes("room: study"));
+            expect(studyLoads.length).toBe(1);
+            expect(studyLoads[0][0]).toContain("south: __sandbox__");
+        });
+
+        test("fails with a ScriptError when the directive has no id or exits", async () => {
+            const result = await runner().run(toLines(["@room"]));
+
+            expect(result).toBe("FAILURE");
+            expect(errored.some(line => line.includes('"@room" requires a room id'))).toBe(true);
+        });
+
+        test("fails with a ScriptError for a malformed exit spec", async () => {
+            const result = await runner().run(toLines(["@room north:"]));
+
+            expect(result).toBe("FAILURE");
+            expect(errored.some(line => line.includes('"@room" exits must be in the form'))).toBe(true);
+        });
+    });
+
     describe("'!$' negative command", () => {
         test("passes, and doesn't execute anything, when the command can't be built", async () => {
             vi.mocked(mockEngineInstance.getWords).mockReturnValue([word("verb.get", "get")]);

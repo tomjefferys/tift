@@ -246,6 +246,15 @@ export class BasicEngine implements Engine {
     const builder = new EngineBuilder();
     builder.fromYaml(message.data);
     this.addContent(env => builder.addToEnv(env));
+    if (this.started) {
+      // Content loaded after the game has started (eg a room added or updated at
+      // runtime) may add/change entities or verbs, so the cached context used by
+      // getWords()/execute() needs refreshing - mirroring what debug commands
+      // already do after mutating game state (see execute() above). Guarded on
+      // "started" because getContext() looks up the player, which doesn't exist
+      // yet during the initial data-file loads that happen before start().
+      this.context = this.getContext();
+    }
   }
 
   save(compress = false) {

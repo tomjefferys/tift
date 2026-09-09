@@ -43,7 +43,7 @@
       }
     },
     "directive": {
-      "comment": "@item <id> - a setup directive, eg staging an item into the current location",
+      "comment": "@item <id> / @room [<id>] <direction>:<targetId> ... - a setup directive, eg staging an item into the current location, or creating a dummy room linked by direction",
       "match": "^(\\s*@)(\\w+)(\\s+.*)?$",
       "captures": {
         "1": { "name": "punctuation.definition.directive.tift-test" },

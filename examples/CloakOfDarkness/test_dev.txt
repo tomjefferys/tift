@@ -43,3 +43,13 @@ $ inventory
 
 $ examine small brass hook
 screwed to the wall
+
+# "@room <direction>:<id>" gives the sandbox room an exit in that direction and
+# auto-creates the target as an empty room - so motion (walking, or pushing an
+# object between rooms) can be tested without needing a full second room of the
+# real game. Here it's just used to confirm walking works from the sandbox.
+--- sandbox: test walking out of the sandbox room
+@room north:sandbox_hall
+
+$ go north
+An empty room named "sandbox_hall"
