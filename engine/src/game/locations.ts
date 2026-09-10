@@ -1,4 +1,5 @@
 import { Env } from "tift-types/src/env";
+import _ from "lodash";
 import * as Entities from "./entities";
 import * as MultiDict from "../util/multidict";
 import { Obj } from "tift-types/src/util/objects";
@@ -125,6 +126,28 @@ export function isInContainer(env : Env, obj : Obj) : boolean {
 export function isLightSourceAtLocation(env : Env, location : Obj) : boolean {
     return env.findObjs(obj => Entities.isEntity(obj) && Entities.entityHasTag(obj, Tags.LIGHTSOURCE))
             .some(entity => isAtLocation(env, location.id, entity));
+}
+
+/**
+ * An exit is either a plain room id, or (for a conditional exit) an object of the
+ * form { roomId: condition }. Resolve either form down to the destination room id.
+ */
+export function getExitDestination(location : Obj, direction : string) : Optional<string> {
+    const directionValue = location?.exits[direction];
+    if (_.isString(directionValue)) {
+        return directionValue;
+    } else if (_.isPlainObject(directionValue)) {
+        const entries = Object.entries(directionValue) as [string, string][];
+        if (entries.length > 1) {
+            throw new Error("Multiple conditional exits not supported");
+        }
+        // The condition is already checked by commandsearch's isEnabled() before a direction
+        // is offered as a valid word, via the verbModifier/verbMatcher built in makeRoom() -
+        // so a command only reaches here once the condition is known to be true.
+        const [dest, _condition] = entries[0];
+        return dest;
+    }
+    return undefined;
 }
 
 export function addExit(env : Env, roomId : string, direction : string, target : string) {

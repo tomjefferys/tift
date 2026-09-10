@@ -997,6 +997,59 @@ test("Test setLocation", () => {
     executeAndTest(["look"], { expected : ["The South Room"]});
 });
 
+test("Test getExits", () => {
+    builder.withObj({...NORTH_ROOM, exits : { south : "southRoom" } })
+           .withObj({...SOUTH_ROOM, exits : { north : "northRoom" } })
+           .withObj({
+                id : "exitsFns",
+                type : "rule",
+                "afterTurn()" : "print('south = ' + getExits(northRoom).south)"
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["south = southRoom"]});
+});
+
+test("Test getRoom", () => {
+    builder.withObj({...NORTH_ROOM, exits : { south : "southRoom" } })
+           .withObj({...SOUTH_ROOM, exits : { north : "northRoom" } })
+           .withObj({
+                id : "roomFns",
+                type : "rule",
+                "afterTurn()" : [
+                    "print('relative = ' + getRoom('south'))",
+                    "print('explicit = ' + getRoom(northRoom, 'south'))",
+                    "print('missing = ' + getRoom('east'))"
+                ]
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["relative = southRoom", "explicit = southRoom", "missing = undefined"]});
+});
+
+test("Test move dir", () => {
+    builder.withObj({...NORTH_ROOM, exits : { south : "southRoom" } })
+           .withObj({...SOUTH_ROOM, exits : { north : "northRoom" } })
+           .withObj({
+                id : "robot",
+                type : "item",
+                location : "northRoom"
+           })
+           .withObj({
+                id : "robotRule",
+                type : "rule",
+                "afterTurn()" : [
+                    "move(robot).dir('south')",
+                    "print('at south = ' + isAtLocation(robot, southRoom))",
+                    "move(robot).dir('east')",
+                    "print('still south = ' + isAtLocation(robot, southRoom))"
+                ]
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+    executeAndTest(["wait"], { expected : ["at south = true", "still south = true"]});
+});
+
 test("Test getInventory", () => {
     builder.withObj({ ...NORTH_ROOM,
                       "after" : {

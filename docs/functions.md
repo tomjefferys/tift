@@ -60,6 +60,7 @@ before:
 
 ### see all
 - [openExit](#openexit)
+- [getExits](#getExits)
 
 ## delTag
 
@@ -147,6 +148,31 @@ do:
   - mouse.in_trap = true
 ```
 
+## getExits
+
+Returns a room's exits, as a map of direction to destination room id.
+
+`getExits(room)`
+
+```yaml
+room: northRoom
+name: north room
+exits:
+  south: southRoom
+afterTurn():
+  - print(getExits(northRoom).south)
+```
+
+```
+$ wait
+> southRoom
+```
+
+### see also
+- [getRoom](#getRoom)
+- [openExit](#openexit)
+- [closeExit](#closeexit)
+
 ## getFullName
 
 Return the name of an entity, including it's article (ie `a`, or `the`).
@@ -204,6 +230,7 @@ getLocation()
 
 ### see also
 - [isAtLocation](#isatlocation)
+- [getRoom](#getRoom)
 
 ## getName
 
@@ -272,6 +299,35 @@ afterTurn():
 > Hello World
 > Howdy
 ```
+
+## getRoom
+
+Returns the id of the room in a particular direction. If only a direction is given, it's resolved relative to the player's current room; a room can be given explicitly as the first argument. Returns `undefined` if there's no exit in that direction.
+
+`getRoom(direction)`
+
+`getRoom(room, direction)`
+
+```yaml
+room: northRoom
+name: north room
+exits:
+  south: southRoom
+afterTurn():
+  - print(getRoom('south'))
+  - print(getRoom(northRoom, 'south'))
+```
+
+```
+$ wait
+> southRoom
+southRoom
+```
+
+### see also
+- [getExits](#getExits)
+- [getLocation](#getLocation)
+- [move](#move)
 
 ## getScore
 
@@ -395,13 +451,40 @@ Returns an array containing all the entities at the specified location
 
 ## move
 
-Move an item to another location
+Move an item to another location, either by specifying the destination directly, or by giving a direction relative to the item's current room.
 
 `move(item).to(location)`
+
+`move(item).dir(direction)`
 
 ```js
 move(cat).to(kitchen)
 ```
+
+`move(item).dir(direction)` does nothing if there's no exit in that direction from the item's current room. Useful for moving NPCs around, e.g. in response to a "tell &lt;npc&gt; to go &lt;direction&gt;" style command.
+
+```yaml
+---
+room: northRoom
+name: north room
+exits:
+  south: southRoom
+---
+room: southRoom
+name: south room
+exits:
+  north: northRoom
+---
+item: robot
+name: robot
+location: northRoom
+afterTurn():
+  - move(robot).dir('south')
+---
+```
+
+### see also
+- [getRoom](#getRoom)
 
 ## not
 
@@ -454,6 +537,7 @@ before:
 
 ### see also
 - [closeExit](#closeexit)
+- [getExits](#getExits)
 
 ## or
 

@@ -15,7 +15,6 @@ import * as Property from "../properties";
 import * as Tags from "./tags";
 import * as Lockable from "./traits/lockable";
 import * as VERB_NAMES from "./verbnames";
-import _ from "lodash";
 
 export const SPATIAL_PREPOSITIONS = ["in", "on", "under", "above", "beside", "behind"];
 
@@ -101,33 +100,13 @@ const WAIT = phaseActionBuilder("wait")
     }));
         
 
-// An exit is either a plain room id, or (for a conditional exit) an object of the
-// form { roomId: condition }. Resolve either form down to the destination room id.
-function getExitDestination(location : Obj, direction : string) : string | undefined {
-    const directionValue = location?.exits[direction];
-    if (_.isString(directionValue)) {
-        return directionValue;
-    } else if (_.isPlainObject(directionValue)) {
-        const entries = Object.entries(directionValue) as [string, string][];
-        if (entries.length > 1) {
-            throw new Error("Multiple conditional exits not supported");
-        }
-        // The condition is already checked by commandsearch's isEnabled() before a direction
-        // is offered as a valid word, via the verbModifier/verbMatcher built in makeRoom() -
-        // so a command only reaches here once the condition is known to be true.
-        const [dest, _condition] = entries[0];
-        return dest;
-    }
-    return undefined;
-}
-
 const GO = phaseActionBuilder("go")
         .withPhase("main")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("go")).withModifier(captureModifier("direction")).build(),
             mkThunk(env => {
                 const location = Player.getLocationEntity(env);
-                const destination = getExitDestination(location, env.get("direction"));
+                const destination = Locations.getExitDestination(location, env.get("direction"));
 
                 if (destination) {
                     const player = Player.getPlayer(env);
@@ -240,7 +219,7 @@ const PUSH = phaseActionBuilder(VERB_NAMES.PUSH)
                 const item =  env.get("pushable");
                 const direction = env.get("direction");
                 const location = Entities.getEntity(env, Locations.getLocation(item));
-                const destination = getExitDestination(location, direction);
+                const destination = Locations.getExitDestination(location, direction);
                 if (destination) {
                     Locations.setLocation(env, item, destination);
                     Output.write(env, `Pushed ${getName(item as Nameable)} ${direction}`);

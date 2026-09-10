@@ -22,9 +22,19 @@ type EnvFnMap = {[key:string]:EnvFn};
 const moveFn = bindParams(["id"], env => {
     const id = env.get("id");
     const DEST = "destination";
+    const DIRECTION = "direction";
     return mkResult({
         to : bindParams([DEST], env => {
             Locations.doMove(env, id, env.get(DEST));
+            return mkResult(null);
+        }),
+        dir : bindParams([DIRECTION], env => {
+            const entity = Entities.getEntity(env, id);
+            const location = Entities.getEntity(env, Locations.getLocation(entity));
+            const destination = Locations.getExitDestination(location, env.get(DIRECTION));
+            if (destination) {
+                Locations.doMove(env, id, destination);
+            }
             return mkResult(null);
         })
     });
@@ -65,7 +75,24 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
         DEFAULT_FUNCTIONS.writeMessage(env.newChild({"message" : log( "warn", env.get("value"))}));
         return mkResult(false);
     }),
-    openExit : bindParams(["room", "direction", "target"], 
+    getRoom : env => {
+                        const args = env.get(ARGS);
+                        const direction = args.length === 1 ? args[0] : args[1];
+                        const room = args.length === 1
+                                        ? Player.getLocationEntity(env)
+                                        : Entities.getEntity(env, args[0]);
+                        return mkResult(Locations.getExitDestination(room, direction));
+                    },
+    getExits : bindParams(["room"], env => {
+                            const room = Entities.getEntity(env, env.get("room"));
+                            const exits = Object.keys(room.exits ?? {})
+                                                 .reduce((acc : Obj, direction : string) => {
+                                                     acc[direction] = Locations.getExitDestination(room, direction);
+                                                     return acc;
+                                                 }, {});
+                            return mkResult(exits);
+                        }),
+    openExit : bindParams(["room", "direction", "target"],
                         env => {
                             Locations.addExit(env, env.get("room"), env.getStr("direction"), env.get("target"));
                             return mkResult(null);
