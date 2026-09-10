@@ -2519,3 +2519,50 @@ test("Test undefined/defined value as when rule", () => {
     engine.send(Input.start());
     executeAndTest(["wait"], { expected : ["NO QUX"]});
 });
+
+// Regression test for a bug where a "before"/"after" rule pattern for a clausal verb
+// with a nested sub-command (eg "tell(robot).to(go($direction))") would throw
+// "Expected a simple value here, but found a nested command" as soon as *any* command
+// was executed - not just the clausal one the rule was written for. This was because
+// the rule's matcher decided whether to treat its pattern as clausal using the verb of
+// whichever command was currently being scored (eg "look"), rather than the verb the
+// pattern itself names (eg "tell") - see matchParser.ts createMatcher().
+test("Test clausal verb before-rule doesn't break unrelated commands", () => {
+    builder.withObj({
+                ...NORTH_ROOM,
+                exits : { south : "southRoom" } })
+           .withObj({
+                ...SOUTH_ROOM,
+                exits : { north : "northRoom" } })
+           .withObj({
+                id : "tell",
+                type : "verb",
+                tags : ["transitive"],
+                attributes : ["to"],
+                commands : ["go"]
+           })
+           .withObj({
+                id : "robot",
+                name : "robot",
+                type : "item",
+                location : "northRoom",
+                tags : ["NPC"],
+                verbs : ["tell"],
+                before : {
+                    "tell(robot).to(go($direction))" : "move(robot).dir(direction)"
+                }
+           });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    // Scoring the robot's clausal before-rule against this unrelated, non-clausal
+    // command used to throw - this would previously fail with a logged error.
+    executeAndTest(["look"], { expected : ["robot"]});
+
+    // The clausal command itself should still work correctly.
+    executeAndTest(["tell", "robot", "to", "go", "south"], {});
+    executeAndTest(["look"], { notExpected : ["robot"]});
+
+    executeAndTest(["go", "south"], {});
+    executeAndTest(["look"], { expected : ["robot"]});
+});

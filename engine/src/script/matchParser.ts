@@ -78,7 +78,16 @@ function createMatcher(compoundMatch : CompoundMatch) : Matcher {
         if (!verb) {
             throw new Error("No verb");
         }
-        builder.withVerb(matchVerb(compoundMatch.nameMatch.name))
+        // Check the verb actually named by this pattern matches the command's verb before doing
+        // anything else - isTransitive/isClausal below need the pattern's own verb (eg "tell"),
+        // not whatever verb the currently-tested command happens to have (eg "look"), which would
+        // otherwise misinterpret this pattern's arguments/member using the wrong verb's shape.
+        const verbMatcher = matchVerb(compoundMatch.nameMatch.name);
+        const verbResult = verbMatcher(command, objId);
+        if (!verbResult.isMatch) {
+            return verbResult;
+        }
+        builder.withVerb(verbMatcher)
 
         const args = compoundMatch.argMatches.slice().reverse(); // Reverse list so we can use pop
         if (isTransitive(verb)) {
