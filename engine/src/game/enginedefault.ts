@@ -14,6 +14,8 @@ import * as Nameable from "../nameable";
 import * as Metadata from "./metadata";
 import * as Mustache from "../util/mustacheUtils";
 import * as Properties from "../properties";
+import { executeCommand } from "../commandexecutor";
+import { getContext } from "./context";
 
 type Nameable = Nameable.Nameable;
 
@@ -156,7 +158,19 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const template = env.get("template");
                             const output = Mustache.formatString(env, template);
                             return mkResult(output);
-                        })
+                        }),
+    // executeCommand(command, full?) - run a fully formed command (eg from a search
+    // performed by an autonomous agent/NPC) against the current context. Takes an
+    // optional second argument (defaulting to false) to also run the before/after-turn
+    // rule phases around the command. Returns true if a matching action was executed,
+    // false if the command didn't match anything in the current context.
+    executeCommand : env => {
+                            const args = env.get(ARGS);
+                            const command = args[0] as string[];
+                            const full = (args[1] as boolean) ?? false;
+                            const context = getContext(env);
+                            return mkResult(executeCommand(env, context, command, full));
+                        }
 }
 
 export function makeDefaultFunctions(obj : Obj) {

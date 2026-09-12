@@ -2,16 +2,13 @@ import { isInstant, Verb } from "./verb"
 import { Entity } from "./entity"
 import { Env } from "tift-types/src/env"
 import { createRootEnv } from "./env"
-import { ContextEntities, buildSearchContext, searchExact, getNextWords } from "./commandsearch"
+import { ContextEntities, getNextWords } from "./commandsearch"
 import { OutputConsumer, OutputMessage } from "tift-types/src/messages/output";
 import { Word } from "tift-types/src/messages/word";
 import * as Output from "./messages/output";
 import * as MessageOut from "./game/output";
-import * as multidict from "./util/multidict";
 import * as _ from "lodash";
-import * as arrays from "./util/arrays";
-import { PhaseAction } from "./script/phaseaction";
-import { SentenceNode } from "./command";
+import { searchCommand, executeActions, executeRule, getContextualRules, getGlobalRules, executeCommand, BEFORE_TURN, AFTER_TURN } from "./commandexecutor";
 import { InputMessage, Load, InputMessageType, ConfigProperties } from "tift-types/src/messages/input";
 import * as Input from "tift-types/src/messages/input";
 import { EngineBuilder } from "./game/enginebuilder";
@@ -39,8 +36,6 @@ const DEFAULT_UNDO_LEVELS = 10;
 const logger = Logger.getLogger("engine");
 
 const BEFORE_GAME = "beforeGame";
-const BEFORE_TURN = "beforeTurn";
-const AFTER_TURN = "afterTurn";
 
 export interface EngineState {
   getEntities : () => Entity[];
@@ -341,9 +336,9 @@ export class BasicEngine implements Engine {
     const isTimePassing = verb && !isInstant(verb);
     // Run any before turn rules
     if (isTimePassing) {
-      const contextualRules = this.getContextualRules(BEFORE_TURN);
-      const globalRules = this.getGlobalRules(BEFORE_TURN);
-      
+      const contextualRules = getContextualRules(this.context, BEFORE_TURN);
+      const globalRules = getGlobalRules(this.env, this.context, BEFORE_TURN);
+
       const allRules = [...globalRules, ...contextualRules];
       allRules.forEach(([obj, rule]) => executeRule(obj, rule, this.env));
     }
@@ -359,8 +354,8 @@ export class BasicEngine implements Engine {
 
     if (isTimePassing || this.env.getTransient("tick")) {
       // Run afterTurn rules
-      const contextualRules = this.getContextualRules(AFTER_TURN);
-      const globalRules = this.getGlobalRules(AFTER_TURN);
+      const contextualRules = getContextualRules(this.context, AFTER_TURN);
+      const globalRules = getGlobalRules(this.env, this.context, AFTER_TURN);
       const allRules = [...contextualRules, ...globalRules];
       allRules.forEach(([obj, rule]) => executeRule(obj, rule, this.env));
 
@@ -373,43 +368,6 @@ export class BasicEngine implements Engine {
       }
     }
     MessageOut.flush(this.env);
-  }
-
-  getContextualRules(methodName : string) : [Obj, EnvFn][] {
-      const allEntities = _.flatten(Object.values(this.context.entities))
-      const contextualRules = allEntities.filter(entity => entity[methodName] != undefined)
-                                         .map(entity => [entity, entity[methodName]] as [Obj, EnvFn]);
-      return contextualRules;
-  }
-
-  getGlobalRules(methodName : string) : [Obj, EnvFn][] {
-      const globalRules = this.env.findObjs(obj => obj["type"] === "rule")
-                              .filter(rule => this.isRuleInScope(rule))
-                              .filter(rule => rule[methodName] != undefined)
-                              .map(rule => [rule, rule[methodName]] as [Obj, EnvFn]);
-      return globalRules;
-  }
-
-
-  /**
-   * Arrange entities in the following execution order
-   * 1. Scope/Context
-   * 2. Room
-   * 3. Object being acted on
-   * 4. The indirect object 
-   * 
-   * @param matchedCommand 
-   * @returns 
-   */
-  sortEntities(matchedCommand : SentenceNode) : Entity[] {
-    const allContextEntities = _.flatten(Object.values(this.context.entities))
-    const location = getLocationFromContext(this.context);
-    const directObject = matchedCommand.getPoS("directObject")?.entity;
-    const indirectObject = matchedCommand.getPoS("indirectObject")?.entity;
-    const inScopeEnitites = arrays.of(indirectObject, directObject, location);
-    allContextEntities.forEach(entity => arrays.pushIfUnique(inScopeEnitites, entity, (entity1, entity2) => entity1.id === entity2.id));
-    inScopeEnitites.reverse();
-    return inScopeEnitites;
   }
 
   createPluginActionContext(start : Optional<CommandContext>, end : CommandContext) : PluginActionContext {
@@ -434,136 +392,15 @@ export class BasicEngine implements Engine {
   getVerbs() : Verb[] {
     return this.env.findObjs(obj => obj["type"] === "verb") as Verb[];
   }
-
-  /**
-   * Check if a rule is in scope.
-   * If a rule is declared with an 'scope', check if at least one of those
-   * entities is in the current context, else return true;
-   * @param rule 
-   * @returns true if the rule is in scope or has no defined scope
-   */
-  isRuleInScope(rule : Obj) {
-    const ruleEntities = rule["scope"];
-    return _.isArray(ruleEntities)
-              ? multidict.values(this.context.entities)
-                        .map(entity => entity.id)
-                        .some(entity => ruleEntities.includes(entity))
-              : true; 
-  }
 }
 
 const commandExecutor : CommandExecutor = (env, context, command) => {
   // Commands run via this executor (eg by plugins) are synthetic and expected to
   // always be well-formed, so an unmatched command here is a genuine internal error.
-  const matched = searchCommand(env, context, command);
-  if (!matched) {
+  const handled = executeCommand(env, context, command);
+  if (!handled) {
     throw new Error("Could not match command: " + JSON.stringify(command));
   }
-  const [matchedCommand, verb] = matched;
-  executeActions(env, context, matchedCommand, verb);
-}
-
-/**
- * Search for a command in the provided context
- */
-function searchCommand(env : Env, context : CommandContext, command : string[]) : [SentenceNode, Verb?] | undefined {
-  const searchContext = buildSearchContext(context.entities, context.verbs, env);
-  const matchedCommand = searchExact(command, searchContext);
-  if (!matchedCommand) {
-    return undefined;
-  }
-  const verb = matchedCommand.getPoS("verb")?.verb;
-  return [matchedCommand, verb];
-}
-
-/**
- * execute before/main/after actions 
- */
-function executeActions(env : Env, context : CommandContext, matchedCommand : SentenceNode, verb? : Verb) {
-      // Get ordered list of in scope entities
-      const inScopeEntities = sortEntities(context, matchedCommand);
-
-      // Before actions
-      // Get ordered list of actions.  There may be multiple actions for each entity
-      const beforeActions = inScopeEntities.flatMap(entity => 
-          getActions(entity.before, entity.id, matchedCommand).map(action => ({entity, action})));
-      
-      const handledBefore = beforeActions.some(entityAction => 
-          executeAction(entityAction.action, env, matchedCommand, entityAction.entity));
-
-      // Main action
-      let handledMain = false;
-      if (!handledBefore && verb) {
-        const mainActions = getActions(verb.actions, verb.id, matchedCommand)
-                                .map(action => ({verb, action}));
-        handledMain = mainActions.some(verbAction => 
-            executeAction(verbAction.action, env, matchedCommand, verbAction.verb));
-      }
-  
-      // After actions
-      if (handledMain) {
-        const afterActions = inScopeEntities.flatMap(entity => 
-          getActions(entity.after, entity.id, matchedCommand).map(action => ({entity, action})));
-        afterActions.some(entityAction => executeAction(entityAction.action, env, matchedCommand, entityAction.entity));
-      }
-
-}
-
-/**
- * Arrange entities in the following execution order
- * 1. Scope/Context
- * 2. Room
- * 3. Object being acted on
- * 4. The indirect object 
- * 
- * @param matchedCommand 
- * @returns 
- */
-function sortEntities(context : CommandContext, matchedCommand : SentenceNode) : Entity[] {
-  const allContextEntities = _.flatten(Object.values(context.entities))
-  const location = getLocationFromContext(context);
-  const directObject = matchedCommand.getPoS("directObject")?.entity;
-  const indirectObject = matchedCommand.getPoS("indirectObject")?.entity;
-  const inScopeEnitites = arrays.of(indirectObject, directObject, location);
-  allContextEntities.forEach(entity => arrays.pushIfUnique(inScopeEnitites, entity, (entity1, entity2) => entity1.id === entity2.id));
-  inScopeEnitites.reverse();
-  return inScopeEnitites;
-}
-
-/**
- * Takes a list of actions and sorts them by score
- */
-function getActions(actions : PhaseAction[], id : string, command : SentenceNode) : PhaseAction[] {
-  const actionScores = actions.map(action => ({action, "score" : action.score(command, id)}));
-
-  return actionScores.sort((a,b) => b.score - a.score)
-                     .map(action => action.action);
-}
-
-function executeAction(action : PhaseAction, env : Env, command : SentenceNode, agent : Obj) : boolean {
-  let handled = false;
-  const result = action.perform(env, agent, command)?.getValue();
-  if (result) {
-    if (_.isString(result)) {
-      env.execute("write", {"value":result});
-    }
-    handled = true;
-  }
-  return handled;
-}
-
-function executeRule(scope : Obj, rule : EnvFn, env : Env) {
-  const entitiesEnv = env.newChild(env.createNamespaceReferences(["entities"]));
-  const entityEnv = entitiesEnv.newChild(scope);
-  const ruleEnv = entityEnv.newChild({"this" : scope});
-  const result = rule(ruleEnv).getValue();
-  if(result && _.isString(result)) {
-    env.execute("write", {"value":result});
-  }
-}
-
-function getLocationFromContext(context : CommandContext) : Optional<Entity> {
-  return _.head(multidict.get(context.entities, "location"));
 }
 
 function getOutputLogger(output : OutputConsumer) : Logger.LogConsumer {

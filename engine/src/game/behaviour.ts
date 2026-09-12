@@ -7,20 +7,11 @@ import * as Player from "./player";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Entity from "../entity";
-import * as Verb from "../verb";
 import { Nameable, getName } from "../nameable";
 import { CommandContext } from "../engine";
-import * as MultiDict from "../util/multidict";
-import * as Logger from "../util/logger";
 import * as Tags from "./tags";
-import * as Verbs from "./verbs";
 import { makeWord } from "../command";
-
-const logger = Logger.getLogger("behaviour");
-
-type Entity = Entity.Entity;
-type EntityDict = MultiDict.MultiDict<Entity>;
-type Verb = Verb.Verb;
+import * as Context from "./context";
 
 
 // Define some default behaviour
@@ -52,48 +43,7 @@ class DefaultBehaviour implements Behaviour {
     }
 
     getContext(env : Env) : CommandContext {
-
-        const contextEntities : EntityDict = {};
-
-        // Entity for the current location
-        const locationEntity = Player.getLocationEntity(env);
-
-        let searchContext = false;
-        if (locationEntity) {
-            MultiDict.add(contextEntities, "location", locationEntity);
-            searchContext = !Entities.entityHasTag(locationEntity, Tags.PSEUDO_ROOM);
-        }
-
-        if (searchContext) {
-            // Get any other entities that are here
-            const localEntities = Locations.findEntities(env, locationEntity);
-            const nonCarriedEntities = localEntities.filter(entity => !Locations.isAtLocation(env, Player.PLAYER, entity));
-            const carriedEntities = localEntities.filter(entity => Locations.isAtLocation(env, Player.PLAYER, entity));
-
-            // Get environment entities
-            nonCarriedEntities.forEach(entity => MultiDict.add(contextEntities, "environment", entity));
-
-            // Get inventory entities
-            const inventoryEntities = carriedEntities.filter(entity => Locations.getLocation(entity) === "__INVENTORY__");
-            inventoryEntities.forEach(entity => MultiDict.add(contextEntities, "inventory", entity));
-
-            // Get worn entities
-            const wornEntities = carriedEntities.filter(entity => Locations.getLocation(entity) === "__WEARING__");
-            wornEntities.forEach(entity => MultiDict.add(contextEntities, "wearing", entity));
-
-            // Get entities in a container
-            const containers = localEntities.filter(entity => Locations.isInContainer(env, entity));
-            containers.forEach(entity => MultiDict.add(contextEntities, "container", entity)); 
-        }
-
-        const verbs  = env.findObjs(obj => Verbs.isVerb(obj)) as Verb[];
-
-        logger.debug(() => MultiDict.values(contextEntities).map(entity => entity.id).join(","));
-    
-        return {
-            entities: contextEntities,
-            verbs: verbs
-        }
+        return Context.getContext(env);
     }
 
     getStatus(env : Env): string {
