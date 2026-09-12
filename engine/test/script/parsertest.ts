@@ -1,6 +1,7 @@
 import { start } from "../../src/command";
-import { parse } from "../../src/script/parser"
+import { ARGS, markLazy, parse } from "../../src/script/parser"
 import { phaseActionBuilder } from "../../src/script/phaseaction";
+import { EnvFn, mkResult } from "../../src/script/thunk";
 import { APPLE, EAT, SOUP, STIR } from "../testutils/testentities";
 import { setUpEnv } from "../testutils/testutils"
 
@@ -51,6 +52,53 @@ test("Test if don't evaluate both sides", () => {
     fn2(env.newChild({}));
     expect(messages).not.toContain("foo");
     expect(messages).toContain("bar");
+});
+
+test("Test markLazy defers argument evaluation until the function chooses to resolve it", () => {
+    const [env, messages] = setUpEnv();
+    const pickFirst : EnvFn = env => {
+        const args = env.get(ARGS) as EnvFn[];
+        return args[0](env);
+    };
+    env.set("pickFirst", markLazy(pickFirst));
+
+    const fn = parse("write(pickFirst(1, write('side-effect')))");
+    fn(env);
+
+    expect(messages).toStrictEqual(["1"]);
+});
+
+test("Test a function without markLazy has its arguments evaluated eagerly", () => {
+    const [env, messages] = setUpEnv();
+    const pickFirst : EnvFn = env => {
+        const args = env.get(ARGS) as unknown[];
+        return mkResult(args[0]);
+    };
+    env.set("pickFirst", pickFirst);
+
+    const fn = parse("write(pickFirst(1, write('side-effect')))");
+    fn(env);
+
+    expect(messages).toStrictEqual(["side-effect", "1"]);
+});
+
+test("Test markLazy is a property of the function value, not the name it's called through", () => {
+    const [env, messages] = setUpEnv();
+    const pickFirst : EnvFn = env => {
+        const args = env.get(ARGS) as EnvFn[];
+        return args[0](env);
+    };
+    env.set("pickFirst", markLazy(pickFirst));
+
+    const fn = parse(`
+        do(
+            set(alias, pickFirst),
+            write(alias(1, write('side-effect')))
+        )
+    `);
+    fn(env);
+
+    expect(messages).toStrictEqual(["1"]);
 });
 
 test("Test switch", () => {

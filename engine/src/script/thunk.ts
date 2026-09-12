@@ -12,10 +12,12 @@ export interface Result {
 export type EnvFn = (env : Env) => Result;
 
 /**
- * Builtin functions need to be handled a bit differently from normal ones
- * so, we save a thunk type with the thunk
+ * "property" identifiers are keyword member names (then/else/case/default, see KEYWORD_PROPS in
+ * parser.ts) that resolve to their own literal name rather than being looked up in the env -
+ * distinct from whether the eventual callee is a "lazy" function (see markLazy in parser.ts),
+ * which is a property of the resolved function value, not of the identifier/thunk itself.
  */
-export type ThunkType = "normal" | "builtin" | "property"
+export type ThunkType = "normal" | "property"
 
 /**
  * A Thunk; an unresolved expression, compiled by the parser but 

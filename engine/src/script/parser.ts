@@ -67,18 +67,37 @@ const ASSIGNMENT_FUNCTIONS : {[key:string]:BinaryFunction} = {
     "|=" : (l,r) => l | r
 }
 
+// Tag a function value as wanting its call arguments passed unresolved (as thunks) rather than
+// evaluated eagerly against the calling env - eg createPlan, which needs to re-resolve its
+// predicate against several different (simulated) envs rather than once against the current
+// one, or the fixed BUILTINS below (if/set/def/...), which need the same treatment for their
+// own reasons (eg `if` must not evaluate its `then`/`else` branches until it knows which one
+// applies). This is a property of the function *value* itself (checked at call time, once the
+// callee has been resolved - see evaluateCallExpression), rather than a fact about the
+// identifier used to look it up - mirroring how game/functionbuilder.ts#IMPLICIT_FUNCTION and
+// EXPLICIT_FUNCTION tag function values rather than names.
+const LAZY_FUNCTION = "__LAZY_FUNCTION__";
+
+export function markLazy<T extends EnvFn>(fn : T) : T {
+    return Object.assign(fn, {[LAZY_FUNCTION] : true});
+}
+
+function isLazyFunction(value : unknown) : value is EnvFn {
+    return typeof value === "function" && value != null && LAZY_FUNCTION in value;
+}
+
 const BUILTINS : {[key:string]:EnvFn} = {
-    "if" : makeIf(),
-    "do" : makeDo(),
-    "set" : makeSet(),
-    "def" : makeDef(),
-    "switch" : makeSwitch(),
-    "fn" : makeFn()
+    "if" : markLazy(makeIf()),
+    "do" : markLazy(makeDo()),
+    "set" : markLazy(makeSet()),
+    "def" : markLazy(makeDef()),
+    "switch" : markLazy(makeSwitch()),
+    "fn" : markLazy(makeFn())
 }
 
 const KEYWORD_PROPS = ["then", "else", "case", "default"];
 
-export const ARGS = "__args__"; 
+export const ARGS = "__args__";
 export const NO_ARGS_LENGTH_CHECK = "__no_arg_len_check__";
 
 export function parseToTree(expression : string, objPath? : Path.PossiblePath) {
@@ -137,17 +156,18 @@ function evaluateCallExpression(callExpression : CallExpression) : Thunk {
     const calleeThunk = evaluate(callExpression.callee);
     const envFn : EnvFn = env => {
         const callee = calleeThunk.resolve(env);
+        const calleeValue = callee.getValue();
         const args = callExpression.arguments;
         let result : Result;
-        if (calleeThunk.type === "builtin") {
+        if (isLazyFunction(calleeValue)) {
             const calleeName = (callExpression.callee as Identifier).name;
             const argThunks = evaluateBuiltInArgs(calleeName, args);
-            const fn = callee.getValue() as EnvFn;
+            const fn = calleeValue;
             result = fn(env.newChild({[ARGS] : argThunks.map(thunk => thunk.resolve)}));
         } else {
             const argThunks = args.map(e => evaluate(e))
             const resolvedArgs = (calleeThunk.type === "property")? argThunks : resolveThunks(argThunks, env);
-            const fn = callee.getValue() as EnvFn;
+            const fn = calleeValue as EnvFn;
             const fnResult = fn(env.newChild({[ARGS] : resolvedArgs}));
             result = mkResult(fnResult);
         }
@@ -245,33 +265,24 @@ function evaluateNameArray(expression : ArrayExpression) : Thunk {
  */
 function evaluateIdentifier(identifier : Identifier) : Thunk {
     const type : ThunkType = getIdentifierType(identifier);
-    const builtIn = BUILTINS[identifier.name];
     let envFn : EnvFn;
-    switch(type) {
-        case("builtin"):
-            envFn = _ => mkResult(builtIn);
-            break;
-        case("property"):
-            envFn = _ => mkResult(identifier.name);
-            break;
-        case("normal"):
-            envFn = env => {
-                const value = env.get(identifier.name);
-                return expandImplicitFunctions(env, value);
-            }
-            break;
+    if (type === "property") {
+        envFn = _ => mkResult(identifier.name);
+    } else {
+        // Look up the value from the env, unless it's one of the fixed BUILTINS (if/do/set/...).
+        // Whether the resolved value turns out to be a "lazy" function (see markLazy above) is
+        // irrelevant here - that's checked later, in evaluateCallExpression, against the actual
+        // resolved value rather than the identifier that named it.
+        const builtIn = BUILTINS[identifier.name];
+        envFn = builtIn !== undefined
+                    ? (_ => mkResult(builtIn))
+                    : (env => expandImplicitFunctions(env, env.get(identifier.name)));
     }
     return mkThunk(envFn, identifier, type);
 }
 
 function getIdentifierType(identifier : Identifier) : ThunkType {
-    if (_.has(BUILTINS,identifier.name)) {
-        return "builtin";
-    } else if (KEYWORD_PROPS.includes(identifier.name)) {
-        return "property";
-    } else {
-        return "normal";
-    }
+    return KEYWORD_PROPS.includes(identifier.name) ? "property" : "normal";
 }
 
 function evaluateUnaryExpressoin(expression : UnaryExpression) : Thunk {
