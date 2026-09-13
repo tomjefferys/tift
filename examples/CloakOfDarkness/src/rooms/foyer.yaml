@@ -6,6 +6,8 @@ description: >
   The entrance from the street is to the north, there doors to the south and west.
 tags:
   - start
+verbs:
+  - solve
 exits:
   south: bar
   west: cloakroom

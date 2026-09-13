@@ -5,6 +5,8 @@ description: >
   It looks like some sort of message has been written in the sawdust.
 tags:
   - dark
+verbs:
+  - solve
 exits:
   north: foyer
 blunderCount: 0

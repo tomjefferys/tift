@@ -53,3 +53,25 @@ screwed to the wall
 
 $ go north
 An empty room named "sandbox_hall"
+
+# "solve" (see src/verbs/solve.yaml) calls createPlan to search - by simulating go/hang/
+# examine commands against forked copies of the game state (see
+# engine/src/commandplanner.ts), never the real one - for a route to the maximum score.
+# Only the two actions that actually earn points are asserted (not the full command
+# list createPlan happens to return), since the exact route found isn't part of the
+# contract and shouldn't make this test brittle to unrelated search changes.
+--- solve: createPlan finds a route to maximum score, without touching the real game
+Foyer of the Opera House
+
+$ solve
+hang cloak on hook
+
+examine message
+
+# Confirm the search really was only ever simulated: still in the foyer, still wearing
+# the cloak, ready to be played normally.
+$ inventory
+velvet cloak (wearing)
+
+$ look
+chandeliers

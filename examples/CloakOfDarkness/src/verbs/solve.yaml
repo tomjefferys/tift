@@ -1,0 +1,9 @@
+verb: solve
+tags:
+  - intransitive
+actions:
+  solve():
+    - plan = createPlan(getScore() == getMetadata('maxScore'), ['go', 'hang', 'examine'], 10)
+    - if: Array.length(plan) == 0
+      then: print('No solution found.')
+      else: print(Array.join(Array.map(plan, fn([cmd], Array.join(cmd, ' '))), '{{br}}'))
