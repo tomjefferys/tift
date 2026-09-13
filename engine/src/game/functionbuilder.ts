@@ -55,7 +55,7 @@ export function compileGlobalFunction(id : string, value : string, env : Env, pa
     if (fnDef) {
         // Global functions must not be permanently bound to whatever env happens to be the
         // engine's root at compile time (see DYNAMIC_ROOT) - otherwise calling one from a
-        // simulated/forked env (see env.ts#forkEnv, used by commandplanner.ts) would read and
+        // simulated/forked env (see env.ts#ForkManager, used by commandplanner.ts) would read and
         // write the real game instead of the simulation.
         const result = compileFnDef(fnDef, value, DYNAMIC_ROOT, path);
         env.set(result.name, result.envFn);
@@ -131,7 +131,7 @@ const makeStrFunction : Compiler = (name, value, scope, obj) => {
  *
  * Consequence: a nested function's reads/writes always go straight to the REAL object graph,
  * bypassing any override proxy - so calling one from a simulated/forked env (see
- * env.ts#forkEnv, used by commandplanner.ts#createPlan) both reads stale (non-simulated) state
+ * env.ts#ForkManager, used by commandplanner.ts#createPlan) both reads stale (non-simulated) state
  * AND leaks any writes it makes into the real game, silently corrupting it. Confirmed
  * empirically: a nested `child.bump()` that increments a nested field, invoked only through a
  * createPlan search, was observed to mutate the real field even though the search is supposed
@@ -152,7 +152,7 @@ function makeCompileFunction(namespace : Optional<string>) : Compiler {
 // Builds a closureEnv resolver (see script/parser.ts#ClosureEnvResolver) that re-resolves the
 // entity (by namespace + id) and rebuilds its scope fresh from whatever root the calling env
 // belongs to - so a per-entity method called from a simulated/forked env (see
-// env.ts#forkEnv, used by commandplanner.ts) sees "this" as the simulated entity, not the real
+// env.ts#ForkManager, used by commandplanner.ts) sees "this" as the simulated entity, not the real
 // one captured when the method was originally compiled. The trailing .newChild() is required by
 // the ClosureEnvResolver contract (see parser.ts) - it stops params/locals being defined
 // directly onto the entity object itself (getScope's returned scope's properties ARE the live

@@ -372,7 +372,7 @@ export type ClosureEnvResolver = (env : Env) => Env;
 // rather than a fixed Env instance captured once at compile time. Used for global (stdlib-style)
 // functions (see game/functionbuilder.ts#compileGlobalFunction): those are compiled once against
 // the engine's one real root, but must still behave correctly if ever called from a simulated
-// env forked off some other root (see env.ts#forkEnv, used by commandplanner.ts) - a fixed
+// env forked off some other root (see env.ts#ForkManager, used by commandplanner.ts) - a fixed
 // closureEnv would silently read/write the real game instead of the simulated one.
 export const DYNAMIC_ROOT : ClosureEnvResolver = env => env.getRoot().newChild();
 

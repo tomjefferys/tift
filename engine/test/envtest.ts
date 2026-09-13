@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Env, createRootEnv, isFound, NameSpace } from "../src/env";
+import { Env, ForkManager, createRootEnv, isFound, NameSpace } from "../src/env";
 import { Path } from "tift-types/src/path"
 import { toValueList } from "../src/path";
 import { Obj } from "../src/util/objects"
@@ -366,6 +366,94 @@ test("Test references to references", () => {
     expect(child1.get("entities.foo.qux")).toEqual("garply");
 
     expect(isFound(root.get("entities.foo.qux"))).toBeTruthy();
+});
+
+test("Test ForkManager fork reads through to the real state", () => {
+    const root = createRootEnv({ foo : "bar" });
+    const forkManager = new ForkManager(root);
+    const [forked] = forkManager.fork();
+
+    expect(forked.get("foo")).toEqual("bar");
+});
+
+test("Test ForkManager fork writes do not affect the real state", () => {
+    const root = createRootEnv({ foo : "bar" });
+    const forkManager = new ForkManager(root);
+    const [forked] = forkManager.fork();
+
+    forked.set("foo", "baz");
+
+    expect(forked.get("foo")).toEqual("baz");
+    expect(root.get("foo")).toEqual("bar");
+});
+
+test("Test ForkManager fork write to a nested object does not affect the real state", () => {
+    const root = createRootEnv({ obj : { foo : "bar" } });
+    const forkManager = new ForkManager(root);
+    const [forked] = forkManager.fork();
+
+    forked.set("obj.foo", "baz");
+
+    expect(forked.get("obj.foo")).toEqual("baz");
+    expect(root.get("obj.foo")).toEqual("bar");
+});
+
+test("Test ForkManager sibling forks are independent of each other", () => {
+    const root = createRootEnv({ foo : "bar" });
+    const forkManager = new ForkManager(root);
+    const [forkA] = forkManager.fork();
+    const [forkB] = forkManager.fork();
+
+    forkA.set("foo", "changedByA");
+
+    expect(forkA.get("foo")).toEqual("changedByA");
+    expect(forkB.get("foo")).toEqual("bar");
+    expect(root.get("foo")).toEqual("bar");
+});
+
+test("Test ForkManager forking a fork inherits the parent fork's writes", () => {
+    const root = createRootEnv({ foo : "bar", baz : "qux" });
+    const forkManager = new ForkManager(root);
+    const [forkA, overlayA] = forkManager.fork();
+    forkA.set("foo", "fromA");
+
+    const [forkB] = forkManager.fork(overlayA);
+
+    expect(forkB.get("foo")).toEqual("fromA");
+    // Properties untouched by the parent fork still fall through to the real state.
+    expect(forkB.get("baz")).toEqual("qux");
+});
+
+test("Test ForkManager forking a fork does not leak writes back to the parent fork", () => {
+    const root = createRootEnv({ foo : "bar" });
+    const forkManager = new ForkManager(root);
+    const [forkA, overlayA] = forkManager.fork();
+    forkA.set("foo", "fromA");
+
+    const [forkB] = forkManager.fork(overlayA);
+    forkB.set("foo", "fromB");
+
+    expect(forkB.get("foo")).toEqual("fromB");
+    expect(forkA.get("foo")).toEqual("fromA");
+    expect(root.get("foo")).toEqual("bar");
+});
+
+test("Test ForkManager fork preserves the root's namespaces", () => {
+    const root = createRootEnv({ entities : { foo : { bar : "baz" } } }, [["entities"]]);
+    const forkManager = new ForkManager(root);
+    const [forked] = forkManager.fork();
+
+    expect(forked.getNamespaces()).toStrictEqual(root.getNamespaces());
+});
+
+test("Test ForkManager constructed from a non-root env still forks the whole real root", () => {
+    const root = createRootEnv({ foo : "bar" });
+    const child = root.newChild({ local : "value" });
+    const forkManager = new ForkManager(child);
+
+    const [forked] = forkManager.fork();
+
+    expect(forked.get("foo")).toEqual("bar");
 });
 
 function resultToValueList(result : [NameSpace, Path]) : [NameSpace, (string | symbol | number)[]] {

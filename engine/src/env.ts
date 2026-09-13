@@ -13,6 +13,7 @@ import { Optional } from "tift-types/src/util/optional";
 import { Obj, isObject } from "./util/objects";
 import { AnyArray, EnvFn, ReturnType } from "tift-types/src/env";
 import * as Type from "tift-types/src/env";
+import { createOverridableProxy, cloneOverlay } from "./util/overrideproxy";
 
 export const REFERENCE = Symbol("__reference__");
 export const NAMESPACE = Symbol("__namespace__");
@@ -487,11 +488,61 @@ function isReference(value : unknown) : value is {[REFERENCE] : Path} {
     return _.isObject(value) && _.has(value, REFERENCE);
 }
 
-/** 
+/**
  * Create a new root environment, based on the supplied object
  */
 export function createRootEnv(obj : Obj, namespaces : NameSpace[] = []) : Type.Env {
     return new Env(obj, [[], ...namespaces]);
+}
+
+/**
+ * Forks an env for speculative execution, any number of times, cheaply. Each fork is a new
+ * root-level env backed by an override proxy over the SAME real root's properties (captured
+ * once, in the constructor): reads fall through to the real state; writes are captured in the
+ * proxy's overlay and never touch the real state.
+ *
+ * Forking a fork works too, and stays cheap regardless of how many times you do it: rather than
+ * nesting proxies, each fork clones the parent fork's accumulated overlay onto a fresh,
+ * single-layer proxy over the same real root - so the proxy nesting depth is always 1, however
+ * many times `fork` has been called in a chain. See the warning on createOverridableProxy:
+ * nesting override proxies is expensive enough (V8's `[[GetOwnProperty]]` invariant-checking for
+ * a Proxy-of-a-Proxy compounds into genuine exponential cost) to make repeated forking - eg
+ * simulating a multi-command sequence one command at a time, as commandplanner.ts does -
+ * impractical past a handful of levels deep.
+ *
+ * Used by the command planner (see commandplanner.ts) to simulate commands against
+ * hypothetical futures without mutating the game the player is actually in. A single
+ * ForkManager is constructed per search, so every fork it produces (however deep) shares the
+ * one real root captured at construction time.
+ */
+export class ForkManager {
+    private readonly realRootProperties : Obj;
+    private readonly namespaces : NameSpace[];
+
+    /**
+     * @param env any env belonging to the environment to fork (its root is what gets forked)
+     */
+    constructor(env : Type.Env) {
+        const root = env.getRoot();
+        this.realRootProperties = root.properties;
+        this.namespaces = root.getNamespaces();
+    }
+
+    /**
+     * @param parentOverlay the overlay of the fork being forked further - ie the overlay
+     *                       previously returned alongside whichever env is now being passed to
+     *                       `fork` as its starting point - or undefined to fork fresh from the
+     *                       real root.
+     * @returns a tuple of the forked env, and the overlay backing it (needed to read back which
+     *          properties were touched - see util/overrideproxy.ts#getTouchedPaths - and to pass
+     *          to a later `fork` call, if forking this fork further)
+     */
+    fork(parentOverlay? : Obj) : [Type.Env, Obj] {
+        const overlay = parentOverlay ? cloneOverlay(parentOverlay) : {};
+        const proxy = createOverridableProxy(this.realRootProperties, overlay);
+        const forked = new Env(proxy, this.namespaces);
+        return [forked, overlay];
+    }
 }
 
 function nameSpace(ns : NameSpace) : {[NAMESPACE] : NameSpace} {

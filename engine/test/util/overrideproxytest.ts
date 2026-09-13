@@ -1,4 +1,4 @@
-import { createOverridableProxy } from "../../src/util/overrideproxy";
+import { createOverridableProxy, cloneOverlay, getTouchedPaths } from "../../src/util/overrideproxy";
 import { Chance } from "chance"
 import { RandomObjectGenerator } from "../testutils/randomobjectgenerator";
 import _ from "lodash"
@@ -159,6 +159,102 @@ test("Test two proxies over the same target are independent", () => {
     expect(proxyA.foo).toEqual("changedByA");
     expect(proxyB.foo).toEqual("bar");
     expect(original.foo).toEqual("bar");
+});
+
+test("Test getTouchedPaths reports a top-level write", () => {
+    const original : Obj = { foo : "bar", baz : "qux" };
+    const overlay : Obj = {};
+    const proxy = createOverridableProxy(original, overlay);
+
+    proxy.foo = "changed";
+
+    expect(getTouchedPaths(overlay)).toStrictEqual([["foo"]]);
+});
+
+test("Test getTouchedPaths reports a deletion", () => {
+    const original : Obj = { foo : "bar" };
+    const overlay : Obj = {};
+    const proxy = createOverridableProxy(original, overlay);
+
+    delete proxy.foo;
+
+    expect(getTouchedPaths(overlay)).toStrictEqual([["foo"]]);
+});
+
+test("Test getTouchedPaths reports a nested write with its full path", () => {
+    const original : Obj = { foo : { bar : "baz", other : "value" } };
+    const overlay : Obj = {};
+    const proxy = createOverridableProxy(original, overlay);
+
+    proxy.foo.bar = "changed";
+
+    expect(getTouchedPaths(overlay)).toStrictEqual([["foo", "bar"]]);
+});
+
+test("Test getTouchedPaths ignores reads that never wrote anything", () => {
+    const original : Obj = { foo : { bar : "baz" } };
+    const overlay : Obj = {};
+    const proxy = createOverridableProxy(original, overlay);
+
+    // Reading through the nested object lazily creates an (empty) merge overlay for "foo" -
+    // that alone must not be reported as a touched path.
+    void proxy.foo.bar;
+
+    expect(getTouchedPaths(overlay)).toStrictEqual([]);
+});
+
+test("Test cloneOverlay preserves a merge write into a nested object", () => {
+    const original : Obj = { foo : { bar : "baz", other : "unchanged" } };
+    const overlay : Obj = {};
+    const proxy = createOverridableProxy(original, overlay);
+    proxy.foo.bar = "grault";
+
+    const cloned = cloneOverlay(overlay);
+    const clonedProxy = createOverridableProxy(original, cloned);
+
+    // Still a merge: the untouched sibling key is still visible alongside the write.
+    expect(clonedProxy.foo.bar).toEqual("grault");
+    expect(clonedProxy.foo.other).toEqual("unchanged");
+});
+
+test("Test cloneOverlay preserves a wholesale replacement (not a merge)", () => {
+    const original : Obj = { foo : { bar : "baz", other : "value" } };
+    const overlay : Obj = {};
+    const proxy = createOverridableProxy(original, overlay);
+    proxy.foo = { qux : "new" };
+
+    const cloned = cloneOverlay(overlay);
+    const clonedProxy = createOverridableProxy(original, cloned);
+
+    expect(clonedProxy.foo).toStrictEqual({ qux : "new" });
+});
+
+test("Test cloneOverlay is independent of the original overlay's later writes", () => {
+    const original : Obj = { foo : "bar" };
+    const overlay : Obj = {};
+    const proxy = createOverridableProxy(original, overlay);
+    proxy.foo = "first";
+
+    const cloned = cloneOverlay(overlay);
+    proxy.foo = "second";
+
+    const clonedProxy = createOverridableProxy(original, cloned);
+    expect(clonedProxy.foo).toEqual("first");
+    expect(proxy.foo).toEqual("second");
+});
+
+test("Test cloneOverlay deep-clones nested merge overlays independently", () => {
+    const original : Obj = { foo : { bar : "baz" } };
+    const overlay : Obj = {};
+    const proxy = createOverridableProxy(original, overlay);
+    proxy.foo.bar = "first";
+
+    const cloned = cloneOverlay(overlay);
+    // Further writes through the original proxy shouldn't reach the clone.
+    proxy.foo.bar = "second";
+
+    const clonedProxy = createOverridableProxy(original, cloned);
+    expect(clonedProxy.foo.bar).toEqual("first");
 });
 
 test("Test random objects", () => {
