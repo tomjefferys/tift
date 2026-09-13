@@ -1,6 +1,7 @@
 import { Obj } from "tift-types/src/util/objects";
 import { Env } from "tift-types/src/env";
 import { Optional } from "tift-types/src/util/optional";
+import { PathElementType } from "tift-types/src/path";
 import { bindParams, DYNAMIC_ROOT, ClosureEnvResolver } from "../script/parser";
 import * as Path from "../path";
 import * as RuleBuilder from "./rulebuilder";
@@ -35,12 +36,8 @@ type FnImpl = {
 
 /**
  * Compiles a function (normal or string).  Returns the function name and the function
- *
- * `isTopLevel` is true when `obj` is the entity itself (as opposed to some nested sub-object
- * within it) - see compileFunction, which uses it to decide whether the function needs its
- * scope ("this"/the entity's own fields) re-resolved dynamically per call.
  */
-type Compiler = (name : string, value : unknown, scope : Env, obj : Obj, path : Path.Type, isTopLevel : boolean) => Optional<FnImpl>;
+type Compiler = (name : string, value : unknown, scope : Env, obj : Obj, path : Path.Type) => Optional<FnImpl>;
 
 export function compileFunctions(namespace : Optional<string>, id : string, env : Env) {
     compile(namespace, id, env, makeCompileFunction(namespace));
@@ -67,7 +64,7 @@ export function compileGlobalFunction(id : string, value : string, env : Env, pa
 function compile(namespace : Optional<string>, id : string, env : Env, compiler : Compiler) {
     const obj = getObj(namespace, id, env);
     const scope = getScope(namespace, obj, env);
-    compileObj(namespace, obj, scope, compiler, [], true);
+    compileObj(namespace, obj, scope, compiler, []);
 }
 
 
@@ -83,18 +80,18 @@ function getScope(namespace : Optional<string>, obj : Obj, env : Env) : Env {
 
 function compileObj(
         namespace : Optional<string>, obj : Obj, scope : Env, compiler : Compiler,
-        path : Path.Type = [], isTopLevel = false) : void {
+        path : Path.Type = []) : void {
     const pathRoot = (path.length)? path : [...(namespace? [Path.namespace(namespace)] : []), obj["id"]];
     Object.entries(obj)
           .forEach(([name, value]) => {
             if (path.length || !SPECIAL_FIELDS.includes(name)) {
                 const fullPath = Path.concat(pathRoot, name);
-                const fnImpl = compiler(name, value, scope, obj, fullPath, isTopLevel);
+                const fnImpl = compiler(name, value, scope, obj, fullPath);
                 if (fnImpl) {
                     obj[fnImpl.name] = fnImpl.envFn;
                 } else if (_.isObject(value)) {
                     // At this point add the object id ot the path
-                    compileObj(namespace, value, scope.newChild(value), compiler, fullPath, false);
+                    compileObj(namespace, value, scope.newChild(value), compiler, fullPath);
                 }
             }
           })
@@ -117,51 +114,53 @@ const makeStrFunction : Compiler = (name, value, scope, obj) => {
  * myFunc(): print("hello world")
  * add(var1, var2): var1 + var2
  *
- * A function defined directly on an entity (`isTopLevel`) gets its scope ("this", and the
- * entity's own fields) re-resolved fresh from the caller's own root each time it's called,
- * rather than closing over the specific (possibly stale, possibly real-not-simulated) object
- * captured at compile time - see makeDynamicEntityScope.
- *
- * KNOWN LIMITATION: functions on a deeper nested sub-object (eg `child: { "foo()": ... }` -
- * see enginetest.ts "Test custom functions in child object", which confirms this pattern is
- * real and used) keep the OLD fixed compile-time scope instead - closing over the literal real
- * sub-object reference captured once when the game loads. Re-deriving an arbitrary nested path
- * dynamically (entity -> child -> grandchild, re-navigated by property path rather than by a
- * stable id) is possible but hasn't been implemented yet.
- *
- * Consequence: a nested function's reads/writes always go straight to the REAL object graph,
- * bypassing any override proxy - so calling one from a simulated/forked env (see
- * env.ts#ForkManager, used by commandplanner.ts#createPlan) both reads stale (non-simulated) state
- * AND leaks any writes it makes into the real game, silently corrupting it. Confirmed
- * empirically: a nested `child.bump()` that increments a nested field, invoked only through a
- * createPlan search, was observed to mutate the real field even though the search is supposed
- * to touch only the forked/simulated state. Top-level entity functions do not have this problem
- * (see makeDynamicEntityScope below).
+ * Every function - whether defined directly on an entity or on some sub-object nested within it
+ * (eg `child: { "foo()": ... }`) - gets its scope ("this", the entity's own fields, and any
+ * nested objects on the path down to the function) re-resolved fresh from the CALLER's own root
+ * each time it's called, rather than closing over the specific (possibly stale, possibly
+ * real-not-simulated) object captured at compile time - see makeDynamicScope. This is what makes
+ * it safe to call any function from a simulated/forked env (see env.ts#ForkManager, used by
+ * commandplanner.ts#createPlan): reads see the simulated state and writes land in the fork's
+ * overlay, never the real object graph.
  */
 function makeCompileFunction(namespace : Optional<string>) : Compiler {
-    return (name, value, scope, obj, path, isTopLevel) => {
+    return (name, value, _scope, _obj, path) => {
         const fnDef = getFunctionDef(name);
         if (!fnDef) {
             return undefined;
         }
-        const closureEnv = isTopLevel ? makeDynamicEntityScope(namespace, obj["id"]) : scope;
+        // The path to the function itself, minus any leading namespace element and the
+        // trailing function-name element, is the entity id followed by the chain of nested
+        // property names leading to the object that owns this function.
+        const [id, ...nestedProps] = path
+            .filter(element => element.type !== "namespace")
+            .slice(0, -1)
+            .map(element => element.getValue());
+        const closureEnv = makeDynamicScope(namespace, id as string, nestedProps);
         return compileFnDef(fnDef, value, closureEnv, path);
     }
 }
 
 // Builds a closureEnv resolver (see script/parser.ts#ClosureEnvResolver) that re-resolves the
-// entity (by namespace + id) and rebuilds its scope fresh from whatever root the calling env
-// belongs to - so a per-entity method called from a simulated/forked env (see
-// env.ts#ForkManager, used by commandplanner.ts) sees "this" as the simulated entity, not the real
-// one captured when the method was originally compiled. The trailing .newChild() is required by
-// the ClosureEnvResolver contract (see parser.ts) - it stops params/locals being defined
-// directly onto the entity object itself (getScope's returned scope's properties ARE the live
-// entity), which would otherwise corrupt real game state.
-function makeDynamicEntityScope(namespace : Optional<string>, id : string) : ClosureEnvResolver {
+// entity (by namespace + id), walks down `nestedProps` (the chain of nested object properties
+// leading to the object the function was defined on, empty for a function defined directly on
+// the entity), and rebuilds the scope fresh from whatever root the calling env belongs to - so a
+// method called from a simulated/forked env (see env.ts#ForkManager, used by commandplanner.ts)
+// sees "this" (and any nested objects on the path) as the simulated versions, not the real ones
+// captured when the method was originally compiled. The trailing .newChild() is required by the
+// ClosureEnvResolver contract (see parser.ts) - it stops params/locals being defined directly
+// onto the entity/sub-object itself (getScope's returned scope's properties ARE the live
+// object), which would otherwise corrupt real game state.
+function makeDynamicScope(namespace : Optional<string>, id : string, nestedProps : PathElementType[]) : ClosureEnvResolver {
     return (env : Env) => {
         const root = env.getRoot();
-        const obj = getObj(namespace, id, root);
-        return getScope(namespace, obj, root).newChild();
+        let obj = getObj(namespace, id, root);
+        let scope = getScope(namespace, obj, root);
+        for (const prop of nestedProps) {
+            obj = obj[prop] as Obj;
+            scope = scope.newChild(obj);
+        }
+        return scope.newChild();
     };
 }
 

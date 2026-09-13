@@ -181,11 +181,6 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
     // `depth` bounds how many commands the search will try before giving up (default:
     // commandplanner.DEFAULT_PLAN_DEPTH). Returns the plan as a list of commands (each a list
     // of word ids), or an empty list if no plan was found.
-    //
-    // KNOWN LIMITATION: "the real game is never touched" doesn't hold for functions defined on
-    // a nested sub-object (as opposed to directly on an entity) - see
-    // game/functionbuilder.ts#makeCompileFunction. Calling one during the search can read stale
-    // state and leak writes into the real game. See commandplanner.ts's module doc comment.
     createPlan : markLazy(env => {
                             const args = env.get(ARGS);
                             const predicate = args[0] as EnvFn;

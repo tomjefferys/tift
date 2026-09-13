@@ -8,16 +8,12 @@
 // from whatever context `env` currently resolves to (ie the player) - there's no notion of
 // planning on behalf of an NPC yet.
 //
-// KNOWN LIMITATION: "the real state is never touched" only holds for top-level entity
-// functions and global (stdlib-style) functions - both of which resolve their scope
-// dynamically from the caller's root (see game/functionbuilder.ts#makeDynamicEntityScope and
-// script/parser.ts#DYNAMIC_ROOT). Functions defined on a NESTED sub-object (eg
-// `child: { "foo()": ... }`) still close over a fixed, real object reference captured at
-// compile time (see game/functionbuilder.ts#makeCompileFunction's doc comment) - calling one
-// during a simulated search reads stale state and leaks any writes into the real game. No
-// game currently exercised by createPlan (eg Cloak of Darkness) uses this pattern, but nothing
-// stops a game from doing so. Left unfixed for now; needs the same dynamic-scope treatment,
-// generalised to re-navigate an arbitrary nested path rather than just an entity id.
+// "The real state is never touched" holds for every function - top-level entity functions,
+// functions on a nested sub-object (eg `child: { "foo()": ... }`), and global (stdlib-style)
+// functions alike - because all of them resolve their scope dynamically from the caller's root
+// on each call (see game/functionbuilder.ts#makeDynamicScope and script/parser.ts#DYNAMIC_ROOT),
+// so reads see the simulated state and writes land in the fork's overlay, never the real object
+// graph.
 
 import * as _ from "lodash";
 import { Env } from "tift-types/src/env";

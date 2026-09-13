@@ -115,6 +115,38 @@ test("Test createPlan prunes cyclic states instead of exhausting the search spac
     executeAndTest(["trigger"], { expected : ["planLength:0"] });
 }, 5000);
 
+test("Test createPlan does not leak writes into the real game via a nested sub-object function", () => {
+    // A function defined on a nested sub-object (as opposed to directly on the entity) used to
+    // close over a fixed, real object reference captured at compile time - so calling it during
+    // a createPlan search would read stale state and leak its writes into the real game, even
+    // though the search is only supposed to touch forked/simulated state (see
+    // game/functionbuilder.ts#makeDynamicScope).
+    builder.withObj({
+        ...THE_ROOM,
+        verbs : ["trigger", "poke", "check"],
+        counter : {
+            count : 0,
+            "bump()" : "count = count + 1"
+        }
+    });
+    builder.withObj({
+        id : "poke", type : "verb", tags : ["intransitive"],
+        actions : { "poke()" : "theRoom.counter.bump()" }
+    });
+    builder.withObj({
+        id : "check", type : "verb", tags : ["intransitive"],
+        actions : { "check()" : "print('count:' + theRoom.counter.count)" }
+    });
+    withTriggerVerb("createPlan(theRoom.counter.count == 1, ['poke'], 2)");
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["trigger"], { expected : ["planLength:1", "plan:poke"] });
+
+    // The search's simulated poke()->bump() calls must not have touched the real counter.
+    executeAndTest(["check"], { expected : ["count:0"] });
+});
+
 test("Test createPlan's ignoredProperties keeps loop detection working despite a per-turn counter", () => {
     builder.withObj({...GAME_METADATA, ignoredProperties : ["entities.counter"]});
     builder.withObj({
