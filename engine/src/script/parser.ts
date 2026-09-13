@@ -363,10 +363,40 @@ function evaluateAssignmentExpression(assignment : AssignmentExpression) : Thunk
     }
 }
 
-export function bindParams(params : string[], fn : EnvFn, closureEnv : Optional<Env> = undefined) : EnvFn {
+// Given the calling env, returns the scope bindParams should define this call's params
+// directly onto - already "fresh" (a distinct newChild) wherever freshness is needed, so
+// bindParams itself never has to reason about when to create one (see toClosureEnvResolver).
+export type ClosureEnvResolver = (env : Env) => Env;
+
+// Isolates a function's locals in a fresh scope rooted at whatever the CALLER's root env is,
+// rather than a fixed Env instance captured once at compile time. Used for global (stdlib-style)
+// functions (see game/functionbuilder.ts#compileGlobalFunction): those are compiled once against
+// the engine's one real root, but must still behave correctly if ever called from a simulated
+// env forked off some other root (see env.ts#forkEnv, used by commandplanner.ts) - a fixed
+// closureEnv would silently read/write the real game instead of the simulated one.
+export const DYNAMIC_ROOT : ClosureEnvResolver = env => env.getRoot().newChild();
+
+// Normalises the two other ways bindParams can be told what scope to use into a
+// ClosureEnvResolver, so the returned function only ever has one case to handle:
+// - no closureEnv (the common case) means "use the calling env directly" - eg the set/def
+//   builtins rely on their OWN execution scope being exactly one env.getParent() hop below
+//   the scope set/def should act on, so this case must not insert an extra scope layer.
+// - a fixed Env (eg fn(...)'s captured lexical closure - see makeFn) means "start a fresh
+//   child of this env every call", so each call's params/locals don't leak into each other.
+function toClosureEnvResolver(closureEnv : Optional<Env> | ClosureEnvResolver) : ClosureEnvResolver {
+    if (closureEnv === undefined) {
+        return env => env;
+    }
+    return _.isFunction(closureEnv) ? closureEnv : (_env => closureEnv.newChild());
+}
+
+export function bindParams(
+        params : string[], fn : EnvFn,
+        closureEnv : Optional<Env> | ClosureEnvResolver = undefined) : EnvFn {
+    const resolveScope = toClosureEnvResolver(closureEnv);
     return env => {
         const args = env.get(ARGS);
-        const scope = closureEnv?.newChild() ?? env
+        const scope = resolveScope(env);
         if (args.length < params.length) {
             const missingArgs = params.slice(args.length);
             throw new Error(`Not enough arguments. Missing: ${missingArgs.join(", ")}`); 

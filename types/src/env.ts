@@ -21,6 +21,10 @@ export interface Env {
 
     getParent() : Env | undefined;
 
+    getRoot() : Env;
+
+    getNamespaces() : NameSpace[];
+
     def(name : string, value : any) : void;
 
     get(name: Path | string | symbol, followReferences : boolean) : any;
