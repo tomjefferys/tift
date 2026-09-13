@@ -3,7 +3,7 @@ import { EnvFn } from "../script/thunk";
 
 import { control, print, log } from "../messages/output";
 import { mkResult } from "../script/thunk";
-import { ARGS, bindParams, NO_ARGS_LENGTH_CHECK } from "../script/parser";
+import { ARGS, bindParams, NO_ARGS_LENGTH_CHECK, markLazy } from "../script/parser";
 import { Obj } from "../util/objects"
 import _ from "lodash";
 import * as Entities from "./entities";
@@ -16,6 +16,7 @@ import * as Mustache from "../util/mustacheUtils";
 import * as Properties from "../properties";
 import { executeCommand } from "../commandexecutor";
 import { getContext } from "./context";
+import { createPlan } from "../commandplanner";
 
 type Nameable = Nameable.Nameable;
 
@@ -170,7 +171,29 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const full = (args[1] as boolean) ?? false;
                             const context = getContext(env);
                             return mkResult(executeCommand(env, context, command, full));
-                        }
+                        },
+    // createPlan(predicate, verbList?, depth?) - search for a sequence of commands that
+    // makes `predicate` true (eg getScore() == getMetadata('maxScore')), simulating commands
+    // against forked copies of the state so the real game is never touched. `predicate` is
+    // marked lazy (see markLazy) so it arrives unresolved and can be re-checked against each
+    // simulated state, rather than being evaluated once against the current one. `verbList`
+    // restricts which verbs are tried at each step (default: all verbs available in context);
+    // `depth` bounds how many commands the search will try before giving up (default:
+    // commandplanner.DEFAULT_PLAN_DEPTH). Returns the plan as a list of commands (each a list
+    // of word ids), or an empty list if no plan was found.
+    //
+    // KNOWN LIMITATION: "the real game is never touched" doesn't hold for functions defined on
+    // a nested sub-object (as opposed to directly on an entity) - see
+    // game/functionbuilder.ts#makeCompileFunction. Calling one during the search can read stale
+    // state and leak writes into the real game. See commandplanner.ts's module doc comment.
+    createPlan : markLazy(env => {
+                            const args = env.get(ARGS);
+                            const predicate = args[0] as EnvFn;
+                            const verbList = (args[1] ? args[1](env).getValue() : []) as string[];
+                            const depth = (args[2] ? args[2](env).getValue() : undefined) as number | undefined;
+                            const plan = createPlan(env, predicate, verbList, depth);
+                            return mkResult(plan ?? []);
+                        })
 }
 
 export function makeDefaultFunctions(obj : Obj) {
