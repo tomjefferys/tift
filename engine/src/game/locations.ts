@@ -152,8 +152,16 @@ export function getExitDestination(location : Obj, direction : string) : Optiona
 
 export function addExit(env : Env, roomId : string, direction : string, target : string) {
     const room = Entities.getEntity(env, roomId);
+    // Opening an already-open exit (eg re-entering a room whose onAddChild rule
+    // unconditionally opens it) must be a no-op on verbModifiers - otherwise repeatedly
+    // opening the same exit leaks duplicate entries, making the room's state look
+    // different every time it's re-opened (see commandplanner.ts's loop detection, which
+    // relies on state settling to a stable key when nothing has actually changed).
+    const alreadyOpen = room.exits[direction] !== undefined;
     room.exits[direction] = Entities.getEntity(env, target).id;
-    MultiDict.add(room.verbModifiers, "direction", { "modType": "direction", "value": direction });
+    if (!alreadyOpen) {
+        MultiDict.add(room.verbModifiers, "direction", { "modType": "direction", "value": direction });
+    }
 }
 
 export function closeExit(env : Env, roomId : string, direction : string) {

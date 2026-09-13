@@ -71,10 +71,10 @@ function getIgnoredProperties(env : Env) : string[] {
 class SearchRunner {
     private readonly ignoredProperties : string[];
     private readonly forkManager : ForkManager;
-    // Shallowest depth (path length) at which each (net) state has been visited so far,
-    // shared across the whole run so a state reached again via a different path is still
-    // recognised as already explored.
-    private readonly visited = new Map<string, number>();
+    // Every (net) state key seen so far, shared across the whole run. Search proceeds
+    // breadth-first, so the first time a key is reached is already via a shortest path -
+    // there's no need to track *how* shallow, just that it's been seen.
+    private readonly visited = new Set<string>();
 
     constructor(
             private readonly origin : Env,
@@ -85,42 +85,41 @@ class SearchRunner {
         this.forkManager = new ForkManager(origin);
     }
 
+    // Breadth-first search: guarantees the first plan found is a shortest one, and (since
+    // states are marked visited as they're enqueued, not as they're expanded) never queues
+    // the same net state twice.
     run() : string[][] | undefined {
-        return this.search(SearchState.initial(this.origin));
-    }
+        const initial = SearchState.initial(this.origin);
+        this.visited.add(stateKey(this.origin, initial.current, initial.touched));
 
-    private search(state : SearchState) : string[][] | undefined {
-        if (this.predicate(withEntityReferences(state.current)).getValue()) {
-            return state.path;
-        }
-        if (state.path.length >= this.depth) {
-            return undefined;
-        }
-
-        // If we've already fully explored this (net) state at least as shallow as this,
-        // there's nothing new to find by expanding it again.
-        const key = stateKey(this.origin, state.current, state.touched);
-        const shallowestSeenAt = this.visited.get(key);
-        if (shallowestSeenAt !== undefined && shallowestSeenAt <= state.path.length) {
-            return undefined;
-        }
-        this.visited.set(key, state.path.length);
-
-        const context = getContext(state.current);
-        const commands = candidateCommands(state.current, context, this.verbList);
-
-        for (const command of commands) {
-            const [forked, overlay] = this.forkManager.fork(state.overlay);
-            suppressOutput(forked);
-            const forkedContext = getContext(forked);
-            const handled = executeCommand(forked, forkedContext, command, true);
-            if (!handled) {
+        const queue = [initial];
+        for (let head = 0; head < queue.length; head++) {
+            const state = queue[head];
+            if (this.predicate(withEntityReferences(state.current)).getValue()) {
+                return state.path;
+            }
+            if (state.path.length >= this.depth) {
                 continue;
             }
-            const result = this.search(
-                    state.advance(forked, overlay, command, this.ignoredProperties));
-            if (result) {
-                return result;
+
+            const context = getContext(state.current);
+            const commands = candidateCommands(state.current, context, this.verbList);
+
+            for (const command of commands) {
+                const [forked, overlay] = this.forkManager.fork(state.overlay);
+                suppressOutput(forked);
+                const forkedContext = getContext(forked);
+                const handled = executeCommand(forked, forkedContext, command, true);
+                if (!handled) {
+                    continue;
+                }
+                const next = state.advance(forked, overlay, command, this.ignoredProperties);
+                const key = stateKey(this.origin, next.current, next.touched);
+                if (this.visited.has(key)) {
+                    continue;
+                }
+                this.visited.add(key);
+                queue.push(next);
             }
         }
         return undefined;
