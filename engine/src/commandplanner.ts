@@ -24,6 +24,7 @@ import { getTouchedPaths } from "./util/overrideproxy";
 import { getAllCommands } from "./commandsearch";
 import { executeCommand } from "./commandexecutor";
 import { getContext } from "./game/context";
+import * as Agent from "./game/agent";
 import * as Metadata from "./game/metadata";
 import * as GameOutput from "./game/output";
 import * as Path from "./path";
@@ -43,13 +44,19 @@ export const DEFAULT_PLAN_DEPTH = 10;
  *                  an empty list means try every command available in context (this is the
  *                  main lever for controlling the branching factor of the search)
  * @param depth the maximum number of commands to try before giving up
+ * @param actorId the agent to plan for (defaults to whichever actor `env` currently resolves
+ *                to - the player, unless bound otherwise - see game/agent.ts#getActorId).
+ *                Passed explicitly (rather than relying on an `__actor__` binding on `env`)
+ *                because each simulated fork is a fresh root env with no ancestors - see
+ *                ForkManager - so a binding on the caller's env wouldn't survive forking.
  * @returns a list of commands (each a list of word ids, eg ["go","north"]) that leads to a
  *          state where `predicate` holds, or undefined if no such plan was found within depth
  */
 export function createPlan(
-        env : Env, predicate : EnvFn, verbList : string[], depth : number = DEFAULT_PLAN_DEPTH)
+        env : Env, predicate : EnvFn, verbList : string[], depth : number = DEFAULT_PLAN_DEPTH,
+        actorId : string = Agent.getActorId(env))
         : string[][] | undefined {
-    return new SearchRunner(env, predicate, verbList, depth).run();
+    return new SearchRunner(env, predicate, verbList, depth, actorId).run();
 }
 
 // Properties that shouldn't count towards state identity when checking for loops - eg a
@@ -80,7 +87,8 @@ class SearchRunner {
             private readonly origin : Env,
             private readonly predicate : EnvFn,
             private readonly verbList : string[],
-            private readonly depth : number) {
+            private readonly depth : number,
+            private readonly actorId : string) {
         this.ignoredProperties = getIgnoredProperties(origin);
         this.forkManager = new ForkManager(origin);
     }
@@ -89,7 +97,7 @@ class SearchRunner {
     // states are marked visited as they're enqueued, not as they're expanded) never queues
     // the same net state twice.
     run() : string[][] | undefined {
-        const initial = SearchState.initial(this.origin);
+        const initial = SearchState.initial(Agent.withActor(this.origin, this.actorId));
         this.visited.add(stateKey(this.origin, initial.current, initial.touched));
 
         const queue = [initial];
@@ -102,18 +110,21 @@ class SearchRunner {
                 continue;
             }
 
-            const context = getContext(state.current);
+            const context = getContext(state.current, this.actorId);
             const commands = candidateCommands(state.current, context, this.verbList);
 
             for (const command of commands) {
                 const [forked, overlay] = this.forkManager.fork(state.overlay);
                 suppressOutput(forked);
-                const forkedContext = getContext(forked);
-                const handled = executeCommand(forked, forkedContext, command, true);
+                // Each fork is a fresh root env (see ForkManager), so the actor binding has
+                // to be re-applied here rather than inherited from `state.current`.
+                const actingEnv = Agent.withActor(forked, this.actorId);
+                const forkedContext = getContext(actingEnv, this.actorId);
+                const handled = executeCommand(actingEnv, forkedContext, command, true);
                 if (!handled) {
                     continue;
                 }
-                const next = state.advance(forked, overlay, command, this.ignoredProperties);
+                const next = state.advance(actingEnv, overlay, command, this.ignoredProperties);
                 const key = stateKey(this.origin, next.current, next.touched);
                 if (this.visited.has(key)) {
                     continue;

@@ -173,6 +173,19 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const context = getContext(env);
                             return mkResult(executeCommand(env, context, command, full));
                         },
+    // executeCommandAs(agentId, command, full?) - like executeCommand, but resolves scope
+    // (location/inventory/wearing) from the named agent instead of whichever actor `env`
+    // already resolves to - so eg an NPC's "go" moves the NPC, not the player. See
+    // game/agent.ts for what makes an entity usable here.
+    executeCommandAs : env => {
+                            const args = env.get(ARGS);
+                            const agentId = args[0] as string;
+                            const command = args[1] as string[];
+                            const full = (args[2] as boolean) ?? false;
+                            const actingEnv = Agent.withActor(env, agentId);
+                            const context = getContext(actingEnv);
+                            return mkResult(executeCommand(actingEnv, context, command, full));
+                        },
     // createPlan(predicate, verbList?, depth?) - search for a sequence of commands that
     // makes `predicate` true (eg getScore() == getMetadata('maxScore')), simulating commands
     // against forked copies of the state so the real game is never touched. `predicate` is
@@ -188,6 +201,20 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const verbList = (args[1] ? args[1](env).getValue() : []) as string[];
                             const depth = (args[2] ? args[2](env).getValue() : undefined) as number | undefined;
                             const plan = createPlan(env, predicate, verbList, depth);
+                            return mkResult(plan ?? []);
+                        }),
+    // createPlanFor(agentId, predicate, verbList?, depth?) - like createPlan, but searches
+    // for a plan from the named agent's own viewpoint (its location/inventory/wearing)
+    // instead of whichever actor `env` already resolves to. Every arg to a lazy function
+    // arrives unresolved (see markLazy), so agentId - unlike in executeCommandAs - has to be
+    // resolved explicitly here rather than being usable as a plain value.
+    createPlanFor : markLazy(env => {
+                            const args = env.get(ARGS);
+                            const agentId = (args[0] as EnvFn)(env).getValue() as string;
+                            const predicate = args[1] as EnvFn;
+                            const verbList = (args[2] ? args[2](env).getValue() : []) as string[];
+                            const depth = (args[3] ? args[3](env).getValue() : undefined) as number | undefined;
+                            const plan = createPlan(env, predicate, verbList, depth, agentId);
                             return mkResult(plan ?? []);
                         })
 }
