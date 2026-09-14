@@ -4,6 +4,7 @@ import { Env } from "tift-types/src/env";
 import { Entity } from "../entity";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
+import * as Agent from "./agent";
 
 export const PLAYER = "__PLAYER__";
 // The player is just an agent (see game/agent.ts) - its inventory/wearing
@@ -31,25 +32,9 @@ export function makePlayer(env : Env, start : string) {
     // available) regardless of whether the room is dark.
     player["visibleWhen"] = Entities.makeAlwaysVisibleFn();
 
-    // Set up the inventory
-    const inventory = new EntityBuilder({
-        id : INVENTORY,
-        type : "special",
-        location : PLAYER
-    }).withTag("container")
-      .build();
-
-    props["entities"][INVENTORY] = inventory;
-
-    // Set up the "wearing" inventory (where items go if the are being worn)
-    const wearing = new EntityBuilder({
-        id : WEARING,
-        type : "special",
-        location : PLAYER
-    }).withTag("container")
-      .build();
-
-    props["entities"][WEARING] = wearing;
+    // The player is just an agent - its inventory/wearing containers are set up
+    // the same way any other agent's are.
+    Agent.makeAgentContainers(env, PLAYER);
 }
 
 export const getPlayer : ((env:Env) => Entity) = env => Entities.getEntity(env, PLAYER) as Entity;

@@ -83,6 +83,14 @@ export function isEntityNPC(obj : Obj) : boolean {
     return entityHasTag(obj, "NPC");
 }
 
+// An "agent" is any entity that can act and have its own inventory/wearing
+// containers (see game/agent.ts) - the player, tagged "NPC" entities, and
+// anything explicitly tagged "agent" (eg a stationary shopkeeper that isn't
+// otherwise NPC-like).
+export function isEntityAgent(obj : Obj) : boolean {
+    return entityHasTag(obj, Tags.AGENT) || isEntityNPC(obj);
+}
+
 export function entityHasTag(obj : Obj, tag : string) : boolean {
     const tags = obj.tags;
     return _.isArray(tags) && tags.includes(tag);

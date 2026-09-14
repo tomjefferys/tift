@@ -4,6 +4,7 @@ import { OutputConsumer, Properties } from "tift-types/src/messages/output";
 import { makeDefaultFunctions } from "./enginedefault";
 import * as Output from "./output";
 import * as Player from "./player";
+import * as Agent from "./agent";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Entity from "../entity";
@@ -40,6 +41,11 @@ class DefaultBehaviour implements Behaviour {
         const start = this.findStartingLocation(env);
         Player.makePlayer(env, start);
         Locations.makeGameEnd(env);
+
+        // Every other agent (eg an NPC) needs its own inventory/wearing
+        // containers too - the player's are already set up by makePlayer().
+        env.findObjs(obj => Entities.isEntity(obj) && Entities.isEntityAgent(obj) && obj.id !== Player.PLAYER)
+           .forEach(agent => Agent.makeAgentContainers(env, agent.id));
     }
 
     getContext(env : Env) : CommandContext {

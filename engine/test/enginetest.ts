@@ -902,6 +902,34 @@ test("Test nested repeat rule", () => {
     executeAndTest(["wait"], { expected : ["foo"], notExpected : ["bar", "baz", "qux"]})
 })
 
+test("Test NPC agents automatically get their own inventory/wearing containers", () => {
+    builder.withObj(NORTH_ROOM);
+    builder.withObj({
+        ...GOBLIN,
+        location : "northRoom"
+    });
+    // The sword is authored directly into the goblin's own inventory container -
+    // nothing in the game data declares "goblin-INVENTORY" as an entity by hand,
+    // it's set up automatically for any "NPC"-tagged entity when the game starts.
+    builder.withObj({
+        id : "sword",
+        type : "item",
+        location : "goblin-INVENTORY"
+    });
+    builder.withObj({
+        id : "checkRule",
+        type : "rule",
+        "afterTurn()" : "print('carried: ' + isAtLocation('sword', 'goblin'))"
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    // The sword is structurally "carried" by the goblin, and isn't loose in the
+    // room (so the player can't just pick it up like an ordinary item there).
+    executeAndTest(["look"], { expected : ["Goblin"], notExpected : ["sword"]});
+    executeAndTest(["wait"], { expected : ["carried: true"]});
+});
+
 test("Test moveTo", () => {
     builder.withObj({
         ...NORTH_ROOM,

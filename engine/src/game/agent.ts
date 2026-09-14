@@ -1,9 +1,11 @@
 import { Env } from "tift-types/src/env";
 import { Obj } from "tift-types/src/util/objects";
 import { Entity } from "../entity";
+import { EntityBuilder } from "./entitybuilder";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Player from "./player";
+import * as Tags from "./tags";
 
 /**
  * "Agent" generalises the player to any entity that can act: perform commands,
@@ -61,4 +63,21 @@ export function getInventoryId(env : Env, actorId : string = getActorId(env)) : 
 
 export function getWearingId(env : Env, actorId : string = getActorId(env)) : string {
     return `${actorId}-WEARING`;
+}
+
+/**
+ * Create the special inventory/wearing container entities for `agentId` (see
+ * getInventoryId/getWearingId), registering them directly into the env. Called
+ * once per agent when the game starts (see game/behaviour.ts) - for the player
+ * and for every other agent-tagged entity loaded from the game data.
+ */
+export function makeAgentContainers(env : Env, agentId : string) : void {
+    const props = env.properties;
+    [getInventoryId(env, agentId), getWearingId(env, agentId)].forEach(containerId => {
+        props["entities"][containerId] = new EntityBuilder({
+            id : containerId,
+            type : Entities.Types.SPECIAL,
+            location : agentId
+        }).withTag(Tags.CONTAINER).build();
+    });
 }

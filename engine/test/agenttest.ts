@@ -3,6 +3,8 @@ import { Obj } from "tift-types/src/util/objects";
 import { EntityBuilder } from "../src/game/entitybuilder";
 import * as Agent from "../src/game/agent";
 import * as Player from "../src/game/player";
+import * as Entities from "../src/game/entities";
+import * as Locations from "../src/game/locations";
 import { getContext } from "../src/game/context";
 import * as MultiDict from "../src/util/multidict";
 
@@ -76,6 +78,42 @@ test("Test getInventoryId/getWearingId derive a <agentId>-INVENTORY/-WEARING id 
     // (eg the command planner, simulating against a forked env with no actor bound).
     expect(Agent.getInventoryId(env, "npc1")).toEqual("npc1-INVENTORY");
     expect(Agent.getWearingId(env, "npc1")).toEqual("npc1-WEARING");
+});
+
+test("Test isEntityAgent is true for the player, for tag \"agent\" and for tag \"NPC\", and false otherwise", () => {
+    const player = new EntityBuilder({ id : "p", type : "player" }).build();
+    const agent = new EntityBuilder({ id : "a", type : "item", tags : ["agent"] }).build();
+    const npc = new EntityBuilder({ id : "n", type : "item", tags : ["NPC"] }).build();
+    const plainItem = new EntityBuilder({ id : "i", type : "item" }).build();
+
+    expect(Entities.isEntityAgent(agent)).toBe(true);
+    expect(Entities.isEntityAgent(npc)).toBe(true);
+    expect(Entities.isEntityAgent(plainItem)).toBe(false);
+    // isEntityAgent doesn't special-case "player" as a type - it's the "agent"
+    // tag (added by makePlayer's caller, game/behaviour.ts) that matters. This
+    // instance has neither, so it's not treated as an agent by this check alone.
+    expect(Entities.isEntityAgent(player)).toBe(false);
+});
+
+test("Test makeAgentContainers creates <agentId>-INVENTORY/-WEARING, located at and owned by the agent", () => {
+    const env = makeEnv();
+    props(env).entities["npc1"] = new EntityBuilder({ id : "npc1", type : "item", location : "theRoom" }).build();
+
+    Agent.makeAgentContainers(env, "npc1");
+
+    const inventory = Entities.getEntity(env, "npc1-INVENTORY");
+    const wearing = Entities.getEntity(env, "npc1-WEARING");
+
+    expect(Locations.getLocation(inventory)).toEqual("npc1");
+    expect(Locations.getLocation(wearing)).toEqual("npc1");
+    expect(Entities.entityHasTag(inventory, "container")).toBe(true);
+    expect(Entities.entityHasTag(wearing, "container")).toBe(true);
+    expect(inventory.type).toEqual(Entities.Types.SPECIAL);
+    expect(wearing.type).toEqual(Entities.Types.SPECIAL);
+
+    // An item placed in the container is structurally "carried" by the agent
+    props(env).entities["sword"] = new EntityBuilder({ id : "sword", type : "item", location : "npc1-INVENTORY" }).build();
+    expect(Locations.isAtLocation(env, "npc1", Entities.getEntity(env, "sword"))).toBe(true);
 });
 
 test("Test getContext scope is unchanged for the player (parity with the pre-actor-refactor behaviour)", () => {

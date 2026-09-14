@@ -14,3 +14,4 @@ export const TRANSPARENT = "transparent";
 export const LOCKABLE = "lockable";
 export const LOCKED = "locked";
 export const PSEUDO_ROOM = "pseudoRoom";
+export const AGENT = "agent";
