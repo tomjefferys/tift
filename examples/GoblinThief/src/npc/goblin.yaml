@@ -1,0 +1,7 @@
+item: goblin
+name: Goblin
+description: >
+  A small, wiry goblin, sniffing around for anything shiny it can carry off.
+location: hollow
+tags:
+  - NPC

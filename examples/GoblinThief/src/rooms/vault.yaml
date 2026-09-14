@@ -1,0 +1,6 @@
+room: vault
+name: the vault
+description: >
+  A small vault at the end of the tunnel, empty but for whatever's lying on the floor.
+exits:
+  west: tunnel

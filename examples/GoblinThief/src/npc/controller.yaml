@@ -1,0 +1,27 @@
+# Drives the goblin's turns.
+#
+# The route to the coin is planned once, up front (createPlanFor - see
+# docs/functions.md and engine/src/game/agent.ts), and stashed here as a queue of
+# commands. Every player turn, one command is popped off the queue and carried out
+# (executeCommandAs) - one step per turn, same pace as a player would move.
+#
+# It's tempting to just call createPlanFor fresh from afterTurn() every turn instead
+# of pre-computing it - but don't: afterTurn() is a global rule, so it also runs
+# inside every command createPlanFor itself simulates while searching (simulated
+# commands still run their full before/after-turn rule phases, to model a real turn
+# accurately). A createPlanFor call sitting directly in afterTurn() would therefore
+# call itself again for every node the search visits, and again inside *that* search,
+# recursing without end. Planning once in beforeGame() - before afterTurn() has
+# anything queued to act on - sidesteps this entirely: those simulated turns find
+# nothing queued yet and do nothing.
+rule: goblinBrain
+plan: []
+beforeGame():
+  - plan = createPlanFor('goblin', isAtLocation(coin, goblin), ['go', 'get'], 5)
+afterTurn():
+  - if: Array.length(plan) > 0
+    then:
+      - step = plan[0]
+      - Array.splice(plan, 0, 1)
+      - executeCommandAs('goblin', step)
+      - print('[goblin] ' + Array.join(step, ' '))

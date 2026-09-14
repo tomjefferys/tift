@@ -119,8 +119,23 @@ export function isInContainer(env : Env, obj : Obj) : boolean {
         return false;
     }
     const location = Entities.getEntity(env, locationId);
-    return location && Entities.entityHasTag(location, Tags.CONTAINER) 
+    return location && Entities.entityHasTag(location, Tags.CONTAINER)
                     && location.type !== Entities.Types.SPECIAL;
+}
+
+/**
+ * Whether an item is carried by some agent - ie somewhere up its container chain sits
+ * inside an agent's own inventory/wearing container (see game/agent.ts). Those
+ * containers are always type SPECIAL, and nothing else ever is, so this recognises
+ * "carried by anyone" generically rather than needing to check a specific agent.
+ */
+export function isCarried(env : Env, obj : Obj) : boolean {
+    const parentId = getLocation(obj);
+    if (!parentId) {
+        return false;
+    }
+    const parent = Entities.getEntity(env, parentId);
+    return parent.type === Entities.Types.SPECIAL || isCarried(env, parent);
 }
 
 export function isLightSourceAtLocation(env : Env, location : Obj) : boolean {

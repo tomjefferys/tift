@@ -1,0 +1,15 @@
+game: The Goblin's Errand
+author: Presto Turnip
+version: 1.0.0
+gameId: 2016A2B5-10AA-44DE-8187-FF3BCF89FA04
+description: >
+  A minimal example demonstrating an autonomous NPC agent - see src/npc/controller.yaml.
+options:
+  - useDefaultVerbs
+introText: >
+  A goblin sniffs at the air beside you, eyeing something shiny further down the
+  tunnel. It isn't going to wait for you to catch up.
+  {{br}}
+  **The Goblin's Errand**
+beforeGame():
+  - print(introText)

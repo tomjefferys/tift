@@ -223,4 +223,31 @@ tags:
 ```
 
 ## NPC
-Items tagged with `npc` have and implicit onMove function added to them. This automatically prints a message when the npc item moves between locations.
+Items tagged with `NPC` have an implicit `onMove` function added to them. This automatically prints a message when the NPC item moves between locations (only when the player is there to see it leave or arrive).
+
+`NPC`-tagged items are also, implicitly, agents - see below.
+
+## Agent
+
+The player is a built-in example of an **agent**: something with its own inventory and worn items, that can act in the world via commands (`go`, `get`, `wear`...) the same way the player does.
+
+Tagging any item `agent` (or `NPC` - every `NPC` is automatically an agent too) gives it its own independent inventory and worn-items containers, set up automatically when the game starts. There's nothing to declare by hand - an item authored directly into `<agentId>-INVENTORY` (or `-WEARING`) starts out carried/worn by that agent:
+
+```yaml
+item: goblin
+name: Goblin
+location: cave
+tags:
+  - NPC
+---
+item: dagger
+location: goblin-INVENTORY
+tags:
+  - carryable
+```
+
+An agent's carried belongings are excluded from `look`'s item listing wherever it's standing, the same way the player's own inventory is - so a goblin holding a dagger doesn't make the dagger look like it's just lying around.
+
+### Driving an agent's turns
+
+Two functions let a game script make an agent act on its own behalf, reusing the same command-search/execution machinery a player's own turn uses - see [`executeCommandAs`](functions.md#executeCommandAs) and [`createPlanFor`](functions.md#createPlanFor). A common pattern is a `rule` with an `afterTurn()` that walks a pre-planned route one command per turn - see `examples/GoblinThief` for a complete worked example, including a discussion (in `src/npc/controller.yaml`) of why the route should be planned once up front rather than replanned from inside `afterTurn()` itself.

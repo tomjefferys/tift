@@ -930,6 +930,30 @@ test("Test NPC agents automatically get their own inventory/wearing containers",
     executeAndTest(["wait"], { expected : ["carried: true"]});
 });
 
+test("Test look does not reveal a carryable item held by an NPC sharing the room", () => {
+    builder.withObj(NORTH_ROOM);
+    builder.withObj({
+        ...GOBLIN,
+        location : "northRoom"
+    });
+    // Unlike the untagged "sword" fixture above (which is hidden from "look" simply
+    // for lacking "carryable"), this item WOULD normally show up in a room's item
+    // listing - proving the exclusion below is really about being carried, and
+    // isn't specific to whichever actor is doing the looking (see
+    // game/locations.ts#isCarried).
+    builder.withObj({
+        id : "coin",
+        name : "gold coin",
+        type : "item",
+        location : "goblin-INVENTORY",
+        tags : ["carryable"]
+    });
+    engine.ref = builder.build();
+    engine.send(Input.start());
+
+    executeAndTest(["look"], { expected : ["Goblin"], notExpected : ["gold coin", "INVENTORY"] });
+});
+
 test("Test moveTo", () => {
     builder.withObj({
         ...NORTH_ROOM,

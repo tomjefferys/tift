@@ -62,6 +62,47 @@ before:
 - [openExit](#openexit)
 - [getExits](#getExits)
 
+## createPlan
+
+Searches for a sequence of commands that makes a predicate come true, by simulating candidate commands against a private copy of the game state - the real game is never touched while searching. Returns the plan as an array of commands (each itself an array of word ids), or an empty array if no plan was found within `depth` commands.
+
+`createPlan(predicate, verbList?, depth?)`
+
+- `predicate` is checked against each simulated future state rather than evaluated up front, so it can reference things (like `getScore()` or `isAtLocation(...)`) that only become true partway through the plan.
+- `verbList` restricts which verbs are tried at each step (default: every verb available in context). Narrowing this keeps the search fast.
+- `depth` bounds how many commands the search will try before giving up (default: 10).
+
+```yaml
+verb: solve
+tags:
+  - intransitive
+actions:
+  solve():
+    - plan = createPlan(getScore() == getMetadata('maxScore'), ['go', 'get'], 10)
+    - print(Array.join(Array.map(plan, fn([cmd], Array.join(cmd, ' '))), '{{br}}'))
+```
+
+### see also
+- [executeCommand](#executeCommand)
+- [createPlanFor](#createPlanFor)
+
+## createPlanFor
+
+Like [createPlan](#createPlan), but searches for a plan from a named agent's own point of view - its own location, inventory and worn items - instead of whichever actor the calling context defaults to (normally the player). Lets a game script plan a route for an NPC. See [Agent](traits.md#agent).
+
+`createPlanFor(agentId, predicate, verbList?, depth?)`
+
+```yaml
+rule: goblinBrain
+plan: []
+beforeGame():
+  - plan = createPlanFor('goblin', isAtLocation(coin, goblin), ['go', 'get'], 5)
+```
+
+### see also
+- [executeCommandAs](#executeCommandAs)
+- [createPlan](#createPlan)
+
 ## delTag
 
 Deletes a tag on an entity
@@ -102,6 +143,37 @@ print("Something has gone wrong")
 - [print](#print)
 - [say](#say)
 - [warn](#warn)
+
+## executeCommand
+
+Runs a fully formed command (a list of word ids, eg from a plan found by [createPlan](#createPlan)) against the current context, the same way a player's own turn would. Returns `true` if a matching action was found and executed, `false` if the command didn't match anything currently in scope.
+
+`executeCommand(command, full?)`
+
+`full` (default `false`) also runs the before-turn/after-turn rule phases around the command - use this when the command should behave exactly like a real turn; leave it off to just run the action itself.
+
+```yaml
+rule: grabber
+afterTurn(): executeCommand(['get', 'coin'])
+```
+
+### see also
+- [createPlan](#createPlan)
+- [executeCommandAs](#executeCommandAs)
+
+## executeCommandAs
+
+Like [executeCommand](#executeCommand), but resolves scope (location, inventory, worn items) from a named agent instead of whichever actor the calling context defaults to. Lets a game script make an NPC carry out a command on its own behalf. See [Agent](traits.md#agent).
+
+`executeCommandAs(agentId, command, full?)`
+
+```yaml
+executeCommandAs('goblin', ['go', 'east'])
+```
+
+### see also
+- [createPlanFor](#createPlanFor)
+- [executeCommand](#executeCommand)
 
 ## format
 Format a string. Strings can be specified using mustache expressions. `format` can be used to evaluate these strings.

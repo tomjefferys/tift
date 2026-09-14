@@ -1,0 +1,8 @@
+room: tunnel
+name: the tunnel
+description: >
+  A narrow tunnel, reeking of goblin. It runs west back to the hollow, and east
+  into a vault.
+exits:
+  west: hollow
+  east: vault

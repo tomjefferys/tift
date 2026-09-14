@@ -20,7 +20,6 @@ export const SPATIAL_PREPOSITIONS = ["in", "on", "under", "above", "beside", "be
 
 export const LOOK_FN = (env : Env) => {
     const location = Agent.getLocationEntity(env);
-    const actorId = Agent.getActorId(env);
 
     const canSee = Locations.canSeeAtLocation(env, location);
 
@@ -28,7 +27,9 @@ export const LOOK_FN = (env : Env) => {
                            .filter(Entities.isEntity)
                            .filter(entity => Entities.isEntityVisible(env, canSee, entity))
                            .filter(obj => Entities.isEntityMovable(obj) || Entities.isEntityNPC(obj))
-                           .filter(obj => !Locations.isAtLocation(env, actorId, obj));
+                           // Excludes anyone's carried belongings, not just the looker's own -
+                           // an NPC sharing this room might be holding something too.
+                           .filter(obj => !Locations.isCarried(env, obj));
                     
     const isDark = Entities.entityHasTag(location, Tags.DARK) && !Locations.isLightSourceAtLocation(env, location);
 

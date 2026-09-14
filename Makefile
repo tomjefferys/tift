@@ -83,9 +83,9 @@ react-app-clean:
 
 # examples
 .PHONY: examples examples-test examples-clean
-examples: examples/CloakOfDarkness
-examples-test: examples/CloakOfDarkness-test examples/CloakOfDarkness-test-dev
-examples-clean: examples/CloakOfDarkness-clean
+examples: examples/CloakOfDarkness examples/GoblinThief
+examples-test: examples/CloakOfDarkness-test examples/CloakOfDarkness-test-dev examples/GoblinThief-test
+examples-clean: examples/CloakOfDarkness-clean examples/GoblinThief-clean
 
 ## Cloak of darkness
 .PHONY: examples/CloakOfDarkness examples/CloakOfDarkness-test examples/CloakOfDarkness-test-dev examples/CloakOfDarkness-clean
@@ -107,6 +107,24 @@ examples/CloakOfDarkness-test-dev: examples/CloakOfDarkness
 
 examples/CloakOfDarkness-clean:
 	cd examples/CloakOfDarkness && make clean
+
+## The Goblin's Errand - a minimal NPC-agent demo (see docs/traits.md#agent and
+## docs/functions.md#createPlanFor). Doesn't need react-app: it's tested purely
+## through the cli, reading stdlib/properties straight from resources/ rather
+## than from a built webapp bundle.
+.PHONY: examples/GoblinThief examples/GoblinThief-test examples/GoblinThief-clean
+examples/GoblinThief: cli
+	echo "Building The Goblin's Errand..."
+	cd examples/GoblinThief && make
+
+examples/GoblinThief-test: examples/GoblinThief
+	cd examples/GoblinThief && cat test.txt | ../../cli/out/main.mjs \
+	 ../../resources/stdlib.yaml \
+	 ../../resources/properties.yaml \
+	 build/adventure.yaml
+
+examples/GoblinThief-clean:
+	cd examples/GoblinThief && make clean
 
 # all
 .PHONY: all test lint clean

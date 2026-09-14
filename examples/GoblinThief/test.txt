@@ -1,0 +1,39 @@
+# Test script for The Goblin's Errand - demonstrates an autonomous NPC agent
+# (the goblin) driven each turn by createPlanFor/executeCommandAs. See
+# src/npc/controller.yaml for the two-line rule that does the work.
+#
+# The room name/description/item listing below come from the engine's
+# "autolook", which fires automatically on game start (before any command
+# has run) - there's no need for an explicit "$ look" to see them.
+
+The Goblin's Errand
+the hollow
+Goblin
+
+# Waiting passes a turn, giving the goblin's controller rule a chance to run.
+# It re-plans and takes one step towards the coin per turn - "go east" first,
+# out of the hollow and into the tunnel. The player is still in the hollow to
+# see it go.
+$ wait
+Goblin leaves east
+[goblin] go east
+
+# The goblin has left - it's no longer here to see.
+$ look
+! Goblin
+
+# Two more turns: one step through the tunnel, then grabbing the coin.
+# Neither is visible to the player, who's stayed behind in the hollow
+# throughout - the goblin gets on with it regardless.
+$ wait
+[goblin] go east
+
+$ wait
+[goblin] get coin
+
+# Following the goblin's own route, the coin is already gone - taken
+# autonomously while the player just stood around waiting for it.
+$ go east
+$ go east
+the vault
+! gold coin

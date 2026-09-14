@@ -1,0 +1,8 @@
+room: hollow
+name: the hollow
+description: >
+  A cramped earthen hollow, the entrance to a goblin warren. A tunnel leads east.
+tags:
+  - start
+exits:
+  east: tunnel
