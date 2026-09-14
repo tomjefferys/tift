@@ -6,8 +6,11 @@ import * as Entities from "./entities";
 import * as Locations from "./locations";
 
 export const PLAYER = "__PLAYER__";
-export const INVENTORY = "__INVENTORY__";
-export const WEARING = "__WEARING__";
+// The player is just an agent (see game/agent.ts) - its inventory/wearing
+// containers follow the same "<agentId>-INVENTORY"/"-WEARING" naming convention
+// as any other agent's.
+export const INVENTORY = `${PLAYER}-INVENTORY`;
+export const WEARING = `${PLAYER}-WEARING`;
 
 export function makePlayer(env : Env, start : string) {
 

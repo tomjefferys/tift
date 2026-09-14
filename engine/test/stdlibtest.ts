@@ -2,6 +2,7 @@ import { EngineBuilder } from "../src/game/enginebuilder";
 import { SaveData, ExecuteAndTestFn, ExpectWordsFn, createEngineTestEnvironment, EngineRef } from "./testutils/testutils";
 import { Input } from "../src/main";
 import { THE_ROOM, NORTH_ROOM, SOUTH_ROOM } from "./testutils/testobjects";
+import * as Player from "../src/game/player";
 
 let saveData : SaveData;
 let builder : EngineBuilder;
@@ -146,7 +147,7 @@ test("Test hiding/revealing object", () => {
     executeAndTest(["examine", "rubbish"], { expected : ["A pile of stinking rubbish"], notExpected : ["You find a diamond"]} );
 
     expect(saveData.data.baseHistory.length).toBe(3);
-    expect(saveData.data.baseHistory[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":"__INVENTORY__"});
+    expect(saveData.data.baseHistory[2]).toStrictEqual({"type":"Set","property":["entities","diamond","location"],"newValue":Player.INVENTORY});
 });
 
 test("Test isCarrying", () => {

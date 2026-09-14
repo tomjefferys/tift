@@ -6,6 +6,7 @@ import { THE_ROOM, ORDINARY_ITEM, OTHER_ITEM, YET_ANOTHER_ITEM, NORTH_ROOM, SOUT
 import { STANDARD_VERBS, STANDARD_VERBS_NO_EXITS } from "./testutils/testutils";
 import { Log, StatusType } from "tift-types/src/messages/output";
 import { Obj } from "../src/util/objects";
+import * as Player from "../src/game/player";
 
 let messages : string[];
 let wordsResponse : string[];
@@ -790,7 +791,7 @@ test("Test load save after getting item", () => {
     executeAndTest(["look"], { expected : ["An almost empty room"], notExpected :["key"]});
 
     expect(saveData.data.baseHistory).toEqual(
-        [{"type":"Set", "property":["entities", "key", "location"], "newValue":"__INVENTORY__"}])
+        [{"type":"Set", "property":["entities", "key", "location"], "newValue":Player.INVENTORY}])
 });
 
 test("Test reset", () => {
@@ -1643,7 +1644,7 @@ test("Test dark room with lightsource in inventory", () => {
     }).withObj({
         id : "torch",
         type : "item",
-        location : "__INVENTORY__",
+        location : Player.INVENTORY,
         tags : ["carryable", "lightSource"]
     })
     engine.ref = builder.build();

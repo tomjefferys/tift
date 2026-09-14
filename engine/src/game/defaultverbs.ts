@@ -3,7 +3,7 @@ import { captureModifier, captureObject, captureIndirectObject, matchAttribute, 
 import { mkResult, mkThunk } from "../script/thunk";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
-import * as Player from "./player";
+import * as Agent from "./agent";
 import { Env } from "tift-types/src/env";
 import { formatString } from "../util/mustacheUtils";
 import { VerbBuilder } from "./verbbuilder";
@@ -19,7 +19,7 @@ import * as VERB_NAMES from "./verbnames";
 export const SPATIAL_PREPOSITIONS = ["in", "on", "under", "above", "beside", "behind"];
 
 export const LOOK_FN = (env : Env) => {
-    const location = Player.getLocationEntity(env);
+    const location = Agent.getLocationEntity(env);
 
     const canSee = Locations.canSeeAtLocation(env, location);
 
@@ -27,7 +27,7 @@ export const LOOK_FN = (env : Env) => {
                            .filter(Entities.isEntity)
                            .filter(entity => Entities.isEntityVisible(env, canSee, entity))
                            .filter(obj => Entities.isEntityMovable(obj) || Entities.isEntityNPC(obj))
-                           .filter(obj => !Locations.isAtLocation(env, Player.PLAYER, obj));
+                           .filter(obj => !Locations.isAtLocation(env, Agent.getActorId(env), obj));
                     
     const isDark = Entities.entityHasTag(location, Tags.DARK) && !Locations.isLightSourceAtLocation(env, location);
 
@@ -80,10 +80,12 @@ const INVENTORY_ACTION = phaseActionBuilder("inventory")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("inventory")).build(),    
             mkThunk(env => {
-                    env.findObjs(obj => obj?.location === Player.INVENTORY && Entities.isEntity(obj))
+                    const inventoryId = Agent.getInventoryId(env);
+                    const wearingId = Agent.getWearingId(env);
+                    env.findObjs(obj => obj?.location === inventoryId && Entities.isEntity(obj))
                        .forEach(entity => Output.write(env, getName(entity as Nameable)));
-    
-                    env.findObjs(obj => obj?.location === Player.WEARING && Entities.isEntity(obj))
+
+                    env.findObjs(obj => obj?.location === wearingId && Entities.isEntity(obj))
                        .forEach(entity => Output.write(env, ` ${getName(entity as Nameable)} (wearing)` ));
                     return mkResult(true);
                 })
@@ -105,12 +107,12 @@ const GO = phaseActionBuilder("go")
         .withMatcherOnMatch(
             matchBuilder().withVerb(matchVerb("go")).withModifier(captureModifier("direction")).build(),
             mkThunk(env => {
-                const location = Player.getLocationEntity(env);
+                const location = Agent.getLocationEntity(env);
                 const destination = Locations.getExitDestination(location, env.get("direction"));
 
                 if (destination) {
-                    const player = Player.getPlayer(env);
-                    Locations.setLocation(env, player, destination);
+                    const actor = Agent.getActor(env);
+                    Locations.setLocation(env, actor, destination);
                 }
                 return mkResult(true);
             })
@@ -122,7 +124,7 @@ const GET = phaseActionBuilder(VERB_NAMES.GET)
             matchBuilder().withVerb(matchVerb(VERB_NAMES.GET)).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                Locations.setLocation(env, item, Player.INVENTORY);
+                Locations.setLocation(env, item, Agent.getInventoryId(env));
                 return mkResult(true);
             }));
 
@@ -132,7 +134,7 @@ const DROP = phaseActionBuilder(VERB_NAMES.DROP)
             matchBuilder().withVerb(matchVerb(VERB_NAMES.DROP)).withObject(captureObject("item")).build(), 
             mkThunk(env => {
                 const item = env.get("item");
-                const location = Player.getLocation(env);
+                const location = Agent.getLocation(env);
                 Locations.setLocation(env, item, location);
                 return mkResult(true);
             }));
@@ -171,7 +173,7 @@ const WEAR = phaseActionBuilder(VERB_NAMES.WEAR)
             matchBuilder().withVerb(matchVerb(VERB_NAMES.WEAR)).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                Locations.setLocation(env, item, Player.WEARING);
+                Locations.setLocation(env, item, Agent.getWearingId(env));
                 return mkResult(true);
             }));
 
@@ -181,7 +183,7 @@ const TAKE_OFF = phaseActionBuilder(VERB_NAMES.REMOVE)
             matchBuilder().withVerb(matchVerb(VERB_NAMES.REMOVE)).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                Locations.setLocation(env, item, Player.INVENTORY);
+                Locations.setLocation(env, item, Agent.getInventoryId(env));
                 return mkResult(true);
             }));
 

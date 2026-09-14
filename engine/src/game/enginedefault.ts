@@ -9,6 +9,7 @@ import _ from "lodash";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as Player from "./player";
+import * as Agent from "./agent";
 import * as Output from "./output";
 import * as Nameable from "../nameable";
 import * as Metadata from "./metadata";
@@ -48,11 +49,11 @@ const moveFn = bindParams(["id"], env => {
 // bindParams third param effectively enables/disabled dynamic scoping
 const DEFAULT_FUNCTIONS : EnvFnMap = {
     setLocation : bindParams(["dest"], env => {
-        Locations.doMove(env, Player.getPlayer(env), env.get("dest"));
+        Locations.doMove(env, Agent.getActor(env), env.get("dest"));
         return mkResult(true);
     }),
     move : moveFn,
-    getLocation : env => mkResult(Player.getLocation(env)),
+    getLocation : env => mkResult(Agent.getLocation(env)),
     write: env => DEFAULT_FUNCTIONS.writeMessage(env.newChild({ "message": print(env.get("value")) })),
     writeMessage: env => {
         Output.getOutput(env)(env.get("message"));
@@ -82,7 +83,7 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                         const args = env.get(ARGS);
                         const direction = args.length === 1 ? args[0] : args[1];
                         const room = args.length === 1
-                                        ? Player.getLocationEntity(env)
+                                        ? Agent.getLocationEntity(env)
                                         : Entities.getEntity(env, args[0]);
                         return mkResult(Locations.getExitDestination(room, direction));
                     },
