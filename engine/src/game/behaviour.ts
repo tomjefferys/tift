@@ -42,9 +42,9 @@ class DefaultBehaviour implements Behaviour {
         Player.makePlayer(env, start);
         Locations.makeGameEnd(env);
 
-        // Every other agent (eg an NPC) needs its own inventory/wearing
-        // containers too - the player's are already set up by makePlayer().
-        env.findObjs(obj => Entities.isEntity(obj) && Entities.isEntityAgent(obj) && obj.id !== Player.PLAYER)
+        // Every agent (the player included - see the "agent" tag it's given in
+        // makePlayer - plus eg any NPC) needs its own inventory/wearing containers.
+        env.findObjs(obj => Entities.isEntity(obj) && Entities.isEntityAgent(obj))
            .forEach(agent => Agent.makeAgentContainers(env, agent.id));
     }
 

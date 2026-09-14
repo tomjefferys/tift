@@ -21,6 +21,9 @@ function makeEnv() {
     // findObjs/getEntity resolve entities via the "entities" namespace.
     const env = createRootEnv(props, [["entities"], ["verbs"]]);
     Player.makePlayer(env, "theRoom");
+    // makePlayer only creates the player entity itself - mirror what
+    // behaviour.ts's start() does next, setting up its containers.
+    Agent.makeAgentContainers(env, Player.PLAYER);
     props.entities["theRoom"] = new EntityBuilder({ id : "theRoom", type : "room" }).build();
     return env;
 }
@@ -80,19 +83,23 @@ test("Test getInventoryId/getWearingId derive a <agentId>-INVENTORY/-WEARING id 
     expect(Agent.getWearingId(env, "npc1")).toEqual("npc1-WEARING");
 });
 
-test("Test isEntityAgent is true for the player, for tag \"agent\" and for tag \"NPC\", and false otherwise", () => {
-    const player = new EntityBuilder({ id : "p", type : "player" }).build();
+test("Test isEntityAgent is true for tag \"agent\" and for tag \"NPC\", and false otherwise", () => {
     const agent = new EntityBuilder({ id : "a", type : "item", tags : ["agent"] }).build();
     const npc = new EntityBuilder({ id : "n", type : "item", tags : ["NPC"] }).build();
     const plainItem = new EntityBuilder({ id : "i", type : "item" }).build();
 
     expect(Entities.isEntityAgent(agent)).toBe(true);
     expect(Entities.isEntityAgent(npc)).toBe(true);
-    expect(Entities.isEntityAgent(plainItem)).toBe(false);
     // isEntityAgent doesn't special-case "player" as a type - it's the "agent"
-    // tag (added by makePlayer's caller, game/behaviour.ts) that matters. This
-    // instance has neither, so it's not treated as an agent by this check alone.
-    expect(Entities.isEntityAgent(player)).toBe(false);
+    // tag that matters, which is why a bare type:"player" entity without it
+    // isn't automatically treated as an agent by this check alone.
+    expect(Entities.isEntityAgent(new EntityBuilder({ id : "p", type : "player" }).build())).toBe(false);
+    expect(Entities.isEntityAgent(plainItem)).toBe(false);
+});
+
+test("Test makePlayer tags the player \"agent\", so it's set up as one by behaviour.ts's start()", () => {
+    const env = makeEnv();
+    expect(Entities.isEntityAgent(Player.getPlayer(env))).toBe(true);
 });
 
 test("Test makeAgentContainers creates <agentId>-INVENTORY/-WEARING, located at and owned by the agent", () => {

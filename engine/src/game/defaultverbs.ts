@@ -20,6 +20,7 @@ export const SPATIAL_PREPOSITIONS = ["in", "on", "under", "above", "beside", "be
 
 export const LOOK_FN = (env : Env) => {
     const location = Agent.getLocationEntity(env);
+    const actorId = Agent.getActorId(env);
 
     const canSee = Locations.canSeeAtLocation(env, location);
 
@@ -27,7 +28,7 @@ export const LOOK_FN = (env : Env) => {
                            .filter(Entities.isEntity)
                            .filter(entity => Entities.isEntityVisible(env, canSee, entity))
                            .filter(obj => Entities.isEntityMovable(obj) || Entities.isEntityNPC(obj))
-                           .filter(obj => !Locations.isAtLocation(env, Agent.getActorId(env), obj));
+                           .filter(obj => !Locations.isAtLocation(env, actorId, obj));
                     
     const isDark = Entities.entityHasTag(location, Tags.DARK) && !Locations.isLightSourceAtLocation(env, location);
 
@@ -124,7 +125,8 @@ const GET = phaseActionBuilder(VERB_NAMES.GET)
             matchBuilder().withVerb(matchVerb(VERB_NAMES.GET)).withObject(captureObject("item")).build(),
             mkThunk(env => {
                 const item = env.get("item");
-                Locations.setLocation(env, item, Agent.getInventoryId(env));
+                const inventoryId = Agent.getInventoryId(env);
+                Locations.setLocation(env, item, inventoryId);
                 return mkResult(true);
             }));
 
@@ -173,7 +175,8 @@ const WEAR = phaseActionBuilder(VERB_NAMES.WEAR)
             matchBuilder().withVerb(matchVerb(VERB_NAMES.WEAR)).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                Locations.setLocation(env, item, Agent.getWearingId(env));
+                const wearingId = Agent.getWearingId(env);
+                Locations.setLocation(env, item, wearingId);
                 return mkResult(true);
             }));
 
@@ -183,7 +186,8 @@ const TAKE_OFF = phaseActionBuilder(VERB_NAMES.REMOVE)
             matchBuilder().withVerb(matchVerb(VERB_NAMES.REMOVE)).withObject(captureObject("wearable")).build(),
             mkThunk(env => {
                 const item = env.get("wearable");
-                Locations.setLocation(env, item, Agent.getInventoryId(env));
+                const inventoryId = Agent.getInventoryId(env);
+                Locations.setLocation(env, item, inventoryId);
                 return mkResult(true);
             }));
 
