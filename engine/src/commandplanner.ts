@@ -23,7 +23,7 @@ import { ForkManager, isFound } from "./env";
 import { getTouchedPaths } from "./util/overrideproxy";
 import { getAllCommands } from "./commandsearch";
 import { executeCommand } from "./commandexecutor";
-import { getContext } from "./game/context";
+import { getContext, rebindContext } from "./game/context";
 import * as Agent from "./game/agent";
 import * as Metadata from "./game/metadata";
 import * as GameOutput from "./game/output";
@@ -119,7 +119,10 @@ class SearchRunner {
                 // Each fork is a fresh root env (see ForkManager), so the actor binding has
                 // to be re-applied here rather than inherited from `state.current`.
                 const actingEnv = Agent.withActor(forked, this.actorId);
-                const forkedContext = getContext(actingEnv, this.actorId);
+                // A fresh fork is content-identical to `state.current` (nothing has run
+                // against it yet), so its context is identical too - rebind the objects
+                // `context` already found onto `actingEnv` instead of re-scanning the world.
+                const forkedContext = rebindContext(actingEnv, context);
                 const handled = executeCommand(actingEnv, forkedContext, command, true);
                 if (!handled) {
                     continue;

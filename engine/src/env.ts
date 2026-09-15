@@ -35,6 +35,9 @@ export class Env implements Type.Env {
     // Allows inter-action communication without updating save game data
     readonly transients : Obj;
 
+    // Memoised result of getNamespaces() - see there for why this is safe.
+    private namespacesCache? : NameSpace[];
+
     constructor(properties : Obj, namespaces : NameSpace[] = [], parent? : Env) {
         [this.properties, this.proxyManager] = createProxy(properties);
         this.parent = parent;
@@ -227,8 +230,14 @@ export class Env implements Type.Env {
     }
 
     getNamespaces() : NameSpace[] {
-        const parentNamespaces = this.parent?.getNamespaces() ?? []
-        return [...this.namespaces, ...parentNamespaces];
+        // Namespaces are fixed at construction (own namespaces never change, and neither
+        // does which env is `this.parent`), so this is safe to compute once and reuse -
+        // it's on the hot path of every get/set/has/findObjs call.
+        if (!this.namespacesCache) {
+            const parentNamespaces = this.parent?.getNamespaces() ?? []
+            this.namespacesCache = [...this.namespaces, ...parentNamespaces];
+        }
+        return this.namespacesCache;
     }
 
     replayHistory(history : History) {
@@ -343,14 +352,59 @@ export class Env implements Type.Env {
     }
 
     /**
-     * Find all objects matching a predicate
-     * @param predicate 
-     * @returns 
+     * Find all objects matching a predicate.
+     *
+     * Walks each requested namespace directly off every env's own properties (nearest env
+     * first, so shadowing resolves the same way `get` would), rather than first collecting
+     * every candidate name (getAllObjectNames) and then re-resolving each one from scratch
+     * via `get` - a full path-parse + reference-expansion + namespace-match + parent-chain
+     * walk per name, for a value already in hand.
+     * @param predicate
+     * @returns
      */
     findObjs(predicate: (obj: Obj) => boolean, namespaces : NameSpace[] = this.getNamespaces()) : Obj[] {
-        const allNames = [...this.getAllObjectNames(namespaces)];
-        return allNames.map(name => this.get(name))
-                       .filter((value): value is Obj => isObject(value) && predicate(value));
+        // Names that are themselves a declared namespace (eg "entities") aren't objects to
+        // return, they're containers of objects - matches the `isNameSpace` filter
+        // getObjectNamesFromNameSpace used to apply per candidate name. Namespaces are only
+        // ever declared on a root env (see createRootEnv/ForkManager.fork), and inherited by
+        // every child via the parent chain, so this.getNamespaces() is the same set no
+        // matter which env in the chain it's computed from.
+        const declaredNamespaces = new Set(this.getNamespaces().map(ns => ns.join(".")));
+        const seen = new Set<string>();
+        const results : Obj[] = [];
+
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        for (let env : Env | undefined = this; env; env = env.parent) {
+            for (const ns of namespaces) {
+                const nsObj = env.getNameSpace(ns);
+                if (!nsObj) {
+                    continue;
+                }
+                const prefix = ns.join(".");
+                for (const key of Object.keys(nsObj)) {
+                    const fullName = prefix ? `${prefix}.${key}` : key;
+                    // Nearest env wins on a shadowed name, matching get()'s findEnv
+                    // semantics - mark it seen (whatever its value) the first time it's
+                    // met, before deciding whether it's a usable object.
+                    if (seen.has(fullName) || declaredNamespaces.has(fullName)) {
+                        continue;
+                    }
+                    seen.add(fullName);
+                    let value = nsObj[key];
+                    if (isReference(value)) {
+                        // Namespace entries are never actually stored as references in
+                        // practice (reference() is only ever handed out transiently by
+                        // createNamespaceReferences), but fall back to a full get() rather
+                        // than assume that can't change.
+                        value = this.get(makePath([...ns, key]));
+                    }
+                    if (isObject(value) && predicate(value)) {
+                        results.push(value);
+                    }
+                }
+            }
+        }
+        return results;
     }
 
     matchNameSpace(path : Path | string) : [NameSpace, Path] {

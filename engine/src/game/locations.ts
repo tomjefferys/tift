@@ -87,16 +87,39 @@ export function doMove(env : Env, entityId : string | object, destinationId : st
 }
 
 /**
- * Recursively find objects at a location and their child objs
- * @param location 
+ * Recursively find objects at a location and their child objs.
+ *
+ * Builds a one-off index of every entity in the game keyed by its current `location`, then
+ * walks the index instead of re-running env.findObjs (a full world scan) at every nesting
+ * level. The index is local to this call and thrown away when it returns - entities can move
+ * between calls (eg a `push`/`get`/`drop` action, or the command planner simulating a turn),
+ * so nothing here may be cached across calls.
+ * @param location
  */
 export function findEntities(env : Env, location : Obj) : Obj[] {
-    const canSee = canSeeAtLocation(env, location);
-    return env.findObjs(obj => obj?.location === location.id)
-              .filter(obj => Entities.isEntity(obj))
-              .filter(obj => Entities.isEntityVisible(env, canSee, obj))
-              .flatMap(obj => [obj, ...findEntities(env, obj)])  // TODO this should check for 'container' tag
-              .filter(obj => obj.type != Entities.Types.SPECIAL)
+    const byLocation = new Map<string, Obj[]>();
+    for (const entity of env.findObjs(obj => Entities.isEntity(obj))) {
+        const locationId = entity.location as string | undefined;
+        if (locationId === undefined) {
+            continue;
+        }
+        const siblings = byLocation.get(locationId);
+        if (siblings) {
+            siblings.push(entity);
+        } else {
+            byLocation.set(locationId, [entity]);
+        }
+    }
+
+    const walk = (loc : Obj) : Obj[] => {
+        const canSee = canSeeAtLocation(env, loc);
+        return (byLocation.get(loc.id) ?? [])
+                  .filter(obj => Entities.isEntityVisible(env, canSee, obj))
+                  .flatMap(obj => [obj, ...walk(obj)])  // TODO this should check for 'container' tag
+                  .filter(obj => obj.type != Entities.Types.SPECIAL)
+    }
+
+    return walk(location);
 }
 
 export function canSeeAtLocation(env : Env, location : Obj) : boolean {

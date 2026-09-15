@@ -5,6 +5,7 @@ import * as Agent from "./agent";
 import * as Entities from "./entities";
 import * as Locations from "./locations";
 import * as MultiDict from "../util/multidict";
+import * as Path from "../path";
 import * as Tags from "./tags";
 import * as Verbs from "./verbs";
 import * as Logger from "../util/logger";
@@ -66,5 +67,21 @@ export function getContext(env : Env, actorId : string = Agent.getActorId(env)) 
     return {
         entities: contextEntities,
         verbs: verbs
+    }
+}
+
+/**
+ * Re-resolve an existing context's entities and verbs against `env`.
+ *
+ * Only valid when `env` is a fresh fork of (or otherwise content-identical to) the env the
+ * context was originally computed from - it copies the *shape* of `context` and only rebinds
+ * the objects, so that reads and writes go through `env`, without repeating the full world
+ * scan getContext performs. Used by the command planner, which forks a node's env once per
+ * candidate command and would otherwise recompute an identical context on every fork.
+ */
+export function rebindContext(env : Env, context : CommandContext) : CommandContext {
+    return {
+        entities: MultiDict.map(context.entities, (_key, entity) => Entities.getEntity(env, entity.id) as Entity),
+        verbs: context.verbs.map(verb => env.get(Path.makePath(["verbs", verb.id])) as Verb)
     }
 }
