@@ -14,6 +14,23 @@
 // on each call (see game/functionbuilder.ts#makeDynamicScope and script/parser.ts#DYNAMIC_ROOT),
 // so reads see the simulated state and writes land in the fork's overlay, never the real object
 // graph.
+//
+// Future performance enhancements
+// --------------------------------
+// A perf investigation (see rebindContext in game/context.ts, and the findEntities/findObjs
+// changes in game/locations.ts and env.ts) fixed the search re-scanning the whole world on
+// every candidate command. Two smaller costs remain, both lower priority because they weren't
+// what made a small game like CloakOfDarkness slow, but worth revisiting if a much larger
+// game (many rules, or a big verb/entity space) makes this search slow again:
+// - run()'s call to executeCommand(..., full=true): the before/after-turn rule phases call
+//   getGlobalRules, which rescans every rule in the game via env.findObjs on *each* candidate
+//   command - the same "rescan a per-run-invariant set on every fork" shape rebindContext
+//   fixed for context, just not yet applied to the rule list. executeCommand also re-parses
+//   `command` via searchCommand even though candidateCommands already parsed it once and threw
+//   the result away. Both scale with game size (rule count / verb+entity count).
+// - stateKey() calls origin.get(path) fresh for every touched path on every successor, even
+//   though `origin` never changes for the life of a run - those values could be resolved once
+//   and cached by path. This scales with search depth (the touched-path count), not game size.
 
 import * as _ from "lodash";
 import { Env } from "tift-types/src/env";
