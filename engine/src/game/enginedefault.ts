@@ -203,20 +203,31 @@ const DEFAULT_FUNCTIONS : EnvFnMap = {
                             const plan = createPlan(env, predicate, verbList, depth);
                             return mkResult(plan ?? []);
                         }),
-    // createPlanFor(agentId, predicate, verbList?, depth?) - like createPlan, but searches
+    // createPlanFor(agent, predicate, verbList?, depth?) - like createPlan, but searches
     // for a plan from the named agent's own viewpoint (its location/inventory/wearing)
-    // instead of whichever actor `env` already resolves to. Every arg to a lazy function
-    // arrives unresolved (see markLazy), so agentId - unlike in executeCommandAs - has to be
-    // resolved explicitly here rather than being usable as a plain value.
+    // instead of whichever actor `env` already resolves to. `agent` can be an agent's id, or
+    // the agent entity itself (eg `this`) - see game/agent.ts#resolveAgentId. Every arg to a
+    // lazy function arrives unresolved (see markLazy), so agent - unlike in executeCommandAs -
+    // has to be resolved explicitly here rather than being usable as a plain value.
     createPlanFor : markLazy(env => {
                             const args = env.get(ARGS);
-                            const agentId = (args[0] as EnvFn)(env).getValue() as string;
+                            const agentId = Agent.resolveAgentId(env, (args[0] as EnvFn)(env).getValue());
                             const predicate = args[1] as EnvFn;
                             const verbList = (args[2] ? args[2](env).getValue() : []) as string[];
                             const depth = (args[3] ? args[3](env).getValue() : undefined) as number | undefined;
                             const plan = createPlan(env, predicate, verbList, depth, agentId);
                             return mkResult(plan ?? []);
-                        })
+                        }),
+    // isPlanning(agent?) - true if a createPlan/createPlanFor search is currently running for
+    // agent (default: whichever actor `env` currently resolves to). `agent` can be an agent's
+    // id, or the agent entity itself (eg `this`) - Agent.isPlanning resolves either directly via
+    // Entities.getEntity. A search runs full turns while it searches, so a rule (eg afterTurn())
+    // can check this to tell a real turn apart from one the search is only simulating - see
+    // commandplanner.ts's "Recursion" note.
+    isPlanning : env => {
+                            const args = env.get(ARGS);
+                            return mkResult(Agent.isPlanning(env, args[0]));
+                        }
 }
 
 export function makeDefaultFunctions(obj : Obj) {

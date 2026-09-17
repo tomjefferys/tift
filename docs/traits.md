@@ -250,4 +250,13 @@ An agent's carried belongings are excluded from `look`'s item listing wherever i
 
 ### Driving an agent's turns
 
-Two functions let a game script make an agent act on its own behalf, reusing the same command-search/execution machinery a player's own turn uses - see [`executeCommandAs`](functions.md#executeCommandAs) and [`createPlanFor`](functions.md#createPlanFor). A common pattern is a `rule` with an `afterTurn()` that walks a pre-planned route one command per turn - see `examples/GoblinThief` for a complete worked example, including a discussion (in `src/npc/controller.yaml`) of why the route should be planned once up front rather than replanned from inside `afterTurn()` itself.
+Two functions let a game script make an agent act on its own behalf, reusing the same command-search/execution machinery a player's own turn uses - see [`executeCommandAs`](functions.md#executeCommandAs) and [`createPlanFor`](functions.md#createPlanFor).
+
+A rule's `afterTurn()` is a natural place to drive an agent. There are two common patterns:
+
+- **Plan once, then step through it.** Work out a route (eg in `beforeGame()`) and pop one command off it per turn - cheapest option when the goal isn't going to change. See `examples/GoblinThief` for a complete worked example.
+- **Replan every turn.** Call `createPlanFor` again from `afterTurn()` itself, so the agent reacts to a world that's changed since its last plan (an item moved, a door opened, the player got in the way). More expensive - every turn re-runs the whole search - but necessary for an agent that can't assume an earlier plan is still valid.
+
+Both are safe. The only thing guarded against is genuine recursion, not repeated real turns: `createPlanFor`'s search simulates full turns while it searches, including `beforeTurn()`/`afterTurn()` rules, so a rule that replans from `afterTurn()` also fires *inside* every command the search itself simulates. A nested call for an agent already being planned for further up the same call stack returns an empty plan and logs a warning instead of recursing without end (see [createPlan](functions.md#createPlan)); a call from a genuinely new turn is unaffected.
+
+That in-progress state is checkable, not hidden engine bookkeeping - see [`isPlanning`](functions.md#isPlanning). A rule can call `isPlanning(agentId)` itself, eg to skip its own work while a search for that agent is already under way (the recommended pattern, rather than relying on the recursion guard as a backstop), or to narrate it ("the goblin pauses, thinking").

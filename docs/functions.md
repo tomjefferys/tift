@@ -72,6 +72,10 @@ Searches for a sequence of commands that makes a predicate come true, by simulat
 - `verbList` restricts which verbs are tried at each step (default: every verb available in context). Narrowing this keeps the search fast.
 - `depth` bounds how many commands the search will try before giving up (default: 10).
 
+Each candidate command simulated during the search runs its full turn, including `beforeTurn()`/`afterTurn()` rules - so a rule that itself calls `createPlan`/`createPlanFor` for the *same* agent fires again inside every command the search simulates, which would otherwise recurse without end. Replanning every turn - eg from a rule's `afterTurn()`, to keep an agent responsive to a world that can invalidate an earlier plan - is a normal, supported pattern; it's specifically a nested call for an agent already being planned for further up the same call stack that's blocked, returning an empty plan and logging a warning instead of starting another search. A fresh call from a later, unrelated turn is never affected.
+
+That in-progress state isn't hidden bookkeeping - use [`isPlanning`](#isPlanning) to check it, eg to skip a rule's own work while a search for that agent is already under way, or to narrate it (see [Agent](traits.md#agent)).
+
 ```yaml
 verb: solve
 tags:
@@ -90,13 +94,23 @@ actions:
 
 Like [createPlan](#createPlan), but searches for a plan from a named agent's own point of view - its own location, inventory and worn items - instead of whichever actor the calling context defaults to (normally the player). Lets a game script plan a route for an NPC. See [Agent](traits.md#agent).
 
-`createPlanFor(agentId, predicate, verbList?, depth?)`
+The recursion guard described under [createPlan](#createPlan) is per-agent: a search already running for one agent doesn't block a nested plan for a *different* agent, only a re-entrant call for the same one.
+
+`createPlanFor(agent, predicate, verbList?, depth?)`
+
+`agent` can be an agent's id, or the agent entity itself - so a function defined on the agent can pass `this` instead of repeating its own id:
 
 ```yaml
 rule: goblinBrain
 plan: []
 beforeGame():
   - plan = createPlanFor('goblin', isAtLocation(coin, goblin), ['go', 'get'], 5)
+```
+
+```yaml
+item: goblin
+"planRoute()":
+  - plan = createPlanFor(this, isAtLocation(coin, this), ['go', 'get'], 5)
 ```
 
 ### see also
@@ -510,6 +524,24 @@ The open/closed status has no effect on this call
 ### see also
 - [open](#open)
 - [close](#close)
+
+## isPlanning
+
+True if a [`createPlan`](#createPlan)/[`createPlanFor`](#createPlanFor) search is currently running for `agent` (default: whichever actor the calling context defaults to, normally the player). A rule can check this itself - eg to skip calling `createPlanFor` again while a search for that agent is already under way, instead of relying on the recursion guard described under [createPlan](#createPlan) as a backstop.
+
+`isPlanning(agent?)`
+
+`agent` can be an agent's id, or the agent entity itself (eg `this`, from a function defined on the agent).
+
+```yaml
+rule: goblinBrain
+afterTurn():
+  - if(!isPlanning('goblin')).then(plan = createPlanFor('goblin', isAtLocation(coin, goblin), ['go', 'get'], 5))
+```
+
+### see also
+- [createPlan](#createPlan)
+- [createPlanFor](#createPlanFor)
 
 ## itemsAtLocation
 

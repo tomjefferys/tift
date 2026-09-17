@@ -31,6 +31,21 @@
 // - stateKey() calls origin.get(path) fresh for every touched path on every successor, even
 //   though `origin` never changes for the life of a run - those values could be resolved once
 //   and cached by path. This scales with search depth (the touched-path count), not game size.
+//
+// Recursion
+// ---------
+// Each candidate command is run with full=true (see run(), below), so before/after-turn rules
+// fire inside the search too - deliberately, to model a real turn accurately. That means a
+// global rule whose afterTurn() calls createPlan/createPlanFor for the SAME agent runs again
+// inside every node the search visits, which would start another search, which would hit the
+// same rule again, and so on without end. This is not a reason to avoid replanning every turn -
+// that's a normal, supported way to keep an agent responsive to a world that can change out from
+// under an earlier plan - it's specifically the *nested*, same-agent case that never terminates.
+// createPlan() guards against exactly that using game/agent.ts#PLANNING (a property on the
+// agent's own entity, so it's checkable game state, not hidden engine bookkeeping): a re-entrant
+// call for an agent already being planned for further up the call stack returns no plan (and
+// logs a warning) instead of recursing; a call for a different agent, or a fresh call from a
+// later real turn (nothing above it on the stack), is unaffected.
 
 import * as _ from "lodash";
 import { Env } from "tift-types/src/env";
@@ -45,7 +60,10 @@ import * as Agent from "./game/agent";
 import * as Metadata from "./game/metadata";
 import * as GameOutput from "./game/output";
 import * as Path from "./path";
+import * as Logger from "./util/logger";
 import type { CommandContext } from "./engine";
+
+const logger = Logger.getLogger("commandplanner");
 
 export const DEFAULT_PLAN_DEPTH = 10;
 
@@ -73,7 +91,17 @@ export function createPlan(
         env : Env, predicate : EnvFn, verbList : string[], depth : number = DEFAULT_PLAN_DEPTH,
         actorId : string = Agent.getActorId(env))
         : string[][] | undefined {
-    return new SearchRunner(env, predicate, verbList, depth, actorId).run();
+    if (Agent.isPlanning(env, actorId)) {
+        logger.warn(() => `createPlan already running for '${actorId}' - returning [] instead `
+                + `of recursing. Check isPlanning('${actorId}') to detect this case.`);
+        return undefined;
+    }
+    Agent.setPlanning(env, actorId, true);
+    try {
+        return new SearchRunner(env, predicate, verbList, depth, actorId).run();
+    } finally {
+        Agent.setPlanning(env, actorId, false);
+    }
 }
 
 // Properties that shouldn't count towards state identity when checking for loops - eg a

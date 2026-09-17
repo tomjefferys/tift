@@ -1,19 +1,24 @@
 # Drives the goblin's turns.
 #
-# The route to the coin is planned once, up front (createPlanFor - see
-# docs/functions.md and engine/src/game/agent.ts), and stashed here as a queue of
-# commands. Every player turn, one command is popped off the queue and carried out
-# (executeCommandAs) - one step per turn, same pace as a player would move.
+# The route to the coin doesn't change once it's found (the coin never moves), so it's
+# planned once, up front (createPlanFor - see docs/functions.md and
+# engine/src/game/agent.ts), and stashed here as a queue of commands. Every player
+# turn, one command is popped off the queue and carried out (executeCommandAs) - one
+# step per turn, same pace as a player would move.
 #
-# It's tempting to just call createPlanFor fresh from afterTurn() every turn instead
-# of pre-computing it - but don't: afterTurn() is a global rule, so it also runs
-# inside every command createPlanFor itself simulates while searching (simulated
-# commands still run their full before/after-turn rule phases, to model a real turn
-# accurately). A createPlanFor call sitting directly in afterTurn() would therefore
-# call itself again for every node the search visits, and again inside *that* search,
-# recursing without end. Planning once in beforeGame() - before afterTurn() has
-# anything queued to act on - sidesteps this entirely: those simulated turns find
-# nothing queued yet and do nothing.
+# An agent facing a world that CAN invalidate its plan (an item moves, a door gets
+# shut) would instead call createPlanFor again from afterTurn() every turn, to stay
+# responsive - see docs/traits.md#driving-an-agents-turns. That's a heavier pattern
+# than this one: afterTurn() is a global rule, so it also runs inside every command
+# createPlanFor itself simulates while searching (simulated commands still run their
+# full before/after-turn rule phases, to model a real turn accurately). A rule that
+# replans from afterTurn() therefore also fires inside its own search - createPlan
+# guards against that specific case recursing without end (see
+# engine/src/game/agent.ts#PLANNING), but it's still doing a full fresh search on
+# every node the search visits, which is far more work than popping one command off a
+# list. Since the goblin's goal here never changes, planning once in beforeGame() -
+# before afterTurn() has anything queued to act on - gets the cheaper behaviour for
+# free: those simulated turns find nothing queued yet and do nothing.
 rule: goblinBrain
 plan: []
 beforeGame():
